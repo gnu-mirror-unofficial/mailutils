@@ -203,7 +203,18 @@ typedef enum mu_c_type mu_c_type_t;
 extern char const *mu_c_type_str[];
 int mu_str_to_c (char const *string, mu_c_type_t type, void *tgt,
 		 char **errmsg);
+
+  /* -------------------------- */
+  /* Safe file copy and rename  */
+  /* -------------------------- */
+#define MU_COPY_MODE    0x01
+#define MU_COPY_OWNER   0x02
+#define MU_COPY_SYMLINK 0x04
+#define MU_COPY_FORCE   0x08
   
+int mu_copy_file (const char *srcpath, const char *dstpath, int flags);
+int mu_rename_file (const char *oldpath, const char *newpath);
+
   /* ----------------------- */
   /* Assorted functions.     */
   /* ----------------------- */

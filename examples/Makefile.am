@@ -44,6 +44,7 @@ noinst_PROGRAMS = \
  murun\
  musocio\
  $(NNTPCLIENT)\
+ rename\
  sa\
  sfrom
 

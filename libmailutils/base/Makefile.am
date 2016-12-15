@@ -24,6 +24,7 @@ libbase_la_SOURCES = \
  argcvjoin.c\
  argcvrem.c\
  assoc.c\
+ copyfile.c\
  ctparse.c\
  daemon.c\
  filesafety.c\
@@ -57,6 +58,7 @@ libbase_la_SOURCES = \
  permstr.c\
  registrar.c\
  refcount.c\
+ renamefile.c\
  rfc2047.c\
  schemeauto.c\
  sha1.c\
