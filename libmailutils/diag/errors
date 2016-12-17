@@ -125,3 +125,7 @@ MU_ERR_PERM_DIR_IWOTH       _("File in world writable directory")
 MU_ERR_DISABLED             _("Requested feature disabled in configuration")
 
 MU_ERR_FORMAT		    _("Error in format string")
+
+MU_ERR_REMOVE_SOURCE	    _("Failed to remove source file")
+MU_ERR_REMOVE_DEST	    _("Failed to remove destination file")
+MU_ERR_RESTORE_META         _("Failed to restore ownership or mode")

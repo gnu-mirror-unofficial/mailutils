@@ -436,7 +436,15 @@ main (int argc, char **argv)
   if (build_only || wh_env.nowhatnowproc)
     {
       if (strcmp (wh_env.file, wh_env.draftfile))
-	rename (wh_env.file, wh_env.draftfile);
+	{
+	  rc = mu_rename_file (wh_env.file, wh_env.draftfile, MU_COPY_OVERWRITE);
+	  if (rc)
+	    {
+	      mu_error (_("can't rename %s to %s: %s"),
+			wh_env.file, wh_env.draftfile, mu_strerror (rc));
+	      return 1;
+	    }
+	}
       return 0;
     }
   

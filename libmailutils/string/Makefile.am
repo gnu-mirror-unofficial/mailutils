@@ -24,8 +24,10 @@ libstring_la_SOURCES = \
  cstrlower.c\
  cstrupper.c\
  hexstr.c\
+ safefilename.c\
  stpcpy.c\
  str_to_c.c\
+ strcount.c\
  strltrim.c\
  strskip.c\
  stripws.c\

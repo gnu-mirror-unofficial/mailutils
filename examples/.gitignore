@@ -5,6 +5,9 @@ base64
 decode2047
 echosrv
 encode2047
+fcopy
+fremove
+frename
 header
 http
 iconv

@@ -1204,7 +1204,7 @@ list_iterator (size_t num, mu_message_t msg, void *data)
 }
 
 int
-mhn_list ()
+mhn_list (void)
 {
   int rc; 
 
@@ -1329,7 +1329,7 @@ sigint (int sig)
 }
 
 static int
-mhn_pause ()
+mhn_pause (void)
 {
   char c;
   int rc = 0;
@@ -1438,7 +1438,7 @@ show_iterator (size_t num, mu_message_t msg, void *data)
 }
 
 int
-mhn_show ()
+mhn_show (void)
 {
   
   int rc;
@@ -1680,7 +1680,7 @@ store_iterator (size_t num, mu_message_t msg, void *data)
 }
 
 int
-mhn_store ()
+mhn_store (void)
 {
   int rc = 0;
   
@@ -2697,7 +2697,7 @@ mhn_header (mu_message_t msg, mu_message_t omsg)
 }
 
 int
-mhn_compose ()
+mhn_compose (void)
 {
   int rc;
   mu_mime_t mime = NULL;
@@ -2760,12 +2760,22 @@ mhn_compose ()
   
   /* Preserve the backup copy and replace the draft */
   unlink (backup);
-  rename (input_file, backup);
-  rename (name, input_file);
+
+  rc = mu_rename_file (input_file, backup, MU_COPY_OVERWRITE);
+  if (rc)
+    mu_error (_("can't rename %s to backup file %s: %s"),
+	      input_file, backup, mu_strerror (rc));
+  else
+    {
+      rc = mu_rename_file (name, input_file, 0);
+      if (rc)
+	mu_error (_("can't rename %s to %s: %s"),
+		  name, input_file, mu_strerror (rc));
+    }
 
   free (name);
   mu_mime_unref (mime); 
-  return 0;
+  return rc;
 }
 
 

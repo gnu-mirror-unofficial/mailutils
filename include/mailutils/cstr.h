@@ -45,6 +45,8 @@ char *mu_str_skip_cset_comp (const char *str, const char *cset);
 char *mu_str_stripws (char *string);  
 
 int mu_string_split (const char *string, char *delim, mu_list_t list);
+
+size_t mu_str_count (char const *str, int chr);
   
 #ifdef __cplusplus
 }

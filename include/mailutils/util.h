@@ -140,8 +140,6 @@ struct mu_param
   char *name;
   char *value;
 };
-
-  
   
 int mu_content_type_parse (const char *input, mu_content_type_t *retct);
 void mu_content_type_destroy (mu_content_type_t *pptr);
@@ -207,17 +205,23 @@ int mu_str_to_c (char const *string, mu_c_type_t type, void *tgt,
   /* -------------------------- */
   /* Safe file copy and rename  */
   /* -------------------------- */
-#define MU_COPY_MODE    0x01
-#define MU_COPY_OWNER   0x02
-#define MU_COPY_SYMLINK 0x04
-#define MU_COPY_FORCE   0x08
+/* Bits for the flags argument of mu_copy_file and mu_rename_file.  The
+   MU_COPY_OVERWRITE is valid for both calls.  The rest is for mu_copy_file
+   only */
+#define MU_COPY_OVERWRITE 0x01 /* Overwrite destination file, if it exists */
+#define MU_COPY_MODE      0x02 /* Preserve file mode */
+#define MU_COPY_OWNER     0x04 /* Preserve file ownership */
+#define MU_COPY_DEREF     0x08 /* Dereference the source file */
   
 int mu_copy_file (const char *srcpath, const char *dstpath, int flags);
-int mu_rename_file (const char *oldpath, const char *newpath);
+int mu_rename_file (const char *oldpath, const char *newpath, int flags);
+int mu_remove_file (const char *path);
 
   /* ----------------------- */
   /* Assorted functions.     */
   /* ----------------------- */
+int mu_file_name_is_safe (char const *str);
+  
 int mu_getmaxfd (void);
 /* Get the host name, doing a gethostbyname() if possible. */
 int mu_get_host_name (char **host);

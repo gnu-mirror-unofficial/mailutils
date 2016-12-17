@@ -562,9 +562,13 @@ backup_file (const char *file_name)
 
   if (unlink (new_name) && errno != ENOENT)
     mu_diag_funcall (MU_DIAG_ERROR, "unlink", new_name, errno);
-  else if (rename (file_name, new_name))
-    mu_error (_("cannot rename `%s' to `%s': %s"),
-	      file_name, new_name, mu_strerror (errno));
+  else
+    {
+      int rc = mu_rename_file (file_name, new_name, MU_COPY_OVERWRITE);
+      if (rc)
+	mu_error (_("cannot rename %s to %s: %s"),
+		  file_name, new_name, mu_strerror (errno));
+    }
   free (new_name);
 }
 

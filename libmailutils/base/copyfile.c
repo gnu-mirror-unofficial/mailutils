@@ -1,3 +1,19 @@
+/* GNU Mailutils -- a suite of utilities for electronic mail
+   Copyright (C) 2016 Free Software Foundation, Inc.
+
+   GNU Mailutils is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
+
+   GNU Mailutils is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
+
 #include <config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -16,13 +32,24 @@ static int copy_regular_file (const char *srcpath, const char *dstpath,
 static int copy_symlink (const char *srcpath, const char *dstpath);
 static int copy_dir (const char *srcpath, const char *dstpath, int flags);
 
+/* Copy SRCPATH to DSTPATH.  SRCPATH can be any kind of file.  If it is
+   a directory, its content will be copied recursively.
+
+   FLAGS:
+
+   MU_COPY_OVERWRITE      Overwrite destination file, if it exists.
+   MU_COPY_MODE           Preserve file mode
+   MU_COPY_OWNER          Preserve file ownership 
+   MU_COPY_DEREF          Dereference symbolic links: operate on files they
+                          refer to.
+*/
 int
 mu_copy_file (const char *srcpath, const char *dstpath, int flags)
 {
   int rc = 0;
   struct stat st;
 
-  if (((flags & MU_COPY_SYMLINK) ? lstat : stat) (srcpath, &st))
+  if (((flags & MU_COPY_DEREF) ? stat : lstat) (srcpath, &st))
     {
       mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
 		(_("can't stat file %s: %s"),
@@ -30,6 +57,23 @@ mu_copy_file (const char *srcpath, const char *dstpath, int flags)
       return errno;
     }
 
+  if (access (dstpath, F_OK) == 0)
+    {
+      if (flags & MU_COPY_OVERWRITE)
+	{
+	  rc = mu_remove_file (dstpath);
+	  if (rc)
+	    {
+	      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
+			(_("can't remove destination %s: %s"),
+			 dstpath, mu_strerror (rc)));
+	      return rc;
+	    }
+	}
+      else
+	return EEXIST;
+    }
+  
   switch (st.st_mode & S_IFMT)
     {
     case S_IFREG:
@@ -37,11 +81,9 @@ mu_copy_file (const char *srcpath, const char *dstpath, int flags)
 
     case S_IFLNK:
       return copy_symlink (srcpath, dstpath);
-      break;
 
     case S_IFDIR:
       return copy_dir (srcpath, dstpath, flags);
-      break;
 
     case S_IFBLK:
     case S_IFCHR:
@@ -123,16 +165,16 @@ copy_regular_file (const char *srcpath, const char *dstpath, int flags,
 	{	    
 	  if (fchmod ((int) trans[0], mode))
 	    {
-	      rc = errno;
 	      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
 			(_("%s: cannot chmod: %s"),
-			 dstpath, mu_strerror (rc)));
+			 dstpath, mu_strerror (errno)));
+	      rc = MU_ERR_RESTORE_META;
 	    }
 	  else if (flags & MU_COPY_OWNER)
 	    {
 	      uid_t uid;
 	      gid_t gid;
-	      
+
 	      if (getuid () == 0)
 		{
 		  uid = st->st_uid;
@@ -153,13 +195,13 @@ copy_regular_file (const char *srcpath, const char *dstpath, int flags,
 		{
 		  if (fchown ((int) trans[0], uid, gid))
 		    {
-		      rc = errno;
 		      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
 				(_("%s: cannot chown to %lu.%lu: %s"),
 				 dstpath,
 				 (unsigned long) uid,
 				 (unsigned long) gid,
-				 mu_strerror (rc)));
+				 mu_strerror (errno)));
+		      rc = MU_ERR_RESTORE_META;
 		    }
 		}
 	    }
@@ -212,9 +254,8 @@ copy_dir (const char *srcpath, const char *dstpath, int flags)
 {
   DIR *dirp;
   struct dirent *dp;
-  struct stat st, st1;
+  struct stat st;
   int rc;
-  int create = 0;
   mode_t mode, mask;
   
   if (stat (srcpath, &st))
@@ -225,67 +266,28 @@ copy_dir (const char *srcpath, const char *dstpath, int flags)
       return errno;
     }
 
-  if (stat (dstpath, &st1))
-    {
-      if (errno == ENOENT)
-	create = 1;
-      else
-	{
-	  mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
-		    (_("can't stat directory %s: %s"),
-		     dstpath, mu_strerror (errno)));
-	  return errno;
-	}
-    }
-  else if (!S_ISDIR (st1.st_mode))
-    {
-      if (flags & MU_COPY_FORCE)
-	{
-	  if (unlink (dstpath))
-	    {
-	      rc = errno;
-	      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
-			(_("%s is not a directory and cannot be unlinked: %s"),
-			 dstpath, mu_strerror (rc)));
-	      return rc;
-	    }
-	  create = 1;
-	}
-      else
-	{
-	  mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
-		    (_("%s is not a directory"),
-		     dstpath));
-	  return EEXIST;
-	}
-    }      
-
   mask = umask (077);
   mode = ((flags & MU_COPY_MODE) ? st.st_mode : (0777 & ~mask)) & 0777;
   
-  if (create)
-    {
-      rc = mkdir (dstpath, 0700);
-      umask (mask);
+  rc = mkdir (dstpath, 0700);
+  umask (mask);
 	  
-      if (rc)
-	{
-	  mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
-		    (_("can't create directory %s: %s"),
-		     dstpath, mu_strerror (errno)));
-	  return errno;
-	}
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
+		(_("can't create directory %s: %s"),
+		 dstpath, mu_strerror (errno)));
+      return errno;
     }
-  else
-    umask (mask);
   
   dirp = opendir (srcpath);
   if (dirp == NULL)
     {
-      mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+      rc = errno;
+      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
 		("cannot open directory %s: %s",
 		 srcpath, mu_strerror (errno)));
-      return 1;
+      return rc;
     }
 
   while ((dp = readdir (dirp)))

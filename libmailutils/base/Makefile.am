@@ -59,6 +59,7 @@ libbase_la_SOURCES = \
  registrar.c\
  refcount.c\
  renamefile.c\
+ removefile.c\
  rfc2047.c\
  schemeauto.c\
  sha1.c\

@@ -125,8 +125,8 @@ imap4d_rename (struct imap4d_session *session,
   if (!newname)
     return io_completion_response (command, RESP_NO, "Permission denied");
 
-  /* It is an error to attempt to rename from a mailbox name that already
-     exist.  */
+  /* It is an error to attempt to rename from a mailbox name that does not
+     exist or to a mailbox name that already exists. */
   if (stat (newname, &newst) == 0)
     {
       /* FIXME: What if it's a maildir?!? */
@@ -216,9 +216,26 @@ imap4d_rename (struct imap4d_session *session,
     }
   else
     {
-      if (rename (oldname, newname) != 0)
+      rc = mu_rename_file (oldname, newname, 0);
+      if (rc)
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "rename", oldname, errno);
+	  switch (rc)
+	    {
+	    case MU_ERR_REMOVE_SOURCE:
+	      mu_error (_("failed to remove source mailbox after moving %s to %s"),
+			oldname, newname);
+	      break;
+	  
+	    case MU_ERR_RESTORE_META:
+	      mu_error (_("failed to restore mailbox ownership/modes after moving %s to %s"),
+			oldname, newname);
+	      break;
+	      
+	    default:
+	      mu_error (_("error renaming mailbox %s to %s: %s"),
+			oldname, newname, mu_strerror (rc));
+	    }
+
           rc = RESP_NO;
           msg = "Failed";
 	}

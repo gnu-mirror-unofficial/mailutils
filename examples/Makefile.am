@@ -30,6 +30,9 @@ noinst_PROGRAMS = \
  addr\
  base64\
  echosrv\
+ fcopy\
+ fremove\
+ frename\
  header\
  http\
  iconv\
@@ -44,7 +47,6 @@ noinst_PROGRAMS = \
  murun\
  musocio\
  $(NNTPCLIENT)\
- rename\
  sa\
  sfrom
 

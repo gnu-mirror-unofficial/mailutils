@@ -425,7 +425,13 @@ quit (struct mh_whatnow_env *wh, int argc, char **argv, int *status)
 	{
 	  mu_printf (_("draft left on \"%s\"."), wh->draftfile);
 	  if (strcmp (wh->file, wh->draftfile))
-	    rename (wh->file, wh->draftfile);
+	    {
+	      int rc;
+	      rc = mu_rename_file (wh->file, wh->draftfile, MU_COPY_OVERWRITE);
+	      if (rc)
+		mu_error (_("can't rename %s to %s: %s"),
+			  wh->file, wh->draftfile, mu_strerror (rc));
+	    }
 	}
     }
   mu_printf ("\n");
