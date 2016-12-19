@@ -5659,7 +5659,7 @@ Keep on going if execution fails on a message.  See also
 @ref{Sieve Configuration, keep-going}.
 
 @item -L @var{dir}
-@item --libdir=@var{dir}
+@itemx --libdir=@var{dir}
 Append directory @var{dir} to the list of directories searched for
 library files.  See also @ref{Sieve Configuration, library-path}.
 

@@ -332,7 +332,8 @@ mutool_initialize_readline (const char *name)
 {
   /* Allow conditional parsing of the ~/.inputrc file. */
   rl_readline_name = (char *) name;
-  rl_attempted_completion_function = (CPPFunction *) shell_completion;
+  rl_attempted_completion_function =
+    (rl_completion_func_t*) shell_completion;
   rl_getc_function = _shell_getc;
   read_history (get_history_file_name ());
 }

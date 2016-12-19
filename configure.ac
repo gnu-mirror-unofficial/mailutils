@@ -1159,6 +1159,9 @@ GINT_INIT([gint],[1.8 with-guile],
 	  [useguile=yes
  	   AC_DEFINE([WITH_GUILE],1,[Enable Guile support])
            GUILE_BINDIR=`guile-config info bindir`
+	   if [ -z "$GUILE_BINDIR" ]; then
+	       GUILE_BINDIR="`guile-config info prefix`/bin"
+	   fi
            LIBMU_SCM=../libmu_scm/libmu_scm.la
            LIBMU_SCM_DEPS='${MU_LIB_MBOX} ${MU_LIB_IMAP} ${MU_LIB_POP} ${MU_LIB_MH} ${MU_LIB_MAILDIR} ${MU_LIB_MAILER}'
            MU_GUILE_SIEVE_MOD_DIR='$(GUILE_SITE)/$(PACKAGE)/sieve-modules'

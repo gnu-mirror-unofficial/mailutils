@@ -981,7 +981,7 @@ exec ${GUILE-guile} -l $0 -c '(mailutils-main)'\n")
 (define output #f)
 
 (define (sieve-usage)
-  (display "usage: sieve2scm [OPTIONS][mailbox]\n")
+  (display "usage: sieve2scm [OPTIONS] [mailbox]\n")
   (display "GNU sieve2scm -- compile a Sieve program into Scheme code\n\n")
   (display "   -f, --file FILENAME      Set input file name\n")
   (display "   -o, --output FILENAME    Set output file name\n")
