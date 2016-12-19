@@ -62,6 +62,7 @@
 #include <mailutils/observer.h>
 #include <mailutils/io.h>
 #include <mailutils/cctype.h>
+#include <mailutils/cstr.h>
 #include <mailutils/mh.h>
 #include <mailutils/sys/mailbox.h>
 #include <mailutils/sys/registrar.h>
@@ -281,13 +282,77 @@ mh_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED, size_t *pcount,
     }
   /* Clean up the things */
 
+  mu_locker_unlock (mailbox->locker);
   amd_cleanup (mailbox);
 #ifdef WITH_PTHREAD
   pthread_cleanup_pop (0);
 #endif
   return status;
 }
+
+static int
+mh_size_unlocked (struct _amd_data *amd, mu_off_t *psize)
+{
+  mu_off_t size = 0;
+  int rc;
+  struct stat st;
+  DIR *dir;
+  struct dirent *entry;
+  
+  dir = opendir (amd->name);
+  if (!dir)
+    return errno;
 
+  while ((entry = readdir (dir)))
+    {
+      if (*mu_str_skip_class (entry->d_name, MU_CTYPE_DIGIT) == 0)
+	{
+	  char *fname = mu_make_file_name (amd->name, entry->d_name);
+	  if (!fname)
+	    continue;
+	  if (stat (fname, &st))
+	    {
+	      rc = errno;
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("can't stat %s: %s", fname, mu_strerror (rc)));
+	      free (fname);
+	      continue;
+	    }
+	  if (S_ISREG (st.st_mode))
+	    size += st.st_size;
+	}
+    }
+
+  *psize = size;
+  
+  closedir (dir);
+
+  return 0;
+}
+
+static int
+mh_size (mu_mailbox_t mailbox, mu_off_t *psize)
+{
+  struct _amd_data *amd = mailbox->data;
+  int rc;
+  
+  mu_monitor_wrlock (mailbox->monitor);
+#ifdef WITH_PTHREAD
+  pthread_cleanup_push (amd_cleanup, (void *)mailbox);
+#endif
+  mu_locker_lock (mailbox->locker);
+
+  rc = mh_size_unlocked (amd, psize);
+  
+  mu_locker_unlock (mailbox->locker);
+  mu_monitor_unlock (mailbox->monitor);
+#ifdef WITH_PTHREAD
+  pthread_cleanup_pop (0);
+#endif
+  return rc;
+}
+
+
 static int
 mh_qfetch (struct _amd_data *amd, mu_message_qid_t qid)
 {
@@ -467,7 +532,8 @@ _mailbox_mh_init (mu_mailbox_t mailbox)
   amd->message_uid = mh_message_uid;
   amd->next_uid = _mh_next_seq;
   amd->remove = mh_remove;
-
+  amd->mailbox_size = mh_size;
+  
   mailbox->_get_property = mh_get_property;
   mailbox->_translate = mh_translate;
 

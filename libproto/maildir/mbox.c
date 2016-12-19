@@ -666,44 +666,63 @@ maildir_scan_dir (struct _amd_data *amd, DIR *dir, char *dirname)
   size_t index;
   int rc = 0;
   int need_sort = 0;
+  struct stat st;
   
   while ((entry = readdir (dir)))
     {
-      switch (entry->d_name[0])
+      char *fname;
+      
+      if (entry->d_name[0] == '.')
+	continue;
+
+      rc = maildir_mkfilename (amd->name, dirname, entry->d_name, &fname);
+      if (rc)
 	{
-	case '.':
-	  break;
-
-	default:
-	  /* Message not found. Index points to the array cell where it
-	     would be placed */
-	  msg = calloc (1, sizeof (*msg));
-	  if (!msg)
-	    {
-	      rc = ENOMEM;
-	      break;
-	    }
-	  key.file_name = entry->d_name;
-	  if (!amd_msg_lookup (amd, (struct _amd_message *) &key, &index))
-	    continue;
-	  rc = _amd_message_append (amd, (struct _amd_message *) msg);
-	  if (rc)
-	    {
-	      free (msg);
-	      break;
-	    }
-	      
-	  msg->dir = dirname;
-	  msg->file_name = strdup (entry->d_name);
-
-	  p = maildir_name_info_ptr (msg->file_name);
-	  if (p)
-	    msg->amd_message.attr_flags = info_to_flags (p);
-	  else
-	    msg->amd_message.attr_flags = 0;
-	  msg->amd_message.orig_flags = msg->amd_message.attr_flags;
-	  need_sort = 1;
+	  mu_diag_funcall (MU_DIAG_ERROR, "maildir_mkfilename",
+			   entry->d_name, rc);
+	  continue;
 	}
+      
+      if (stat (fname, &st))
+	{
+	  rc = errno;
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("can't stat %s: %s", fname, mu_strerror (rc)));
+	  free (fname);
+	  continue;
+	}
+
+      free (fname);
+
+      if (!S_ISREG (st.st_mode))
+	continue;
+      
+      msg = calloc (1, sizeof (*msg));
+      if (!msg)
+	{
+	  rc = ENOMEM;
+	  break;
+	}
+      key.file_name = entry->d_name;
+      if (!amd_msg_lookup (amd, (struct _amd_message *) &key, &index))
+	continue;
+      rc = _amd_message_append (amd, (struct _amd_message *) msg);
+      if (rc)
+	{
+	  free (msg);
+	  break;
+	}
+	      
+      msg->dir = dirname;
+      msg->file_name = strdup (entry->d_name);
+
+      p = maildir_name_info_ptr (msg->file_name);
+      if (p)
+	msg->amd_message.attr_flags = info_to_flags (p);
+      else
+	msg->amd_message.attr_flags = 0;
+      msg->amd_message.orig_flags = msg->amd_message.attr_flags;
+      need_sort = 1;
     }
 
   if (rc == 0 && need_sort)
@@ -712,9 +731,7 @@ maildir_scan_dir (struct _amd_data *amd, DIR *dir, char *dirname)
 }
 
 static int
-maildir_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED,
-	       size_t *pcount, 
-	       int do_notify)
+maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
 {
   struct _amd_data *amd = mailbox->data;
   DIR *dir;
@@ -723,12 +740,6 @@ maildir_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED,
   struct stat st;
   size_t i;
   
-  if (amd == NULL)
-    return EINVAL;
-  if (mailbox->flags & MU_STREAM_APPEND)
-    return 0;
-  mu_monitor_wrlock (mailbox->monitor);
-
   /* 1st phase: Flush tmp/ */
   maildir_flush (amd);
 
@@ -748,11 +759,11 @@ maildir_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED,
     }
   free (name);
 
+  /* 3rd phase: Scan cur/ */
   status = maildir_mkfilename (amd->name, CURSUF, NULL, &name);
   if (status)
     return status;
   
-  /* 3rd phase: Scan cur/ */
   status = maildir_opendir (&dir, name,
 			    PERMS |
 			    mu_stream_flags_to_mode (mailbox->flags, 1));
@@ -778,11 +789,120 @@ maildir_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED,
   if (pcount)
     *pcount = amd->msg_count;
 
-  /* Clean up the things */
-  amd_cleanup (mailbox);
   return status;
 }
 
+static int
+maildir_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED,
+	       size_t *pcount, 
+	       int do_notify)
+{
+  struct _amd_data *amd = mailbox->data;
+  int rc;
+  
+  if (amd == NULL)
+    return EINVAL;
+  if (mailbox->flags & MU_STREAM_APPEND)
+    return 0;
+  mu_monitor_wrlock (mailbox->monitor);
+  rc = maildir_scan_unlocked (mailbox, pcount, do_notify);
+  mu_monitor_unlock (mailbox->monitor);
+  return rc;
+}
+  
+static int
+maildir_size_dir (struct _amd_data *amd, char *dirsuf, mu_off_t *psize)
+{
+  DIR *dir;
+  struct dirent *entry;
+  int rc = 0;
+  struct stat st;
+  char *name;
+  
+  rc = maildir_mkfilename (amd->name, dirsuf, NULL, &name);
+  if (rc)
+    return rc;
+  dir = opendir (name);
+  
+  if (!dir)
+    {
+      rc = errno;
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("can't open directory %s: %s", name, mu_strerror (rc)));
+      free (name);
+      if (rc == ENOENT)
+	return 0;
+      return rc;
+    }
+
+  while ((entry = readdir (dir)))
+    {
+      char *fname;
+      
+      if (entry->d_name[0] == '.')
+	continue;
+
+      rc = maildir_mkfilename (amd->name, dirsuf, entry->d_name, &fname);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "maildir_mkfilename",
+			   entry->d_name, rc);
+	  continue;
+	}
+      
+      if (stat (fname, &st))
+	{
+	  rc = errno;
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("can't stat %s: %s", fname, mu_strerror (rc)));
+	  free (fname);
+	  continue;
+	}
+
+      free (fname);
+
+      if (S_ISREG (st.st_mode))
+	*psize += st.st_size;
+    }
+
+  closedir (dir);
+  free (name);
+  
+  return 0;
+}
+
+static int
+maildir_size_unlocked (struct _amd_data *amd, mu_off_t *psize)
+{
+  mu_off_t size = 0;
+  int rc;
+
+  rc = maildir_size_dir (amd, NEWSUF, &size);
+  if (rc)
+    return rc;
+  rc = maildir_size_dir (amd, CURSUF, &size);
+  if (rc)
+    return rc;
+  *psize = size;
+  return 0;
+}
+
+static int
+maildir_size (mu_mailbox_t mailbox, mu_off_t *psize)
+{
+  struct _amd_data *amd = mailbox->data;
+  int rc;
+  
+  if (amd == NULL)
+    return EINVAL;
+
+  mu_monitor_wrlock (mailbox->monitor);
+  rc = maildir_size_unlocked (amd, psize);
+  mu_monitor_unlock (mailbox->monitor);
+
+  return rc;
+}
+  
 
 static int
 maildir_qfetch (struct _amd_data *amd, mu_message_qid_t qid)
@@ -926,6 +1046,7 @@ _mailbox_maildir_init (mu_mailbox_t mailbox)
   amd->remove = maildir_remove;
   amd->chattr_msg = maildir_chattr_msg;
   amd->capabilities = MU_AMD_STATUS;
+  amd->mailbox_size = maildir_size;
   
   /* Set our properties.  */
   {
