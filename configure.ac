@@ -567,7 +567,6 @@ check_dbm_impl() {
                        [AC_CHECK_HEADERS(tchdb.h,
                                          AC_DEFINE(WITH_TOKYOCABINET,1,
                                                  [Enable use of Tokyo Cabinet]))
-		       DBMLIB_DEPENDENCY="$DBMLIB_DEPENDENCY -lz -lbz2 -lrt"
                        DBMLIBS="$DBMLIBS -ltokyocabinet"
                        status_dbm="$status_dbm,Tokyo Cabinet"]);;
 
@@ -576,7 +575,6 @@ check_dbm_impl() {
                        [AC_CHECK_HEADERS(kclangc.h,
                                          AC_DEFINE(WITH_KYOTOCABINET,1,
                                                  [Enable use of Kyoto Cabinet]))
-		       DBMLIB_DEPENDENCY="$DBMLIB_DEPENDENCY -lz -lbz2 -lrt"
                        DBMLIBS="$DBMLIBS -lkyotocabinet"
                        status_dbm="$status_dbm,Kyoto Cabinet"]);;
   esac
@@ -1169,6 +1167,9 @@ GINT_INIT([gint],[1.8 with-guile],
            LIBMU_SCM_DEPS='${MU_LIB_MBOX} ${MU_LIB_IMAP} ${MU_LIB_POP} ${MU_LIB_MH} ${MU_LIB_MAILDIR} ${MU_LIB_MAILER}'
            MU_GUILE_SIEVE_MOD_DIR='$(GUILE_SITE)/$(PACKAGE)/sieve-modules'
            GINT_INCLUDES='${MU_APP_COMMON_INCLUDES}'
+           if test $REPLACE_STRERROR = 1; then
+               GINT_LDADD='${top_builddir}/lib/gnu/libgnu.la'
+           fi
           ],[useguile=no])
 
 AM_CONDITIONAL([MU_COND_LIBMU_SCM],[test "$useguile" = "yes"])
