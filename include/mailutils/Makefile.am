@@ -21,7 +21,10 @@ errno.h: $(top_srcdir)/libmailutils/diag/errors errno.hin
 	$(AM_V_GEN)$(AWK) -f $(mu_aux_dir)/generr.awk $(top_srcdir)/libmailutils/diag/errors errno.hin > errno.h
 
 types.h: $(top_srcdir)/include/mailutils/types.hin Makefile
-	$(AM_V_GEN)sed 's/_MU_OFF_TYPE_/$(MU_OFF_TYPE)/;s/_MU_DEFAULT_RECORD_/$(MU_DEFAULT_RECORD)/' $(top_srcdir)/include/mailutils/types.hin > $@
+	$(AM_V_GEN)sed -e 's/_MU_OFF_TYPE_/$(MU_OFF_TYPE)/' \
+                       -e 's/_MU_DEFAULT_RECORD_/$(MU_DEFAULT_RECORD)/' \
+                       -e 's/_MU_PRI_OFF_T_/$(MU_PRI_OFF_T)/' \
+                   $(top_srcdir)/include/mailutils/types.hin > $@
 DISTCLEANFILES = types.h
 
 pkginclude_HEADERS = \

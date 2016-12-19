@@ -83,7 +83,8 @@ struct mu_sockaddr; /* defined in mailutils/sockaddr.h */
 struct mu_cidr;     /* defined in mailutils/cidr.h */  
   
 typedef _MU_OFF_TYPE_ mu_off_t;
-
+#define MU_PRI_OFF_T "_MU_PRI_OFF_T_"
+  
 typedef struct mu_address *mu_address_t;
 typedef struct _mu_attribute *mu_attribute_t;
 typedef struct _mu_authority *mu_authority_t;

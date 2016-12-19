@@ -691,10 +691,13 @@ AC_CHECK_SIZEOF(off_t)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_SUBST(MU_OFF_TYPE)
+AC_SUBST(MU_PRI_OFF_T)
 if test $ac_cv_sizeof_off_t -eq $ac_cv_sizeof_long; then
   MU_OFF_TYPE=long
+  MU_PRI_OFF_T='ld'
 elif test $ac_cv_sizeof_off_t -eq $ac_cv_sizeof_long_long; then
   MU_OFF_TYPE="long long"
+  MU_PRI_OFF_T='lld'
 else
   AC_MSG_ERROR([Cannot find ${ac_cv_sizeof_off_t}-byte type, suitable for mu_off_t])
 fi
@@ -1159,7 +1162,7 @@ GINT_INIT([gint],[1.8 with-guile],
 	  [useguile=yes
  	   AC_DEFINE([WITH_GUILE],1,[Enable Guile support])
            GUILE_BINDIR=`guile-config info bindir`
-	   if [ -z "$GUILE_BINDIR" ]; then
+	   if test -z "$GUILE_BINDIR"; then
 	       GUILE_BINDIR="`guile-config info prefix`/bin"
 	   fi
            LIBMU_SCM=../libmu_scm/libmu_scm.la
