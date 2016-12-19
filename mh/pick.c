@@ -260,28 +260,44 @@ parse_comp_match (int *pargc, char **argv)
   *pargc = j;
 }
 
-static int
-comp_match_arg (int argc, char **argv, void *data)
-{
-  if (argc >= 2 && strncmp (argv[0], "--", 2) == 0)
-    {
-      mu_list_t *lp = data;
-      pick_add_token (lp, T_COMP, argv[0] + 2);
-      pick_add_token (lp, T_STRING, argv[1]);
-      return 2;
-    }
-  return 0;
-}
-  
 int
 main (int argc, char **argv)
 {
-  int status;
+  int i, status;
   mu_mailbox_t mbox;
   mu_msgset_t msgset;
-
-  mh_getopt0 (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
-	      args_doc, prog_doc, NULL, comp_match_arg, &lexlist);
+  int argv_alloc = 0;
+  
+  for (i = 1; i < argc;)
+    {
+      if (strncmp (argv[i], "--", 2) == 0 && argv[i][3] && i + 1 < argc)
+	{
+	  size_t n = argc + 2;
+	  if (argv_alloc)
+	    argv = mu_realloc (argv, (n + 1) * sizeof (argv[0]));
+	  else
+	    {
+	      char **p = mu_calloc (n + 1, sizeof p[0]);
+	      memcpy (p, argv, (argc + 1) * sizeof argv[0]);
+	      argv = p;
+	      argv_alloc = 1;
+	    }
+	  
+	  memmove (argv + i + 4, argv + i + 2,
+		   (argc - i - 1) * sizeof argv[0]);
+	  argv[i + 3] = argv[i + 1];
+	  argv[i + 2] = mu_strdup ("-pattern");
+	  argv[i + 1] = mu_strdup (argv[i] + 2);
+	  argv[i] = mu_strdup ("-component");
+	  argc = n;
+	  i += 4; 
+	}
+      else
+	i++;
+    }
+  
+  mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
+	     args_doc, prog_doc, NULL);
 
   parse_comp_match (&argc, argv);
   
