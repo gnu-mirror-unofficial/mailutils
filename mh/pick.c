@@ -232,34 +232,6 @@ action_add (void *item, void *data)
   return 0;
 }
 
-static void
-parse_comp_match (int *pargc, char **argv)
-{
-  int i, j;
-  int argc = *pargc;
-
-  for (i = j = 0; i < argc; i++)
-    {
-      if (strncmp (argv[i], "--", 2) == 0)
-	{
-	  if (++i < argc)
-	    {
-	      pick_add_token (&lexlist, T_COMP, argv[i-1] + 2);
-	      pick_add_token (&lexlist, T_STRING, argv[i]);
-	    }
-	  else
-	    {
-	      mu_error (_("%s: must be followed by a pattern"), argv[i-1]);
-	      exit (1);
-	    }
-	}
-      else
-	argv[j++] = argv[i];
-    }
-  argv[j] = NULL;
-  *pargc = j;
-}
-
 int
 main (int argc, char **argv)
 {
@@ -267,7 +239,8 @@ main (int argc, char **argv)
   mu_mailbox_t mbox;
   mu_msgset_t msgset;
   int argv_alloc = 0;
-  
+
+  /* Expand eventual --COMPONENT NAME pairs */
   for (i = 1; i < argc;)
     {
       if (strncmp (argv[i], "--", 2) == 0 && argv[i][3] && i + 1 < argc)
@@ -299,8 +272,6 @@ main (int argc, char **argv)
   mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
 	     args_doc, prog_doc, NULL);
 
-  parse_comp_match (&argc, argv);
-  
   if (pick_parse (lexlist))
     return 1;
 

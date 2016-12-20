@@ -1137,19 +1137,19 @@ mu_sieve_machine_clone (mu_sieve_machine_t const parent,
 	}
 
       /* Copy value space */
-      child->valspace = mu_sieve_calloc (parent, parent->valcount,
+      child->valspace = mu_sieve_calloc (child, parent->valcount,
 					 sizeof child->valspace[0]);
       child->valcount = child->valmax = parent->valcount;
       for (i = 0; i < child->valcount; i++)
 	{
 	  child->valspace[i].type = parent->valspace[i].type;
 	  child->valspace[i].tag =
-	    mu_sieve_strdup (parent, parent->valspace[i].tag);
+	    mu_sieve_strdup (child, parent->valspace[i].tag);
 	  switch (child->valspace[i].type)
 	    {
 	    case SVT_TAG:
 	      child->valspace[i].v.string =
-		mu_sieve_strdup (parent, parent->valspace[i].v.string);
+		mu_sieve_strdup (child, parent->valspace[i].v.string);
 	      break;
 	      
 	    default:
