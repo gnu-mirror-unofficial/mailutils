@@ -71,8 +71,15 @@ retrieve_address (void *item, void *data, size_t idx, char **pval)
 	return MU_ERR_NOENT;
       rc = mu_address_create (&ap->addr, val);
       free (val);
-      if (rc)
-	return rc;
+      switch (rc)
+	{
+	case MU_ERR_EMPTY_ADDRESS:
+	case MU_ERR_NOENT:
+	  return MU_ERR_NOENT;
+
+	default:
+	  return rc;
+	}
     }
 
   rc = ap->aget (ap->addr, idx+1, pval);
