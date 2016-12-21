@@ -135,6 +135,12 @@ LIST_CHECK([empty reference + INBOX],[list07],
 * LIST (\NoInferiors) NIL INBOX
 ])
 
+LIST_CHECK([empty reference + mailbox],[list08],
+["" "search.mbox"],
+[dnl
+* LIST (\NoInferiors) "/" search.mbox
+])
+
 dnl ----------------------------------------------------------------------
 
 m4_popdef([IMAP4D_HOMEDIR])

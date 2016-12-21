@@ -170,17 +170,14 @@ imap4d_list (struct imap4d_session *session,
       mu_folder_t folder;
       char *cwd;
       struct refinfo refinfo;
-      size_t seglen;
+      size_t i;
       
       switch (*wcard)
 	{
 	  /* Absolute Path in wcard, dump the old ref.  */
 	case '/':
-	  {
-	    ref = calloc (2, 1);
-	    ref[0] = *wcard;
-	    wcard++;
-	  }
+	  ref = mu_strdup ("/");
+	  wcard++;
 	  break;
 
 	  /* Absolute Path, but take care of things like ~guest/Mail,
@@ -207,23 +204,22 @@ imap4d_list (struct imap4d_session *session,
 	  ref = mu_strdup (ref);
 	}
 
-      /* Move any directory not containing a wildcard into the reference
-	 So (ref = ~guest, wcard = Mail/folder1/%.vf) -->
-	 (ref = ~guest/Mail/folder1, wcard = %.vf).  */
-      seglen = strcspn (wcard, "%*");
-
-      if (seglen)
+      /* Find the longest directory prefix */
+      i = strcspn (wcard, "%*");
+      while (i > 0 && wcard[i - 1] != '/')
+	i--;
+      /* Append it to the reference */
+      if (i)
 	{
 	  size_t reflen = strlen (ref);
 	  int addslash = (reflen > 0 && ref[reflen-1] != '/'); 
-	  size_t len = seglen + reflen + addslash + 1;
+	  size_t len = i + reflen + addslash;
 
-	  ref = realloc (ref, len);
+	  ref = mu_realloc (ref, len);
 	  if (addslash)
 	    ref[reflen++] = '/';
-	  memcpy (ref + reflen, wcard, seglen);
-	  ref[reflen + seglen] = 0;
-	  wcard += seglen;
+	  memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
+	  ref[len-1] = 0;
 	}
 
       /* Allocates.  */
@@ -233,20 +229,6 @@ imap4d_list (struct imap4d_session *session,
 	  free (ref);
 	  return io_completion_response (command, RESP_NO,
 			              "The requested item could not be found.");
-	}
-
-      /* FIXME */
-      if (wcard[0] == 0)
-	{
-	  char *p = strrchr (ref, '/');
-	  if (p && p[1])
-	    {
-	      *p++ = 0;
-	      wcard = p;
-
-	      p = strrchr (cwd, '/');
-	      *p = 0;
-	    }
 	}
 
       status = mu_folder_create (&folder, cwd);
