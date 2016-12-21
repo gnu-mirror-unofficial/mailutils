@@ -72,7 +72,7 @@ parse_response_code (mu_imap_t imap, mu_list_t resp)
       if (mu_kwd_xlat_name (mu_imap_response_codes, arg->v.string, &rcode))
 	return -1;
       
-      arg = _mu_imap_list_at (resp, 3);
+      arg = _mu_imap_list_at (resp, 4);
       if (!arg || !_mu_imap_list_element_is_string (arg, "]"))
 	return -1;
     }

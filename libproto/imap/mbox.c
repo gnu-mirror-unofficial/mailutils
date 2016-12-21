@@ -875,10 +875,10 @@ _imap_message_unseen (mu_mailbox_t mbox, size_t *pn)
       rc = mu_msgset_get_list (msgset, &list);
       if (rc == 0)
 	{
-	  struct mu_msgrange r;
+	  struct mu_msgrange *r;
 	  rc = mu_list_head (list, (void **) &r);
 	  if (rc == 0)
-	    *pn = r.msg_beg;
+	    *pn = r->msg_beg;
 	}
       mu_msgset_free (msgset);
       return rc;
