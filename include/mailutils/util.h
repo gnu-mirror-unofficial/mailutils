@@ -23,6 +23,7 @@
 
 #include <mailutils/list.h>
 #include <mailutils/types.h>
+#include <mailutils/cidr.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -198,6 +199,25 @@ enum mu_c_type
   };
 
 typedef enum mu_c_type mu_c_type_t;
+
+union mu_c_storage
+{
+  char *c_string;
+  signed short c_short;
+  unsigned short c_ushort;
+  int c_int;
+  unsigned int c_uint;
+  long c_long;
+  unsigned long c_ulong;
+  size_t c_size;
+  mu_off_t c_off;
+  time_t c_time;
+  int c_bool;
+  struct mu_cidr c_cidr;
+};
+
+typedef union mu_c_storage mu_c_storage_t;
+
 extern char const *mu_c_type_str[];
 int mu_str_to_c (char const *string, mu_c_type_t type, void *tgt,
 		 char **errmsg);

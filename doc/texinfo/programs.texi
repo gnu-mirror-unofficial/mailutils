@@ -7816,6 +7816,7 @@ with Mailutils.
 * mailutils info::                Show Mailutils configuration.
 * mailutils cflags::              Show compiler options.
 * mailutils ldflags::             List libraries required to link.
+* mailutils stat::                Show mailbox status.
 * mailutils query::               Query configuration values.
 * mailutils 2047::                Decode/encode email message headers.
 * mailutils filter::              Apply a chain of filters to the input.
@@ -8002,6 +8003,75 @@ Link in the Mailutils authentication library.
 Provide Guile language bindings.
 @item python
 Provide Python language bindings.
+@end table
+
+@node mailutils stat
+@subsection mailutils stat
+The command @command{mailutils stat} shows status of a mailbox.  The
+name or URL of the mailbox to operate upon is supplied in the first
+argument.  If not given, the command will display status of the
+invoking user system mailbox.
+
+@example
+$ mailutils stat
+type: maildir
+path: /var/mail/smith
+URL: /var/mail/smith
+size: 3498
+messages: 24
+recent messages: 3
+first unseen: 20
+uidvalidity: 1338543026
+next uid: 87
+access: 2016-12-15 09:15:08 +0200
+@end example
+
+The output format is controlled by the @option{--format} (@option{-c})
+option.  Its argument is the desired format string, composed of
+ordinary characters, which are reporduced on standard output verbatim,
+backslash sequences, and format specifiers, beginning with @samp{%}.
+
+@dfn{Backslash sequences} are interpreted as in C.
+
+A @dfn{format specifier} consists of a leading @samp{%} followed by a
+letter.  Optional @samp{:} may occur between @samp{%} and the letter.
+Its presense instructs the program to print the description of the
+corresponding value before the value itself.
+
+The following format sequences are understood:
+
+@table @asis
+@item %f
+Name of the mailbox as supplied in the command line.  If
+@command{mailutils stat} was used without explicit mailbox argument,
+@samp{%f} is equivalent to @samp{%U}.
+@item %t
+Type of the mailbox (@samp{mbox}, @samp{maildir}, etc.).  The
+description string is @samp{type}.
+@item %p
+Path to the mailbox.  In case of remote mailboxes, it is the path
+part of the mailbox URL.  Description string: @samp{path}.
+@item %U
+URL of the mailbox.  Description string: @samp{URL}.
+@item %s
+Size of the mailbox in octets.  Description string: @samp{size}.
+@item %c
+Number of messages in the mailbox.  Description string:
+@samp{messages}.
+@item %r
+Number of recent (unread) messages in the mailbox.  Description string:
+@samp{recent messages}.
+@item %u
+Index of the first unseen message.  Description string: @samp{first unseen}.
+@item %v
+The UIDVALIDITY value.  Description string: @samp{uidvalidity}.
+@item %n
+The UID value which will be assigned to the new message to be
+incorporated into the mailbox.  Description string: @samp{next uid}.
+@item %a
+Access time of the mailbox, as a number of seconds since the epoch.
+@item %A
+Access time of the mailbox in human-readable format.
 @end table
 
 @node mailutils query

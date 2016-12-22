@@ -59,6 +59,7 @@ MODULES = \
  $(POP_C)\
  query.c\
  send.c\
+ stat.c\
  $(SMTP_C)\
  wicket.c
 
