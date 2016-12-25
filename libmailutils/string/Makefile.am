@@ -21,6 +21,8 @@ libstring_la_SOURCES = \
  cpystr.c\
  cstrcasecmp.c\
  cstrcasestr.c\
+ cstrescape.c\
+ cstrunescape.c\
  cstrlower.c\
  cstrupper.c\
  hexstr.c\

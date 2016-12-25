@@ -32,7 +32,7 @@ main (int argc, char **argv)
     }
 
   if (!mu_file_name_is_safe (argv[0])
-      || (argv[0][0] == '/' && mu_str_count (argv[0], '/') < 2))
+      || (argv[0][0] == '/' && mu_str_count (argv[0], "/", NULL) < 2))
     {
       mu_error ("unsafe file name");
       return 1;

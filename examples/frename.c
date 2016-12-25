@@ -36,13 +36,13 @@ main (int argc, char **argv)
     }
 
   if (!mu_file_name_is_safe (argv[0])
-      || (argv[0][0] == '/' && mu_str_count (argv[0], '/') < 2))
+      || (argv[0][0] == '/' && mu_str_count (argv[0], "/", NULL) < 2))
     {
       mu_error ("%s: unsafe file name", argv[0]);
       return 1;
     }
   if (!mu_file_name_is_safe (argv[1])
-      || (argv[1][0] == '/' && mu_str_count (argv[1], '/') < 2))
+      || (argv[1][0] == '/' && mu_str_count (argv[1], "/", NULL) < 2))
     {
       mu_error ("%sunsafe file name", argv[0]);
       return 1;

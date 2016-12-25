@@ -16,19 +16,30 @@
 
 #include <config.h>
 #include <limits.h>
+#include <string.h>
 #include <mailutils/util.h>
 
-/* Return the number of occurrences of the ASCII character CHR in the
-   UTF-8 string STR. */
+/* Count number of occurrences of each ASCII character from CHR in the
+   UTF-8 string STR.  Unless CNT is NULL, fill it with the counts for
+   each character (so that CNT[i] contains number of occurrences of
+   CHR[i]).  Return total number of occurrences. */
 size_t
-mu_str_count (char const *str, int chr)
+mu_str_count (char const *str, char const *chr, size_t *cnt)
 {
   unsigned char c;
-  size_t count = 0;
   int consume = 0;
-  
-  if (!str || chr < 0 || chr > UCHAR_MAX)
+  size_t count = 0;
+
+  if (!str || !chr)
     return 0;
+  
+  if (cnt)
+    {
+      int i;
+      
+      for (i = 0; chr[i]; i++)
+	cnt[i] = 0;
+    }
   
   while ((c = *str++) != 0)
     {
@@ -36,8 +47,13 @@ mu_str_count (char const *str, int chr)
 	consume--;
       else if (c < 0xc0)
 	{
-	  if (c == chr)
-	    count++;
+	  char *p = strchr (chr, c);
+	  if (p)
+	    {
+	      if (cnt)
+		cnt[p - chr]++;
+	      count++;
+	    }
 	}
       else if (c & 0xc0)
 	consume = 1;

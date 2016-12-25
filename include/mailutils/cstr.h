@@ -46,7 +46,18 @@ char *mu_str_stripws (char *string);
 
 int mu_string_split (const char *string, char *delim, mu_list_t list);
 
-size_t mu_str_count (char const *str, int chr);
+size_t mu_str_count (char const *str, char const *chr, size_t *cnt);
+
+int mu_c_str_escape (char const *str, char const *chr, char const *xtab,
+		     char **ret_str);
+int mu_c_str_escape_trans (char const *str, char const *trans, char **ret_str);
+
+int mu_c_str_unescape_inplace (char *str, char const *chr, char const *xtab);
+int mu_c_str_unescape (char const *str, char const *chr, char const *xtab,
+		       char **ret_str);
+int mu_c_str_unescape_trans (char const *str, char const *trans,
+			     char **ret_str);
+
   
 #ifdef __cplusplus
 }
