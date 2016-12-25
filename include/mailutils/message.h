@@ -211,10 +211,21 @@ extern int mu_message_set_bodystructure (mu_message_t msg,
       void *owner);
   
 /* misc functions */
+extern int mu_attachment_create (mu_message_t *newmsg,
+				 const char *content_type,
+				 const char *encoding,
+				 const char *name, const char *filename);
+extern int mu_attachment_copy_from_stream (mu_message_t att,
+					   mu_stream_t stream,
+					   char const *encoding);
+extern int mu_attachment_copy_from_file (mu_message_t att,
+					 char const *filename,
+					 char const *encoding);
 extern int mu_message_create_attachment (const char *content_type,
 					 const char *encoding,
 					 const char *filename,
 					 mu_message_t *newmsg);
+  
 extern int mu_message_save_attachment (mu_message_t msg,
 				       const char *filename,
 				       mu_mime_io_buffer_t buf);

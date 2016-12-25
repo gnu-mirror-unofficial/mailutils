@@ -55,79 +55,179 @@ struct _mu_mime_io_buffer
   mu_stream_t fstream;	/* output file stream for saving attachment */
 };
 
+static int
+at_hdr (mu_header_t hdr, const char *content_type, const char *encoding,
+	const char *name, const char *filename)
+{
+  int rc;
+  char *val, *str;
+
+  if (!name)
+    {
+      if (filename)
+	{
+	  name = strrchr (filename, '/');
+	  if (name)
+	    name++;
+	  else
+	    name = filename;
+	}
+    }
+
+  if (name)
+    {
+      rc = mu_c_str_escape (name, "\\\"", NULL, &str);
+      if (rc)
+	return rc;
+      rc = mu_asprintf (&val, "%s; name=\"%s\"", content_type, str);
+      free (str);
+      if (rc)
+	return rc;
+      rc = mu_header_append (hdr, MU_HEADER_CONTENT_TYPE, val);
+      free (val);
+    }
+  else
+    rc = mu_header_append (hdr, MU_HEADER_CONTENT_TYPE, content_type);
+  
+  if (rc)
+    return rc;
+  
+  if (filename)
+    {
+      rc = mu_c_str_escape (filename, "\\\"", NULL, &str);
+      if (rc)
+	return rc;
+      rc = mu_asprintf (&val, "%s; filename=\"%s\"", "attachment", str);
+      free (str);
+      if (rc)
+	return rc;
+      rc = mu_header_append (hdr, MU_HEADER_CONTENT_DISPOSITION, val);
+      free (val);
+    }
+  else
+    rc = mu_header_append (hdr, MU_HEADER_CONTENT_DISPOSITION, "attachment");
+  if (rc)
+    return rc;
+  return mu_header_append (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING, encoding);
+}
+
+/* Create in *NEWMSG an empty attachment of given CONTENT_TYPE and ENCODING.
+   NAME, if not NULL, supplies the name of the attachment.
+   FILENAME, if not NULL, gives the file name.
+ */
+int
+mu_attachment_create (mu_message_t *newmsg,
+		      const char *content_type, const char *encoding,
+		      const char *name,
+		      const char *filename)
+{
+  int rc;
+  mu_header_t hdr;
+  
+  if (newmsg == NULL)
+    return MU_ERR_OUT_PTR_NULL;
+
+  rc = mu_message_create (newmsg, NULL);
+  if (rc)
+    return rc;
+
+  rc = mu_header_create (&hdr, NULL, 0);
+  if (rc)
+    {
+      mu_message_destroy (newmsg, NULL);
+      return rc;
+    }
+  mu_message_set_header (*newmsg, hdr, NULL);
+
+  rc = at_hdr (hdr, content_type, encoding, name, filename);
+
+  if (rc)
+    mu_message_destroy (newmsg, NULL);
+  
+  return rc;
+}
+
+/* ATT is an attachment created by a previous call to mu_attachment_create().
+
+   Fills in the attachment body with the data from STREAM using the specified
+   ENCODING.
+ */
+int
+mu_attachment_copy_from_stream (mu_message_t att, mu_stream_t stream,
+				char const *encoding)
+{
+  mu_body_t body;
+  mu_stream_t bstr;
+  mu_stream_t tstream;
+  int rc;
+  
+  mu_message_get_body (att, &body);
+  rc = mu_body_get_streamref (body, &bstr);
+  if (rc)
+    return rc;
+  
+  rc = mu_filter_create (&tstream, stream, encoding, MU_FILTER_ENCODE,
+			 MU_STREAM_READ);
+  if (rc == 0)
+    {
+      rc = mu_stream_copy (bstr, tstream, 0, NULL);
+      mu_stream_unref (tstream);
+    }
+  mu_stream_unref (bstr);
+  return rc;
+}
+
+/* ATT is an attachment created by a previous call to mu_attachment_create().
+
+   Fills in the attachment body with the data from FILENAME using the specified
+   ENCODING.
+ */
+int
+mu_attachment_copy_from_file (mu_message_t att, char const *filename,
+			      char const *encoding)
+{
+  mu_stream_t stream;
+  int rc;
+
+  rc = mu_file_stream_create (&stream, filename, MU_STREAM_READ);
+  if (rc == 0)
+    {
+      rc = mu_attachment_copy_from_stream (att, stream, encoding);
+      mu_stream_unref (stream);
+    }
+  return rc;
+} 
+
 int
 mu_message_create_attachment (const char *content_type, const char *encoding,
 			      const char *filename, mu_message_t *newmsg)
 {
-  mu_header_t hdr;
-  mu_body_t body;
-  mu_stream_t fstream = NULL, tstream = NULL;
-  char *header = NULL, *name = NULL, *fname = NULL;
-  int ret;
-
-  if (newmsg == NULL)
-    return MU_ERR_OUT_PTR_NULL;
-  if (filename == NULL)
-    return EINVAL;
-
-  if ((ret = mu_message_create (newmsg, NULL)) == 0)
-    {
-      if (content_type == NULL)
-	content_type = "text/plain";
-      if (encoding == NULL)
-	encoding = "7bit";
-      if ((fname = strdup (filename)) != NULL)
-	{
-	  name = strrchr (fname, '/');
-	  if (name)
-	    name++;
-	  else
-	    name = fname;
-	  ret = mu_asprintf (&header,
-			     "Content-Type: %s; name=%s\n"
-			     "Content-Transfer-Encoding: %s\n"
-			     "Content-Disposition: attachment; filename=%s\n\n",
-			     content_type, name, encoding, name);
-	  if (ret == 0)
-	    {
-	      if ((ret = mu_header_create (&hdr, header,
-					   strlen (header))) == 0)
-		{
-		  mu_stream_t bstr;
-		  mu_message_get_body (*newmsg, &body);
-		  mu_body_get_streamref (body, &bstr);
-		  
-		  if ((ret = mu_file_stream_create (&fstream, filename,
-						    MU_STREAM_READ)) == 0)
-		    {
-		      if ((ret = mu_filter_create (&tstream, fstream, encoding,
-						   MU_FILTER_ENCODE,
-						   MU_STREAM_READ)) == 0)
-			{
-			  mu_stream_copy (bstr, tstream, 0, NULL);
-			  mu_stream_unref (tstream);
-			  mu_message_set_header (*newmsg, hdr, NULL);
-			}
-		    }
-		  mu_stream_unref (bstr);
-		  free (header);
-		}
-	    }
-	}
-    }
+  int rc;
+  char const *name;
+  mu_message_t att;
   
-  if (ret)
+  if (content_type == NULL)
+    content_type = "text/plain";
+  if (encoding == NULL)
+    encoding = "7bit";
+
+  name = strrchr (filename, '/');
+  if (name)
+    name++;
+  else
+    name = filename;
+
+  rc = mu_attachment_create (&att, content_type, encoding, name, filename);
+  if (rc == 0)
     {
-      if (*newmsg)
-	mu_message_destroy (newmsg, NULL);
-      if (hdr)
-	mu_header_destroy (&hdr);
-      if (fstream)
-	mu_stream_destroy (&fstream);
-      if (fname)
-	free (fname);
+      rc = mu_attachment_copy_from_file (att, filename, encoding);
+      if (rc)
+	mu_message_destroy (&att, NULL);
     }
-  return ret;
+  if (rc == 0)
+    *newmsg = att;
+
+  return rc;
 }
 
 int
