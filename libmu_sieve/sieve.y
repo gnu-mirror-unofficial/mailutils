@@ -1516,7 +1516,7 @@ sieve_parse (void)
 	  mu_error (_("Optimized parse tree"));
 	  tree_dump (mu_strerr, sieve_tree, 0, mu_sieve_machine);
 	}
-      mu_i_sv_code (mu_sieve_machine, (sieve_op_t) 0);
+      mu_i_sv_code (mu_sieve_machine, (sieve_op_t) (sieve_instr_t) 0);
 
       /* Clear location, so that mu_i_sv_locus will do its job. */
       mu_sieve_machine->locus.mu_file = NULL;
@@ -1524,7 +1524,7 @@ sieve_parse (void)
       mu_sieve_machine->locus.mu_col = 0;
       
       tree_code (mu_sieve_machine, sieve_tree);
-      mu_i_sv_code (mu_sieve_machine, (sieve_op_t) 0);
+      mu_i_sv_code (mu_sieve_machine, (sieve_op_t) (sieve_instr_t) 0);
     }
   
   if (rc == 0)
