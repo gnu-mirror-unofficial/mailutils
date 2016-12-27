@@ -46,41 +46,52 @@ static unsigned int max_rehash = sizeof (hash_size) / sizeof (hash_size[0]);
 struct _mu_assoc_elem
 {
   char *name;
-  char data[1];
+  struct _mu_assoc_elem *next, *prev;
+  char *data;
 };
 
 struct _mu_assoc
 {
   int flags;
   unsigned int hash_num;  /* Index to hash_size table */
-  size_t elsize;          /* Size of an element */
-  void *tab;
-  mu_assoc_free_fn free;
+  struct _mu_assoc_elem **tab;
+  struct _mu_assoc_elem *head, *tail;
+  mu_deallocator_t free;
   mu_iterator_t itr;
 };
-
-struct _mu_assoc_elem_align
+
+static void
+assoc_elem_unlink (mu_assoc_t assoc, int idx)
 {
-  char c;
-  struct _mu_assoc_elem x;
-};
+  struct _mu_assoc_elem *p;
 
-#define __ASSOC_ELEM_ALIGNMENT (mu_offsetof(struct _mu_assoc_elem_align, x))
+  p = assoc->tab[idx]->prev;
+  if (p)
+    p->next = assoc->tab[idx]->next;
+  else
+    assoc->head = assoc->tab[idx]->next;
 
-#define __ASSOC_ELEM_SIZE(a) \
-   ((a)->elsize + mu_offsetof(struct _mu_assoc_elem, data))
-#define __ASSOC_ALIGN(a, b) (((a) + (b) - 1) & ~((b) - 1))
-#define ASSOC_ELEM_SIZE(a) \
-   __ASSOC_ALIGN(__ASSOC_ELEM_SIZE(a),__ASSOC_ELEM_ALIGNMENT)
+  p = assoc->tab[idx]->next;
+  if (p)
+    p->prev = assoc->tab[idx]->prev;
+  else
+    assoc->tail = assoc->tab[idx]->prev;
 
-#define __ASSOC_ELEM(a,p,n) \
- ((struct _mu_assoc_elem*) ((char*) (p) + ASSOC_ELEM_SIZE (a) * n))
+  assoc->tab[idx]->prev = assoc->tab[idx]->next = NULL;
+}
 
-#define ASSOC_ELEM(a,n) __ASSOC_ELEM(a,(a)->tab,n)
+static void
+assoc_elem_link (mu_assoc_t assoc, int idx)
+{
+  assoc->tab[idx]->next = NULL;
+  assoc->tab[idx]->prev = assoc->tail;
 
-#define ASSOC_ELEM_INDEX(a,e) \
- (((char*)(e) - (char*)(a)->tab) / ASSOC_ELEM_SIZE (a))
-
+  if (assoc->tail)
+    assoc->tail->next = assoc->tab[idx];
+  else
+    assoc->head = assoc->tab[idx];
+  assoc->tail = assoc->tab[idx];
+}
 
 static unsigned
 hash (const char *name, unsigned long hash_num)
@@ -95,39 +106,38 @@ hash (const char *name, unsigned long hash_num)
   return i % hash_size[hash_num];
 };
 
-static int
-assoc_lookup_or_install (struct _mu_assoc_elem **elp,
-			 mu_assoc_t assoc, const char *name, int *install);
+static int assoc_find_slot (mu_assoc_t assoc, const char *name,
+			    int *install, unsigned *slot);
 
 static int
 assoc_rehash (mu_assoc_t assoc)
 {
-  void *old_tab = assoc->tab;
-  void *new_tab;
+  struct _mu_assoc_elem **old_tab = assoc->tab;
+  struct _mu_assoc_elem **new_tab;
   unsigned int i;
   unsigned int hash_num = assoc->hash_num + 1;
   
   if (hash_num >= max_rehash)
-      return MU_ERR_BUFSPACE;
+    return MU_ERR_BUFSPACE;
 
-  new_tab = calloc (hash_size[hash_num], ASSOC_ELEM_SIZE (assoc));
+  new_tab = calloc (hash_size[hash_num], sizeof (new_tab[0]));
+  if (!new_tab)
+    return errno;
   assoc->tab = new_tab;
   if (old_tab)
     {
       assoc->hash_num = hash_num;
       for (i = 0; i < hash_size[hash_num-1]; i++)
 	{
-	  struct _mu_assoc_elem *elt = __ASSOC_ELEM (assoc, old_tab, i);
-	  if (elt->name)
+	  if (old_tab[i])
 	    {
 	      int tmp;
-	      struct _mu_assoc_elem *newp;
-	      
-	      int rc = assoc_lookup_or_install (&newp, assoc, elt->name, &tmp);
+	      unsigned slot;
+	      int rc = assoc_find_slot (assoc, old_tab[i]->name,
+					&tmp, &slot);
 	      if (rc)
 		return rc;
-	      newp->name = elt->name;
-	      memcpy(newp->data, elt->data, assoc->elsize);
+	      assoc->tab[slot] = old_tab[i];
 	    }
 	}
       free (old_tab);
@@ -136,45 +146,47 @@ assoc_rehash (mu_assoc_t assoc)
 }
 
 static void
-assoc_free_elem (mu_assoc_t assoc, struct _mu_assoc_elem *elem)
+assoc_free_elem (mu_assoc_t assoc, unsigned idx)
 {
-  if (assoc->free)
-    assoc->free (elem->data);
-  if (!(assoc->flags & MU_ASSOC_COPY_KEY))
-    free (elem->name);
+  if (assoc->tab[idx])
+    {
+      assoc_elem_unlink (assoc, idx);
+      if (assoc->free)
+	assoc->free (assoc->tab[idx]->data);
+      if (!(assoc->flags & MU_ASSOC_COPY_KEY))
+	free (assoc->tab[idx]->name);
+      assoc->tab[idx] = NULL;
+    }
 }
 
 static int
-assoc_remove (mu_assoc_t assoc, struct _mu_assoc_elem *elem)
+assoc_remove (mu_assoc_t assoc, unsigned idx)
 {
   unsigned int i, j, r;
 
-  if (!(ASSOC_ELEM (assoc, 0) <= elem
-	&& elem < ASSOC_ELEM (assoc, hash_size[assoc->hash_num])))
+  if (!(idx < hash_size[assoc->hash_num]))
     return EINVAL;
 
-  assoc_free_elem (assoc, elem);
+  mu_iterator_delitem (assoc->itr, assoc->tab[idx]);
+  assoc_free_elem (assoc, idx);
   
-  for (i = ASSOC_ELEM_INDEX (assoc, elem);;)
+  for (i = idx;;)
     {
-      struct _mu_assoc_elem *p = ASSOC_ELEM (assoc, i);
-      p->name = NULL;
+      assoc->tab[i] = NULL;
       j = i;
 
       do
 	{
 	  if (++i >= hash_size[assoc->hash_num])
 	    i = 0;
-	  p = ASSOC_ELEM (assoc, i);
-	  if (!p->name)
+	  if (!assoc->tab[i])
 	    return 0;
-	  r = hash (p->name, assoc->hash_num);
+	  r = hash (assoc->tab[i]->name, assoc->hash_num);
 	}
       while ((j < r && r <= i) || (i < j && j < r) || (r <= i && i < j));
 
       if (j != i)
-	memcpy (ASSOC_ELEM (assoc, j), ASSOC_ELEM (assoc, i),
-		assoc->elsize);
+	assoc->tab[j] = assoc->tab[i];
     }
   return 0;
 }
@@ -183,8 +195,8 @@ assoc_remove (mu_assoc_t assoc, struct _mu_assoc_elem *elem)
                              mu_c_strcasecmp(a,b) : strcmp(a,b))
 
 static int
-assoc_lookup_or_install (struct _mu_assoc_elem **elp,
-			 mu_assoc_t assoc, const char *name, int *install)
+assoc_find_slot (mu_assoc_t assoc, const char *name,
+		 int *install, unsigned *slot)
 {
   int rc;
   unsigned i, pos;
@@ -204,13 +216,13 @@ assoc_lookup_or_install (struct _mu_assoc_elem **elp,
 
   pos = hash (name, assoc->hash_num);
 
-  for (i = pos; (elem = ASSOC_ELEM (assoc, i))->name;)
+  for (i = pos; (elem = assoc->tab[i]);)
     {
       if (name_cmp (assoc, elem->name, name) == 0)
 	{
 	  if (install)
 	    *install = 0;
-	  *elp = elem;
+	  *slot = i;
 	  return 0;
 	}
       
@@ -223,35 +235,26 @@ assoc_lookup_or_install (struct _mu_assoc_elem **elp,
   if (!install)
     return MU_ERR_NOENT;
   
-  if (elem->name == NULL)
+  if (!elem)
     {
+      *slot = i;
       *install = 1;
-      if (assoc->flags & MU_ASSOC_COPY_KEY)
-	elem->name = (char *) name;
-      else
-	{
-	  elem->name = strdup (name);
-	  if (!elem->name)
-	    return ENOMEM;
-	}
-      *elp = elem;
       return 0; 
     }
 
   if ((rc = assoc_rehash (assoc)) != 0)
     return rc;
 
-  return assoc_lookup_or_install (elp, assoc, name, install);
+  return assoc_find_slot (assoc, name, install, slot);
 }
 
 int
-mu_assoc_create (mu_assoc_t *passoc, size_t elsize, int flags)
+mu_assoc_create (mu_assoc_t *passoc, int flags)
 {
   mu_assoc_t assoc = calloc (1, sizeof (*assoc));
   if (!assoc)
     return ENOMEM;
   assoc->flags = flags;
-  assoc->elsize = elsize;
   *passoc = assoc;
   return 0;
 }
@@ -266,14 +269,7 @@ mu_assoc_clear (mu_assoc_t assoc)
 
   hs = hash_size[assoc->hash_num];
   for (i = 0; i < hs; i++)
-    {
-      struct _mu_assoc_elem *elem = ASSOC_ELEM (assoc, i);
-      if (elem->name)
-	{
-	  assoc_free_elem (assoc, elem);
-	  elem->name = NULL;
-	}
-    }
+    assoc_free_elem (assoc, i);
 }
 
 void
@@ -290,7 +286,7 @@ mu_assoc_destroy (mu_assoc_t *passoc)
 }
 
 int
-mu_assoc_set_free (mu_assoc_t assoc, mu_assoc_free_fn fn)
+mu_assoc_set_destroy_item (mu_assoc_t assoc, mu_deallocator_t fn)
 {
   if (!assoc)
     return EINVAL;
@@ -298,18 +294,37 @@ mu_assoc_set_free (mu_assoc_t assoc, mu_assoc_free_fn fn)
   return 0;
 }
 
-void *
-mu_assoc_ref (mu_assoc_t assoc, const char *name)
+int
+mu_assoc_lookup (mu_assoc_t assoc, const char *name, void *dataptr)
 {
   int rc;
-  static struct _mu_assoc_elem *elp;
+  unsigned idx;
+  
+  if (!assoc || !name)
+    return EINVAL;
 
+  rc = assoc_find_slot (assoc, name, NULL, &idx);
+  if (rc == 0)
+    {
+      if (dataptr)
+	*(void**)dataptr = assoc->tab[idx]->data;
+    }
+  return rc;
+}
+
+
+void *
+mu_assoc_get (mu_assoc_t assoc, const char *name)
+{
+  int rc;
+  unsigned idx;
+  
   if (!assoc || !name)
     return NULL;
-  
-  rc = assoc_lookup_or_install (&elp, assoc, name, NULL);
+
+  rc = assoc_find_slot (assoc, name, NULL, &idx);
   if (rc == 0)
-    return elp->data;
+    return assoc->tab[idx]->data;
   return NULL;
 }
 
@@ -318,34 +333,98 @@ mu_assoc_install (mu_assoc_t assoc, const char *name, void *value)
 {
   int rc;
   int inst;
-  static struct _mu_assoc_elem *elp;
-
+  unsigned idx;
+  struct _mu_assoc_elem *elem;
+  
   if (!assoc || !name)
     return EINVAL;
 
-  rc = assoc_lookup_or_install (&elp, assoc, name, &inst);
+  rc = assoc_find_slot (assoc, name, &inst, &idx);
   if (rc)
     return rc;
   if (!inst)
     return MU_ERR_EXISTS;
-  memcpy (elp->data, value, assoc->elsize);
+
+  elem = malloc (sizeof *elem);
+  if (!elem)
+    return errno;
+      
+  if (assoc->flags & MU_ASSOC_COPY_KEY)
+    elem->name = (char *) name;
+  else
+    {
+      elem->name = strdup (name);
+      if (!elem->name)
+	{
+	  int rc = errno;
+	  free (elem);
+	  return rc;
+	}
+    }
+  elem->data = value;
+  assoc->tab[idx] = elem;
+  assoc_elem_link (assoc, idx);
   return 0;
 }
-
+
 int
-mu_assoc_ref_install (mu_assoc_t assoc, const char *name, void **pval)
+mu_assoc_lookup_ref (mu_assoc_t assoc, const char *name, void *dataptr)
 {
   int rc;
-  int inst;
-  static struct _mu_assoc_elem *elp;
-
+  unsigned idx;
+  
   if (!assoc || !name)
     return EINVAL;
 
-  rc = assoc_lookup_or_install (&elp, assoc, name, &inst);
+  rc = assoc_find_slot (assoc, name, NULL, &idx);
+  if (rc == 0)
+    {
+      if (dataptr)
+	*(void**)dataptr = &assoc->tab[idx]->data;
+    }
+  return rc;
+}
+
+int
+mu_assoc_install_ref (mu_assoc_t assoc, const char *name, void *pval)
+{
+  int rc;
+  int inst;
+  unsigned idx;
+
+  if (!assoc || !name)
+    return EINVAL;
+  
+  rc = assoc_find_slot (assoc, name, &inst, &idx);
   if (rc)
     return rc;
-  *pval = elp->data;
+
+  if (inst)
+    {
+      struct _mu_assoc_elem *elem;
+      
+      elem = malloc (sizeof *elem);
+      if (!elem)
+	return errno;
+      
+      if (assoc->flags & MU_ASSOC_COPY_KEY)
+	elem->name = (char *) name;
+      else
+	{
+	  elem->name = strdup (name);
+	  if (!elem->name)
+	    {
+	      int rc = errno;
+	      free (elem);
+	      return rc;
+	    }
+	}
+      elem->data = NULL;
+      assoc->tab[idx] = elem;
+      assoc_elem_link (assoc, idx);
+    }
+  
+  *(void**)pval = &assoc->tab[idx]->data;
   return inst ? 0 : MU_ERR_EXISTS;
 }  
 
@@ -353,55 +432,101 @@ int
 mu_assoc_remove (mu_assoc_t assoc, const char *name)
 {
   int rc;
-  static struct _mu_assoc_elem *elem;
+  unsigned idx;
 
   if (!assoc || !name)
     return EINVAL;
-  rc = assoc_lookup_or_install (&elem, assoc, name, NULL);
+  rc = assoc_find_slot (assoc, name, NULL, &idx);
   if (rc)
     return rc;
-  return assoc_remove (assoc, elem);
+  return assoc_remove (assoc, idx);
 }
-
-#define OFFSET(s,f) (size_t)(&((s*)0)->f)
-
-int
-mu_assoc_remove_ref (mu_assoc_t assoc, void *data)
-{
-  struct _mu_assoc_elem *elem;
-
-  elem = (struct _mu_assoc_elem *) ((char*)data -
-				    OFFSET(struct _mu_assoc_elem, data));
-  return assoc_remove (assoc, elem);
-}
-
 
 /* Iterator interface */
 
 struct assoc_iterator
 {
   mu_assoc_t assoc;
-  unsigned start;
-  unsigned index;
+  struct _mu_assoc_elem *elem;
+  int backwards; /* true if iterating backwards */
 };
+
+static int
+itrctl (void *owner, enum mu_itrctl_req req, void *arg)
+{
+  struct assoc_iterator *itr = owner;
+  mu_assoc_t assoc = itr->assoc;
+
+  switch (req)
+    {
+    case mu_itrctl_tell:
+      /* Return current position in the object */
+      {
+	size_t n = 0;
+	struct _mu_assoc_elem *elem;
+
+	for (elem = itr->elem; elem; elem = elem->prev)
+	  n++;
+	*(size_t*)arg = n;
+      }
+      break;
+
+    case mu_itrctl_delete:
+    case mu_itrctl_delete_nd:
+      /* Delete current element */
+      if (itr->elem)
+	{
+	  unsigned i;
+
+	  for (i = 0; i < hash_size[assoc->hash_num]; i++)
+	    {
+	      if (assoc->tab[i] == itr->elem)
+		{
+		  if (req == mu_itrctl_delete_nd)
+		    assoc->tab[i]->data = NULL;
+		  assoc_remove (assoc, i);
+		  return 0;
+		}
+	    }
+	}
+      return MU_ERR_NOENT;
+
+    case mu_itrctl_replace:
+    case mu_itrctl_replace_nd:
+      /* Replace current element */
+      if (itr->elem == NULL)
+	return MU_ERR_NOENT;
+      if (req == mu_itrctl_replace && assoc->free)
+	assoc->free (itr->elem->data);
+      itr->elem->data = arg;
+      break;
+      
+    case mu_itrctl_qry_direction:
+      if (!arg)
+	return EINVAL;
+      else
+	*(int*)arg = itr->backwards;
+      break;
+
+    case mu_itrctl_set_direction:
+      if (!arg)
+	return EINVAL;
+      else
+	itr->backwards = !!*(int*)arg;
+      break;
+      
+    default:
+      return ENOSYS;
+    }
+  return 0;
+}
 
 static int
 first (void *owner)
 {
   struct assoc_iterator *itr = owner;
   mu_assoc_t assoc = itr->assoc;
-  unsigned hash_max = hash_size[assoc->hash_num];
-  unsigned i;
-
-  if (assoc->tab)
-    {
-      for (i = 0; i < hash_max; i++)
-        if ((ASSOC_ELEM (assoc, i))->name)
-	  break;
-    }
-  else
-    i = hash_max;
-  itr->index = i;
+  itr->elem = itr->backwards ? assoc->tail : assoc->head;
   return 0;
 }
 
@@ -409,15 +534,7 @@ static int
 next (void *owner)
 {
   struct assoc_iterator *itr = owner;
-  mu_assoc_t assoc = itr->assoc;
-  unsigned hash_max = hash_size[assoc->hash_num];
-  unsigned i;
-  
-  for (i = itr->index + 1; i < hash_max; i++)
-    if ((ASSOC_ELEM (assoc, i))->name)
-      break;
-
-  itr->index = i;
+  itr->elem = itr->backwards ? itr->elem->prev : itr->elem->next;
   return 0;
 }
 
@@ -425,14 +542,12 @@ static int
 getitem (void *owner, void **pret, const void **pkey)
 {
   struct assoc_iterator *itr = owner;
-  struct _mu_assoc_elem *elem;
 
-  if (itr->index >= hash_size[itr->assoc->hash_num])
+  if (!itr->elem)
     return EINVAL;
-  elem = ASSOC_ELEM (itr->assoc, itr->index);
-  *pret = elem->data;
+  *pret = itr->elem->data;
   if (pkey)
-    *pkey = elem->name;
+    *pkey = itr->elem->name;
   return 0;
 }
 
@@ -440,7 +555,7 @@ static int
 finished_p (void *owner)
 {
   struct assoc_iterator *itr = owner;
-  return itr->index >= hash_size[itr->assoc->hash_num];
+  return itr->elem == NULL;
 }
 
 static int
@@ -456,10 +571,7 @@ static int
 delitem (void *owner, void *item)
 {
   struct assoc_iterator *itr = owner;
-  mu_assoc_t assoc = itr->assoc;
-  struct _mu_assoc_elem *elem = ASSOC_ELEM (assoc, itr->index);
-  
-  return elem == item ? MU_ITR_DELITEM_NEXT : MU_ITR_DELITEM_NOTHING;
+  return itr->elem == item ? MU_ITR_DELITEM_NEXT : MU_ITR_DELITEM_NOTHING;
 }
 
 static int
@@ -486,7 +598,7 @@ mu_assoc_get_iterator (mu_assoc_t assoc, mu_iterator_t *piterator)
   if (!itr)
     return ENOMEM;
   itr->assoc = assoc;
-  itr->index = 0;
+  itr->elem = NULL;
 
   status = mu_iterator_create (&iterator, itr);
   if (status)
@@ -502,6 +614,7 @@ mu_assoc_get_iterator (mu_assoc_t assoc, mu_iterator_t *piterator)
   mu_iterator_set_delitem (iterator, delitem);
   mu_iterator_set_destroy (iterator, destroy);
   mu_iterator_set_dup (iterator, assoc_data_dup);
+  mu_iterator_set_itrctl (iterator, itrctl);
   
   mu_iterator_attach (&assoc->itr, iterator);
 

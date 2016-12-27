@@ -179,10 +179,10 @@ mu_sieve_get_environ (mu_sieve_machine_t mach, char const *name, char **retval)
   if (!mach->exenv)
     return MU_ERR_NOENT;
 
-  p = mu_assoc_ref (mach->exenv, name);
+  p = mu_assoc_get (mach->exenv, name);
   if (p)
     {
-      *retval = strdup (*(char**)p);
+      *retval = strdup (p);
       if (!*retval)
 	return errno;
     }
@@ -204,11 +204,11 @@ mu_sieve_set_environ (mu_sieve_machine_t mach, char const *name,
       
       if (!mach->exenv)
 	{
-          int rc = mu_assoc_create (&mach->exenv, sizeof (char *), 0);
+          int rc = mu_assoc_create (&mach->exenv, 0);
 	  if (rc)
 	    return rc;
 	}
-      rc = mu_assoc_ref_install (mach->exenv, name, (void **) &pptr);
+      rc = mu_assoc_install_ref (mach->exenv, name, &pptr);
       if (rc == 0 || rc == MU_ERR_EXISTS)
 	{
 	  char *copy = strdup (value);

@@ -755,10 +755,10 @@ com_id (int argc, char **argv)
     {
       if (test)
 	{
-	  void *res = mu_assoc_ref (assoc, test);
-	  if (res)
+	  char *val = mu_assoc_get (assoc, test);
+	  if (val)
 	    {
-	      mu_printf ("%s: %s\n", test, *(char **)res);
+	      mu_printf ("%s: %s\n", test, val);
 	    }
 	  else
 	    mu_printf (_("%s is not set\n"), test);
@@ -772,10 +772,10 @@ com_id (int argc, char **argv)
 	       !mu_iterator_is_done (itr); mu_iterator_next (itr))
 	    {
 	      char *key;
-	      void *val;
+	      char *val;
 
-	      mu_iterator_current_kv (itr, (const void**)&key, &val);
-	      mu_printf ("ID: %s %s\n", key, *(char**)val);
+	      mu_iterator_current_kv (itr, (const void**)&key, (void**)&val);
+	      mu_printf ("ID: %s %s\n", key, val);
 	    }
 	  mu_iterator_destroy (&itr);
 	}

@@ -46,8 +46,7 @@ static void
 alloc_section_tab ()
 {
   if (!section_tab)
-    mu_assoc_create (&section_tab, sizeof (struct mu_cfg_cont **),
-		     MU_ASSOC_COPY_KEY);
+    mu_assoc_create (&section_tab, MU_ASSOC_COPY_KEY);
 }
 
 int
@@ -56,7 +55,7 @@ mu_create_canned_section (char *name, struct mu_cfg_section **psection)
   int rc;
   struct mu_cfg_cont **pcont;
   alloc_section_tab ();
-  rc = mu_assoc_ref_install (section_tab, name, (void **)&pcont);
+  rc = mu_assoc_install_ref (section_tab, name, &pcont);
   if (rc == 0)
     {
       mu_config_create_container (pcont, mu_cfg_cont_section);
@@ -74,7 +73,7 @@ mu_create_canned_param (char *name, struct mu_cfg_param **pparam)
   int rc;
   struct mu_cfg_cont **pcont;
   alloc_section_tab ();
-  rc = mu_assoc_ref_install (section_tab, name, (void **)&pcont);
+  rc = mu_assoc_install_ref (section_tab, name, &pcont);
   if (rc == 0)
     {
       mu_config_create_container (pcont, mu_cfg_cont_param);
@@ -89,8 +88,7 @@ mu_create_canned_param (char *name, struct mu_cfg_param **pparam)
 struct mu_cfg_cont *
 mu_get_canned_container (const char *name)
 {
-  struct mu_cfg_cont **pcont = mu_assoc_ref (section_tab, name);
-  return pcont ? *pcont : NULL;
+  return mu_assoc_get (section_tab, name);
 }
 
 
@@ -615,17 +613,11 @@ parse_mapping (void *item, void *data)
   val = mu_strdup (str + len + 1);
   if (!val)
     return ENOMEM;
-  clos->err = mu_assoc_install (clos->assoc, key, &val);
+  clos->err = mu_assoc_install (clos->assoc, key, val);
   free (key);
   if (clos->err)
     return 1;
   return 0;
-}
-
-static void
-assoc_str_free (void *data)
-{
-  free (data);
 }
 
 int
@@ -636,10 +628,10 @@ mu_cfg_field_map (struct mu_config_value const *val, mu_assoc_t *passoc,
   struct mapping_closure clos;
   mu_list_t list = NULL;
   
-  rc = mu_assoc_create (&clos.assoc, sizeof(char*), 0);
+  rc = mu_assoc_create (&clos.assoc, 0);
   if (rc)
     return rc;
-  mu_assoc_set_free (clos.assoc, assoc_str_free);
+  mu_assoc_set_destroy_item (clos.assoc, mu_list_free_item);
   clos.err_term = NULL;
   
   switch (val->type)

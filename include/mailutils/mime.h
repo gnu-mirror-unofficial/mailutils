@@ -57,7 +57,8 @@ int mu_rfc2047_decode   (const char *tocode, const char *fromstr,
 int mu_rfc2047_encode   (const char *charset, const char *encoding, 
 			 const char *text, char **result);
 int mu_rfc2047_decode_param (const char *tocode, const char *input,
-			     struct mu_mime_param *param);
+			     struct mu_mime_param **param);
+void mu_mime_param_free (struct mu_mime_param *p);
 
 int mu_base64_encode    (const unsigned char *input, size_t input_len,
 			 unsigned char **output, size_t * output_len);

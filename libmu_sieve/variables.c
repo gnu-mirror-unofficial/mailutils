@@ -166,7 +166,7 @@ sieve_action_set (mu_sieve_machine_t mach)
   size_t i;
   char *name;
   char *value;
-  struct sieve_variable *vptr;
+  struct sieve_variable *var, **vptr;
   int rc;
   
   mu_sieve_get_arg (mach, 0, SVT_STRING, &name);
@@ -181,21 +181,29 @@ sieve_action_set (mu_sieve_machine_t mach)
       value = str;
     }
 
-  rc = mu_assoc_ref_install (mach->vartab, name, (void **)&vptr);
+  rc = mu_assoc_install_ref (mach->vartab, name, &vptr);
   switch (rc)
     {
     case 0:
+      var = malloc (sizeof (*var));
+      if (!var)
+	{
+	  mu_sieve_error (mach, "%s", mu_strerror (errno));
+	  mu_sieve_abort (mach);
+	}
+      *vptr = var;
       break;
 
     case MU_ERR_EXISTS:
-      mu_sieve_free (mach, vptr->value);
+      var = *vptr;
+      mu_sieve_free (mach, var->value);
       break;
 
     default:
       mu_sieve_error (mach, "mu_assoc_ref_install: %s", mu_strerror (rc));
       mu_sieve_abort (mach);
     }
-  vptr->value = value;
+  var->value = value;
   return 0;
 }  
 
@@ -354,7 +362,7 @@ mu_i_sv_expand_variables (char const *input, size_t len,
       memcpy (name, input, len);
       name[len] = 0;
 
-      var = mu_assoc_ref (mach->vartab, name);
+      var = mu_assoc_get (mach->vartab, name);
 
       free (name);
       
@@ -383,11 +391,10 @@ mu_sieve_require_variables (mu_sieve_machine_t mach)
   if (mach->vartab)
     return 0;
 
-  rc = mu_assoc_create (&mach->vartab, sizeof (struct sieve_variable),
-			MU_ASSOC_ICASE);
+  rc = mu_assoc_create (&mach->vartab, MU_ASSOC_ICASE);
   if (rc)
     mu_sieve_error (mach, "mu_assoc_create: %s", mu_strerror (rc));
-
+  mu_assoc_set_destroy_item (mach->vartab, mu_list_free_item);
   if (rc == 0)
     {
       mu_sieve_register_action (mach, "set", sieve_action_set, 
@@ -418,11 +425,14 @@ mu_i_sv_copy_variables (mu_sieve_machine_t child, mu_sieve_machine_t parent)
     {
       const char *name;
       struct sieve_variable const *val;
-      struct sieve_variable newval;
+      struct sieve_variable *newval;
 
       mu_iterator_current_kv (itr, (const void **)&name, (void**)&val);
-      newval.value = mu_sieve_strdup (child, val->value);
-      mu_assoc_install (child->vartab, name, &newval);
+      newval = malloc (sizeof (*newval));
+      if (!newval)
+	mu_sieve_abort (child);
+      newval->value = mu_sieve_strdup (child, val->value);
+      mu_assoc_install (child->vartab, name, newval);
     }
 
   mu_iterator_destroy (&itr);	  

@@ -29,6 +29,7 @@
 #include <mailutils/errno.h>
 #include <mailutils/nls.h>
 #include <mailutils/assoc.h>
+#include <mailutils/list.h>
 #include <mailutils/stream.h>
 #include <mailutils/sql.h>
 
@@ -54,12 +55,6 @@ mu_mh_delim (const char *str)
 	;
     }
   return str[0] == '\n';
-}
-
-static void
-assoc_str_free (void *data)
-{
-  free (data);
 }
 
 int
@@ -91,10 +86,10 @@ mutil_parse_field_map (const char *map, mu_assoc_t *passoc_tab, int *perr)
 	}
       if (!assoc_tab)
 	{
-	  rc = mu_assoc_create (&assoc_tab, sizeof(char*), 0);
+	  rc = mu_assoc_create (&assoc_tab, 0);
 	  if (rc)
 	    break;
-	  mu_assoc_set_free (assoc_tab, assoc_str_free);
+	  mu_assoc_set_destroy_item (assoc_tab, mu_list_free_item);
 	  *passoc_tab = assoc_tab;
 	}
       *p++ = 0;
@@ -104,7 +99,7 @@ mutil_parse_field_map (const char *map, mu_assoc_t *passoc_tab, int *perr)
 	  rc = errno;
 	  break;
 	}
-      rc = mu_assoc_install (assoc_tab, tok, &pptr);
+      rc = mu_assoc_install (assoc_tab, tok, pptr);
       if (rc)
 	{
 	  free (p);

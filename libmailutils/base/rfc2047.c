@@ -234,18 +234,23 @@ _rfc2047_decode_param (const char *tocode, const char *input,
 
 int
 mu_rfc2047_decode_param (const char *tocode, const char *input,
-			 struct mu_mime_param *param)
+			 struct mu_mime_param **param_ptr)
 {
   int rc;
-  struct mu_mime_param tmp;
+  struct mu_mime_param *p;
 
   if (!input)
     return EINVAL;
-  if (!param)
+  if (!param_ptr)
     return MU_ERR_OUT_PTR_NULL;
-  rc = _rfc2047_decode_param (tocode, input, &tmp);
+  p = malloc (sizeof (*p));
+  if (!p)
+    return errno;
+  rc = _rfc2047_decode_param (tocode, input, p);
   if (rc == 0)
-    *param = tmp;
+    *param_ptr = p;
+  else
+    mu_mime_param_free (p);
   return rc;
 }
 

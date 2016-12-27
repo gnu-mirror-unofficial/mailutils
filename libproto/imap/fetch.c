@@ -362,7 +362,7 @@ static int
 _map_body_param (void **itmv, size_t itmc, void *call_data)
 {
   mu_assoc_t assoc = call_data;
-  struct mu_mime_param param;
+  struct mu_mime_param *param;
   struct imap_list_element *key, *val;
   int rc;
 
@@ -377,12 +377,18 @@ _map_body_param (void **itmv, size_t itmc, void *call_data)
   rc = mu_rfc2047_decode_param ("UTF-8", val->v.string, &param);
   if (rc)
     {
-      param.lang = param.cset = NULL;
-      param.value = strdup (val->v.string);
-      if (!param.value)
+      param = malloc (sizeof (*param));
+      if (!param)
 	return ENOMEM;
+      param->lang = param->cset = NULL;
+      param->value = strdup (val->v.string);
+      if (!param->value)
+	{
+	  free (param);
+	  return ENOMEM;
+	}
     }
-  return mu_assoc_install (assoc, key->v.string, &param);
+  return mu_assoc_install (assoc, key->v.string, param);
 }
 
 static int

@@ -45,12 +45,13 @@
 				      info */
 
 /* Free members of struct mu_mime_param, but do not free it itself. */
-static void
-_mu_mime_param_free (struct mu_mime_param *p)
+void
+mu_mime_param_free (struct mu_mime_param *p)
 {
   free (p->lang);
   free (p->cset);
   free (p->value);
+  free (p);
 }
 
 /* Treat ITEM as a pointer to struct mu_mime_param and reclaim all
@@ -60,7 +61,7 @@ _mu_mime_param_free (struct mu_mime_param *p)
 static void
 _mu_mime_param_free_item (void *item)
 {
-  _mu_mime_param_free (item);
+  mu_mime_param_free (item);
 }
 
 /* Recode a string between two charsets.
@@ -153,31 +154,38 @@ flush_param (struct param_continuation *cont, mu_assoc_t assoc, int subset,
 	     const char *outcharset)
 {
   int rc;
-  struct mu_mime_param param, *param_slot = NULL;
+  struct mu_mime_param *param, **param_slot;
   mu_off_t size;
   
   if (subset)
     {
-      param_slot = mu_assoc_ref (assoc, cont->param_name);
-      if (!param_slot)
+      rc = mu_assoc_lookup_ref (assoc, cont->param_name, &param_slot);
+      if (rc)
 	return 0;
     }
   
+  param = calloc (1, sizeof *param);
+  if (!param)
+    return errno;
+  
   if (cont->param_lang)
     {
-      param.lang = strdup (cont->param_lang);
-      if (!param.lang)
-	return ENOMEM;
+      param->lang = strdup (cont->param_lang);
+      if (!param->lang)
+	{
+	  mu_mime_param_free (param);
+	  return ENOMEM;
+	}
     }
   else
-    param.lang = NULL;
+    param->lang = NULL;
 
   if (outcharset || cont->param_cset)
     {
-      param.cset = strdup (outcharset ? outcharset : cont->param_cset);
-      if (!param.cset)
+      param->cset = strdup (outcharset ? outcharset : cont->param_cset);
+      if (!param->cset)
 	{
-	  free (param.lang);
+	  mu_mime_param_free (param);
 	  return ENOMEM;
 	}
     }
@@ -185,23 +193,25 @@ flush_param (struct param_continuation *cont, mu_assoc_t assoc, int subset,
   rc = mu_stream_size (cont->param_value, &size);
   if (rc == 0)
     {
-      param.value = malloc (size + 1);
-      if (!param.value)
-	rc = ENOMEM;
+      param->value = malloc (size + 1);
+      if (!param->value)
+	{
+	  mu_mime_param_free (param);
+	  rc = ENOMEM;
+	}
     }
 
   if (rc == 0)
     {
       rc = mu_stream_seek (cont->param_value, 0, MU_SEEK_SET, NULL);
       if (rc == 0)
-	rc = mu_stream_read (cont->param_value, param.value, size, NULL);
-      param.value[size] = 0;
+	rc = mu_stream_read (cont->param_value, param->value, size, NULL);
+      param->value[size] = 0;
     }
   
   if (rc)
     {
-      free (param.lang);
-      free (param.cset);
+      mu_mime_param_free (param);
       return rc;
     }
 
@@ -209,26 +219,25 @@ flush_param (struct param_continuation *cont, mu_assoc_t assoc, int subset,
       mu_c_strcasecmp (cont->param_cset, outcharset))
     {
       char *tmp;
-      rc = _recode_string (param.value, cont->param_cset, outcharset, &tmp);
-      free (param.value);
+      rc = _recode_string (param->value, cont->param_cset, outcharset, &tmp);
+      free (param->value);
       if (rc)
 	{
-	  free (param.lang);
-	  free (param.cset);
+	  mu_mime_param_free (param);
 	  return rc;
 	}
-      param.value = tmp;
+      param->value = tmp;
     }
 	
-  if (param_slot)
+  if (subset)
     {
       *param_slot = param;
     }
   else
     {
-      rc = mu_assoc_install (assoc, cont->param_name, &param);
+      rc = mu_assoc_install (assoc, cont->param_name, param);
       if (rc)
-	_mu_mime_param_free (&param);
+	mu_mime_param_free (param);
     }
   
   return rc;
@@ -239,10 +248,9 @@ int
 mu_mime_param_assoc_create (mu_assoc_t *paramtab)
 {
   mu_assoc_t assoc;
-  int rc = mu_assoc_create (&assoc, sizeof (struct mu_mime_param),
-			    MU_ASSOC_ICASE);
+  int rc = mu_assoc_create (&assoc, MU_ASSOC_ICASE);
   if (rc == 0)
-    mu_assoc_set_free (assoc, _mu_mime_param_free_item);
+    mu_assoc_set_destroy_item (assoc, _mu_mime_param_free_item);
   *paramtab = assoc;
   return rc;
 }
@@ -251,20 +259,7 @@ mu_mime_param_assoc_create (mu_assoc_t *paramtab)
 int
 mu_mime_param_assoc_add (mu_assoc_t assoc, const char *name)
 {
-  struct mu_mime_param param;
-
-  memset (&param, 0, sizeof param);
-  return mu_assoc_install (assoc, name, &param);
-}
-
-/* See FIXME near the end of _mime_header_parse, below. */
-static int
-_remove_entry (void *item, void *data)
-{
-  struct mu_mime_param *p = item;
-  mu_assoc_t assoc = data;
-  mu_assoc_remove_ref (assoc, p);
-  return 0;
+  return mu_assoc_install (assoc, name, NULL);
 }
 
 /* A working horse of this module.  Parses input string, which should
@@ -331,7 +326,7 @@ _mime_header_parse (const char *text, char **pvalue,
       char *p;
       char *decoded;
       int flags = 0;
-      struct mu_mime_param param;
+      struct mu_mime_param *param;
 
       key = ws.ws_wordv[i];
       if (key[0] == ';')
@@ -484,19 +479,20 @@ _mime_header_parse (const char *text, char **pvalue,
 	}
       else
 	{
+	  struct mu_mime_param *param;
 	  rc = mu_rfc2047_decode_param (outcharset, val, &param);
 	  if (rc)
 	    return rc;
-	  cset = csetp = param.cset;
-	  lang = langp = param.lang;
-	  decoded = param.value;
+	  cset = csetp = param->cset;
+	  lang = langp = param->lang;
+	  decoded = param->value;
+	  free (param);
 	}
       val = decoded;
       
       if (flags & MU_MIMEHDR_MULTILINE)
 	{
-	  rc = mu_stream_write (cont.param_value, val, strlen (val),
-				NULL);
+	  rc = mu_stream_write (cont.param_value, val, strlen (val), NULL);
 	  free (decoded);
 	  free (csetp);
 	  free (langp);
@@ -505,25 +501,30 @@ _mime_header_parse (const char *text, char **pvalue,
 	  continue;
 	}
 
-      memset (&param, 0, sizeof (param));
-      if (lang)
+      param = calloc (1, sizeof (*param));
+      if (!param)
+	rc = ENOMEM;
+      else
 	{
-	  param.lang = strdup (lang);
-	  if (!param.lang)
-	    rc = ENOMEM;
-	  else
+	  if (lang)
 	    {
-	      param.cset = strdup (cset);
-	      if (!param.cset)
+	      param->lang = strdup (lang);
+	      if (!param->lang)
+		rc = ENOMEM;
+	      else
 		{
-		  free (param.lang);
-		  rc = ENOMEM;
+		  param->cset = strdup (cset);
+		  if (!param->cset)
+		    {
+		      free (param->lang);
+		      rc = ENOMEM;
+		    }
 		}
 	    }
+	  
+	  free (csetp);
+	  free (langp);
 	}
-
-      free (csetp);
-      free (langp);
       
       if (rc)
 	{
@@ -531,27 +532,29 @@ _mime_header_parse (const char *text, char **pvalue,
 	  break;
 	}
       
-      param.value = strdup (val);
+      param->value = strdup (val);
       free (decoded);
-      if (!param.value)
+      if (!param->value)
 	{
-	  _mu_mime_param_free (&param);
+	  mu_mime_param_free (param);
 	  rc = ENOMEM;
 	  break;
 	}
 
       if (subset)
 	{
-	  struct mu_mime_param *p = mu_assoc_ref (assoc, key);
-	  if (p)
+	  struct mu_mime_param **p;
+	  if (mu_assoc_lookup_ref (assoc, key, &p) == 0)
 	    *p = param;
+	  else
+	    mu_mime_param_free (param);
 	}
       else
 	{
-	  rc = mu_assoc_install (assoc, key, &param);
+	  rc = mu_assoc_install (assoc, key, param);
 	  if (rc)
 	    {
-	      _mu_mime_param_free (&param);
+	      mu_mime_param_free (param);
 	      break;
 	    }
 	}
@@ -574,12 +577,7 @@ _mime_header_parse (const char *text, char **pvalue,
 
   if (subset)
     {
-      /* Eliminate empty elements.
-	 
-	 FIXME: What I wanted to do initially is commented out, because
-	 unfortunately iterator_ctl is not defined for assoc tables...
-      */
-#if 0
+      /* Eliminate empty elements. */
       mu_iterator_t itr;
 
       rc = mu_assoc_get_iterator (assoc, &itr);
@@ -592,38 +590,11 @@ _mime_header_parse (const char *text, char **pvalue,
 	      struct mu_mime_param *p;
 	      
 	      mu_iterator_current_kv (itr, (const void **)&name, (void**)&p);
-	      if (!p->value)
+	      if (!p)
 		mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
 	    }
 	  mu_iterator_destroy (&itr);
 	}
-#else
-  /* ... Instead, the following kludgy approach is taken: */
-      mu_iterator_t itr;
-      mu_list_t elist;
-
-      rc = mu_list_create (&elist);
-      if (rc)
-	return rc;
-      rc = mu_assoc_get_iterator (assoc, &itr);
-      if (rc == 0)
-	{
-	  for (mu_iterator_first (itr); rc == 0 && !mu_iterator_is_done (itr);
-	       mu_iterator_next (itr))
-	    {
-	      const char *name;
-	      struct mu_mime_param *p;
-	      
-	      mu_iterator_current_kv (itr, (const void **)&name, (void**)&p);
-	      if (!p->value)
-		rc = mu_list_append (elist, p);
-	    }
-	  mu_iterator_destroy (&itr);
-	}
-      if (rc == 0)
-	mu_list_foreach (elist, _remove_entry, assoc);
-      mu_list_destroy (&elist);
-#endif
     }
   
   return rc;
@@ -782,7 +753,7 @@ mu_mimehdr_aget_decoded_param (const char *str, const char *name,
 	  rc = mu_mime_header_parse_subset (str, charset, NULL, assoc);
 	  if (rc == 0)
 	    {
-	      struct mu_mime_param *param = mu_assoc_ref (assoc, name);
+	      struct mu_mime_param *param = mu_assoc_get (assoc, name);
 	      if (!param)
 		rc = MU_ERR_NOENT;
 	      else
@@ -852,7 +823,7 @@ _get_attachment_name (mu_message_t msg, const char *charset,
 	    {
 	      struct mu_mime_param *param;
 	      if (mu_c_strcasecmp (disp, "attachment") == 0 &&
-		  (param = mu_assoc_ref (assoc, "filename")))
+		  (param = mu_assoc_get (assoc, "filename")))
 		{
 		  *pbuf = param->value;
 		  if (psz)
@@ -893,7 +864,7 @@ _get_attachment_name (mu_message_t msg, const char *charset,
 	  if (ret == 0)
 	    {
 	      struct mu_mime_param *param;
-	      if ((param = mu_assoc_ref (assoc, "name")))
+	      if ((param = mu_assoc_get (assoc, "name")))
 		{
 		  *pbuf = param->value;
 		  if (psz)

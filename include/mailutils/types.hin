@@ -129,6 +129,10 @@ typedef struct _mu_dbm_file *mu_dbm_file_t;
 typedef struct _mu_imapio *mu_imapio_t;
 typedef struct _mu_msgset *mu_msgset_t;
 
+/* Pointer to a function responsible for freeing the memory resources
+   allocated for its argument. */
+typedef void (*mu_deallocator_t) (void *);
+  
 typedef void (*mu_onexit_t) (void*);
 typedef unsigned int mu_debug_handle_t;
 typedef unsigned int mu_debug_level_t;

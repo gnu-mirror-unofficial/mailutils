@@ -28,18 +28,19 @@ extern "C" {
 #define MU_ASSOC_COPY_KEY 0x01
 #define MU_ASSOC_ICASE    0x02
   
-typedef void (*mu_assoc_free_fn) (void *data);
-  
-int mu_assoc_create (mu_assoc_t *passoc, size_t elsize, int flags);
+int mu_assoc_create (mu_assoc_t *passoc, int flags);
 void mu_assoc_destroy (mu_assoc_t *passoc);
-void mu_assoc_clear (mu_assoc_t assoc);  
-void *mu_assoc_ref (mu_assoc_t assoc, const char *name);
+void mu_assoc_clear (mu_assoc_t assoc);
+int mu_assoc_lookup (mu_assoc_t assoc, const char *name, void *dataptr);
+void *mu_assoc_get (mu_assoc_t assoc, const char *name);
 int mu_assoc_install (mu_assoc_t assoc, const char *name, void *value);
-int mu_assoc_ref_install (mu_assoc_t assoc, const char *name, void **pval);
+
+int mu_assoc_lookup_ref (mu_assoc_t assoc, const char *name, void *dataptr);
+int mu_assoc_install_ref (mu_assoc_t assoc, const char *name, void *pval);
+  
 int mu_assoc_get_iterator (mu_assoc_t assoc, mu_iterator_t *piterator);
-int mu_assoc_remove_ref (mu_assoc_t assoc, void *data);
 int mu_assoc_remove (mu_assoc_t assoc, const char *name);  
-int mu_assoc_set_free (mu_assoc_t assoc, mu_assoc_free_fn fn);
+int mu_assoc_set_destroy_item (mu_assoc_t assoc, mu_deallocator_t fn);
 int mu_assoc_count (mu_assoc_t assoc, size_t *pcount);
 
 #ifdef __cplusplus

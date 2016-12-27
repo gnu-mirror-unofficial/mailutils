@@ -27,22 +27,19 @@
 #include <mailutils/imap.h>
 #include <mailutils/sys/imap.h>
 
-void
-_id_free (void *data)
-{
-  char *s = *(char**)data;
-  free (s);
-}
-
 static int
 _id_mapper (void **itmv, size_t itmc, void *call_data)
 {
   int rc;
+  char *copy;
   mu_assoc_t assoc = call_data;
   struct imap_list_element *key = itmv[0], *val = itmv[1];
   if (key->type != imap_eltype_string || val->type != imap_eltype_string)
     return MU_ERR_FAILURE;
-  rc = mu_assoc_install (assoc, key->v.string, &val->v.string);
+  copy = strdup (val->v.string);
+  if (!copy)
+    return errno;
+  rc = mu_assoc_install (assoc, key->v.string, copy);
   if (rc == 0)
     val->v.string = NULL;
   return rc;
@@ -52,10 +49,10 @@ static mu_assoc_t
 create_id_assoc (void)
 {
   mu_assoc_t assoc;
-  int rc = mu_assoc_create (&assoc, sizeof (char**), MU_ASSOC_ICASE);
+  int rc = mu_assoc_create (&assoc, MU_ASSOC_ICASE);
   if (rc)
     return NULL;
-  mu_assoc_set_free (assoc, _id_free);
+  mu_assoc_set_destroy_item (assoc, mu_list_free_item);
   return assoc;
 }
 

@@ -32,7 +32,7 @@ AB_INIT
 
 dnl Library versioning
 AC_SUBST(VI_CURRENT,  5)
-AC_SUBST(VI_REVISION, 1)
+AC_SUBST(VI_REVISION, 2)
 AC_SUBST(VI_AGE,      0)
 
 dnl Library paths

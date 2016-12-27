@@ -25,12 +25,8 @@
 #include <mailutils/assoc.h>
 #include <mailutils/stream.h>
 #include <mailutils/iterator.h>
+#include <mailutils/list.h>
 #include <stdlib.h>
-
-struct property_item
-{
-  char *value;
-};
 
 static void
 _assoc_prop_done (struct _mu_property *prop)
@@ -46,13 +42,13 @@ _assoc_prop_getval (struct _mu_property *prop,
 		    const char *key, const char **pval)
 {
   mu_assoc_t assoc = prop->_prop_data;
-  struct property_item *item;
+  char *item;
 
-  item = mu_assoc_ref (assoc, key);
+  item = mu_assoc_get (assoc, key);
   if (item == NULL)
     return MU_ERR_NOENT;
   if (pval)
-    *pval = item->value;
+    *pval = item;
   return 0;
 
 }
@@ -62,14 +58,14 @@ _assoc_prop_setval (struct _mu_property *prop, const char *key,
 		       const char *val, int overwrite)
 {
   mu_assoc_t assoc = prop->_prop_data;
-  struct property_item *item;
+  char **item;
   int rc;
 
-  rc = mu_assoc_ref_install (assoc, key, (void **)&item);
+  rc = mu_assoc_install_ref (assoc, key, &item);
   if (rc == 0)
     {
-      item->value = strdup (val);
-      if (!item->value)
+      *item = strdup (val);
+      if (!*item)
 	{
 	  mu_assoc_remove (assoc, key);
 	  return ENOMEM;
@@ -80,8 +76,8 @@ _assoc_prop_setval (struct _mu_property *prop, const char *key,
       char *newval = strdup (val);
       if (!newval)
 	return ENOMEM;
-      free (item->value);
-      item->value = newval;
+      free (*item);
+      *item = newval;
     }
   else
     return rc;
@@ -105,13 +101,6 @@ _assoc_prop_clear (struct _mu_property *prop)
 }
 
 
-static void *
-_assoc_prop_dataptr (void *in)
-{
-  struct property_item *item = in;
-  return item->value;
-}
-
 static int
 _assoc_prop_getitr (struct _mu_property *prop, mu_iterator_t *pitr)
 {
@@ -121,17 +110,8 @@ _assoc_prop_getitr (struct _mu_property *prop, mu_iterator_t *pitr)
   rc = mu_assoc_get_iterator ((mu_assoc_t)prop->_prop_data, &itr);
   if (rc)
     return rc;
-  mu_iterator_set_dataptr (itr, _assoc_prop_dataptr);
   *pitr = itr;
   return 0;
-}
-
-
-static void
-prop_free_value (void *data)
-{
-  struct property_item *item = data;
-  free (item->value);
 }
 
 
@@ -201,10 +181,10 @@ mu_assoc_property_init (struct _mu_property *prop)
   mu_assoc_t assoc;
   int rc;
   
-  rc = mu_assoc_create (&assoc, sizeof (struct property_item), 0);
+  rc = mu_assoc_create (&assoc, 0);
   if (rc)
     return rc;
-  mu_assoc_set_free (assoc, prop_free_value);
+  mu_assoc_set_destroy_item (assoc, mu_list_free_item);
   prop->_prop_data = assoc;
 
   prop->_prop_done = _assoc_prop_done;

@@ -24,13 +24,13 @@ mail_test -message "alias staff" "alias" \
 
 mail_command "alias teeparty alice march.hare hatter" 
 mail_test -message "alias teeparty" "alias" \
-	"teeparty    alice march.hare hatter"\
-	"staff    alice tweedledum tweedledee"
+	"staff    alice tweedledum tweedledee" \
+	"teeparty    alice march.hare hatter"
 
 mail_command "alias messengers haigha hatta" 
 mail_test -message "alias messengers" "alias" \
-	"teeparty    alice march.hare hatter"\
-	"staff    alice tweedledum tweedledee"\
+	"staff    alice tweedledum tweedledee" \
+	"teeparty    alice march.hare hatter" \
 	"messengers    haigha hatta"
 
 mail_command "unalias teeparty"
@@ -46,9 +46,9 @@ mail_test -message "alias teeparty output" \
 
 mail_command "alias pretenders lion unicorn"
 mail_test -message "alias pretenders" "alias"\
-"pretenders    lion unicorn "\
 "staff    alice tweedledum tweedledee"\
-"messengers    haigha hatta"
+"messengers    haigha hatta"\
+"pretenders    lion unicorn"
 
 mail_stop
 

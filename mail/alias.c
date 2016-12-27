@@ -17,34 +17,27 @@
 
 #include "mail.h"
 
-typedef struct _alias *alias_t;
-
-struct _alias
-{
-  mu_list_t list;
-};
-
 static mu_assoc_t aliases;
 
 static void
 alias_free (void *data)
 {
-  alias_t al = data;
-  util_slist_destroy (&al->list);
+  mu_list_t al = data;
+  util_slist_destroy (&al);
 }
 
 static void
-alias_print_group (const char *name, alias_t al)
+alias_print_group (const char *name, mu_list_t al)
 {
   mu_printf ("%s    ", name);
-  util_slist_print (al->list, 0);
+  util_slist_print (al, 0);
   mu_printf ("\n");
 }
 
-static alias_t
+static mu_list_t
 alias_lookup (const char *name)
 {
-  return mu_assoc_ref (aliases, name);
+  return mu_assoc_get (aliases, name);
 }
 
 static void
@@ -62,7 +55,7 @@ alias_print (char *name)
 	   mu_iterator_next (itr))
 	{
 	  const char *name;
-	  alias_t al;
+	  mu_list_t al;
 	  if (mu_iterator_current_kv (itr, (const void **)&name, (void**)&al))
 	    continue;
 	  alias_print_group (name, al);
@@ -70,7 +63,7 @@ alias_print (char *name)
     }
   else
     {
-      alias_t al;
+      mu_list_t al;
 
       al = alias_lookup (name);
       if (!al)
@@ -83,21 +76,25 @@ alias_print (char *name)
 }
 
 static int
-alias_create (const char *name, alias_t *al)
+alias_create (const char *name, mu_list_t *al)
 {
   int rc;
-
+  mu_list_t l;
+  
   if (!aliases)
     {
-      mu_assoc_create (&aliases, sizeof (struct _alias), 0);
-      mu_assoc_set_free (aliases, alias_free);
+      mu_assoc_create (&aliases, 0);
+      mu_assoc_set_destroy_item (aliases, alias_free);
     }
-  
-  rc = mu_assoc_ref_install (aliases, name, (void**) al);
-  if (rc == MU_ERR_EXISTS)
-    return 0;
-  if (rc == 0)
-    return mu_list_create (&(*al)->list);
+  if (mu_assoc_lookup_ref (aliases, name, al))
+    {
+      rc = mu_list_create (&l);
+      if (rc)
+	return rc;
+      mu_assoc_install (aliases, name, l);
+      *al = l;
+      return 0;
+    }
   return 1;
 }
 
@@ -111,7 +108,7 @@ alias_destroy (const char *name)
 static void
 recursive_alias_expand (const char *name, mu_list_t exlist, mu_list_t origlist)
 { 
-  alias_t al;
+  mu_list_t al;
   mu_iterator_t itr;
   
   if ((al = alias_lookup (name)) == NULL)
@@ -121,7 +118,7 @@ recursive_alias_expand (const char *name, mu_list_t exlist, mu_list_t origlist)
       return;
     }
   
-  mu_list_get_iterator (al->list, &itr);
+  mu_list_get_iterator (al, &itr);
   for (mu_iterator_first (itr);
        !mu_iterator_is_done (itr);
        mu_iterator_next (itr))
@@ -148,7 +145,7 @@ string_comp (const void *item, const void *value)
 char *
 alias_expand (const char *name)
 {
-  alias_t al;
+  mu_list_t al;
   mu_list_t list;
   
   if (mailvar_get (NULL, "recursivealiases", mailvar_type_boolean, 0) == 0)
@@ -180,7 +177,7 @@ alias_expand (const char *name)
   
   if ((al = alias_lookup (name)) == NULL)
     return NULL;
-  return util_slist_to_string (al->list, ",");
+  return util_slist_to_string (al, ",");
 }
 
 
@@ -198,7 +195,7 @@ alias_iterate_next (alias_iterator_t atr)
   while (!mu_iterator_is_done (atr->itr))
     {
       const char *name;
-      alias_t al;
+      mu_list_t al;
 
       if (mu_iterator_current_kv (atr->itr, (const void **)&name, (void**)&al))
 	continue;
@@ -259,7 +256,7 @@ mail_alias (int argc, char **argv)
     alias_print (argv[1]);
   else
     {
-      alias_t al;
+      mu_list_t al;
 
       if (alias_create (argv[1], &al))
 	return 1;
@@ -267,7 +264,7 @@ mail_alias (int argc, char **argv)
       argc--;
       argv++;
       while (--argc)
-	util_slist_add (&al->list, *++argv);
+	util_slist_add (&al, *++argv);
     }
   return 0;
 }

@@ -59,7 +59,7 @@ int mu_list_get_comparator (mu_list_t _list, mu_list_comparator_t *_pcmp);
 
   /* The destroy function is responsible for deallocating a list element.
      By default, it is not set. */
-typedef void (*mu_list_destroy_item_t) (void *);
+typedef mu_deallocator_t mu_list_destroy_item_t;
 
   /* An often used destroy function.  It simply calls free(3) over the
      _item. */
