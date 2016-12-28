@@ -625,20 +625,17 @@ mu_assoc_get_iterator (mu_assoc_t assoc, mu_iterator_t *piterator)
 int
 mu_assoc_count (mu_assoc_t assoc, size_t *pcount)
 {
-  mu_iterator_t itr;
-  int rc;
-  size_t count = 0;
-  
-  if (!assoc || !pcount)
-    return EINVAL;
-  rc = mu_assoc_get_iterator (assoc, &itr);
-  if (rc)
-    return rc;
-  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
-       mu_iterator_next (itr))
-    count++;
-  mu_iterator_destroy (&itr);
-  *pcount = count;
+  size_t length = 0;
+
+  if (!pcount)
+    return MU_ERR_OUT_PTR_NULL;
+  if (assoc)
+    {
+      struct _mu_assoc_elem *elt;
+      for (elt = assoc->head; elt; elt = elt->next)
+	length++;
+    }
+  *pcount = length;
   return 0;
 }
 
@@ -676,3 +673,119 @@ mu_assoc_foreach (mu_assoc_t assoc, mu_assoc_action_t action, void *data)
   mu_iterator_destroy (&itr);
   return rc;
 }
+
+/* Merges the two NULL-terminated lists, LEFT and RIGHT, using CMP for
+   element comparison.  DATA supplies call-specific data for CMP.
+
+   Both LEFT and RIGHT are treated as singly-linked lists, with NEXT pointing
+   to the successive element.  PREV pointers are ignored.
+   
+   Returns the resulting list.
+ */
+static struct _mu_assoc_elem *
+merge (struct _mu_assoc_elem *left, struct _mu_assoc_elem *right,
+       mu_assoc_comparator_t cmp, void *data)
+{
+  struct _mu_assoc_elem *head = NULL, **tailptr = &head, *tmp;
+
+  while (left && right)
+    {
+      if (cmp (left->name, left->data, right->name, right->data, data) < 0)
+	{
+	  tmp = left->next;
+	  *tailptr = left;
+	  tailptr = &left->next;
+	  left = tmp;
+	}
+      else
+	{
+	  tmp = right->next;
+	  *tailptr = right;
+	  tailptr = &right->next;
+	  right = tmp;
+	}
+    }
+
+  *tailptr = left ? left : right;
+
+  return head;
+}
+
+/* Sort the singly-linked LIST of LENGTH elements using merge sort algorithm.
+   Elements are compared using the CMP function with DATA pointing to
+   call-specific data.
+   The elements of LIST are linked by the NEXT pointer.  The NEXT pointer of
+   the last element (LIST[LENGTH], 1-based) must be NULL.
+
+   Returns the resulting list.
+
+   Side-effects: PREV pointers in the returned list are messed up.
+*/
+static struct _mu_assoc_elem *
+merge_sort (struct _mu_assoc_elem *list, size_t length,
+	    mu_assoc_comparator_t cmp, void *data)
+{
+  struct _mu_assoc_elem *left, *right;
+  size_t left_len, right_len, i;
+  struct _mu_assoc_elem *elt;
+  
+  if (length == 1)
+    return list;
+
+  if (length == 2)
+    {
+      elt = list->next;
+      if (cmp (list->name, list->data, elt->name, elt->data, cmp) > 0)
+	{
+	  elt->next = list;
+	  list->next = NULL;
+	  return elt;
+	}
+      return list;
+    }
+
+  left = list;
+  left_len = (length + 1) / 2;
+
+  right_len = length / 2;
+  for (elt = list, i = left_len - 1; i; i--)
+    elt = elt->next;
+
+  right = elt->next;
+  elt->next = NULL;
+
+  left = merge_sort (left, left_len, cmp, data);
+  right = merge_sort (right, right_len, cmp, data);
+
+  return merge (left, right, cmp, data);
+}
+
+/* Sort the linked list of elements in ASSOC using merge sort.  CMP points
+   to the function to use for comparing two elements.  DATA supplies call-
+   specific data for CMP.
+*/
+int
+mu_assoc_sort_r (mu_assoc_t assoc, mu_assoc_comparator_t cmp, void *data)
+{
+  struct _mu_assoc_elem *head, *prev, *p;
+  size_t length;
+  
+  if (!assoc)
+    return EINVAL;
+  if (!cmp)
+    return 0;
+
+  mu_assoc_count (assoc, &length);
+  head = merge_sort (assoc->head, length, cmp, data);
+  /* The above call leaves PREV pointers in inconsistent state.  Fix them
+     up: */
+  for (prev = NULL, p = head; p; prev = p, p = p->next)
+    p->prev = prev;
+
+  /* Update list head and tail */
+  assoc->head = head;
+  assoc->tail = prev;
+
+  return 0;
+}
+  

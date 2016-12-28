@@ -33,27 +33,19 @@
 #include <mailutils/error.h>
 #include <mailutils/errno.h>
 
-struct named_param
-{
-  const char *name;
-  struct mu_mime_param const *param;
-};
-
 static int
-sort_names (void const *a, void const *b)
+sort_names (char const *aname, void const *adata,
+	    char const *bname, void const *bdata, void *data)
 {
-  struct named_param const *pa = a;
-  struct named_param const *pb = b;
-  return mu_c_strcasecmp (pa->name, pb->name);
+  return mu_c_strcasecmp (aname, bname);
 }
 
 static int
-print_named_param (void *item, void *data)
+print_param (const char *name, void *item, void *data)
 {
-  struct named_param const *p = item;
-  struct mu_mime_param const *param = p->param;
+  struct mu_mime_param *param = item;
   
-  mu_printf ("%s", p->name);
+  mu_printf ("%s", name);
   if (param->lang)
     mu_printf ("(lang:%s/%s)", param->lang, param->cset);
   mu_printf ("=%s\n", param->value);
@@ -68,8 +60,6 @@ main (int argc, char **argv)
   mu_transport_t trans[2];
   char *value;
   mu_assoc_t assoc;
-  mu_iterator_t itr;
-  mu_list_t list;
   char *charset = NULL;
   
   mu_set_program_name (argv[0]);
@@ -108,27 +98,8 @@ main (int argc, char **argv)
   MU_ASSERT (mu_mime_header_parse ((char*)trans[0], charset, &value, &assoc));
 
   mu_printf ("%s\n", value);
-  MU_ASSERT (mu_list_create (&list));
-  MU_ASSERT (mu_assoc_get_iterator (assoc, &itr));
-  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
-       mu_iterator_next (itr))
-    {
-      const char *name;
-      struct mu_mime_param *p;
-      struct named_param *np;
-      
-      mu_iterator_current_kv (itr, (const void **)&name, (void**)&p);
-      np = malloc (sizeof (*np));
-      if (!np)
-	abort ();
-      np->name = name;
-      np->param = p;
-      MU_ASSERT (mu_list_append (list, np));
-    }
-  mu_iterator_destroy (&itr);
-
-  mu_list_sort (list, sort_names);
-  mu_list_foreach (list, print_named_param, NULL);
+  mu_assoc_sort_r (assoc, sort_names, NULL);
+  mu_assoc_foreach (assoc, print_param, NULL);
   
   return 0;
 }

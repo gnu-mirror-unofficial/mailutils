@@ -46,6 +46,13 @@ int mu_assoc_is_empty (mu_assoc_t assoc);
 
 typedef int (*mu_assoc_action_t) (char const *, void *, void *);
 int mu_assoc_foreach (mu_assoc_t assoc, mu_assoc_action_t action, void *data);
+
+typedef int (*mu_assoc_comparator_t) (const char *, const void *,
+				      const char *, const void *,
+				      void *);
+
+int mu_assoc_sort_r (mu_assoc_t assoc, mu_assoc_comparator_t cmp, void *data);
+  
   
 #ifdef __cplusplus
 }

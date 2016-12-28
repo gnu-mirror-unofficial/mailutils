@@ -1,6 +1,7 @@
 atconfig
 atlocal
 cidr
+conttype
 package.m4
 testsuite
 testsuite.dir
@@ -14,6 +15,7 @@ fltst
 fsaf
 fsaftomod
 fsfolder
+globtest
 imapio
 listop
 mailcap
