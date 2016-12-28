@@ -43,6 +43,9 @@ int mu_assoc_remove (mu_assoc_t assoc, const char *name);
 int mu_assoc_set_destroy_item (mu_assoc_t assoc, mu_deallocator_t fn);
 int mu_assoc_count (mu_assoc_t assoc, size_t *pcount);
 
+typedef int (*mu_assoc_action_t) (char const *, void *, void *);
+int mu_assoc_foreach (mu_assoc_t assoc, mu_assoc_action_t action, void *data);
+  
 #ifdef __cplusplus
 }
 #endif

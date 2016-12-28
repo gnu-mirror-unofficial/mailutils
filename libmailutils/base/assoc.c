@@ -621,9 +621,7 @@ mu_assoc_get_iterator (mu_assoc_t assoc, mu_iterator_t *piterator)
   *piterator = iterator;
   return 0;
 }  
-
 
-
 int
 mu_assoc_count (mu_assoc_t assoc, size_t *pcount)
 {
@@ -643,4 +641,32 @@ mu_assoc_count (mu_assoc_t assoc, size_t *pcount)
   *pcount = count;
   return 0;
 }
+
+int
+mu_assoc_foreach (mu_assoc_t assoc, mu_assoc_action_t action, void *data)
+{
+  mu_iterator_t itr;
+  int rc;
+  
+  if (!assoc || !action)
+    return EINVAL;
+  rc = mu_assoc_get_iterator (assoc, &itr);
+  if (rc)
+    return rc;
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
+       mu_iterator_next (itr))
+    {
+      char *name;
+      void *value;
 
+      rc = mu_iterator_current_kv (itr, (const void **)&name, (void**)&value);
+      if (rc)
+	break;
+      
+      rc = action (name, value, data);
+      if (rc)
+	break;
+    }
+  mu_iterator_destroy (&itr);
+  return rc;
+}
