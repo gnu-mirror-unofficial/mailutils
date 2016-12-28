@@ -42,6 +42,7 @@ int mu_assoc_get_iterator (mu_assoc_t assoc, mu_iterator_t *piterator);
 int mu_assoc_remove (mu_assoc_t assoc, const char *name);  
 int mu_assoc_set_destroy_item (mu_assoc_t assoc, mu_deallocator_t fn);
 int mu_assoc_count (mu_assoc_t assoc, size_t *pcount);
+int mu_assoc_is_empty (mu_assoc_t assoc);
 
 typedef int (*mu_assoc_action_t) (char const *, void *, void *);
 int mu_assoc_foreach (mu_assoc_t assoc, mu_assoc_action_t action, void *data);

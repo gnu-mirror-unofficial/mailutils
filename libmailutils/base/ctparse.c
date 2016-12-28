@@ -21,206 +21,68 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mailutils/types.h>
-#include <mailutils/cstr.h>
-#include <mailutils/cctype.h>
+#include <mailutils/mime.h>
+#include <mailutils/assoc.h>
 #include <mailutils/util.h>
 #include <mailutils/errno.h>
 
-void
-mu_param_free (void *data)
-{
-  struct mu_param *p = data;
-  free (p->name);
-  free (p->value);
-  free (p);
-} 
-
-int
-mu_param_cmp (void const *a, void const *b)
-{
-  struct mu_param const *p1 = a; 
-  struct mu_param const *p2 = b;
-
-  return mu_c_strcasecmp (p1->name, p2->name);
-}
-
-static int parse_param (const char **input_ptr, mu_content_type_t ct);
-static int parse_params (const char *input, mu_content_type_t ct);
-static int parse_subtype (const char *input, mu_content_type_t ct);
-static int parse_type (const char *input, mu_content_type_t ct);
-
+  
 static int
-parse_type (const char *input, mu_content_type_t ct)
-{
-  size_t i;
-
-  for (i = 0; input[i] != '/'; i++)
-    {
-      if (input[i] == 0
-	  || !(mu_isalnum (input[i]) || input[i] == '-' || input[i] == '_'))
-	return MU_ERR_PARSE;
-    }
-  ct->type = malloc (i + 1);
-  if (!ct->type)
-    return ENOMEM;
-  memcpy (ct->type, input, i);
-  ct->type[i] = 0;
-
-  return parse_subtype (input + i + 1, ct);
-}
-
-static char tspecials[] = "()<>@,;:\\\"/[]?=";
-
-#define ISTOKEN(c) ((unsigned char)(c) > ' ' && !strchr (tspecials, c))
-
-static int
-parse_subtype (const char *input, mu_content_type_t ct)
-{
-  size_t i;
-
-  for (i = 0; !(input[i] == 0 || input[i] == ';'); i++)
-    {
-      if (!ISTOKEN (input[i]))
-	return MU_ERR_PARSE;
-    }
-  ct->subtype = malloc (i + 1);
-  if (!ct->subtype)
-    return ENOMEM;
-  memcpy (ct->subtype, input, i);
-  ct->subtype[i] = 0;
-
-  return parse_params (input + i, ct);
-}
-    
-static int
-parse_params (const char *input, mu_content_type_t ct)
+content_type_parse (const char *input, const char *charset,
+		    mu_content_type_t ct)
 {
   int rc;
-
-  rc = mu_list_create (&ct->param);
+  char *value, *p;
+  
+  rc = mu_mime_header_parse (input, charset, &value, &ct->param);
   if (rc)
     return rc;
-  mu_list_set_destroy_item (ct->param, mu_param_free);
-  mu_list_set_comparator (ct->param, mu_param_cmp);
-  
-  while (*input == ';')
+  p = strchr (value, '/');
+  if (p)
     {
-      input = mu_str_skip_class (input + 1, MU_CTYPE_SPACE);
-      rc = parse_param (&input, ct);
-      if (rc)
-	return rc;
-    }
-
-  if (*input)
-    {
-      input = mu_str_skip_class (input, MU_CTYPE_SPACE);
-      ct->trailer = strdup (input);
-      if (!ct->trailer)
-	return ENOMEM;
-    }
-
-  return rc;
-}
-
-static int
-parse_param (const char **input_ptr, mu_content_type_t ct)
-{
-  const char *input = *input_ptr;
-  size_t i = 0;
-  size_t namelen;
-  size_t valstart, vallen;
-  struct mu_param *p;
-  int rc;
-  unsigned quotechar = 0;
-  
-  while (ISTOKEN (input[i]))
-    i++;
-  namelen = i;
-
-  if (input[i] != '=')
-    return MU_ERR_PARSE;
-  i++;
-  if (input[i] == '"')
-    {
-      i++;
-      valstart = i;
-      while (input[i] != '"')
+      size_t len = p - value;
+      ct->type = malloc (len + 1);
+      if (!ct->type)
 	{
-	  if (input[i] == '\\')
-	    {
-	      quotechar++;
-	      i++;
-	    }
-	  if (!input[i])
-	    return MU_ERR_PARSE;
-	  i++;
+	  rc = errno;
+	  free (value);
+	  return rc;
 	}
-      vallen = i - valstart - quotechar;
-      i++;
+      memcpy (ct->type, value, len);
+      ct->type[len] = 0;
+
+      ct->subtype = strdup (p + 1);
+      if (!ct->subtype)
+	{
+	  rc = errno;
+	  free (value);
+	  return rc;
+	}
     }
   else
     {
-      valstart = i;
-      while (ISTOKEN (input[i]))
-	i++;
-      vallen = i - valstart;
+      ct->type = value;
+      ct->subtype = NULL;
     }
-
-  p = malloc (sizeof (*p));
-  if (!p)
-    return ENOMEM;
-  p->name = malloc (namelen + 1);
-  p->value = malloc (vallen + 1);
-  if (!p->name || !p->value)
-    {
-      mu_param_free (p);
-      return ENOMEM;
-    }
-
-  memcpy (p->name, input, namelen);
-  p->name[namelen] = 0;
-  if (quotechar)
-    {
-      size_t j;
-      const char *src = input + valstart;
-
-      for (i = j = 0; j < vallen; i++, j++)
-	{
-	  if (src[j] == '\\')
-	    j++;
-	  p->value[i] = src[j];
-	}
-      p->value[i] = 0;
-    }
-  else
-    {
-      memcpy (p->value, input + valstart, vallen);
-      p->value[vallen] = 0;
-    }
-  
-  rc = mu_list_append (ct->param, p);
-  if (rc)
-    {
-      mu_param_free (p);
-      return rc;
-    }
-
-  *input_ptr = input + i;
-
   return 0;
-}     
-  
+}
+
 int
-mu_content_type_parse (const char *input, mu_content_type_t *retct)
+mu_content_type_parse (const char *input, const char *charset,
+		       mu_content_type_t *retct)
 {
   int rc;
   mu_content_type_t ct;
+
+  if (!input)
+    return EINVAL;
+  if (!retct)
+    return MU_ERR_OUT_PTR_NULL;
   
   ct = calloc (1, sizeof (*ct));
   if (!ct)
     return errno;
-
-  rc = parse_type (mu_str_skip_class (input, MU_CTYPE_SPACE), ct);
+  rc = content_type_parse (input, charset, ct);
   if (rc)
     mu_content_type_destroy (&ct);
   else
@@ -238,7 +100,7 @@ mu_content_type_destroy (mu_content_type_t *pptr)
       free (ct->type);
       free (ct->subtype);
       free (ct->trailer);
-      mu_list_destroy (&ct->param);
+      mu_assoc_destroy (&ct->param);
       free (ct);
       *pptr = NULL;
     }

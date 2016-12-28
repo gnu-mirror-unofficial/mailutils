@@ -131,18 +131,13 @@ struct mu_content_type
   char *type;
   char *subtype;
   char *trailer;
-  mu_list_t param;
+  mu_assoc_t param;
 };
 
 typedef struct mu_content_type *mu_content_type_t;
-
-struct mu_param
-{
-  char *name;
-  char *value;
-};
   
-int mu_content_type_parse (const char *input, mu_content_type_t *retct);
+int mu_content_type_parse (const char *input, const char *charset,
+			   mu_content_type_t *retct);
 void mu_content_type_destroy (mu_content_type_t *pptr);
   
   /* ----------------------- */

@@ -17,7 +17,7 @@
 
 #include "imap4d.h"
 #include <ctype.h>
-#include <mailutils/argcv.h>
+#include <mailutils/assoc.h>
 
 /*  Taken from RFC2060
     fetch           ::= "FETCH" SPACE set SPACE ("ALL" / "FULL" /
@@ -164,95 +164,47 @@ fetch_send_header_address (mu_header_t header, const char *name,
     fetch_send_address (defval);
 }
 
-static void
-imap4d_ws_alloc_die (struct mu_wordsplit *wsp)
-{
-  imap4d_bye (ERR_NO_MEM);
-}
-
-#define IMAP4D_WS_FLAGS \
-  (MU_WRDSF_DEFFLAGS | MU_WRDSF_DELIM | \
-   MU_WRDSF_ENOMEMABRT | MU_WRDSF_ALLOC_DIE)
+static int format_param (char const *name, void *item, void *data);
 
 /* Send parameter list for the bodystructure.  */
 static void
 send_parameter_list (const char *buffer)
 {
-  struct mu_wordsplit ws;
+  int rc;
+  char *value;
+  mu_assoc_t param;
   
-  if (!buffer)
+  if (!buffer || mu_str_skip_class (buffer, MU_CTYPE_BLANK)[0] == 0)
     {
       io_sendf ("NIL");
       return;
     }
-
-  ws.ws_delim = " \t\r\n;=";
-  ws.ws_alloc_die = imap4d_ws_alloc_die;
-  if (mu_wordsplit (buffer, &ws, IMAP4D_WS_FLAGS))
+  
+  rc = mu_mime_header_parse (buffer, NULL, &value, &param);
+  if (rc)
     {
-      mu_error (_("%s failed: %s"), "mu_wordsplit",
-		mu_wordsplit_strerror (&ws));
-      return; /* FIXME: a better error handling, maybe? */
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", buffer, rc);
+      io_sendf ("NIL");
+      return;
     }
   
-  if (ws.ws_wordc == 0)
-    io_sendf ("NIL");
+  io_sendf ("(");
+  io_send_qstring (value);
+  io_sendf (" ");
+  if (mu_assoc_is_empty (param))
+    {
+      io_sendf ("NIL");
+    }
   else
     {
-      char *p;
-      
+      int first = 1;
       io_sendf ("(");
-        
-      p = ws.ws_wordv[0];
-      io_send_qstring (p);
-
-      if (ws.ws_wordc > 1)
-	{
-	  int i, space = 0;
-	  char *lvalue = NULL;
-
-	  io_sendf ("(");
-	  for (i = 1; i < ws.ws_wordc; i++)
-	    {
-	      if (lvalue)
-		{
-		  if (space)
-		    io_sendf (" ");
-		  io_send_qstring (lvalue);
-		  lvalue = NULL;
-		  space = 1;
-		}
-	      
-	      switch (ws.ws_wordv[i][0])
-		{
-		case ';':
-		  continue;
-		  
-		case '=':
-		  if (++i < ws.ws_wordc)
-		    {
-		      io_sendf (" ");
-		      io_send_qstring (ws.ws_wordv[i]);
-		    }
-		  break;
-		  
-		default:
-		  lvalue = ws.ws_wordv[i];
-		}
-	    }
-	  if (lvalue)
-	    {
-	      if (space)
-		io_sendf (" ");
-	      io_send_qstring (lvalue);
-	    }
-	  io_sendf (")");
-	}
-      else
-	io_sendf (" NIL");
+      mu_assoc_foreach (param, format_param, &first);
       io_sendf (")");
     }
-  mu_wordsplit_free (&ws);
+  io_sendf (")");
+  free (value);
+  mu_assoc_destroy (&param);
 }
 
 static void
@@ -263,7 +215,7 @@ fetch_send_header_list (mu_header_t header, const char *name,
   
   if (space)
     io_sendf (" ");
-  if (mu_header_aget_value (header, name, &buffer) == 0)
+  if (mu_header_aget_value_unfold (header, name, &buffer) == 0)
     {
       send_parameter_list (buffer);
       free (buffer);
@@ -315,16 +267,32 @@ fetch_envelope0 (mu_message_t msg)
 static int fetch_bodystructure0 (mu_message_t message, int extension);
 
 static int
-format_param (void *item, void *data)
+format_param (char const *name, void *item, void *data)
 {
-  struct mu_param *p = item;
+  struct mu_mime_param *p = item;
   int *first = data;
 
   if (!*first)
     io_sendf (" ");
-  io_send_qstring (p->name);
+  io_send_qstring (name);
   io_sendf (" ");
-  io_send_qstring (p->value);
+  if (p->cset)
+    {
+      char *text;
+      int rc = mu_rfc2047_encode (p->cset, "base64", p->value, &text);
+      if (rc == 0)
+	{
+	  io_send_qstring (text);
+	  free (text);
+	}
+      else
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_rfc2047_encode", p->value, rc);
+	  io_send_qstring (p->value);
+	}
+    }
+  else 
+    io_send_qstring (p->value);
   *first = 0;
   return 0;
 }
@@ -338,19 +306,19 @@ get_content_type (mu_header_t hdr, mu_content_type_t *ctp, char const *dfl)
   rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE, &buffer);
   if (rc == 0)
     {
-      rc = mu_content_type_parse (buffer, ctp);
+      rc = mu_content_type_parse (buffer, NULL, ctp);
       if (rc == MU_ERR_PARSE)
 	{
 	  mu_error (_("malformed content type: %s"), buffer);
 	  if (dfl)
-	    rc = mu_content_type_parse (dfl, ctp);
+	    rc = mu_content_type_parse (dfl, NULL, ctp);
 	}
       else if (rc)
 	mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", buffer, rc);
       free (buffer);
     }
   else if (rc == MU_ERR_NOENT && dfl)
-    rc = mu_content_type_parse (dfl, ctp);
+    rc = mu_content_type_parse (dfl, NULL, ctp);
   return rc;
 }
 
@@ -424,13 +392,13 @@ bodystructure (mu_message_t msg, int extension)
       io_send_qstring (ct->subtype);
 
       /* body parameter parenthesized list: Content-type attributes */
-      if (mu_list_is_empty (ct->param))
+      if (mu_assoc_is_empty (ct->param))
 	io_sendf (" NIL");
       else
 	{
 	  int first = 1;
 	  io_sendf (" (");
-	  mu_list_foreach (ct->param, format_param, &first);
+	  mu_assoc_foreach (ct->param, format_param, &first);
 	  io_sendf (")");
 	}
       mu_content_type_destroy (&ct);
@@ -557,11 +525,11 @@ fetch_bodystructure0 (mu_message_t message, int extension)
 	  io_send_qstring (ct->subtype);
 
 	  /* The extension data for multipart. */
-	  if (extension && !mu_list_is_empty (ct->param))
+	  if (extension && !mu_assoc_is_empty (ct->param))
 	    {
 	      int first = 1;
 	      io_sendf (" (");
-	      mu_list_foreach (ct->param, format_param, &first);
+	      mu_assoc_foreach (ct->param, format_param, &first);
 	      io_sendf (")");
 	    }
 	  else
@@ -581,8 +549,8 @@ fetch_bodystructure0 (mu_message_t message, int extension)
       fetch_send_header_list (header, MU_HEADER_CONTENT_DISPOSITION,
 			      NULL, 1);
       /* body language: Content-Language.  */
-      fetch_send_header_list (header, MU_HEADER_CONTENT_LANGUAGE,
-			      NULL, 1);
+      fetch_send_header_value (header, MU_HEADER_CONTENT_LANGUAGE,
+			       NULL, 1);
     }
   else
     bodystructure (message, extension);

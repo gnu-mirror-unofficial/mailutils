@@ -643,6 +643,12 @@ mu_assoc_count (mu_assoc_t assoc, size_t *pcount)
 }
 
 int
+mu_assoc_is_empty (mu_assoc_t assoc)
+{
+  return assoc == NULL || assoc->head == NULL;
+}
+
+int
 mu_assoc_foreach (mu_assoc_t assoc, mu_assoc_action_t action, void *data)
 {
   mu_iterator_t itr;

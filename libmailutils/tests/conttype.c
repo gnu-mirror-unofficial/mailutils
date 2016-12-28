@@ -3,11 +3,11 @@
 #include <assert.h>
 
 static int
-print_param (void *item, void *data)
+print_param (char const *name, void *item, void *data)
 {
   size_t *n = data;
-  struct mu_param *p = item;
-  printf ("%2zu: %s=%s\n", *n, p->name, p->value);
+  struct mu_mime_param *p = item;
+  printf ("%2zu: %s=%s\n", *n, name, p->value);
   ++*n;
   return 0;
 }
@@ -18,7 +18,7 @@ parse (char const *input)
   mu_content_type_t ct;
   int rc;
     
-  rc = mu_content_type_parse (input,  &ct);
+  rc = mu_content_type_parse (input, NULL, &ct);
   if (rc)
     {
       mu_error ("%s", mu_strerror (rc));
@@ -29,10 +29,10 @@ parse (char const *input)
   printf ("subtype = %s\n", ct->subtype);
   if (ct->trailer)
     printf ("trailer = %s\n", ct->trailer);
-  if (!mu_list_is_empty (ct->param))
+  if (!mu_assoc_is_empty (ct->param))
     {
       size_t n = 0;
-      mu_list_foreach (ct->param, print_param, &n);
+      mu_assoc_foreach (ct->param, print_param, &n);
     }
   mu_content_type_destroy (&ct);
   return 0;

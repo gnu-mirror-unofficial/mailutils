@@ -639,7 +639,7 @@ mu_mime_header_parse_subset (const char *text, const char *cset,
    corresponding data are of no interest to the caller.
 */
 int
-mu_mime_header_parse (const char *text, char *cset, char **pvalue,
+mu_mime_header_parse (const char *text, char const *cset, char **pvalue,
 		      mu_assoc_t *passoc)
 {
   int rc;
