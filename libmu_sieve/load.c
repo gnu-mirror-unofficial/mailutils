@@ -34,7 +34,7 @@ typedef int (*sieve_module_init_t) (mu_sieve_machine_t mach);
 static int _add_load_dir (void *, void *);
 
 static int
-sieve_init_load_path ()
+sieve_init_load_path (void)
 {
   static int inited = 0;
 
@@ -42,11 +42,14 @@ sieve_init_load_path ()
     {
       if (lt_dlinit ())
 	return 1;
-      mu_list_foreach (mu_sieve_library_path_prefix, _add_load_dir, NULL);
+      if (mu_list_foreach (mu_sieve_library_path_prefix, _add_load_dir, NULL))
+	return 1;
 #ifdef MU_SIEVE_MODDIR
-      _add_load_dir (MU_SIEVE_MODDIR, NULL);
+      if (_add_load_dir (MU_SIEVE_MODDIR, NULL))
+	return 1;
 #endif
-      mu_list_foreach (mu_sieve_library_path, _add_load_dir, NULL);
+      if (mu_list_foreach (mu_sieve_library_path, _add_load_dir, NULL))
+	return 1;
       inited = 1;
     }
   return 0;
@@ -122,7 +125,13 @@ mu_sieve_unload_ext (void *data)
 static int
 _add_load_dir (void *item, void *unused)
 {
-  return lt_dladdsearchdir (item);
+  if (lt_dladdsearchdir (item))
+    {
+      mu_error (_("can't add dynamic library search directory: %s"),
+		lt_dlerror ());
+      return MU_ERR_FAILURE;
+    }
+  return 0;
 }
 
 int

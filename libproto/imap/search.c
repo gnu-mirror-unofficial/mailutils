@@ -45,7 +45,7 @@ add_msgno (void *item, void *data)
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		(_("unexpected list element in untagged response from SEARCH")));
       scp->retcode = MU_ERR_BADREPLY;
-      return 1;
+      return MU_ERR_USER0;
     }
 
   if (!scp->msgset)
@@ -70,7 +70,7 @@ add_msgno (void *item, void *data)
 		(_("not a number in untagged response from SEARCH: %s"),
 		 elt->v.string));
       scp->retcode = MU_ERR_BADREPLY;
-      return 1;
+      return MU_ERR_USER0;
     }
   
   rc = mu_msgset_add_range (scp->msgset, num, num, MU_MSGSET_NUM);
@@ -79,7 +79,7 @@ add_msgno (void *item, void *data)
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		("mu_msgset_add_range: %s", mu_strerror (rc)));
       scp->retcode = rc;
-      return 1;
+      return MU_ERR_USER0;
     }
   return 0;
 }

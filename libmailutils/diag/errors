@@ -129,3 +129,14 @@ MU_ERR_FORMAT		    _("Error in format string")
 MU_ERR_REMOVE_SOURCE	    _("Failed to remove source file")
 MU_ERR_REMOVE_DEST	    _("Failed to remove destination file")
 MU_ERR_RESTORE_META         _("Failed to restore ownership or mode")
+
+# User-defined errors are meant to be returned by foreach iterator
+# callbacks when they need to break iterations.
+MU_ERR_USER0                _("User-defined error 0")
+MU_ERR_USER1                _("User-defined error 1")
+MU_ERR_USER2                _("User-defined error 2")
+MU_ERR_USER3                _("User-defined error 3")
+MU_ERR_USER4                _("User-defined error 4")
+MU_ERR_USER5                _("User-defined error 5")
+MU_ERR_USER6                _("User-defined error 6")
+MU_ERR_USER7                _("User-defined error 7")

@@ -30,7 +30,9 @@ mu_list_foreach_dir (mu_list_t list, int dir,
   mu_iterator_t itr;
   int status = 0;
   
-  if (list == NULL || action == NULL)
+  if (list == NULL)
+    return 0;
+  if (action == NULL)
     return EINVAL;
   status = mu_list_get_iterator (list, &itr);
   if (status)

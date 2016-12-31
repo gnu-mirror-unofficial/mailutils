@@ -86,12 +86,6 @@ find_tag (mu_sieve_tag_group_t *taglist, char *tagname,
   return NULL;
 }
 
-static int
-_compare_ptr (void *item, void *data)
-{
-  return item == data;
-}
-
 struct check_arg
 {
   struct mu_sieve_machine *mach;
@@ -125,7 +119,7 @@ _run_checker (void *item, void *data)
   mach->tagcount = 0;
   mach->identifier = NULL;
 
-  return rc;
+  return rc ? MU_ERR_USER0 : 0;
 }
 
 void
@@ -223,7 +217,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 		  err = 1;
 		  break;
 		}
-	      if (mu_list_foreach (chk_list, _compare_ptr, cf) == 0)
+	      if (mu_list_locate (chk_list, cf, NULL) == MU_ERR_NOENT)
 		{
 		  rc = mu_list_append (chk_list, cf);
 		  if (rc)

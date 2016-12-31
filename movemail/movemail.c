@@ -218,7 +218,7 @@ set_onerror_action (void *item, void *data)
       if (mu_kwd_xlat_name (onerror_kw, str, &flag))
 	{
 	  mu_error (_("unknown keyword: %s"), str);
-	  return 1;
+	  return MU_ERR_FAILURE;
 	}
       if (clr)
 	onerror_flags &= ~flag;

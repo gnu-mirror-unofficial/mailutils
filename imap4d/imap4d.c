@@ -340,11 +340,11 @@ check_user_groups (void *item, void *data)
     return 0;
 
   if (gp->gr_gid == auth_data->gid)
-    return MU_ERR_EXISTS;
+    return MU_ERR_USER0;
 
   for (p = gp->gr_mem; *p; p++)
     if (strcmp (*p, auth_data->name) == 0)
-      return MU_ERR_EXISTS;
+      return MU_ERR_USER0;
 
   return 0;
 }
@@ -353,7 +353,7 @@ static int
 imap_check_group_list (mu_list_t l)
 {
   int rc = mu_list_foreach (l, check_user_groups, NULL);
-  if (rc == MU_ERR_EXISTS) 
+  if (rc == MU_ERR_USER0) 
     return 0;
   else if (rc == 0)
     return MU_ERR_NOENT;

@@ -216,7 +216,7 @@ m_server_cleanup (void *item, void *data)
 	mu_diag_output (MU_DIAG_ERR,
 			"process %lu terminated (cause unknown)",
 			(unsigned long) datp->pid);
-      return 1;
+      return MU_ERR_USER0;
     }
   return 0;
 }

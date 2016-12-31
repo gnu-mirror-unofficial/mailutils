@@ -447,7 +447,7 @@ addr_cmp (void *item, void *data)
 	continue;
       rc = mu_address_contains_email (b, str);
     }
-  return rc;
+  return rc ? MU_ERR_USER0 : 0;
 }
 
 static int

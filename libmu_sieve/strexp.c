@@ -200,11 +200,16 @@ string_split (struct stringbuf *buf)
 static int
 string_assemble (struct stringbuf *buf)
 {
-  struct segm_stat st;  
+  int rc;
+  struct segm_stat st;
+  
   st.len = 0;
   st.end = 0;
   
-  mu_list_foreach (buf->seglist, update_len, &st);
+  rc = mu_list_foreach (buf->seglist, update_len, &st);
+  if (rc)
+    longjmp (buf->errbuf, rc);
+  
   if (st.end == buf->length - 1)
     return MU_ERR_CANCELED;
 
@@ -212,7 +217,14 @@ string_assemble (struct stringbuf *buf)
   if (!buf->expansion)
     longjmp (buf->errbuf, ENOMEM);
   buf->endptr = buf->expansion; 
-  mu_list_foreach (buf->seglist, append_segm, buf);
+  rc = mu_list_foreach (buf->seglist, append_segm, buf);
+  if (rc)
+    {
+      free (buf->expansion);
+      buf->expansion = NULL;
+      longjmp (buf->errbuf, rc);
+    }
+  
   *buf->endptr = 0;
 
   return 0;

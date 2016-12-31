@@ -96,7 +96,7 @@ imap4d_authenticate (struct imap4d_session *session,
 {
   char *auth_type;
   struct imap4d_auth adata;
-  enum imap4d_auth_result res;
+  int res;
   
   if (imap4d_tokbuf_argc (tok) != 3)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
@@ -136,6 +136,10 @@ imap4d_authenticate (struct imap4d_session *session,
     case imap4d_auth_fail:
       adata.response = RESP_NO;
       break;
+
+    default:
+      adata.response = RESP_NO;
+      mu_error ("%s", mu_strerror (res));
     }
   return io_completion_response (command, adata.response,
 				 "%s authentication failed", auth_type);

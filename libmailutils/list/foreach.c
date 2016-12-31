@@ -29,7 +29,9 @@ mu_list_foreach (mu_list_t list, mu_list_action_t action, void *cbdata)
   mu_iterator_t itr;
   int status = 0;
 
-  if (list == NULL || action == NULL)
+  if (list == NULL)
+    return 0;
+  if (action == NULL)
     return EINVAL;
   status = mu_list_get_iterator (list, &itr);
   if (status)

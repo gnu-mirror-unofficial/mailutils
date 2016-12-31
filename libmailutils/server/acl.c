@@ -483,12 +483,12 @@ _run_entry (void *item, void *data)
 	{
 	case mu_acl_accept:
 	  *rp->result = mu_acl_result_accept;
-	  status = 1;
+	  status = MU_ERR_USER0;
 	  break;
       
 	case mu_acl_deny:
 	  *rp->result = mu_acl_result_deny;
-	  status = 1;
+	  status = MU_ERR_USER0;
 	  break;
       
 	case mu_acl_log:
@@ -523,12 +523,12 @@ _run_entry (void *item, void *data)
 		  {
 		  case 0:
 		    *rp->result = mu_acl_result_accept;
-		    status = 1;
+		    status = MU_ERR_USER0;
 		    break;
 		    
 		  case 1:
 		    *rp->result = mu_acl_result_deny;
-		    status = 1;
+		    status = MU_ERR_USER0;
 		  }
 	      }
 	  }
@@ -573,9 +573,11 @@ mu_acl_check_sockaddr (mu_acl_t acl, const struct sockaddr *sa, int salen,
   r.result = pres;
   r.env = acl->envv;
   *r.result = mu_acl_result_undefined;
-  mu_list_foreach (acl->aclist, _run_entry, &r);
+  rc = mu_list_foreach (acl->aclist, _run_entry, &r);
   free (r.addrstr);
-  return 0;
+  if (rc == MU_ERR_USER0)
+    rc = 0;
+  return rc;
 }
 
 int

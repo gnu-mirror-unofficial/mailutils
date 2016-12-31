@@ -50,9 +50,11 @@ _path_append (void *item, void *data)
 {
   mu_list_t *plist = data;
   char *p;
+  int rc;
+  
   if (!*plist)
     {
-      int rc = mu_list_create (plist);
+      rc = mu_list_create (plist);
       if (rc)
 	{
 	  mu_error (_("cannot create list: %s"), mu_strerror (rc));
@@ -62,8 +64,15 @@ _path_append (void *item, void *data)
     }
   p = strdup (item);
   if (!p)
-    return ENOMEM;
-  return mu_list_append (*plist, p);
+    rc = errno;
+  else
+    rc = mu_list_append (*plist, p);
+  if (rc)
+    {
+      mu_error (_("can't add directory to path: %s"), mu_strerror (rc));
+      exit (1);
+    }
+  return 0;
 }
 
 static int
@@ -223,7 +232,8 @@ sieve_commit (void *ptr)
 {
   if (sieve_settings.clearflags & MU_SIEVE_CLEAR_INCLUDE_PATH)
     mu_list_destroy (&mu_sieve_include_path);
-  mu_list_foreach (sieve_settings.include_path, _path_append, &mu_sieve_include_path);
+  mu_list_foreach (sieve_settings.include_path, _path_append,
+		   &mu_sieve_include_path);
   if (sieve_settings.clearflags & MU_SIEVE_CLEAR_LIBRARY_PATH)
     {
       mu_list_destroy (&mu_sieve_library_path);
@@ -231,7 +241,8 @@ sieve_commit (void *ptr)
     }
   mu_list_foreach (sieve_settings.library_path_prefix, _path_append,
 		   &mu_sieve_library_path_prefix);
-  mu_list_foreach (sieve_settings.library_path, _path_append, &mu_sieve_library_path);
+  mu_list_foreach (sieve_settings.library_path, _path_append,
+		   &mu_sieve_library_path);
   mu_list_destroy (&sieve_settings.library_path);
   mu_list_destroy (&sieve_settings.library_path_prefix);
   mu_list_destroy (&sieve_settings.include_path);

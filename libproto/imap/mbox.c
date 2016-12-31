@@ -1119,9 +1119,11 @@ sum_lines (void *item, void *data)
   struct mu_bodystructure *bs = item;
   size_t *pn = data;
   size_t n;
-
-  if (_compute_lines (bs, &n))
-    return 1;
+  int rc;
+  
+  rc = _compute_lines (bs, &n);
+  if (rc)
+    return rc;
   *pn += n;
   return 0;
 }
@@ -1146,7 +1148,7 @@ _compute_lines (struct mu_bodystructure *bs, size_t *pcount)
       *pcount = 0;
       return mu_list_foreach (bs->v.multipart.body_parts, sum_lines, pcount);
     }
-  return 1;
+  return MU_ERR_USER0;
 }
 
 static int

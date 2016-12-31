@@ -123,7 +123,7 @@ try_auth (void *item, void *data)
   if (authenticate (cb->authority) == 0)
     {
       cb->status = 0;
-      return 1;
+      return MU_ERR_USER0;
     }
   return 0;
 }

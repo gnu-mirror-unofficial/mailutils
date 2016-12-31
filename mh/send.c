@@ -221,7 +221,7 @@ elt_fixup (void *item, void *data)
     exit (1);
   elt->msg = mh_file_to_message (NULL, elt->file_name);
   if (!elt->msg)
-    return 1;
+    return MU_ERR_USER0;
 
   return 0;
 }
@@ -633,7 +633,7 @@ _action_send (void *item, void *data)
   
   mailer = open_mailer ();
   if (!mailer)
-    return 1;
+    return MU_ERR_FAILURE;
 
   WATCH ((_("Sending message %s"), elt->file_name));
   if (split_message)
@@ -650,7 +650,7 @@ _action_send (void *item, void *data)
   if (rc)
     {
       mu_error(_("cannot send message: %s"), mu_strerror (rc));
-      return 1;
+      return MU_ERR_FAILURE;
     }
 
   WATCH ((_("Destroying the mailer")));

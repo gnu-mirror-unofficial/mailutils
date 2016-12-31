@@ -388,7 +388,7 @@ _try_include (void *item, void *data)
   if (access (name, R_OK) == 0)
     {
       *(char**) data = name;
-      return 1;
+      return MU_ERR_USER0;
     }
   free (name);
   return 0;

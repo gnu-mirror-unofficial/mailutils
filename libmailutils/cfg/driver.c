@@ -165,7 +165,13 @@ dup_container (struct mu_cfg_cont **pcont)
       newcont->v.section.offset = oldcont->v.section.offset;
       newcont->v.section.docstring = oldcont->v.section.docstring;
       newcont->v.section.children = NULL;
-      mu_list_foreach (oldcont->v.section.children, _dup_cont_action, &dd);
+      rc = mu_list_foreach (oldcont->v.section.children, _dup_cont_action, &dd);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "_dup_cont_action",
+			   oldcont->v.section.ident, rc);
+	  abort ();
+	}
       break;
 
     case mu_cfg_cont_param:
@@ -325,8 +331,7 @@ mu_config_clone_container (struct mu_cfg_cont *cont)
   switch (cont->type)
     {
     case mu_cfg_cont_section:
-      mu_list_foreach (cont->v.section.children, _clone_action, NULL);
-      break;
+      return mu_list_foreach (cont->v.section.children, _clone_action, NULL);
 
     case mu_cfg_cont_param:
       break;
@@ -590,7 +595,6 @@ struct mapping_closure
 {
   mu_assoc_t assoc;
   char *err_term;
-  int err;
 };
 
 static int
@@ -600,6 +604,7 @@ parse_mapping (void *item, void *data)
   char *str = item;
   size_t len;
   char *key, *val;
+  int rc;
   
   len = strcspn (str, "=");
   if (str[len] == 0)
@@ -613,11 +618,9 @@ parse_mapping (void *item, void *data)
   val = mu_strdup (str + len + 1);
   if (!val)
     return ENOMEM;
-  clos->err = mu_assoc_install (clos->assoc, key, val);
+  rc = mu_assoc_install (clos->assoc, key, val);
   free (key);
-  if (clos->err)
-    return 1;
-  return 0;
+  return rc;
 }
 
 int
@@ -655,10 +658,15 @@ mu_cfg_field_map (struct mu_config_value const *val, mu_assoc_t *passoc,
 
   if (rc)
     {
-      if (err_term)
-	*err_term = clos.err_term;
+      if (rc == MU_ERR_PARSE)
+	{
+	  if (err_term)
+	    *err_term = clos.err_term;
+	  else
+	    free (clos.err_term);
+	}
       else
-	free (clos.err_term);
+	mu_error ("%s:%d: %s", __FILE__, __LINE__, mu_strerror (rc));
       mu_assoc_destroy (&clos.assoc);
     }
   else

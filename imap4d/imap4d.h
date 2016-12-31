@@ -467,10 +467,10 @@ struct imap4d_auth
 
 enum imap4d_auth_result
   {
-    imap4d_auth_nosup,
-    imap4d_auth_ok,
-    imap4d_auth_resp,
-    imap4d_auth_fail
+    imap4d_auth_nosup = 0,
+    imap4d_auth_ok    = MU_ERR_USER0,
+    imap4d_auth_resp  = MU_ERR_USER1,
+    imap4d_auth_fail  = MU_ERR_USER2
   };
   
 typedef enum imap4d_auth_result

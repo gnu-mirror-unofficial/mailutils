@@ -693,7 +693,7 @@ evaluate (void *item, void *data)
   if (eval_rule (p->node))
     {
       *ptype = p->type;
-      return 1;
+      return MU_ERR_USER0;
     }
   return 0;
 }

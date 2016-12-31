@@ -565,7 +565,7 @@ mu_cfg_tree_postprocess (mu_cfg_tree_t *tree, struct mu_cfg_parse_hints *hints)
 		    {
 		      /* Reset the parent node */
 		      mu_list_foreach (node->nodes, _node_set_parent,
-				  node->parent);
+				       node->parent);
 		      /* Move all nodes from this block to the topmost
 			 level */
 		      mu_iterator_ctl (itr, mu_itrctl_insert_list,
@@ -619,6 +619,7 @@ _mu_cfg_preorder_recursive (void *item, void *cbdata)
 {
   mu_cfg_node_t *node = item;
   struct mu_cfg_iter_closure *clos = cbdata;
+  int rc;
   
   switch (node->type)
     {
@@ -629,22 +630,24 @@ _mu_cfg_preorder_recursive (void *item, void *cbdata)
       switch (clos->beg (node, clos->data))
 	{
 	case MU_CFG_ITER_OK:
-	  if (mu_cfg_preorder (node->nodes, clos))
-	    return 1;
+	  rc = mu_cfg_preorder (node->nodes, clos);
+	  if (rc)
+	    return rc;
 	  if (clos->end && clos->end (node, clos->data) == MU_CFG_ITER_STOP)
-	    return 1;
+	    return MU_ERR_USER0;
 	  break;
 	  
 	case MU_CFG_ITER_SKIP:
 	  break;
 	  
 	case MU_CFG_ITER_STOP:
-	  return 1;
+	  return MU_ERR_USER0;
 	}
       break;
       
     case mu_cfg_node_param:
-      return clos->beg (node, clos->data) == MU_CFG_ITER_STOP;
+      if (clos->beg (node, clos->data) == MU_CFG_ITER_STOP)
+	return MU_ERR_USER0;
     }
   return 0;
 }
@@ -1035,6 +1038,7 @@ mu_cfg_scan_tree (mu_cfg_tree_t *tree, struct mu_cfg_section *sections,
   struct mu_cfg_iter_closure clos;
   int save_mode = 0, mode;
   struct mu_locus save_locus = { NULL, };
+  int rc;
   
   dat.tree = tree;
   dat.list = NULL;
@@ -1055,9 +1059,10 @@ mu_cfg_scan_tree (mu_cfg_tree_t *tree, struct mu_cfg_section *sections,
   clos.beg = _scan_tree_helper;
   clos.end = _scan_tree_end_helper;
   clos.data = &dat;
-  mu_cfg_preorder (tree->nodes, &clos);
+  rc = mu_cfg_preorder (tree->nodes, &clos);
   pop_section (&dat);
-  
+  if (rc && rc != MU_ERR_USER0)
+    dat.error++;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &save_mode);
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
@@ -1448,11 +1453,13 @@ mu_cfg_find_node (mu_cfg_tree_t *tree, const char *path, mu_cfg_node_t **pval)
       clos.data = &data;
       rc = mu_cfg_preorder (tree->nodes, &clos);
       destroy_value (data.label);
-      if (rc)
+      if (rc == MU_ERR_USER0)
 	{
 	  *pval = (mu_cfg_node_t *) data.node;
 	  return 0;
 	}
+      else
+	mu_diag_funcall (MU_DIAG_ERR, "mu_cfg_preorder", NULL, rc);
     }
   return MU_ERR_NOENT;
 }

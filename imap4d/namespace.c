@@ -83,8 +83,18 @@ namespace_enumerate (int id, nsfp_t f, void *closure)
   nsc.id = id;
   nsc.fun = f;
   nsc.closure = closure;
-  return namespace[id] == 0 ? 0 :
-          mu_list_foreach (namespace[id], _enum_fun, &nsc);
+  if (namespace[id])
+    {
+      int rc = mu_list_foreach (namespace[id], _enum_fun, &nsc);
+      if (rc == MU_ERR_USER0)
+	return 1;
+      else if (rc != 0)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_list_foreach", NULL, rc);
+	  return 0;
+	}
+    }
+  return 0;
 }
 
 static int
@@ -149,7 +159,7 @@ check_namespace (void *closure, int ns, char *path, int delim)
     {
       p->ns = ns;
       p->exact = len == p->namelen;
-      return 1;
+      return MU_ERR_USER0;
     }
   return 0;
 }

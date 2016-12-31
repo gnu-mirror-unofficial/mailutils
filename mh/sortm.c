@@ -286,7 +286,7 @@ compare_action (void *item, void *data)
   free (a);
   free (b);
 
-  return dp->r; /* go on until the difference is found */
+  return dp->r ? MU_ERR_USER0 : 0; /* go on until the difference is found */
 }
 
 static int

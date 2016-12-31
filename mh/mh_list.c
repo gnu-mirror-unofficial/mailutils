@@ -466,15 +466,15 @@ static void goto_offset (struct eval_env *env, int count);
 static void print (struct eval_env *env, char *str, int nloff);
 
 static int
-_comp_name (void *item, void *date)
+_comp_name (void const *item, void const *date)
 {
-  return mu_c_strcasecmp (item, date) == 0;
+  return mu_c_strcasecmp (item, date);
 }
 
 int
 header_is_printed (struct eval_env *env, const char *name)
 {
-  return mu_list_foreach (env->printed_fields, _comp_name, (void*) name) == 1;
+  return mu_list_locate (env->printed_fields, (void*) name, NULL) == 0;
 }
 
 int
@@ -842,6 +842,7 @@ mhl_format_run (mu_list_t fmt,
 
   env.bvar[B_NEWLINE] = 1;
   mu_list_create (&env.printed_fields);
+  mu_list_set_comparator (env.printed_fields, _comp_name);
   env.ivar[I_WIDTH] = width;
   env.ivar[I_LENGTH] = length;
   env.bvar[B_CLEARSCREEN] = flags & MHL_CLEARSCREEN;
