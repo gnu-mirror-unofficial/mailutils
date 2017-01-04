@@ -76,16 +76,17 @@ LIST_CHECK([empty ref + asterisk],[list02],
 * LIST (\NoInferiors) NIL INBOX
 ])
 
+# FIXME: I'm not sure whether it should include / in the reply.
 LIST_CHECK([root ref + asterisk],[list03],
 ["/" "*"],
 [dnl
-* LIST (\NoInferiors) "/" bigto.mbox
-* LIST (\NoInferiors) "/" mbox
-* LIST (\NoInferiors) "/" mbox1
-* LIST (\NoInferiors) "/" relational.mbox
-* LIST (\NoInferiors) "/" search.mbox
-* LIST (\NoInferiors) "/" sieve.mbox
-* LIST (\NoInferiors) "/" teaparty.mbox
+* LIST (\NoInferiors) "/" /bigto.mbox
+* LIST (\NoInferiors) "/" /mbox
+* LIST (\NoInferiors) "/" /mbox1
+* LIST (\NoInferiors) "/" /relational.mbox
+* LIST (\NoInferiors) "/" /search.mbox
+* LIST (\NoInferiors) "/" /sieve.mbox
+* LIST (\NoInferiors) "/" /teaparty.mbox
 ])
 
 LIST_CHECK([absolute reference + asterisk],[list04],

@@ -104,7 +104,6 @@ namespace_init (void)
 	    }
 	  pfx->ns = i;
 
-	  trim_delim (pfx->prefix, pfx->delim);
 	  trim_delim (pfx->dir, '/');
 	  
 	  rc = mu_assoc_install (prefixes, pfx->prefix, pfx);
@@ -182,9 +181,7 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 {
   size_t pfxlen = strlen (pfx->prefix);
 
-  if (pfxlen <= namelen
-      && memcmp (pfx->prefix, name, pfxlen) == 0
-      && (pfxlen == 0 || pfxlen == namelen || name[pfxlen] == pfx->delim))
+  if (pfxlen <= namelen && memcmp (pfx->prefix, name, pfxlen) == 0)
     {
       char *tmpl, *p;
 
@@ -212,10 +209,17 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
       p = mu_stpcpy (p, pfx->dir);
       if (*name)
 	{
-	  *p++ = '/';
+	  if (pfx->ns == NS_OTHER
+	      && pfx->prefix[strlen(pfx->prefix) - 1] != pfx->delim)
+	    {
+	      while (*name && *name != pfx->delim)
+		name++;
+	    }
+	  else if (*name != pfx->delim)
+	    *p++ = '/';
 	  translate_delim (p, name, '/', pfx->delim);
 	}
-
+      
       return tmpl;
     }
   return NULL;
@@ -230,15 +234,6 @@ i_translate_name (char const *name, int url, int ns,
   char *res = NULL;
   size_t namelen = strlen (name);
 
-#if 0
-  FIXME
-   if (namelen >= 5
-      && strcmp (name + namelen - 5, "INBOX") == 0
-      && (namelen == 5 && name[namelen - 6] == '/'))
-    {
-    } 
-#endif
-  
   rc = mu_assoc_get_iterator (prefixes, &itr);
   if (rc)
     {
@@ -285,7 +280,10 @@ extract_username (char const *name, struct namespace_prefix const *pfx)
     len = end - p;
   else
     len = strlen (p);
-  
+
+  if (len == 0)
+    return mu_strdup (auth_data->name);
+
   user = mu_alloc (len + 1);
   memcpy (user, p, len);
   user[len] = 0;
@@ -310,17 +308,10 @@ namespace_translate_name (char const *name, int url,
   struct namespace_prefix const *pfx;
   char *env[] = ENV_INITIALIZER;
   
-  if (name[0] == '~')
+  if (mu_c_strcasecmp (name, "INBOX") == 0 && auth_data->change_uid)
     {
-      if (name[1] == 0 || name[1] == '/')
-	{
-	  if (mu_c_strcasecmp (name, "INBOX") == 0 && auth_data->change_uid)
-	    res = mu_strdup (auth_data->mailbox);
-	  else
-	    res = i_translate_name (name, url, NS_PRIVATE, &pfx);
-	}
-      else 
-	res = i_translate_name (name, url, NS_OTHER, &pfx);
+      res = mu_strdup (auth_data->mailbox);
+      pfx = mu_assoc_get (prefixes, "");
     }
   else
     res = i_translate_name (name, url, NS_MAX, &pfx);
@@ -336,7 +327,7 @@ namespace_translate_name (char const *name, int url,
 	  env[ENV_HOME] = real_homedir;
 	  break;
 
-	case NS_SHARED:
+	case NS_OTHER:
 	  {
 	    struct mu_auth_data *adata;
 	    env[ENV_USER] = extract_username (name, pfx);
@@ -349,7 +340,7 @@ namespace_translate_name (char const *name, int url,
 	  }
 	  break;
 
-	case NS_OTHER:
+	case NS_SHARED:
 	  break;
 	}
       
