@@ -28,7 +28,11 @@ EOT
 
 MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox1,INBOX)
 
-imap4d IMAP4D_OPTIONS < input | remove_uidvalidity | tr -d '\r'
+IMAP4D_RUN([1 select INBOX
+2 FETCH 1:$MU_ULONG_MAX_1 FLAGS
+3 UID FETCH 1:$MU_ULONG_MAX_1 FLAGS
+X LOGOUT
+],[expand]) | remove_uidvalidity 
 ],
 [0],
 [* PREAUTH IMAP4rev1 Test mode

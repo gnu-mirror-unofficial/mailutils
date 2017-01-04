@@ -79,55 +79,35 @@ LIST_CHECK([empty ref + asterisk],[list02],
 LIST_CHECK([root ref + asterisk],[list03],
 ["/" "*"],
 [dnl
-1 NO LIST The requested item could not be found.
+* LIST (\NoInferiors) "/" bigto.mbox
+* LIST (\NoInferiors) "/" mbox
+* LIST (\NoInferiors) "/" mbox1
+* LIST (\NoInferiors) "/" relational.mbox
+* LIST (\NoInferiors) "/" search.mbox
+* LIST (\NoInferiors) "/" sieve.mbox
+* LIST (\NoInferiors) "/" teaparty.mbox
 ])
 
 LIST_CHECK([absolute reference + asterisk],[list04],
-["$cwd/spool" "*"],
-[dnl
-* LIST (\NoInferiors) "/" ////bigto.mbox
-* LIST (\NoInferiors) "/" ////folder/one
-* LIST (\NoInferiors) "/" ////folder/two
-* LIST (\NoInferiors) "/" ////mbox
-* LIST (\NoInferiors) "/" ////mbox1
-* LIST (\NoInferiors) "/" ////relational.mbox
-* LIST (\NoInferiors) "/" ////search.mbox
-* LIST (\NoInferiors) "/" ////sieve.mbox
-* LIST (\NoInferiors) "/" ////teaparty.mbox
-* LIST (\NoSelect) "/" ////folder
-],
+["/foo/bar/baz" "*"],
+[],
 [mkdir IMAP4D_HOMEDIR/folder
  MUT_MBCOPY($abs_top_srcdir/testsuite/folder/one,IMAP4D_HOMEDIR/folder)
- MUT_MBCOPY($abs_top_srcdir/testsuite/folder/two,IMAP4D_HOMEDIR/folder)],
-[sed "s|$cwd/IMAP4D_HOMEDIR|///|"],
-[expand])
+ MUT_MBCOPY($abs_top_srcdir/testsuite/folder/two,IMAP4D_HOMEDIR/folder)])
 
 LIST_CHECK([absolute reference + percent],[list05],
-["$cwd/spool" "%"],
-[dnl
-* LIST (\NoInferiors) "/" ////bigto.mbox
-* LIST (\NoInferiors) "/" ////mbox
-* LIST (\NoInferiors) "/" ////mbox1
-* LIST (\NoInferiors) "/" ////relational.mbox
-* LIST (\NoInferiors) "/" ////search.mbox
-* LIST (\NoInferiors) "/" ////sieve.mbox
-* LIST (\NoInferiors) "/" ////teaparty.mbox
-* LIST (\NoSelect) "/" ////folder
-],
+["/foo/bar/baz" "%"],
+[],
 [mkdir IMAP4D_HOMEDIR/folder
  MUT_MBCOPY($abs_top_srcdir/testsuite/folder/one,IMAP4D_HOMEDIR/folder)
- MUT_MBCOPY($abs_top_srcdir/testsuite/folder/two,IMAP4D_HOMEDIR/folder)],
-[sed "s|$cwd/IMAP4D_HOMEDIR|///|"],
-[expand])
+ MUT_MBCOPY($abs_top_srcdir/testsuite/folder/two,IMAP4D_HOMEDIR/folder)])
 
 LIST_CHECK([absolute reference + mailbox],[list06],
-["$cwd/spool" "search.mbox"],
-[dnl
-* LIST (\NoInferiors) "/" ////search.mbox
-],
+["/foo/bar/baz" "mbox"],
 [],
-[sed "s|$cwd/IMAP4D_HOMEDIR|///|"],
-[expand])
+[mkdir IMAP4D_HOMEDIR/folder
+ MUT_MBCOPY($abs_top_srcdir/testsuite/folder/one,IMAP4D_HOMEDIR/folder)
+ MUT_MBCOPY($abs_top_srcdir/testsuite/folder/two,IMAP4D_HOMEDIR/folder)])
 
 LIST_CHECK([empty reference + INBOX],[list07],
 ["" INBOX],

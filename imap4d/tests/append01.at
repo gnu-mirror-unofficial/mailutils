@@ -17,8 +17,9 @@
 AT_SETUP([append with envelope date])
 AT_KEYWORDS([append01])
 
-AT_DATA([input],
-[1 APPEND mbox "25-Aug-2002 18:00:00 +0200" {274+}
+AT_CHECK([
+> mbox
+IMAP4D_RUN([1 APPEND mbox "25-Aug-2002 18:00:00 +0200" {274+}
 Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
 From: Fred Foobar <foobar@Blurdybloop.COM>
 Subject: afternoon meeting again
@@ -31,10 +32,6 @@ Better yet at 04:00?
 
 X LOGOUT
 ])
-
-AT_CHECK([
-> mbox
-imap4d IMAP4D_OPTIONS < input | tr -d '\r'
 echo "=="
 awk 'NF==0 {print NR":"; next} {print NR":",$0}' mbox
 ],

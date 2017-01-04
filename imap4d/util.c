@@ -17,26 +17,6 @@
 
 #include "imap4d.h"
 
-/* Get the absolute path.  */
-/* NOTE: Path is allocated and must be free()d by the caller.  */
-char *
-util_getfullpath (const char *name)
-{
-  char *exp = mu_tilde_expansion (name, MU_HIERARCHY_DELIMITER,
-				  imap4d_homedir);
-  if (*exp != MU_HIERARCHY_DELIMITER)
-    {
-      char *p, *s =
-	mu_alloc (strlen (imap4d_homedir) + 1 + strlen (exp) + 1);
-      p = mu_stpcpy (s, imap4d_homedir);
-      *p++ = MU_HIERARCHY_DELIMITER;
-      strcpy (p, exp);
-      free (exp);
-      exp = s;
-    }
-  return mu_normalize_path (exp);
-}
-
 int
 util_do_command (struct imap4d_session *session, imap4d_tokbuf_t tok)
 {

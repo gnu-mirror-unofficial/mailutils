@@ -27,8 +27,6 @@ int imap4d_transcript;
 
 mu_mailbox_t mbox;              /* Current mailbox */
 char *real_homedir;             /* Homedir as returned by user database */
-char *imap4d_homedir;           /* Homedir as visible for the remote party */
-char *modify_homedir;           /* Expression to produce imap4d_homedir */
 int state = STATE_NONAUTH;      /* Current IMAP4 state */
 struct mu_auth_data *auth_data; 
 
@@ -39,8 +37,6 @@ int create_home_dir;            /* Create home directory if it does not
 mu_list_t user_retain_groups;
 
 int home_dir_mode = S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
-
-int mailbox_mode[NS_MAX];
 
 /* Saved command line. */
 int imap4d_argc;                 
@@ -359,7 +355,179 @@ imap_check_group_list (mu_list_t l)
     return MU_ERR_NOENT;
   return rc;
 }
+
+static int
+cb_prefix_delim (void *data, mu_config_value_t *val)
+{
+  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
+    return 1;
+  if (val->v.string[0] == 0)
+    mu_error (_("delimiter cannot be empty"));
+  else if (val->v.string[1] != 0)
+    mu_error (_("delimiter must be a single character"));
+  else
+    *(int*) data = val->v.string[0];
+  return 0;
+}
 
+static int
+cb_prefix_scheme (void *data, mu_config_value_t *val)
+{
+  struct namespace_prefix *pfx = data;
+  char *scheme;
+  mu_record_t rec;
+  int rc;
+  int (*mbx) (mu_mailbox_t);
+  
+  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
+    return 1;
+  scheme = mu_strdup (val->v.string);
+  rc = mu_registrar_lookup_scheme (scheme, &rec);
+  if (rc == MU_ERR_NOENT)
+    {
+      mu_error (_("unknown mailbox type"));
+      return 1;
+    }
+  else if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_registrar_lookup_scheme", scheme, rc);
+      return 1;
+    }
+
+  rc = mu_record_get_mailbox (rec, &mbx);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_record_get_mailbox", scheme, rc);
+      return 1;
+    }
+
+  if (!mbx || !mu_record_is_local (rec))
+    {
+      mu_error (_("not a local mailbox type"));
+      return 1;
+    }
+  
+  pfx->scheme = scheme;
+  pfx->record = rec;
+
+  return 0;
+}
+
+static struct mu_cfg_param prefix_param[] = {
+  { "directory", mu_c_string,
+    NULL, mu_offsetof (struct namespace_prefix, dir), NULL,
+    N_("Directory in the file system") },
+  { "delimiter", mu_cfg_callback,
+    NULL, mu_offsetof (struct namespace_prefix, delim), cb_prefix_delim,
+    N_("Hierarchy delimiter character") },
+  { "mailbox-type", mu_cfg_callback,
+    NULL, 0, cb_prefix_scheme,
+    N_("Type of mailboxes residing under this prefix") },
+  { NULL }
+};
+
+static struct mu_cfg_param namespace_param[] = {
+  { "mailbox-mode", mu_cfg_callback,
+    NULL, mu_offsetof (struct namespace, mode), cb_mailbox_mode,
+    N_("File mode for newly created mailboxes in this namespace"),
+    N_("mode: g(+|=)[wr]+,o(+|=)[wr]+") },
+  { "prefix", mu_cfg_section },
+  { NULL }
+};
+
+static int
+prefix_section_parser (enum mu_cfg_section_stage stage,
+		       const mu_cfg_node_t *node,
+		       const char *section_label, void **section_data,
+		       void *call_data,
+		       mu_cfg_tree_t *tree)
+{
+  struct namespace_prefix *pfx;
+
+  switch (stage)
+    {
+    case mu_cfg_section_start:
+      {
+	struct namespace *nspace = *section_data;
+      
+	if (node->label == NULL || node->label->type != MU_CFG_STRING)
+	  return 1;
+
+	pfx = mu_zalloc (sizeof (*pfx));
+	pfx->prefix = mu_strdup (node->label->v.string);
+	mu_list_append (nspace->prefixes, pfx);
+	*section_data = pfx;
+      }
+      break;
+
+    case mu_cfg_section_end:
+      pfx = *section_data;
+      if (!pfx->delim)
+	pfx->delim = '/';
+      if (!pfx->dir)
+	{
+	  if (pfx->prefix)
+	    pfx->dir = mu_strdup (pfx->prefix);
+	  else
+	    {
+	      mu_error (_("bad prefix definition"));
+	      return 1;
+	    }
+	}
+      else if (!pfx->prefix)
+	{
+	  pfx->prefix = mu_alloc (strlen (pfx->dir) + 1);
+	  translate_delim (pfx->prefix, pfx->dir, pfx->delim, '/');
+	}
+    }
+  return 0;
+}
+      
+static int
+namespace_section_parser (enum mu_cfg_section_stage stage,
+			  const mu_cfg_node_t *node,
+			  const char *section_label, void **section_data,
+			  void *call_data,
+			  mu_cfg_tree_t *tree)
+{
+  if (stage == mu_cfg_section_start)
+    {
+      struct namespace *ns;
+      
+      if (node->label == NULL || node->label->type != MU_CFG_STRING)
+	return 1;
+
+      ns = namespace_lookup (node->label->v.string);
+      if (!ns)
+	{
+	  mu_error (_("unknown namespace"));
+	  return 0;
+	}
+	
+      *section_data = ns;
+    }
+  return 0;
+}
+
+static void
+namespace_cfg_init (void)
+{
+  struct mu_cfg_section *section;
+
+  if (mu_create_canned_section ("prefix", &section))
+    abort ();
+  section->docstring = N_("Define a single prefix");
+  mu_cfg_section_add_params (section, prefix_param);
+  section->parser = prefix_section_parser;
+  
+  if (mu_create_canned_section ("namespace", &section))
+    abort ();
+  section->docstring = N_("Define a namespace");
+  section->label = "private | other | shared";
+  section->parser = namespace_section_parser;
+  mu_cfg_section_add_params (section, namespace_param);
+}
+
 static struct mu_cfg_param imap4d_srv_param[] = {
 #ifdef WITH_TLS
   { "tls", mu_cfg_callback,
@@ -385,8 +553,12 @@ static struct mu_cfg_param imap4d_cfg_param[] = {
     0, NULL, 
     N_("Deny access if the user group is in this list.") },
   
+  { "namespace", mu_cfg_section },
+  
+#if 0
   { "homedir", mu_c_string, &modify_homedir, 0, NULL,
     N_("Modify home directory.") },
+
   { "personal-namespace", MU_CFG_LIST_OF(mu_c_string), &namespace[NS_PRIVATE],
     0, NULL, 
     N_("Set personal namespace.") },
@@ -396,6 +568,7 @@ static struct mu_cfg_param imap4d_cfg_param[] = {
   { "shared-namespace", MU_CFG_LIST_OF(mu_c_string), &namespace[NS_SHARED],
     0, NULL,
     N_("Set shared namespace.") },
+  FIXME
   { "other-mailbox-mode", mu_cfg_callback, &mailbox_mode[NS_OTHER], 0,
     cb_mailbox_mode,
     N_("File mode for mailboxes in other namespace."),
@@ -404,6 +577,7 @@ static struct mu_cfg_param imap4d_cfg_param[] = {
     cb_mailbox_mode,
     N_("File mode for mailboxes in shared namespace."),
     N_("mode: g(+|=)[wr]+,o(+|=)[wr]+") },
+#endif
   { "login-disabled", mu_c_bool, &login_disabled, 0, NULL,
     N_("Disable LOGIN command.") },
   { "create-home-dir", mu_c_bool, &create_home_dir, 0, NULL,
@@ -530,52 +704,6 @@ imap4d_session_setup0 ()
   real_homedir = mu_normalize_path (mu_strdup (auth_data->dir));
   if (imap4d_check_home_dir (real_homedir, auth_data->uid, auth_data->gid))
     return 1;
-
-  if (modify_homedir)
-    {
-      char *expr = mu_tilde_expansion (modify_homedir, MU_HIERARCHY_DELIMITER,
-				       real_homedir);
-      struct mu_wordsplit ws;
-      const char *env[5];
-
-      env[0] = "user";
-      env[1] = auth_data->name;
-      env[2] = "home";
-      env[3] = real_homedir;
-      env[4] = NULL;
-
-      ws.ws_env = env;
-      if (mu_wordsplit (expr, &ws,
-			MU_WRDSF_NOSPLIT | MU_WRDSF_NOCMD |
-			MU_WRDSF_ENV | MU_WRDSF_ENV_KV))
-	{
-	  mu_error (_("cannot expand line `%s': %s"), expr,
-		    mu_wordsplit_strerror (&ws));
-	  return 1;
-	}
-      else if (ws.ws_wordc == 0)
-	{
-	  mu_error (_("expanding %s yields empty string"), expr);
-	  return 1;
-	}
-      imap4d_homedir = mu_strdup (ws.ws_wordv[0]);
-      if (!imap4d_homedir)
-	{
-	  mu_error ("%s", mu_strerror (errno));
-	  return 1;
-	}
-    }
-  else
-    imap4d_homedir = mu_strdup (real_homedir);
-
-  if (strcmp (imap4d_homedir, real_homedir)
-      && imap4d_check_home_dir (imap4d_homedir,
-				auth_data->uid, auth_data->gid))
-    {
-      free (imap4d_homedir);
-      free (real_homedir);
-      return 1;
-    }
   
   if (auth_data->change_uid)
     {
@@ -591,7 +719,6 @@ imap4d_session_setup0 ()
 	  if (rc)
 	    {
 	      mu_error(_("cannot create list: %s"), mu_strerror (rc));
-	      free (imap4d_homedir);
 	      free (real_homedir);
 	      return 1;
 	    }
@@ -603,7 +730,6 @@ imap4d_session_setup0 ()
 	    {
 	      /* FIXME: When mu_get_user_groups goes to the library, add a
 		 diag message here */
-	      free (imap4d_homedir);
 	      free (real_homedir);
 	      return 1;
 	    }
@@ -614,15 +740,13 @@ imap4d_session_setup0 ()
 	    {
 	      mu_error (_("can't switch to user %s privileges: %s"),
 			auth_data->name, mu_strerror (rc));
-	      free (imap4d_homedir);
 	      free (real_homedir);
 	      return 1;
 	    }
 	}
     }
 
-  util_chdir (imap4d_homedir);
-  namespace_init_session (imap4d_homedir);
+  util_chdir (real_homedir);
   
   mu_diag_output (MU_DIAG_INFO,
 		  _("user `%s' logged in (source: %s)"), auth_data->name,
@@ -936,6 +1060,7 @@ main (int argc, char **argv)
   mu_tcpwrapper_cfg_init ();
   manlock_cfg_init ();
   mu_acl_cfg_init ();
+  namespace_cfg_init ();
   
   mu_m_server_create (&server, program_version);
   mu_m_server_set_config_size (server, sizeof (struct imap4d_srv_config));
@@ -959,14 +1084,14 @@ main (int argc, char **argv)
       mu_error (_("too many arguments"));
       exit (EX_USAGE);
     }
+
+  namespace_init ();
   
   if (test_mode)
     mu_m_server_set_mode (server, MODE_INTERACTIVE);
   
   if (login_disabled)
     imap4d_capability_add (IMAP_CAPA_LOGINDISABLED);
-
-  namespace_init ();
 
   if (mu_gsasl_enabled ())
     {

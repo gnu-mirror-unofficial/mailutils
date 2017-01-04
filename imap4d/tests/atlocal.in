@@ -5,6 +5,35 @@
 PATH=@abs_builddir@:@abs_top_builddir@/imap4d:$top_srcdir:$srcdir:$PATH
 MU_ULONG_MAX_1=@MU_ULONG_MAX_1@
 
+make_config() {
+    CWD=`pwd`
+    HOMEDIR=${CWD}${1:+/}$1
+    cat > imap4d.conf <<EOT
+logging {
+	syslog off;
+	severity notice;
+}
+
+gsasl {
+	enable off;
+}
+
+namespace private {
+	prefix "" {
+		directory "$HOMEDIR";
+	}
+	prefix "~" {
+		directory "$HOMEDIR";
+	}
+}
+
+mailbox {
+	folder "$CWD";
+	mailbox-pattern "$CWD/INBOX";
+}	
+EOT
+}
+
 remove_untagged() {
   sed '/^\*/d'
 }

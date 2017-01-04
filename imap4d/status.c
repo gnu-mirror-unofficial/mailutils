@@ -81,7 +81,7 @@ imap4d_status (struct imap4d_session *session,
   
   name = imap4d_tokbuf_getarg (tok, IMAP4_ARG_1);
 
-  mailbox_name = namespace_getfullpath (name, NULL);
+  mailbox_name = namespace_get_url (name, NULL);
 
   if (!mailbox_name)
     return io_completion_response (command, RESP_NO, "Error opening mailbox");

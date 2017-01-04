@@ -49,7 +49,7 @@ imap4d_delete (struct imap4d_session *session,
     return io_completion_response (command, RESP_NO, "Already exist");
 
  /* Allocates memory.  */
-  name = namespace_getfullpath (name, NULL);
+  name = namespace_get_url (name, NULL);
   if (!name)
     return io_completion_response (command, RESP_NO, "Cannot remove");
 

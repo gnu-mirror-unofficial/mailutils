@@ -39,7 +39,7 @@ imap4d_create (struct imap4d_session *session,
 {
   char *name;
   int isdir = 0;
-  int ns;
+  int mode = 0;
   int rc = RESP_OK;
   const char *msg = "Completed";
 
@@ -67,7 +67,7 @@ imap4d_create (struct imap4d_session *session,
     isdir = 1;
   
   /* Allocates memory.  */
-  name = namespace_getfullpath (name, &ns);
+  name = namespace_get_url (name, &mode);
 
   if (!name)
     return io_completion_response (command, RESP_NO, "Cannot create mailbox");
@@ -96,7 +96,7 @@ imap4d_create (struct imap4d_session *session,
 	    }
 	  else if ((rc = mu_mailbox_open (mbox,
 					  MU_STREAM_RDWR | MU_STREAM_CREAT
-					  | mailbox_mode[ns])))
+					  | mode)))
 	    {
 	      mu_diag_output (MU_DIAG_ERR,
 			      _("Cannot open mailbox %s: %s"),

@@ -197,16 +197,12 @@ struct imap4d_session
   
 extern struct imap4d_command imap4d_command_table[];
 extern mu_mailbox_t mbox;
-extern char *imap4d_homedir;
 extern char *real_homedir;  
-extern char *modify_homedir;
 extern int state;
 extern size_t children;
 extern int is_virtual;
 extern struct mu_auth_data *auth_data; 
 extern const char *program_version;
-  
-extern int mailbox_mode[NS_MAX];
   
 extern int login_disabled;
 extern enum imap4d_preauth preauth_mode;
@@ -394,15 +390,34 @@ extern int imap4d_bye0 (int reason, struct imap4d_command *command);
 void imap4d_enter_critical (void);
 void imap4d_leave_critical (void);
 
-
 /* Namespace functions */
-extern mu_list_t namespace[NS_MAX];
-  
-extern int namespace_init_session (char *path);
-extern void namespace_init (void);
-extern char *namespace_getfullpath (const char *name, int *pns);
-extern char *namespace_checkfullpath (const char *name, const char *pattern,
-				      int *pns);
+struct namespace_prefix
+{
+  char *prefix;              /* Prefix string */
+  int delim;                 /* Delimiter character */
+  char *dir;                 /* Directory in the file system */
+  char *scheme;              /* Mailbox URL scheme (type) */
+  mu_record_t record;        /* The corresponding record */
+  int ns;                    /* Namespace */
+};
+
+struct namespace
+{
+  char const *name;
+  int mode;                  /* File mode for creating new mailboxes */
+  mu_list_t prefixes;        /* List of prefixes (struct namespace_prefix */
+};
+
+void namespace_init (void);
+struct namespace *namespace_lookup (char const *name);
+
+char *namespace_translate_name (char const *name, int url,
+				struct namespace_prefix const **pfx);
+char *namespace_get_url (char const *name, int *mode);
+
+void translate_delim (char *dst, char const *src, int dst_delim, int src_delim);
+
+
 int imap4d_session_setup (char *username);
 int imap4d_session_setup0 (void);
 void imap4d_child_signal_setup (RETSIGTYPE (*handler) (int signo));
@@ -417,7 +432,6 @@ extern void imap4d_capability_init (void);
 extern int  util_start (char *);
 extern int  util_getstate (void);
 extern int  util_do_command (struct imap4d_session *, imap4d_tokbuf_t);
-extern char *util_getfullpath (const char *);
 extern struct imap4d_command *util_getcommand (char *, 
                                                struct imap4d_command []);
 

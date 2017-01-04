@@ -18,12 +18,9 @@ AT_SETUP([create nested])
 AT_KEYWORDS([create create01])
 
 AT_CHECK([
-AT_DATA([input],[dnl
-1 create en/to/tre
+IMAP4D_RUN([1 create en/to/tre
 X LOGOUT
 ])
-
-imap4d IMAP4D_OPTIONS < input | tr -d '\r'
 find . -name tre
 ],
 [0],

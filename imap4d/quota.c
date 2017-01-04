@@ -120,9 +120,9 @@ directory_size (const char *dirname, mu_off_t *size)
 mu_off_t used_size;
 
 void
-quota_setup ()
+quota_setup (void)
 {
-  directory_size (imap4d_homedir, &used_size);
+  directory_size (real_homedir, &used_size);
 }
 
 int
@@ -138,7 +138,7 @@ quota_check (mu_off_t size)
 
   total = used_size;
 
-  mailbox_name = namespace_getfullpath ("INBOX", NULL);
+  mailbox_name = namespace_get_url ("INBOX", NULL);
   rc = mu_mailbox_create (&mbox, mailbox_name);
   if (rc)
     {

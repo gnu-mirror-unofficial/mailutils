@@ -18,12 +18,9 @@ AT_SETUP([create])
 AT_KEYWORDS([create create00])
 
 AT_CHECK([
-AT_DATA([input],[dnl
-1 create flat
+IMAP4D_RUN([1 create flat
 X LOGOUT
 ])
-
-imap4d IMAP4D_OPTIONS < input | tr -d '\r'
 find . -name flat
 ],
 [0],

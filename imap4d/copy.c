@@ -211,7 +211,7 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
   char *end;
   mu_mailbox_t cmbox = NULL;
   int arg = IMAP4_ARG_1 + !!isuid;
-  int ns;
+  int mode = 0;
   
   *err_text = NULL;
   if (imap4d_tokbuf_argc (tok) != arg + 2)
@@ -240,7 +240,7 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
       return RESP_BAD;
     }
 
-  mailbox_name = namespace_getfullpath (name, &ns);
+  mailbox_name = namespace_get_url (name, &mode);
 
   if (!mailbox_name)
     {
@@ -255,7 +255,7 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
   if (status == 0)
     {
       /* It SHOULD NOT automatifcllly create the mailbox. */
-      status = mu_mailbox_open (cmbox, MU_STREAM_RDWR | mailbox_mode[ns]);
+      status = mu_mailbox_open (cmbox, MU_STREAM_RDWR | mode);
       if (status == 0)
 	{
 	  mu_list_t msglist;

@@ -23,8 +23,9 @@ struct refinfo
 {
   char *refptr;   /* Original reference */
   size_t reflen;  /* Length of the original reference */
-  size_t pfxlen;  /* Length of the current prefix */
-  size_t homelen; /* Length of homedir */
+  struct namespace_prefix const *pfx;
+  size_t pfxlen;
+  size_t dirlen;  /* Length of the current directory prefix */
   char *buf;
   size_t bufsize;
 };
@@ -35,12 +36,15 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   char *name;
   struct refinfo *refinfo = data;
   size_t size;
+  char *p;
+
+  if (refinfo->pfx->record && refinfo->pfx->record != resp->format)
+    return 0;
   
   name = resp->name;
   size = strlen (name);
-  if (size == refinfo->homelen + 6
-      && memcmp (name, imap4d_homedir, refinfo->homelen) == 0
-      && memcmp (name + refinfo->homelen + 1, "INBOX", 5) == 0)
+  if (size == refinfo->pfxlen + 6
+      && memcmp (name + refinfo->pfxlen + 1, "INBOX", 5) == 0)
     return 0;
      
   io_sendf ("* %s", "LIST (");
@@ -52,10 +56,10 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   else if (resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
     io_sendf ("\\NoSelect");
   
-  io_sendf (") \"%c\" ", resp->separator);
+  io_sendf (") \"%c\" ", refinfo->pfx->delim);
 
-  name = resp->name + refinfo->pfxlen;
-  size = strlen (name) + refinfo->reflen + 1;
+  name = resp->name + refinfo->dirlen + 1;
+  size = strlen (name) + refinfo->pfxlen + 2;
   if (size > refinfo->bufsize)
     {
       if (refinfo->buf == NULL)
@@ -82,10 +86,17 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
 	}
     }
 
-  if ((refinfo->reflen == 0 || refinfo->refptr[refinfo->reflen - 1] == '/')
-      && name[0] == '/')
-    name++;
-  strcpy (refinfo->buf + refinfo->reflen, name);
+  if (refinfo->pfxlen)
+    {
+      p = mu_stpcpy (refinfo->buf, refinfo->pfx->prefix);
+      if (*name)
+	*p++ = refinfo->pfx->delim;
+    }
+  else
+    p = refinfo->buf;
+  if (*name)
+    translate_delim (p, name, refinfo->pfx->delim, resp->separator);
+
   name = refinfo->buf;
   
   if (strpbrk (name, "\"{}"))
@@ -168,69 +179,84 @@ imap4d_list (struct imap4d_session *session,
     {
       int status;
       mu_folder_t folder;
+      mu_url_t url;
       char *cwd;
+      char const *dir;
       struct refinfo refinfo;
       size_t i;
+      struct namespace_prefix const *pfx;
+
+      if (*wcard == '~')
+	{
+	  for (i = 1;
+	       mu_c_is_class (wcard[i], MU_CTYPE_ALPHA|MU_CTYPE_DIGIT)
+		 || wcard[i] == '_'; i++)
+	    ;
+	  ref = mu_alloc (i + 1);
+	  memcpy (ref, wcard, i);
+	  ref[i] = 0;
+	  wcard += i;
+	}
+      else
+	ref = mu_strdup (ref);
       
-      switch (*wcard)
+      cwd = namespace_translate_name (ref, 0, &pfx);
+      if (!cwd)
+	{
+	  free (ref);
+	  return io_completion_response (command, RESP_NO,
+				      "The requested item could not be found.");
+	}
+      free (cwd);
+      
+      if (*wcard == pfx->delim && ref[0] != '~')
 	{
 	  /* Absolute Path in wcard, dump the old ref.  */
-	case '/':
-	  ref = mu_strdup ("/");
-	  wcard++;
-	  break;
-
-	  /* Absolute Path, but take care of things like ~guest/Mail,
-	     ref becomes ref = ~guest.  */
-	case '~':
-	  {
-	    char *s = strchr (wcard, '/');
-	    if (s)
-	      {
-		ref = calloc (s - wcard + 1, 1);
-		memcpy (ref, wcard, s - wcard);
-		ref [s - wcard] = '\0';
-		wcard = s + 1;
-	      }
-	    else
-	      {
-		ref = mu_strdup (wcard);
-		wcard += strlen (wcard);
-	      }
-	  }
-	  break;
-
-	default:
-	  ref = mu_strdup (ref);
+	  ref[0] = 0;
 	}
-
+      
       /* Find the longest directory prefix */
       i = strcspn (wcard, "%*");
-      while (i > 0 && wcard[i - 1] != '/')
+      while (i > 0 && wcard[i - 1] != pfx->delim)
 	i--;
       /* Append it to the reference */
       if (i)
 	{
 	  size_t reflen = strlen (ref);
-	  int addslash = (reflen > 0 && ref[reflen-1] != '/'); 
+	  int addslash = (reflen > 0
+			  && ref[reflen-1] != pfx->delim
+			  && *wcard != pfx->delim); 
 	  size_t len = i + reflen + addslash;
 
 	  ref = mu_realloc (ref, len);
 	  if (addslash)
-	    ref[reflen++] = '/';
+	    ref[reflen++] = pfx->delim;
 	  memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
 	  ref[len-1] = 0;
+
+	  wcard += i;
 	}
 
-      /* Allocates.  */
-      cwd = namespace_checkfullpath (ref, wcard, NULL);
+      cwd = namespace_translate_name (ref, 0, &pfx);
       if (!cwd)
 	{
 	  free (ref);
 	  return io_completion_response (command, RESP_NO,
-			              "The requested item could not be found.");
+				      "The requested item could not be found.");
 	}
-
+      
+      if (pfx->ns == NS_OTHER
+	  && strcmp (ref, pfx->prefix) == 0
+	  && *mu_str_skip_cset_comp (wcard, "*%"))
+	{
+	  /* [A] server MAY return NO to such a LIST command, requiring that a
+	     user name be included with the Other Users' Namespace prefix
+	     before listing any other user's mailboxes */
+	  free (ref);
+	  return io_completion_response (command, RESP_NO,
+			              "The requested item could not be found.");
+	}	  
+	
       status = mu_folder_create (&folder, cwd);
       if (status)
 	{
@@ -246,8 +272,13 @@ imap4d_list (struct imap4d_session *session,
 
       refinfo.refptr = ref;
       refinfo.reflen = strlen (ref);
-      refinfo.pfxlen = strlen (cwd);
-      refinfo.homelen = strlen (imap4d_homedir);
+      refinfo.pfx = pfx;
+      
+      mu_folder_get_url (folder, &url);
+      mu_url_sget_path (url, &dir);
+      refinfo.dirlen = strlen (dir);
+	     
+      refinfo.pfxlen = strlen (pfx->prefix);
 
       /* The special name INBOX is included in the output from LIST, if
 	 INBOX is supported by this server for this user and if the
