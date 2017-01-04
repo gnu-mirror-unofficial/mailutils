@@ -31,7 +31,6 @@
 extern "C" {
 #endif  
 
-typedef enum mu_cfg_node_type mu_cfg_node_type_t;
 typedef struct mu_cfg_node mu_cfg_node_t;
 typedef struct mu_cfg_tree mu_cfg_tree_t;
 

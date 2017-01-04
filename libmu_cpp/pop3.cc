@@ -205,7 +205,7 @@ Pop3 :: rset ()
 }
 
 void
-Pop3 :: stat (unsigned int* count, mu_off_t* octets)
+Pop3 :: stat (size_t* count, mu_off_t* octets)
 {
   int status = mu_pop3_stat (pop3, count, octets);
   if (status)
