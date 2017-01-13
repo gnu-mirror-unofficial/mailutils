@@ -35,6 +35,11 @@ const char *program_version = "mail (" PACKAGE_STRING ")";
 int hint;
 char *file;
 char *user;
+
+char *default_encoding;
+char *default_content_type;
+char *content_name;
+char *content_filename;
 
 static void
 cli_f_option (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -134,9 +139,45 @@ cli_append (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
 static void
 cli_attach (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
 {
+  int fd = -1;
+  
   hint |= HINT_SEND_MODE;
-  if (send_attach_file_default (arg))
+  if (strcmp (arg, "-") == 0)
+    {
+      arg = NULL;
+      fd = 0;
+    }
+  if (send_attach_file (fd, arg, content_filename, content_name,
+			default_content_type, default_encoding))
     exit (1);
+
+  free (content_name);
+  content_name = NULL;
+  free (content_filename);
+  content_filename = NULL;
+}
+
+static void
+cli_attach_fd (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  int rc, fd;
+  
+  hint |= HINT_SEND_MODE;
+  rc = mu_str_to_c (arg, mu_c_int, &fd, NULL);
+  if (rc)
+    {
+      mu_parseopt_error (po, _("%s: bad descriptor"), arg);
+      exit (po->po_exit_error);
+    }
+  
+  if (send_attach_file (fd, NULL, content_filename, content_name,
+			default_content_type, default_encoding))
+    exit (1);
+
+  free (content_name);
+  content_name = NULL;
+  free (content_filename);
+  content_filename = NULL;
 }
 
 static struct mu_option mail_options[] = {
@@ -212,9 +253,20 @@ static struct mu_option mail_options[] = {
     N_("set content type for subsequent --attach options"),
     mu_c_string, &default_content_type },
   
+  { "content-name", 0, N_("NAME"), MU_OPTION_DEFAULT,
+    N_("set the Content-Type name parameter for the next --attach option"),
+    mu_c_string, &content_name },
+  { "content-filename", 0, N_("NAME"), MU_OPTION_DEFAULT,
+    N_("set the Content-Disposition filename parameter for the next --attach option"),
+    mu_c_string, &content_filename },
+  
   { "attach",  'A', N_("FILE"), MU_OPTION_DEFAULT,
     N_("attach FILE"),
     mu_c_string, NULL, cli_attach },
+
+  { "attach-fd",  0, N_("FD"), MU_OPTION_DEFAULT,
+    N_("attach from file descriptor FD"),
+    mu_c_string, NULL, cli_attach_fd },
 
   MU_OPTION_END
 }, *options[] = { mail_options, NULL };

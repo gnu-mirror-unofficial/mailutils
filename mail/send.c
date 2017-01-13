@@ -134,55 +134,97 @@ mail_sendheader (int argc, char **argv)
 /* Attachments */
 struct atchinfo
 {
+  char *id;
   char *encoding;
   char *content_type;
+  char *name;
   char *filename;
+  mu_stream_t source;
 };
 
 static mu_list_t attlist;
-
-char *default_encoding;
-char *default_content_type;
 
 static void
 atchinfo_free (void *p)
 {
   struct atchinfo *ap = p;
+  free (ap->id);
   free (ap->encoding);
   free (ap->content_type);
+  free (ap->name);
   free (ap->filename);
+  mu_stream_destroy (&ap->source);
   free (ap);
 }
 
 int
-send_attach_file (const char *name,
+send_attach_file (int fd,
+		  const char *realname,
+		  const char *content_filename, const char *content_name,
 		  const char *content_type, const char *encoding)
 {
   int rc;
   struct stat st;
   struct atchinfo *aptr;
   mu_list_t list;
+  mu_stream_t stream = NULL;
+  char *id = NULL;
+
+  if (fd >= 0)
+    {
+      rc = mu_fd_stream_create (&stream, NULL, fd, MU_STREAM_READ);
+      if (rc)
+	{
+	  mu_error (_("can't open descriptor %d: %s"), fd, mu_strerror (rc));
+	  return 1;
+	}
+      mu_asprintf (&id, "fd %d", fd);
+      if (fd == 0)
+	{
+	  mu_stream_destroy (&mu_strin);
+	  mu_nullstream_create (&mu_strin, MU_STREAM_READ);
+	  mu_stream_ioctl (mu_strin, MU_IOCTL_NULLSTREAM,
+			   MU_IOCTL_NULLSTREAM_SET_PATTERN, NULL);
+	  util_do_command ("set nullbody nullbodymsg");
+	}
+    }
+  else if (realname)
+    {
+      if (!content_filename)
+	content_filename = realname;
+      if (stat (realname, &st))
+	{
+	  if (errno == ENOENT)
+	    {
+	      mu_error (_("%s: file does not exist"), realname);
+	      return 1;
+	    }
+	  else
+	    {
+	      mu_error (_("%s: cannot stat: %s"), realname,
+			mu_strerror (errno));
+	      return 1;
+	    }
+	}
+      
+      if (!S_ISREG (st.st_mode))
+	{
+	  mu_error (_("%s: not a regular file"), realname);
+	  return 1;
+	}
+
+      rc = mu_mapfile_stream_create (&stream, realname, MU_STREAM_READ);
+      if (rc)
+	{
+	  mu_error (_("can't open file %s: %s"),
+		    realname, mu_strerror (rc));
+	  return 1;
+	}
+      mu_asprintf (&id, "\"%s\"", realname);
+    }
+  else
+    abort ();
   
-  if (stat (name, &st))
-    {
-      if (errno == ENOENT)
-	{
-	  mu_error (_("%s: file does not exist"), name);
-	  return 1;
-	}
-      else
-	{
-	  mu_error (_("%s: cannot stat: %s"), name, mu_strerror (errno));
-	  return 1;
-	}
-    }
-
-  if (!S_ISREG (st.st_mode))
-    {
-      mu_error (_("%s: not a regular file"), name);
-      return 1;
-    }
-
   if (!encoding)
     encoding = "base64";
   mu_filter_get_list (&list);
@@ -190,6 +232,8 @@ send_attach_file (const char *name,
   if (rc)
     {
       mu_error (_("unsupported encoding: %s"), encoding);
+      free (id);
+      mu_stream_destroy (&stream);
       return 1;
     }
   
@@ -205,11 +249,13 @@ send_attach_file (const char *name,
     }
   aptr = mu_alloc (sizeof (*aptr));
 
+  aptr->id = id;
   aptr->encoding = mu_strdup (encoding);  
   aptr->content_type = mu_strdup (content_type ?
-				  content_type :
-				    "application/octet-stream");
-  aptr->filename = mu_strdup (name);
+				  content_type : "application/octet-stream");
+  aptr->name = content_name ? mu_strdup (content_name) : NULL;
+  aptr->filename = content_filename ? mu_strdup (content_filename) : NULL;
+  aptr->source = stream;
   rc = mu_list_append (attlist, aptr);
   if (rc)
     {
@@ -217,12 +263,6 @@ send_attach_file (const char *name,
       exit (1);
     }
   return 0;
-}
-
-int
-send_attach_file_default (const char *name)
-{
-  return send_attach_file (name, default_content_type, default_encoding);
 }
 
 int
@@ -246,7 +286,7 @@ escape_list_attachments (int argc, char **argv, compose_env_t *env)
 	continue;
 	  
       mu_printf ("%3d %-12s %-30s %-s\n",
-		 i, aptr->filename, aptr->content_type, aptr->encoding);
+		 i, aptr->id, aptr->content_type, aptr->encoding);
     }
   mu_iterator_destroy (&itr);
 
@@ -266,7 +306,8 @@ escape_attach (int argc, char **argv, compose_env_t *env)
     case 3:
       content_type = argv[2];
     case 2:
-      return send_attach_file (argv[1], content_type, encoding);
+      return send_attach_file (-1, argv[1], argv[1], argv[1],
+			       content_type, encoding);
     default:
       return escape_check_args (argc, argv, 2, 4);
     }
@@ -309,12 +350,20 @@ saveatt (void *item, void *data)
   int rc;
   size_t nparts;
   char *p;
-  
-  rc = mu_message_create_attachment (aptr->content_type, aptr->encoding,
-				     aptr->filename, &part);
+
+  rc = mu_attachment_create (&part, aptr->content_type, aptr->encoding,
+			     aptr->name, aptr->filename);
   if (rc)
     {
-      mu_error (_("cannot attach \"%s\": %s"), aptr->filename,
+      mu_error (_("can't create attachment %s: %s"),
+		aptr->id, mu_strerror (rc));
+      return 1;
+    }
+
+  rc = mu_attachment_copy_from_stream (part, aptr->source, aptr->encoding);
+  if (rc)
+    {
+      mu_error (_("cannot attach %s: %s"), aptr->filename,
 		mu_strerror (rc));
       return 1;
     }

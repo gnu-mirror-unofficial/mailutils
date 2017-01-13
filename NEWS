@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2016-12-17
+GNU mailutils NEWS -- history of user-visible changes. 2017-01-13
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -6,6 +6,54 @@ Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 
 Version 3.1.90 (Git)
+
+* mail
+
+** Modifying attachment name and filename
+
+Two new options are provided for modifying attachment name (a.k.a
+description), and file name:
+
+  --content-name=STRING
+     Sets the attachment name (description).  Technically speaking, it
+     is the "name" parameter in the Content-Type MIME header.
+     
+  --content-filename=NAME
+     Sets the file name (the "filename" parameter in the
+     Content-Description MIME header of the outgoing message.
+
+Both options affect only the next `--attach' or `--attach-fd' option.
+
+* Constructing attachments from command line
+
+The new option `--attach-fd=N' instructs mail to read attachment from
+file descriptor N.  By default, the attachments created using this
+option are unnamed, i.e. neither name parameter of the Content-Type
+header, nor the filename parameter of the Content-Disposition header
+are set.  Use the --content-name and --content-filename options to
+change these.
+
+The option `--attach-fd=0' causes attachment to be read from the
+standard input.  The option `--attach=-' has the same effect.  For
+obvious reasons, the interactive mode is suppressed in this case.
+
+The `--attach-fd' option is useful when calling `mail' from another
+program.
+
+Example:
+
+Suppose that the 'mail' binary is opened at file descriptor 5 and
+the mail.c file is opened at descriptor 6, the following command
+line sends them as attachments:
+
+  mail --encoding=base64 \
+       --content-type=application/octet-stream \
+       --content-name="the mail(1) binary" --content-filename="mail" \
+       --attach-fd=5 \
+       --encoding=binary\
+       --content-type=text/plain --content-name="mail.c source file"\
+       --content-filename=mail.c --attach-fd=6 \
+       root@example.org
 
 
 Version 3.1.1 - 2016-12-15

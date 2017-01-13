@@ -2915,6 +2915,7 @@ Configuration Files}, for a detailed description of their format.
 * Invoking Mail::            Command Line Options.
 * Specifying Messages::      How to Specify Message Sets.
 * Composing Mail::           Composing Mail.
+* Attachments::              Attaching Files.
 * Reading Mail::             Reading Mail.
 * Scripting::                Scripting.
 * Mail Variables::           How to Alter the Behavior of @command{mail}.
@@ -2938,9 +2939,22 @@ mail sending mode, otherwise it operates in mail reading mode.
 @table @option
 @item -A @var{file}
 @itemx --attach=@var{file}
-Attach @var{file} to the composed message.  The encoding and content
-type are controlled by the @option{--encoding} and
-@option{--content-type} options, correspondingly.
+Attach @var{file} to the composed message.  The encoding, content
+type, and content description are controlled by the
+@option{--encoding}, @option{--content-type}, and
+@option{--content-name} options, correspondingly.
+
+The option @option{--attach=-} instructs @command{mail} to read the
+file to be attached from the standard input.  Interactive shell is
+disabled in this case.
+
+@item --attach-fd=@var{fd}
+Read attachment body from the file descriptor @var{fd}.  The
+descriptor must be open for reading.  This option is useful when
+calling @command{mail} from another program.
+
+See the options @option{--encoding}, @option{--content-type}, 
+@option{--content-name}, and @option{--content-filename}.
 
 @item -a @var{header}:@var{value}
 @itemx --append=@var{header}:@var{value}
@@ -2949,6 +2963,14 @@ Append the given header to the composed message.
 @item --content-type=@var{type}
 This options sets the content type to be used by all subsequent
 @option{--attach} options.
+
+@item --content-filename=@var{name}
+Set the @samp{filename} parameter in the @samp{Content-Disposition}
+header for the next @option{--attach-fd} option.
+
+@item --content-name=@var{text}
+Set the @samp{name} parameter (description) in the @samp{Content-Type}
+header for the next @option{--attach} or @option{--attach-fd} option.
 
 @item -E @var{command}
 @itemx --exec=@var{command}
@@ -3409,6 +3431,115 @@ message composed so far through the given shell command and replaces the
 message with the output the command produced.  If the command produced
 no output, @command{mail} assumes that something went wrong and retains
 the old contents of your message.
+
+@c *********************************************************************
+
+@node Attachments
+@subsection Sending Attachments
+
+The simplest way to attach a file from command line is by using the
+@option{--attach} (@option{-A}) option.  Its argument specifies the
+file to attach.  For example, the following will attach the content
+of the file @file{archive.tar}:
+
+@example
+$ mail --attach=archive.tar
+@end example
+
+By default, the content type will be set to
+@samp{application/octet-stream}, and the attachment will be encoded
+using the @samp{base64} encoding.  To change the content type, use the
+@option{--content-type} option.  For example, to send an HTML
+attachment:
+
+@example
+$ mail --content-type=text/html --attach=in.html
+@end example
+
+The @option{--content-type} option affects all @option{--attach}
+options that follow it.  To change the content type, simply add
+another @option{--content-type} option.  For example, to send both
+the HTML file and the archive:
+
+@example
+$ mail --content-type=text/html --attach=in.html \
+       --content-type=application/x-tar --attach=archive.tar
+@end example
+
+Similarly, the encoding to use is set up by the @option{--encoding}
+option.  As well as @option{--content-type}, this option affects all
+attachments supplied after it in the command line, until changed by
+the eventual next appearance of the same option.  Extending the above
+example:
+
+@example
+$ mail --content-type=text/html --encoding=quoted-printable \
+       --attach=in.html \
+       --content-type=application/x-tar --encoding=base64 \
+       --attach=archive.tar
+@end example
+
+Each attachment can also be assigned a @dfn{description} and a
+@dfn{file name}.  Normally, these are the same as the file name
+supplied with the @option{--attach} option.  However, you can change
+either or both of them using the @option{--content-name} and
+@option{--content-filename}, correspondingly.  Both of these options
+affect only the next @option{--attach} (or @option{--attach-fd}, see
+below) option.
+
+All the examples above will enter the usual interactive shell,
+allowing you to compose the body of the message.  If that's not
+needed, the non-interactive use can be forced by redirecting
+@file{/dev/null} to the standard input, e.g.:
+
+@example
+$ mail --attach=archive.tar < /dev/null
+@end example
+
+This will normally produce a message saying:
+
+@example
+mail: Null message body; hope that's ok
+@end example
+
+To suppress this message, unset the @samp{nullbodymsg} variable,
+as shown in the example below:
+
+@example
+$ mail -E 'set nonullbodymsg' --attach=archive.tar < /dev/null
+@end example
+
+The option @option{--attach=-} forces @command{mail} to read the file
+to be attached from the standard input stream.  This option implies
+disables the interactive mode and sets @samp{nonullbodymsg}
+implicitly, so that the above example can be rewritten as:
+
+@example
+$ mail --attach=- < archive.tar
+@end example
+
+Special option is provided to facilitate the use of @command{mail}
+in scripts.  The @option{--attach-fd=@var{N}} instructs the program to
+read the data to be attached from the file descriptor @var{N}.  The
+above example is equivalent to:
+
+@example
+$ mail --attach-fd=0 < archive.tar
+@end example
+
+Attachments created using this option have neither filename not
+description set, so normally the use of @option{--content-name} and/or
+@option{--content-filename} is advised.
+
+@example
+$ mail --subject 'mail(1)' \
+       --content-name="The mail(1) binary" --content-filename="mail" \
+       --attach-fd 5 \
+       --encoding=binary --content-type=text/plain \
+       --content-name="mail.c source file" --content-filename=mail.c \
+       --attach-fd 6 gray@@example.org 5</usr/bin/mail \
+       6<mailutils/mail/mail.c
+@end example
 
 @c *********************************************************************
 
