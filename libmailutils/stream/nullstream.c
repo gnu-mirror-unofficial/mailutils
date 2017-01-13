@@ -66,10 +66,10 @@ _nullstream_free_pattern (struct _mu_nullstream *np)
   if (!(np->mode & MU_NULLSTREAM_PATSTAT))
     {
       free (np->pattern);
-      np->pattern = NULL;
-      np->patsize = 0;
       np->mode &= ~MU_NULLSTREAM_PATSTAT;
     }
+  np->pattern = NULL;
+  np->patsize = 0;
 }
 
 static void
@@ -196,8 +196,8 @@ mu_nullstream_create (mu_stream_t *pref, int flags)
   np->base.truncate = _nullstream_truncate;
   np->base.done = _nullstream_done;
 
-  np->pattern = "";
-  np->patsize = 0;
+  np->pattern = "\0";
+  np->patsize = 1;
   np->mode = MU_NULLSTREAM_PATSTAT;
   
   *pref = (mu_stream_t) np;
