@@ -3510,9 +3510,9 @@ $ mail -E 'set nonullbodymsg' --attach=archive.tar < /dev/null
 @end example
 
 The option @option{--attach=-} forces @command{mail} to read the file
-to be attached from the standard input stream.  This option implies
-disables the interactive mode and sets @samp{nonullbodymsg}
-implicitly, so that the above example can be rewritten as:
+to be attached from the standard input stream.  This option disables
+the interactive mode and sets @samp{nonullbodymsg} implicitly, so that
+the above example can be rewritten as:
 
 @example
 $ mail --attach=- < archive.tar
@@ -3527,19 +3527,108 @@ above example is equivalent to:
 $ mail --attach-fd=0 < archive.tar
 @end example
 
-Attachments created using this option have neither filename not
+Attachments created with this option have neither filename nor 
 description set, so normally the use of @option{--content-name} and/or
 @option{--content-filename} is advised.
 
+The following Perl program serves as an example of using
+@command{mail} from a script to construct a MIME message on the fly.
+It scans all mounted file systems for executable files that have
+setuid or setgid bits set and reports the names of those files in
+separate attachments.  Each attachment is named after the mountpoint
+it describes.
+
+The script begins with the usual prologue stating the modules that
+will be used:
+
 @example
-$ mail --subject 'mail(1)' \
-       --content-name="The mail(1) binary" --content-filename="mail" \
-       --attach-fd 5 \
-       --encoding=binary --content-type=text/plain \
-       --content-name="mail.c source file" --content-filename=mail.c \
-       --attach-fd 6 gray@@example.org 5</usr/bin/mail \
-       6<mailutils/mail/mail.c
+#!/usr/bin/perl
+
+use strict;
+use autodie;
 @end example
+
+Then global variables are declared.  The @samp{@@rcpt} array contains
+the email addresses of the recipients:
+
+@example
+my @@rcpt= 'root@@example.com';
+@end example
+
+The @samp{@@cmd} variable holds the @command{mail} command line.  It
+will be augmented for each file system.  The initial value is set as
+follows:
+
+@example
+my @@cmd = ('mail',
+           '-E set nonullbodymsg',
+           '--content-type=text/plain');
+@end example
+
+The @command{find} utility will be used to locate the files.  The
+script will start as many instances as there are mountpoints.  Those
+instances will be run in parallel and their standard output streams
+will be connected to file descriptors passed to @command{mail}
+invocation in @option{--attach-fd} options.
+
+The descriptors will be held in @samp{@@fds} array.  This will prevent
+them from being wiped out by the garbage collector.  Furthermore, care
+should be taken to ensure that the @code{O_CLOECEC} flag be not set
+for these descriptors.  This sample script takes a simplistic approach:
+it instructs Perl to not close first 255 descriptors when executing
+another programs:
+
+@example
+my @@fds;
+$^F = 255;
+@end example
+
+The following code obtains the list of mount points:
+
+@example
+open(my $in, '-|', 'mount -t nonfs,noproc,nosysfs,notmpfs');
+while (<$in>) @{
+    chomp;
+    if (/^\S+ on (?<mpoint>.+) type (?<fstype>.+) /) @{
+@end example
+
+For each mountpoint, the @command{find} command line is constructed
+and launched.  The file descriptor is pushed to the @samp{@@fds} array
+to prevent it from being collected by the garbage collector:
+
+@example
+	open(my $fd, '-|',
+	     "find $+@{mpoint@} -xdev -type f"
+             . " \\( -perm -u+x -o -perm -g+x -o -perm -o+x \\)"
+             . " \\( -perm -u+s -o -perm -g+s \\) -print");
+	push @@fds, $fd;
+@end example
+
+Now, the @command{mail} command is instructed to create next
+attachment from that file descriptor:
+
+@example
+	my $mpname = $+@{mpoint@};
+	$mpname =~ tr@{/@}@{%@}; 
+	push @@cmd,
+             "--content-name=Set[ug]id files on $+@{mpoint@} (type $+@{fstype@})",
+	     "--content-filename=$mpname.list",
+	     '--attach-fd=' . fileno($fd);
+    @}
+@}
+close $in;
+@end example
+
+Finally, the emails of the recipients are added to the command line,
+the standard input is closed to make sure @command{mail} won't enter
+the interactive mode and the constructed command is executed:
+
+@example
+push @@cmd, @@rcpt;
+close STDIN;
+system(@@cmd);
+@end example
+
 
 @c *********************************************************************
 
