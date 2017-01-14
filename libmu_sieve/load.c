@@ -147,7 +147,7 @@ mu_i_sv_load_add_dir (mu_sieve_machine_t mach, const char *name)
 #else
 #include <sieve-priv.h>
 
-int
+void *
 mu_sieve_load_ext (mu_sieve_machine_t mach, const char *name)
 {
   return 1;
@@ -156,7 +156,7 @@ mu_sieve_load_ext (mu_sieve_machine_t mach, const char *name)
 int
 mu_i_sv_load_add_dir (mu_sieve_machine_t mach, const char *name)
 {
-  return 1;
+  return NULL;
 }
 
 #endif /* HAVE_LIBLTDL */
