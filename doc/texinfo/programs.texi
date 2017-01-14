@@ -3573,9 +3573,9 @@ invocation in @option{--attach-fd} options.
 
 The descriptors will be held in @samp{@@fds} array.  This will prevent
 them from being wiped out by the garbage collector.  Furthermore, care
-should be taken to ensure that the @code{O_CLOECEC} flag be not set
+should be taken to ensure that the @code{O_CLOEXEC} flag be not set
 for these descriptors.  This sample script takes a simplistic approach:
-it instructs Perl to not close first 255 descriptors when executing
+it instructs Perl not to close first 255 descriptors when executing
 another programs:
 
 @example
@@ -3608,12 +3608,12 @@ Now, the @command{mail} command is instructed to create next
 attachment from that file descriptor:
 
 @example
-	my $mpname = $+@{mpoint@};
-	$mpname =~ tr@{/@}@{%@}; 
-	push @@cmd,
+        my $mpname = $+@{mpoint@};
+        $mpname =~ tr@{/@}@{%@}; 
+        push @@cmd,
              "--content-name=Set[ug]id files on $+@{mpoint@} (type $+@{fstype@})",
-	     "--content-filename=$mpname.list",
-	     '--attach-fd=' . fileno($fd);
+             "--content-filename=$mpname.list",
+             '--attach-fd=' . fileno($fd);
     @}
 @}
 close $in;
