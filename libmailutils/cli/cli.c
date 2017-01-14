@@ -160,7 +160,7 @@ config_verbose (struct mu_parseopt *po, struct mu_option *opt,
 
 static void
 config_lint (struct mu_parseopt *po, struct mu_option *opt,
-		char const *arg)
+	     char const *arg)
 {
   struct app_data *dp = po->po_data;
   dp->lint = 1;
@@ -183,11 +183,27 @@ param_set (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
   mu_cfg_tree_add_node (dp->append_tree, node);
 }
 
+static void
+hangproc (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  int n;
+  if (mu_str_to_c (arg, mu_c_int, &n, NULL))
+    {
+      mu_parseopt_error (po, _("%s: bad number"), arg);
+      exit (po->po_exit_error);
+    }
+  mu_wd (n);
+}
+
 struct mu_option mu_common_options[] = {
   /*  MU_OPTION_GROUP(N_("Common options")),*/
-  { "program-name",   0,  N_("NAME"),  MU_OPTION_IMMEDIATE|MU_OPTION_HIDDEN,
+  { "program-name",   0,  N_("NAME"),    MU_OPTION_IMMEDIATE|MU_OPTION_HIDDEN,
     N_("set program name"),
     mu_c_string, NULL, change_progname },
+  { "HANG",           0,  N_("SECONDS"),
+    MU_OPTION_IMMEDIATE|MU_OPTION_ARG_OPTIONAL|MU_OPTION_HIDDEN,
+    N_("wait this number of seconds before startup"),
+    mu_c_string, NULL, hangproc, "3600" },
   MU_OPTION_END
 };
 
