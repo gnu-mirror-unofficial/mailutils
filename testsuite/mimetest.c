@@ -29,7 +29,7 @@
 
 #include <mailutils/mailutils.h>
 
-void message_display_parts(mu_message_t msg, int indent);
+void message_display_parts (mu_message_t msg, int indent);
 
 const char *from;
 const char *subject;

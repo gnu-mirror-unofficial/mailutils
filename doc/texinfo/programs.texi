@@ -2879,7 +2879,7 @@ Prints additional debugging output.
 
 @item -s @var{string}
 @itemx --sender=@var{string}
-Prints only mail whose @samp{From:} headers contain the supplied string.
+Prints only mail with @samp{From:} header containing the supplied string.
 @FIXME{Probably, this should test envelopes as well.}
 
 @item -f @var{url}

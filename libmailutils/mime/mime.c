@@ -545,8 +545,11 @@ _mime_part_size (mu_mime_t mime, size_t *psize)
   int ret;
 
   if (mime->nmtp_parts == 0)
-    return EINVAL;
-
+    {
+      *psize = 0;
+      return 0;
+    }
+  
   if ((ret = _mime_set_content_type (mime)) != 0)
     return ret;
   if (mime->nmtp_parts == 1)
@@ -855,20 +858,26 @@ _mime_body_lines (mu_body_t body, size_t *plines)
   mu_message_t       msg = mu_body_get_owner (body);
   mu_mime_t          mime = mu_message_get_owner (msg);
   int             i, ret;
-  size_t          lines;
+  size_t          total = 0;
 
   if (mime->nmtp_parts == 0)
-    return EINVAL;
-
+    {
+      *plines = 0;
+      return 0;
+    }
+  
   if ((ret = _mime_set_content_type (mime)) != 0)
     return ret;
   for (i = 0; i < mime->nmtp_parts; i++)
     {
+      size_t lines;
+      
       mu_message_lines (mime->mtp_parts[i]->msg, &lines);
-      plines += lines;
+      total += lines;
       if (mime->nmtp_parts > 1)	/* boundary line */
-	plines++;
+	total++;
     }
+  *plines = total;
   return 0;
 }
 

@@ -5,7 +5,7 @@ See the end of file for copying conditions.
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 
-Version 3.1.90 (Git)
+Version 3.1.91 (Git)
 
 * mail
 
@@ -20,11 +20,11 @@ description), and file name:
      
   --content-filename=NAME
      Sets the file name (the "filename" parameter in the
-     Content-Description MIME header of the outgoing message.
+     Content-Description MIME header of the outgoing message).
 
 Both options affect only the next `--attach' or `--attach-fd' option.
 
-* Constructing attachments from command line
+** Constructing attachments from command line
 
 The new option `--attach-fd=N' instructs mail to read attachment from
 file descriptor N.  By default, the attachments created using this
