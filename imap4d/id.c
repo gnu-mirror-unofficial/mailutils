@@ -39,16 +39,23 @@ eat_args (imap4d_tokbuf_t tok)
   else if (p[0] != '(')
     return RESP_BAD;
 
+  mu_diag_init ();  
+  mu_stream_printf (mu_strerr, "\033s<%d>%s", MU_DIAG_INFO,
+		    _("client identification: "));
+
   /* Collect arguments */
   while ((p = imap4d_tokbuf_getarg (tok, n++)))
     {
       if (p[0] == ')')
 	{
+	  mu_stream_printf (mu_strerr, "\n");
 	  if (imap4d_tokbuf_getarg (tok, n))
 	    return RESP_BAD;
 	  return RESP_OK;
 	}
+      mu_stream_printf (mu_strerr, "%s%c", p, (n % 2) ? ' ' : '=');
     }
+  mu_stream_printf (mu_strerr, "\n");
   return RESP_BAD;
 }
 

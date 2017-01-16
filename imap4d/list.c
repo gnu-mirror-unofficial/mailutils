@@ -210,7 +210,7 @@ imap4d_list (struct imap4d_session *session,
       
       if (pfx->ns == NS_OTHER
 	  && strcmp (ref, pfx->prefix) == 0
-	  && *mu_str_skip_cset_comp (wcard, "*%"))
+	  && strpbrk (wcard, "*%"))
 	{
 	  /* [A] server MAY return NO to such a LIST command, requiring that a
 	     user name be included with the Other Users' Namespace prefix
