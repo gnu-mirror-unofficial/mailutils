@@ -140,6 +140,7 @@ struct atchinfo
   char *name;
   char *filename;
   mu_stream_t source;
+  int skip_empty;
 };
 
 static mu_list_t attlist;
@@ -256,6 +257,7 @@ send_attach_file (int fd,
   aptr->name = content_name ? mu_strdup (content_name) : NULL;
   aptr->filename = content_filename ? mu_strdup (content_filename) : NULL;
   aptr->source = stream;
+  aptr->skip_empty = skip_empty_attachments;
   rc = mu_list_append (attlist, aptr);
   if (rc)
     {
@@ -363,11 +365,31 @@ saveatt (void *item, void *data)
   rc = mu_attachment_copy_from_stream (part, aptr->source, aptr->encoding);
   if (rc)
     {
-      mu_error (_("cannot attach %s: %s"), aptr->filename,
-		mu_strerror (rc));
+      mu_error (_("cannot attach %s: %s"), aptr->id, mu_strerror (rc));
       return 1;
     }
 
+  if (aptr->skip_empty)
+    {
+      mu_body_t body;
+      size_t size;
+      
+      rc = mu_message_get_body (part, &body);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_body", aptr->id, rc);
+	  return 1;
+	}
+      rc = mu_body_size (body, &size);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_body_size", aptr->id, rc);
+	  return 1;
+	}
+      if (size == 0)
+	return 0;
+    }
+      
   mu_mime_get_num_parts	(mime, &nparts);
   mu_message_get_header (part, &hdr);
   mu_rfc2822_msg_id (nparts, &p);

@@ -173,7 +173,8 @@ extern int interactive;
 extern const char *program_version;
 extern char *default_encoding;
 extern char *default_content_type;
-
+extern int skip_empty_attachments;
+  
 /* Functions */
 extern int mail_alias (int argc, char **argv);
 extern int mail_alt (int argc, char **argv);	/* command alternates */

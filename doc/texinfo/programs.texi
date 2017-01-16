@@ -3044,6 +3044,13 @@ Cause interrupts to terminate program.
 Sets the return email address for outgoing mail.
 @xref{return-address}.
 
+@item --skip-empty-attachments
+@itemx --no-skip-empty-attachments
+Don't create attachments that would have zero-size body.  This
+option affects all attachments created by @option{--attach} and
+@option{--attach-fd} options appearing after it in the command line.
+To cancel its effect, use the @option{--no-skip-empty-attachments} option.
+
 @item -s @var{subj}
 @itemx --subject=@var{subj}
 Send a message with a Subject of @var{subj}.  Valid only in sending
@@ -3530,6 +3537,12 @@ $ mail --attach-fd=0 < archive.tar
 Attachments created with this option have neither filename nor 
 description set, so normally the use of @option{--content-name} and/or
 @option{--content-filename} is advised.
+
+The option @option{--skip-empty-attachments} instructs @command{mail}
+to skip creating attachments that would have zero-size body.  This
+option affects all attachments created by @option{--attach} and
+@option{--attach-fd} options appearing after it in the command line.
+To cancel its effect, use the @option{--no-skip-empty-attachments} option.
 
 The following Perl program serves as an example of using
 @command{mail} from a script to construct a MIME message on the fly.

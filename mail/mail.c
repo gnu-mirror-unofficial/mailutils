@@ -36,10 +36,11 @@ int hint;
 char *file;
 char *user;
 
+int skip_empty_attachments;
 char *default_encoding;
 char *default_content_type;
-char *content_name;
-char *content_filename;
+static char *content_name;
+static char *content_filename;
 
 static void
 cli_f_option (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -108,14 +109,12 @@ cli_command_option (struct mu_parseopt *po, struct mu_option *opt,
       break;
 
     case 0:
-      mu_parseopt_error (po,
-			 _("--%s: option should have been recognized"),
+      mu_parseopt_error (po, _("--%s: option should have been recognized"),
 			 opt->opt_long);
       exit (po->po_exit_error);
       
     default:
-      mu_parseopt_error (po,
-			 _("-%c: option should have been recognized"),
+      mu_parseopt_error (po, _("-%c: option should have been recognized"),
 			 opt->opt_short);
       exit (po->po_exit_error);
     }      
@@ -240,6 +239,10 @@ static struct mu_option mail_options[] = {
   { "append",   'a', N_("HEADER: VALUE"), MU_OPTION_DEFAULT,
     N_("append given header to the message being sent"),
     mu_c_string, NULL, cli_append },
+
+  { "skip-empty-attachments", 0, NULL, MU_OPTION_DEFAULT,
+    N_("skip attachments with empty body"),
+    mu_c_bool, &skip_empty_attachments },
     
   { "exec" ,    'E', N_("COMMAND"), MU_OPTION_DEFAULT,
     N_("execute COMMAND"),

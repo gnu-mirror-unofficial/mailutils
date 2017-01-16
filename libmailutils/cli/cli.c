@@ -710,6 +710,9 @@ mu_cli (int argc, char **argv, struct mu_cli_setup *setup, char **capa,
   pohint.po_version_hook = mu_version_hook;
   pohint.po_flags |= MU_PARSEOPT_VERSION_HOOK;
 
+  pohint.po_negation = "no-";
+  pohint.po_flags |= MU_PARSEOPT_NEGATION;
+  
   cfhint.site_file = mu_site_config_file ();
   cfhint.flags = MU_CFHINT_SITE_FILE | MU_CFHINT_PER_USER_FILE;
   
