@@ -216,11 +216,9 @@ extern int mu_attachment_create (mu_message_t *newmsg,
 				 const char *encoding,
 				 const char *name, const char *filename);
 extern int mu_attachment_copy_from_stream (mu_message_t att,
-					   mu_stream_t stream,
-					   char const *encoding);
+					   mu_stream_t stream);
 extern int mu_attachment_copy_from_file (mu_message_t att,
-					 char const *filename,
-					 char const *encoding);
+					 char const *filename);
 extern int mu_message_create_attachment (const char *content_type,
 					 const char *encoding,
 					 const char *filename,

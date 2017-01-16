@@ -108,7 +108,8 @@ at_hdr (mu_header_t hdr, const char *content_type, const char *encoding,
     rc = mu_header_append (hdr, MU_HEADER_CONTENT_DISPOSITION, "attachment");
   if (rc)
     return rc;
-  return mu_header_append (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING, encoding);
+  return mu_header_append (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
+			   encoding ? encoding : "8bit");
 }
 
 /* Create in *NEWMSG an empty attachment of given CONTENT_TYPE and ENCODING.
@@ -149,42 +150,58 @@ mu_attachment_create (mu_message_t *newmsg,
 
 /* ATT is an attachment created by a previous call to mu_attachment_create().
 
-   Fills in the attachment body with the data from STREAM using the specified
-   ENCODING.
+   Fills in the attachment body with the data from STREAM using the encoding
+   stored in the Content-Transfer-Encoding header of ATT.
  */
 int
-mu_attachment_copy_from_stream (mu_message_t att, mu_stream_t stream,
-				char const *encoding)
+mu_attachment_copy_from_stream (mu_message_t att, mu_stream_t stream)
 {
   mu_body_t body;
   mu_stream_t bstr;
   mu_stream_t tstream;
+  mu_header_t hdr;
   int rc;
+  char *encoding;
+  
+  mu_message_get_header (att, &hdr);
+  rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
+				    &encoding);
+  switch (rc)
+    {
+    case 0:
+      break;
+      
+    case MU_ERR_NOENT:
+      return EINVAL;
+
+    default:
+      return rc;
+    }
   
   mu_message_get_body (att, &body);
   rc = mu_body_get_streamref (body, &bstr);
-  if (rc)
-    return rc;
-  
-  rc = mu_filter_create (&tstream, stream, encoding, MU_FILTER_ENCODE,
-			 MU_STREAM_READ);
   if (rc == 0)
     {
-      rc = mu_stream_copy (bstr, tstream, 0, NULL);
-      mu_stream_unref (tstream);
+      rc = mu_filter_create (&tstream, stream, encoding, MU_FILTER_ENCODE,
+			     MU_STREAM_READ);
+      if (rc == 0)
+	{
+	  rc = mu_stream_copy (bstr, tstream, 0, NULL);
+	  mu_stream_unref (tstream);
+	}
+      mu_stream_unref (bstr);
     }
-  mu_stream_unref (bstr);
+  free (encoding);
   return rc;
 }
 
 /* ATT is an attachment created by a previous call to mu_attachment_create().
 
-   Fills in the attachment body with the data from FILENAME using the specified
-   ENCODING.
+   Fills in the attachment body with the data from FILENAME using the encoding
+   specified in the Content-Transfer-Encoding header.
  */
 int
-mu_attachment_copy_from_file (mu_message_t att, char const *filename,
-			      char const *encoding)
+mu_attachment_copy_from_file (mu_message_t att, char const *filename)
 {
   mu_stream_t stream;
   int rc;
@@ -192,7 +209,7 @@ mu_attachment_copy_from_file (mu_message_t att, char const *filename,
   rc = mu_file_stream_create (&stream, filename, MU_STREAM_READ);
   if (rc == 0)
     {
-      rc = mu_attachment_copy_from_stream (att, stream, encoding);
+      rc = mu_attachment_copy_from_stream (att, stream);
       mu_stream_unref (stream);
     }
   return rc;
@@ -208,8 +225,6 @@ mu_message_create_attachment (const char *content_type, const char *encoding,
   
   if (content_type == NULL)
     content_type = "text/plain";
-  if (encoding == NULL)
-    encoding = "7bit";
 
   name = strrchr (filename, '/');
   if (name)
@@ -220,7 +235,7 @@ mu_message_create_attachment (const char *content_type, const char *encoding,
   rc = mu_attachment_create (&att, content_type, encoding, name, filename);
   if (rc == 0)
     {
-      rc = mu_attachment_copy_from_file (att, filename, encoding);
+      rc = mu_attachment_copy_from_file (att, filename);
       if (rc)
 	mu_message_destroy (&att, NULL);
     }

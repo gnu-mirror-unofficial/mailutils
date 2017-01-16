@@ -362,7 +362,7 @@ saveatt (void *item, void *data)
       return 1;
     }
 
-  rc = mu_attachment_copy_from_stream (part, aptr->source, aptr->encoding);
+  rc = mu_attachment_copy_from_stream (part, aptr->source);
   if (rc)
     {
       mu_error (_("cannot attach %s: %s"), aptr->id, mu_strerror (rc));
