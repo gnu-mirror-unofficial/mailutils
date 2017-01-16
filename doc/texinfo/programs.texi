@@ -3048,7 +3048,9 @@ Sets the return email address for outgoing mail.
 @itemx --no-skip-empty-attachments
 Don't create attachments that would have zero-size body.  This
 option affects all attachments created by @option{--attach} and
-@option{--attach-fd} options appearing after it in the command line.
+@option{--attach-fd} options appearing after it in the command line,
+as well as the body of the original message.
+
 To cancel its effect, use the @option{--no-skip-empty-attachments} option.
 
 @item -s @var{subj}
@@ -3542,7 +3544,38 @@ The option @option{--skip-empty-attachments} instructs @command{mail}
 to skip creating attachments that would have zero-size body.  This
 option affects all attachments created by @option{--attach} and
 @option{--attach-fd} options appearing after it in the command line.
-To cancel its effect, use the @option{--no-skip-empty-attachments} option.
+It also affects the handling of the original message body.  To cancel
+its effect, use the @option{--no-skip-empty-attachments} option. 
+
+Here are some examples illustrating how it works.
+
+First, consider the following command line
+
+@example
+$ mail --attach=archive.tar </dev/null
+@end example
+
+Assume that @file{archive.tar} is not empty.
+
+This will create a MIME message of two parts: the first part having
+@samp{text/html} type and empty body, and the second part of type
+@samp{application/octet-stream}, with the content copied from the file
+@file{archive.tar}.
+
+Now, if you do:
+
+@example
+$ mail --attach=archive.tar --skip-empty-attachments </dev/null
+@end example
+
+@noindent
+then the created MIME message will contain only one part: that
+containing @file{archive.tar}.
+
+If the file @file{archive.tar} has zero length, the resulting archive
+will still contain the @samp{application/octet-stream} part of zero
+length.  However, if you place the @option{--skip-empty-attachments}
+option before @option{--attach}, then the produced message will be empty.
 
 The following Perl program serves as an example of using
 @command{mail} from a script to construct a MIME message on the fly.

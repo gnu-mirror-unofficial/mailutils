@@ -662,7 +662,10 @@ _mime_body_stream_read (mu_stream_t stream, char *buf, size_t buflen, size_t *nb
   size_t             total = 0;
   
   if (mime->nmtp_parts == 0)
-    return EINVAL;
+    {
+      *nbytes = 0;
+      return 0;
+    }
   
   if ((ret = _mime_set_content_type (mime)) == 0)
     {
@@ -1055,7 +1058,10 @@ mu_mime_get_num_parts (mu_mime_t mime, size_t *nmtp_parts)
 	    return (ret);
 	}
       else
-	mime->nmtp_parts = 1;
+	{
+	  *nmtp_parts = 1;
+	  return 0;
+	}
     }
   *nmtp_parts = mime->nmtp_parts;
   return (ret);

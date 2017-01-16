@@ -408,49 +408,51 @@ saveatt (void *item, void *data)
 }
 
 static int
-add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
+add_body (mu_message_t inmsg, mu_iterator_t itr, mu_mime_t mime)
 {
-  mu_message_t inmsg, outmsg, part;
   mu_body_t body;
-  mu_header_t inhdr, outhdr;
-  mu_iterator_t itr;
-  mu_mime_t mime;
+  mu_message_t part;
   mu_stream_t str, output;
-  int rc;
+  mu_header_t outhdr;
   char *p;
+  int rc;
   
-  if (mu_list_is_empty (attlist))
-    {
-      *pmime = NULL;
-      return 0;
-    }
-  
-  inmsg = *pmsg;
-
-  /* Create a mime object */
-  rc = mu_mime_create (&mime, NULL, 0);
-  if (rc)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_create", NULL, rc);
-      return 1;
-    }
-
-  /* Add original message as its first part */
-  /* 1. Create the part and obtain a reference to its stream */
-  mu_message_create (&part, NULL);
-  mu_message_get_body (part, &body);
-  mu_body_get_streamref (body, &output);
-
-  /* 2. Get original body stream and copy it out to the part's body */
   mu_message_get_body (inmsg, &body);
+  if (skip_empty_attachments)
+    {
+      size_t size;
+      rc = mu_body_size (body, &size);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_body_size", NULL, rc);
+	  return -1;
+	}
+      if (size == 0)
+	return 0;
+    }
+    
+  /* Add original message as the first part */
+  
+  /* 1. Create the part and obtain a reference to its stream */
+  if ((rc = mu_message_create (&part, NULL)) == 0)
+    {
+      mu_body_t pbody;
+      
+      mu_message_get_body (part, &pbody);
+      mu_body_get_streamref (pbody, &output);
+    }
+  else
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_create", NULL, rc);
+      return -1;
+    }
+  
+  /* 2. Get original body stream and copy it out to the part's body */
   mu_body_get_streamref (body, &str);
   mu_stream_copy (output, str, 0, NULL);
 
   mu_stream_close (output);
   mu_stream_destroy (&output);
-
-  mu_message_get_header (inmsg, &inhdr);
-  mu_header_get_iterator (inhdr, &itr);
 
   /* 3. Copy "Content-*" headers from the original message */
   mu_message_get_header (part, &outhdr);
@@ -477,11 +479,50 @@ add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
   mu_mime_add_part (mime, part);
   mu_message_unref (part);
 
+  return 0;
+}  
+
+static int
+add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
+{
+  mu_message_t inmsg, outmsg;
+  mu_header_t inhdr, outhdr;
+  mu_iterator_t itr;
+  mu_mime_t mime;  
+  int rc;
+  
+  if (mu_list_is_empty (attlist))
+    {
+      *pmime = NULL;
+      return 0;
+    }
+  
+  inmsg = *pmsg;
+
+  /* Create a mime object */
+  rc = mu_mime_create (&mime, NULL, 0);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_create", NULL, rc);
+      return 1;
+    }
+
+  mu_message_get_header (inmsg, &inhdr);
+  mu_header_get_iterator (inhdr, &itr);
+
+  if (add_body (inmsg, itr, mime))
+    {
+      mu_mime_destroy (&mime);
+      mu_iterator_destroy (&itr);
+      return 1;
+    }
+
   /* Add the respective attachments */
   rc = mu_list_foreach (attlist, saveatt, mime);
   if (rc)
     {
       mu_mime_destroy (&mime);
+      mu_iterator_destroy (&itr);
       return 1;
     }
 
@@ -492,6 +533,7 @@ add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_get_message", NULL, rc);
       mu_mime_destroy (&mime);
+      mu_iterator_destroy (&itr);
       return 1;
     }
 
@@ -515,6 +557,7 @@ add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
 
   mu_message_unref (outmsg);
   mu_message_unref (inmsg);
+
   *pmsg = outmsg;
   *pmime = mime;
   return 0;
@@ -1193,6 +1236,7 @@ mail_send0 (compose_env_t *env, int save_to)
 	  status = mu_message_create (&msg, NULL);
 	  if (status)
 	    break;
+	  
 	  /* Fill the body. */
 	  mu_stream_seek (env->compstr, 0, MU_SEEK_SET, NULL);
 	  status = fill_body (msg, env->compstr);
