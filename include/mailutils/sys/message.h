@@ -32,7 +32,6 @@ extern "C" {
 
 #define MESSAGE_MODIFIED        0x10000
 #define MESSAGE_INTERNAL_STREAM 0x20000
-#define MESSAGE_MIME_OWNER      0x40000
 
 struct _mu_message
 {

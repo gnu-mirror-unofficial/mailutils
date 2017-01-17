@@ -36,9 +36,8 @@ mu_message_is_multipart (mu_message_t msg, int *pmulti)
 	  int status = mu_mime_create (&msg->mime, msg, 0);
 	  if (status != 0)
 	    return 0;
-	  msg->flags |= MESSAGE_MIME_OWNER;
 	}
-      *pmulti = mu_mime_is_multipart(msg->mime);
+      *pmulti = mu_mime_is_multipart (msg->mime);
     }
   return 0;
 }

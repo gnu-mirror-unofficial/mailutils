@@ -1074,7 +1074,6 @@ mu_mime_get_num_parts (mu_mime_t mime, size_t *nmtp_parts)
     }
   *nmtp_parts = mime->nmtp_parts;
   return (ret);
-
 }
 
 int
@@ -1149,7 +1148,6 @@ mu_mime_to_message (mu_mime_t mime, mu_message_t *pmsg)
   if (rc == 0)
     {
       mu_message_unref (msg);
-      msg->flags |= MESSAGE_MIME_OWNER;
       mime->msg = NULL;
       mu_mime_ref (mime);
       *pmsg = msg;
