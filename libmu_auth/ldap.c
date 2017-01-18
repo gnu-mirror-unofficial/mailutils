@@ -598,38 +598,34 @@ _mu_ldap_search (LDAP *ld, const char *filter_pat, const char *key,
   size_t nattrs;
   LDAPMessage *res, *msg;
   ber_int_t msgid;
-  const char *env[3];
-  struct mu_wordsplit ws;
-
+  char *filter_str;
+  
   rc = _construct_attr_array (&nattrs, &attrs);
   if (rc)
     return rc;
 
-  env[0] = "user";
-  env[1] = key;
-  env[2] = NULL;
-
-  ws.ws_env = env;
-  if (mu_wordsplit (filter_pat, &ws,
-		    MU_WRDSF_NOSPLIT | MU_WRDSF_NOCMD |
-		    MU_WRDSF_ENV | MU_WRDSF_ENV_KV))
+  rc = mu_str_vexpand (&filter_str, filter_pat, "user", key, NULL);
+  if (rc)
     {
-      mu_error (_("cannot expand line `%s': %s"), filter_pat,
-		mu_wordsplit_strerror (&ws));
-      return MU_ERR_FAILURE;
-    }
-  else if (ws.ws_wordc == 0)
-    {
-      mu_error (_("expanding %s yields empty string"), filter_pat);
-      mu_wordsplit_free (&ws);
       mu_argcv_free (nattrs, attrs);
-      return MU_ERR_FAILURE;
+      if (rc == MU_ERR_FAILURE)
+	{
+	  mu_error (_("cannot expand line `%s': %s"), filter_pat,
+		    filter_str);
+	  free (filter_str);
+	}
+      else
+	{
+	  mu_error (_("cannot expand line `%s': %s"), filter_pat,
+		    mu_strerror (rc));
+	}
+      return rc;
     }
   
   rc = ldap_search_ext (ld, ldap_param.base, LDAP_SCOPE_SUBTREE,
-			ws.ws_wordv[0], attrs, 0,
+			filter_str, attrs, 0,
 			NULL, NULL, NULL, -1, &msgid);
-  mu_wordsplit_free (&ws);
+  free (filter_str);
   mu_argcv_free (nattrs, attrs);
 
   if (rc != LDAP_SUCCESS)

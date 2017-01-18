@@ -153,28 +153,6 @@ namespace_init (void)
   mu_assoc_sort_r (prefixes, cmplen, NULL);
 }
       
-static int
-expand_vars (char **env, char const *input, char **output)
-{
-  struct mu_wordsplit ws;
-  size_t wordc;
-  char **wordv;
-  
-  ws.ws_env = (const char **) env;
-  if (mu_wordsplit (input, &ws,
-		    MU_WRDSF_NOSPLIT | MU_WRDSF_NOCMD |
-		    MU_WRDSF_ENV | MU_WRDSF_ENV_KV))
-    {
-      mu_error (_("cannot expand line `%s': %s"), input,
-		mu_wordsplit_strerror (&ws));
-      return 1;
-    }
-  mu_wordsplit_get_words (&ws, &wordc, &wordv);
-  *output = wordv[0];
-  mu_wordsplit_free (&ws);
-  return 0;
-}
-
 static char *
 prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 		       size_t namelen, int url)
@@ -290,23 +268,12 @@ extract_username (char const *name, struct namespace_prefix const *pfx)
   return user;
 }
 
-enum
-  {
-    ENV_USER = 1,
-    ENV_HOME = 3,
-    ENV_NULL = 4
-  };
-
-#define ENV_INITIALIZER \
-  { [ENV_USER-1] = "user", [ENV_HOME-1] = "home", [ENV_NULL] = NULL }
-
 char *
 namespace_translate_name (char const *name, int url,
 			  struct namespace_prefix const **return_pfx)
 {
   char *res = NULL;
   struct namespace_prefix const *pfx;
-  char *env[] = ENV_INITIALIZER;
   
   if (mu_c_strcasecmp (name, "INBOX") == 0 && auth_data->change_uid)
     {
@@ -318,43 +285,64 @@ namespace_translate_name (char const *name, int url,
 
   if (res)
     {
+      mu_assoc_t assoc;
+      int rc;
       char *dir;
+      
+      rc = mu_assoc_create (&assoc, 0);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_assoc_create", NULL, rc);
+	  free (res);
+	  imap4d_bye (ERR_NO_MEM);
+	}
       
       switch (pfx->ns)
 	{
 	case NS_PRIVATE:
-	  env[ENV_USER] = auth_data->name;
-	  env[ENV_HOME] = real_homedir;
+	  mu_assoc_install (assoc, "user", auth_data->name);
+	  mu_assoc_install (assoc, "home", real_homedir);
 	  break;
 
 	case NS_OTHER:
 	  {
 	    struct mu_auth_data *adata;
-	    env[ENV_USER] = extract_username (name, pfx);
-	    adata = mu_get_auth_by_name (env[ENV_USER]);
+	    char *user = extract_username (name, pfx);
+	    mu_assoc_install (assoc, "user", user);
+	    adata = mu_get_auth_by_name (user);
 	    if (adata)
 	      {
-		env[ENV_HOME] = mu_strdup (adata->dir);
+		mu_assoc_install (assoc, "home", mu_strdup (adata->dir));
 		mu_auth_data_free (adata);
 	      }
+	    mu_assoc_set_destroy_item (assoc, mu_list_free_item);
 	  }
 	  break;
 
 	case NS_SHARED:
 	  break;
 	}
-      
-      if (expand_vars (env, res, &dir))
-	imap4d_bye (ERR_NO_MEM);
+
+      rc = mu_str_expand (&dir, res, assoc);
       free (res);
+      mu_assoc_destroy (&assoc);
+      if (rc)
+	{
+	  if (rc == MU_ERR_FAILURE)
+	    {
+	      mu_error (_("cannot expand line `%s': %s"), res, dir);
+	      free (dir);
+	    }
+	  else
+	    {
+	      mu_error (_("cannot expand line `%s': %s"), res,
+			mu_strerror (rc));
+	    }
+	  imap4d_bye (ERR_NO_MEM);
+	}
+      
       res = dir;
       trim_delim (res, '/');
-      
-      if (pfx->ns == NS_OTHER)
-	{
-	  free (env[ENV_USER]);
-	  free (env[ENV_HOME]);
-	}
       
       if (return_pfx)
 	*return_pfx = pfx;

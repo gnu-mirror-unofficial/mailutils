@@ -43,8 +43,8 @@ struct mutool_command
 };
 
 extern char *mutool_shell_prompt;
-extern char **mutool_prompt_env;
 extern int mutool_shell_interactive;
+mu_assoc_t mutool_shell_prompt_assoc (void);
 int mutool_shell (const char *name, struct mutool_command *cmd);
 mu_stream_t mutool_open_pager (void);
 

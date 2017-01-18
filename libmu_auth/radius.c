@@ -35,6 +35,7 @@
 #include <mailutils/iterator.h>
 #include <mailutils/mailbox.h>
 #include <mailutils/radius.h>
+#include <mailutils/cstr.h>
 #include <mailutils/wordsplit.h>
 #include <mailutils/mu_auth.h>
 #include <mailutils/error.h>
@@ -275,35 +276,25 @@ module_init (void *ptr)
 static char *
 _expand_query (const char *query, const char *ustr, const char *passwd)
 {
-  struct mu_wordsplit ws;
-  const char *env[2 * 2 + 1];
   char *ret;
-  
-  env[0] = "user";
-  env[1] = (char*) ustr;
-  env[2] = "passwd";
-  env[3] = (char*) passwd;
-  env[4] = NULL;
+  int rc;
 
-  ws.ws_env = env;
-  if (mu_wordsplit (query, &ws,
-		    MU_WRDSF_NOSPLIT | MU_WRDSF_NOCMD |
-		    MU_WRDSF_ENV | MU_WRDSF_ENV_KV))
+  rc = mu_str_vexpand (&ret, query, 
+		       "user", ustr,
+		       "passwd", passwd,
+		       NULL);
+  if (rc)
     {
-      mu_error (_("cannot expand line `%s': %s"), query,
-		mu_wordsplit_strerror (&ws));
-      return NULL;
-    }
-  else if (ws.ws_wordc == 0)
-    {
-      mu_error (_("expanding %s yields empty string"), query);
-      mu_wordsplit_free (&ws);
+      if (rc == MU_ERR_FAILURE)
+	{
+	  mu_error (_("cannot expand line `%s': %s"), query, ret);
+	  free (ret);
+	}
+      else
+	mu_error (_("cannot expand line `%s': %s"), query, mu_strerror (rc));
       return NULL;
     }
   
-  ret = grad_emalloc (strlen (ws.ws_wordv[0]) + 1);
-  strcpy (ret, ws.ws_wordv[0]);
-  mu_wordsplit_free (&ws);
   return ret;
 }
 

@@ -517,6 +517,7 @@ namespace_cfg_init (void)
   if (mu_create_canned_section ("prefix", &section))
     abort ();
   section->docstring = N_("Define a single prefix");
+  section->label = N_("string");
   mu_cfg_section_add_params (section, prefix_param);
   section->parser = prefix_section_parser;
   

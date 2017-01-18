@@ -24,7 +24,7 @@
 #endif
 
 char *mutool_shell_prompt;
-char **mutool_prompt_env;
+static mu_assoc_t mutool_prompt_assoc;
 int mutool_shell_interactive;
 
 
@@ -63,7 +63,7 @@ static int shell_history (int, char **);
 #endif
 
 struct mutool_command default_comtab[] = {
-  { "prompt",     1, 2, CMD_COALESCE_EXTRA_ARGS, shell_prompt,
+  { "prompt",     1, 2, 0, shell_prompt,
     N_("STRING"),
     N_("set command prompt") },
   { "exit",       1, 1, 0, shell_exit,    NULL,        N_("exit program") },
@@ -244,16 +244,8 @@ shell_help (int argc, char **argv)
 static int
 shell_prompt (int argc, char **argv)
 {
-  mu_wordsplit_t ws;
-  
-  if (mu_wordsplit (argv[1], &ws, MU_WRDSF_NOSPLIT | MU_WRDSF_DEFFLAGS))
-    mu_error ("mu_wordsplit: %s", mu_wordsplit_strerror (&ws));
-  else
-    {
-      free (mutool_shell_prompt);
-      mutool_shell_prompt = mu_strdup (ws.ws_wordv[0]);
-    }
-  mu_wordsplit_free (&ws);
+  free (mutool_shell_prompt);
+  mutool_shell_prompt = mu_strdup (argv[1]);
   return 0;
 }
 
@@ -593,23 +585,22 @@ execute_line (char *line)
 static char *
 input_line_interactive ()
 {
-  char *line;
-  int wsflags = MU_WRDSF_NOSPLIT | MU_WRDSF_NOCMD;
-  struct mu_wordsplit ws;
+  char *line, *prompt;
+  int rc;
   
   report_signals ();
-  if (mutool_prompt_env)
+  rc = mu_str_expand (&prompt, mutool_shell_prompt, mutool_prompt_assoc);
+  if (rc)
     {
-      ws.ws_env = (const char **)mutool_prompt_env;
-      wsflags |= MU_WRDSF_ENV | MU_WRDSF_ENV_KV;
+      if (rc == MU_ERR_FAILURE)
+	mu_error (_("cannot expand prompt: %s"), prompt);
+      else
+	mu_error (_("cannot expand prompt: %s"), mu_strerror (rc));
+      exit (1);
     }
-  if (mu_wordsplit (mutool_shell_prompt, &ws, wsflags))
-    line = readline (mutool_shell_prompt);
-  else
-    {
-      line = readline (ws.ws_wordv[0]);
-      mu_wordsplit_free (&ws);
-    }
+
+  line = readline (prompt);
+  free (prompt);
   return line;
 }
 
@@ -632,6 +623,29 @@ shell_exit (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED)
 {
   done = 1;
   return 0;
+}
+
+mu_assoc_t
+mutool_shell_prompt_assoc (void)
+{
+  if (mutool_prompt_assoc)
+    mu_assoc_clear (mutool_prompt_assoc);
+  else
+    {
+      int rc = mu_assoc_create (&mutool_prompt_assoc, 0);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_assoc_create", NULL, rc);
+	  exit (1);
+	}
+    }
+  mu_assoc_install (mutool_prompt_assoc, "program-name", mu_program_name);
+  mu_assoc_install (mutool_prompt_assoc, "canonical-program-name",
+		    "mailutils");
+  mu_assoc_install (mutool_prompt_assoc, "package", PACKAGE);
+  mu_assoc_install (mutool_prompt_assoc, "version", PACKAGE_VERSION);
+
+  return mutool_prompt_assoc;
 }
 
 int

@@ -187,37 +187,27 @@ sql_escape_string (const char *ustr)
 char *
 mu_sql_expand_query (const char *query, const char *ustr)
 {
+  int rc;
   char *res;
   char *esc_ustr;
-  struct mu_wordsplit ws;
-  const char *env[2 + 1];
 
   if (!query)
     return NULL;
 
   esc_ustr = sql_escape_string (ustr);
-  env[0] = "user";
-  env[1] = (char*) ustr;
-  env[2] = NULL;
-
-  ws.ws_env = env;
-  if (mu_wordsplit (query, &ws,
-		    MU_WRDSF_NOSPLIT | MU_WRDSF_NOCMD |
-		    MU_WRDSF_ENV | MU_WRDSF_ENV_KV))
-    {
-      mu_error (_("cannot expand line `%s': %s"), query,
-		mu_wordsplit_strerror (&ws));
-      return NULL;
-    }
-  else if (ws.ws_wordc == 0)
-    {
-      mu_error (_("expanding %s yields empty string"), query);
-      mu_wordsplit_free (&ws);
-      return NULL;
-    }
-  res = strdup (ws.ws_wordv[0]);
-  mu_wordsplit_free (&ws);
+  rc = mu_str_vexpand (&res, query, "user", esc_ustr, NULL);
   free (esc_ustr);
+  if (rc)
+    {
+      if (rc == MU_ERR_FAILURE)
+	{
+	  mu_error (_("cannot expand line `%s': %s"), query, res);
+	  free (res);
+	}
+      else
+	mu_error (_("cannot expand line `%s': %s"), query, mu_strerror (rc));
+      return NULL;
+    }
   return res;
 }
 

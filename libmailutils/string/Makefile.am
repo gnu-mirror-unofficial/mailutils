@@ -25,6 +25,7 @@ libstring_la_SOURCES = \
  cstrunescape.c\
  cstrlower.c\
  cstrupper.c\
+ expvar.c\
  hexstr.c\
  safefilename.c\
  stpcpy.c\

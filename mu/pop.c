@@ -56,35 +56,17 @@ pop_session_str (enum pop_session_status stat)
 }
 
 static void
-pop_prompt_env ()
+pop_prompt_env (void)
 {
-  if (!mutool_prompt_env)
-    mutool_prompt_env = mu_calloc (2*7 + 1, sizeof(mutool_prompt_env[0]));
+  mu_assoc_t assoc = mutool_shell_prompt_assoc ();
 
-  mutool_prompt_env[0] = "user";
-  mutool_prompt_env[1] = (pop_session_status == pop_session_logged_in) ?
-                           username : "[nouser]";
+  if (pop_session_status == pop_session_logged_in)
+    mu_assoc_install (assoc, "user", username);
+  if (pop_session_status != pop_session_disconnected)
+    mu_assoc_install (assoc, "host", host); 
 
-  mutool_prompt_env[2] = "host"; 
-  mutool_prompt_env[3] = (pop_session_status != pop_session_disconnected) ?
-                           host : "[nohost]";
-
-  mutool_prompt_env[4] = "program-name";
-  mutool_prompt_env[5] = (char*) mu_program_name;
-
-  mutool_prompt_env[6] = "canonical-program-name";
-  mutool_prompt_env[7] = "mu";
-
-  mutool_prompt_env[8] = "package";
-  mutool_prompt_env[9] = PACKAGE;
-
-  mutool_prompt_env[10] = "version";
-  mutool_prompt_env[11] = PACKAGE_VERSION;
-
-  mutool_prompt_env[12] = "status";
-  mutool_prompt_env[13] = (char*) pop_session_str (pop_session_status);
-
-  mutool_prompt_env[14] = NULL;
+  mu_assoc_install (assoc, "status",
+		    pop_session_str (pop_session_status));
 }
 
 

@@ -46,6 +46,7 @@ noinst_PROGRAMS = \
  debugspec\
  decode2047\
  encode2047\
+ exp\
  fltst\
  fsaf\
  fsaftomod\

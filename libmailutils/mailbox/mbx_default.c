@@ -38,7 +38,7 @@
 #include <mailutils/mu_auth.h>
 #include <mailutils/folder.h>
 #include <mailutils/auth.h>
-#include <mailutils/wordsplit.h>
+#include <mailutils/cstr.h>
 #include <mailutils/io.h>
 
 #include <mailutils/sys/mailbox.h>
@@ -158,32 +158,22 @@ mu_construct_user_mailbox_url (char **pout, const char *name)
 {
   int rc;
   const char *pat = mu_mailbox_url ();
-  const char *env[3];
-  struct mu_wordsplit ws;
-
-  env[0] = "user";
-  env[1] = (char*) name;
-  env[2] = NULL;
-  ws.ws_env = env;
-  rc = mu_wordsplit (pat, &ws,
-		     MU_WRDSF_NOSPLIT | MU_WRDSF_NOCMD |
-		     MU_WRDSF_ENV | MU_WRDSF_ENV_KV);
+  char *result;
     
+  rc = mu_str_vexpand (&result, pat, "user", name, NULL);
   if (rc)
     {
-      mu_error (_("cannot expand line `%s': %s"), pat,
-		mu_wordsplit_strerror (&ws));
+      if (rc == MU_ERR_FAILURE)
+	{
+	  mu_error (_("cannot expand line `%s': %s"), pat, result);
+	  free (result);
+	}
+      else
+	mu_error (_("cannot expand line `%s': %s"), pat, mu_strerror (rc));
       return rc;
     }
 
-  if (ws.ws_wordc == 0)
-    /* FIXME: a special return code maybe? */
-    *pout = strdup ("");
-  else
-    *pout = strdup (ws.ws_wordv[0]);
-  mu_wordsplit_free (&ws);
-  if (!*pout)
-    return ENOMEM;
+  *pout = result;
   return 0;
 }
 

@@ -58,6 +58,9 @@ int mu_c_str_unescape (char const *str, char const *chr, char const *xtab,
 int mu_c_str_unescape_trans (char const *str, char const *trans,
 			     char **ret_str);
 
+
+int mu_str_expand (char **output, char const *input, mu_assoc_t assoc);
+int mu_str_vexpand (char **output, char const *input, ...);
   
 #ifdef __cplusplus
 }

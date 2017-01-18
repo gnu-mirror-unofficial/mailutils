@@ -69,39 +69,18 @@ smtp_session_str (enum smtp_session_status stat)
 }
 
 static void
-smtp_prompt_env ()
+smtp_prompt_env (void)
 {
+  mu_assoc_t assoc = mutool_shell_prompt_assoc ();
   const char *value;
   
-  if (!mutool_prompt_env)
-    mutool_prompt_env = mu_calloc (2*7 + 1, sizeof(mutool_prompt_env[0]));
-
-  mutool_prompt_env[0] = "user";
-  mutool_prompt_env[1] = "[nouser]";
   if (smtp_session_status == smtp_session_logged_in &&
       mu_smtp_get_param (smtp, MU_SMTP_PARAM_USERNAME, &value) == 0)
-    mutool_prompt_env[1] = (char*) value;
+    mu_assoc_install (assoc, "user", value);
 
-  mutool_prompt_env[2] = "host"; 
-  mutool_prompt_env[3] = (smtp_session_status != smtp_session_disconnected) ?
-                           host : "[nohost]";
-
-  mutool_prompt_env[4] = "program-name";
-  mutool_prompt_env[5] = (char*) mu_program_name;
-
-  mutool_prompt_env[6] = "canonical-program-name";
-  mutool_prompt_env[7] = "mu";
-
-  mutool_prompt_env[8] = "package";
-  mutool_prompt_env[9] = PACKAGE;
-
-  mutool_prompt_env[10] = "version";
-  mutool_prompt_env[11] = PACKAGE_VERSION;
-
-  mutool_prompt_env[12] = "status";
-  mutool_prompt_env[13] = (char*) smtp_session_str (smtp_session_status);
-
-  mutool_prompt_env[14] = NULL;
+  if (smtp_session_status != smtp_session_disconnected)
+    mu_assoc_install (assoc, "host", host);
+  mu_assoc_install (assoc, "status", smtp_session_str (smtp_session_status));
 }
 
 static void

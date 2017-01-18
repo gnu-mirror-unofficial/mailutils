@@ -121,37 +121,20 @@ static char **connect_argv;
 static char *username;
 
 static void
-imap_prompt_env ()
+imap_prompt_env (void)
 {
+  mu_assoc_t assoc = mutool_shell_prompt_assoc ();
   enum mu_imap_session_state state = current_imap_state ();
-  if (!mutool_prompt_env)
-    mutool_prompt_env = mu_calloc (2*7 + 1, sizeof(mutool_prompt_env[0]));
+  const char *p;
+  
+  if (state >= MU_IMAP_SESSION_AUTH && username) 
+    mu_assoc_install (assoc, "user", username);
 
-  mutool_prompt_env[0] = "user";
-  mutool_prompt_env[1] = (state >= MU_IMAP_SESSION_AUTH && username) ?
-                           username : "[nouser]";
+  if (connect_argv)
+    mu_assoc_install (assoc, "host", host); 
 
-  mutool_prompt_env[2] = "host"; 
-  mutool_prompt_env[3] = connect_argv ? host : "[nohost]";
-
-  mutool_prompt_env[4] = "program-name";
-  mutool_prompt_env[5] = (char*) mu_program_name;
-
-  mutool_prompt_env[6] = "canonical-program-name";
-  mutool_prompt_env[7] = "mu";
-
-  mutool_prompt_env[8] = "package";
-  mutool_prompt_env[9] = PACKAGE;
-
-  mutool_prompt_env[10] = "version";
-  mutool_prompt_env[11] = PACKAGE_VERSION;
-
-  mutool_prompt_env[12] = "status";
-  if (mu_imap_session_state_str (state,
-				 (const char **) &mutool_prompt_env[13]))
-    mutool_prompt_env[12] = NULL;
-
-  mutool_prompt_env[14] = NULL;
+  if (mu_imap_session_state_str (state, &p) == 0)
+    mu_assoc_install (assoc, "status", (void*) p);
 }
 
 /* Callbacks */
@@ -724,7 +707,11 @@ com_login (int argc, char **argv)
   memset (pwd, 0, strlen (pwd));
   free (passbuf);
   if (status == 0)
-    imap_prompt_env ();
+    {
+      free (username);
+      username = mu_strdup (argv[1]);
+      imap_prompt_env ();
+    }
   else
     report_failure ("login", status);
   return 0;
