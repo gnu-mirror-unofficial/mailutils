@@ -70,9 +70,9 @@ _mime_append_part (mu_mime_t mime, mu_message_t msg,
 		   size_t offset, size_t len, size_t lines)
 {
   struct _mime_part *mime_part, **part_arr;
-  int             ret;
-  size_t          size;
-  mu_header_t     hdr;
+  int ret;
+  size_t size;
+  mu_header_t hdr;
 
   if ((mime_part = calloc (1, sizeof (*mime_part))) == NULL)
     return ENOMEM;
@@ -147,8 +147,8 @@ _mime_append_part (mu_mime_t mime, mu_message_t msg,
 static void
 _mime_munge_content_header (char *field_body)
 {
-  char           *p, *e, *str = field_body;
-  int             quoted = 0;
+  char *p, *e, *str = field_body;
+  int quoted = 0;
 
   mu_str_stripws (field_body);
 
@@ -184,8 +184,8 @@ _mime_munge_content_header (char *field_body)
 static char    *
 _mime_get_param (char *field_body, const char *param, int *len)
 {
-  char           *str, *p, *v, *e;
-  int             quoted = 0, was_quoted;
+  char *str, *p, *v, *e;
+  int quoted = 0, was_quoted;
 
   if (len == NULL || (str = field_body) == NULL)
     return NULL;
@@ -242,11 +242,10 @@ _mime_append_header_line (mu_mime_t mime)
 {
   if (mime->header_length + mime->line_ndx > mime->header_buf_size)
     {
-      char           *nhb;
+      char *nhb;
 
-      if ((nhb =
-	   realloc (mime->header_buf,
-		    mime->header_length + mime->line_ndx + 128)) == NULL)
+      if ((nhb = realloc (mime->header_buf,
+			  mime->header_length + mime->line_ndx + 128)) == NULL)
 	return;
       mime->header_buf = nhb;
       mime->header_buf_size = mime->header_length + mime->line_ndx + 128;
@@ -259,20 +258,20 @@ _mime_append_header_line (mu_mime_t mime)
 static int
 _mime_parse_mpart_message (mu_mime_t mime)
 {
-  char           *cp, *cp2;
-  size_t         blength, mb_length, mb_offset, mb_lines;
-  int            ret;
-  size_t         nbytes;
+  char *cp, *cp2;
+  size_t blength, mb_length, mb_offset, mb_lines;
+  int ret;
+  size_t nbytes;
 
   if (!(mime->flags & MIME_PARSER_ACTIVE))
     {
-      char           *boundary;
-      int             len;
+      char *boundary;
+      int len;
 
       if ((ret = _mime_setup_buffers (mime)) != 0)
 	return ret;
-      if ((boundary =
-	   _mime_get_param (mime->content_type, "boundary", &len)) == NULL)
+      if ((boundary = _mime_get_param (mime->content_type, "boundary", &len))
+	  == NULL)
 	return EINVAL;
       if ((mime->boundary = calloc (1, len + 1)) == NULL)
 	return ENOMEM;
@@ -289,9 +288,8 @@ _mime_parse_mpart_message (mu_mime_t mime)
   blength = strlen (mime->boundary);
 
   mu_stream_seek (mime->stream, mime->cur_offset, MU_SEEK_SET, NULL);
-  while ((ret =
-	  mu_stream_read (mime->stream, mime->cur_buf, mime->buf_size,
-			  &nbytes)) == 0 && nbytes)
+  while ((ret = mu_stream_read (mime->stream, mime->cur_buf, mime->buf_size,
+				&nbytes)) == 0 && nbytes)
     {
       cp = mime->cur_buf;
       while (nbytes)
@@ -308,9 +306,8 @@ _mime_parse_mpart_message (mu_mime_t mime)
 		  break;
 
 		case MIME_STATE_SCAN_BOUNDARY:
-		  cp2 =
-		    mime->cur_line[0] ==
-		    '\n' ? mime->cur_line + 1 : mime->cur_line;
+		  cp2 = mime->cur_line[0] == '\n'
+		        ? mime->cur_line + 1 : mime->cur_line;
 		  if (mime->line_ndx >= blength)
 		    {
 		      if ((!strncmp (cp2, "--", 2)
@@ -423,7 +420,7 @@ _mime_parse_mpart_message (mu_mime_t mime)
 static int
 _mimepart_body_size (mu_body_t body, size_t *psize)
 {
-  mu_message_t       msg = mu_body_get_owner (body);
+  mu_message_t msg = mu_body_get_owner (body);
   struct _mime_part *mime_part = mu_message_get_owner (msg);
 
   if (mime_part == NULL)
@@ -436,7 +433,7 @@ _mimepart_body_size (mu_body_t body, size_t *psize)
 static int
 _mimepart_body_lines (mu_body_t body, size_t *plines)
 {
-  mu_message_t       msg = mu_body_get_owner (body);
+  mu_message_t msg = mu_body_get_owner (body);
   struct _mime_part *mime_part = mu_message_get_owner (msg);
 
   if (mime_part == NULL)
@@ -451,9 +448,9 @@ static int
 _mime_set_content_type (mu_mime_t mime)
 {
   const char  *content_type;
-  mu_header_t     hdr = NULL;
-  size_t          size;
-  int             ret;
+  mu_header_t hdr = NULL;
+  size_t size;
+  int ret;
 
   /* Delayed the creation of the header 'til they create the final message via
      mu_mime_get_message()  */
@@ -657,12 +654,13 @@ _mime_body_stream_seek (mu_stream_t stream, mu_off_t off, mu_off_t *presult)
   while (0)
 
 static int
-_mime_body_stream_read (mu_stream_t stream, char *buf, size_t buflen, size_t *nbytes)
+_mime_body_stream_read (mu_stream_t stream, char *buf, size_t buflen,
+			size_t *nbytes)
 {
   struct _mime_body_stream *mstr = (struct _mime_body_stream *)stream;
   mu_mime_t mime = mstr->mime;
-  int                ret = 0;
-  size_t             total = 0;
+  int ret = 0;
+  size_t total = 0;
   
   if (mime->nmtp_parts == 0)
     {
@@ -674,7 +672,7 @@ _mime_body_stream_read (mu_stream_t stream, char *buf, size_t buflen, size_t *nb
     {
       do
 	{
-	  size_t             part_nbytes = 0;
+	  size_t part_nbytes = 0;
 
 	  if (buflen == 0)
 	    break;
@@ -847,18 +845,18 @@ create_mime_body_stream (mu_stream_t *pstr, mu_mime_t mime)
 static int
 _mime_body_size (mu_body_t body, size_t *psize)
 {
-  mu_message_t       msg = mu_body_get_owner (body);
-  mu_mime_t          mime = mu_message_get_owner (msg);
+  mu_message_t msg = mu_body_get_owner (body);
+  mu_mime_t mime = mu_message_get_owner (msg);
   return _mime_part_size (mime, psize);
 }
 
 static int
 _mime_body_lines (mu_body_t body, size_t *plines)
 {
-  mu_message_t       msg = mu_body_get_owner (body);
-  mu_mime_t          mime = mu_message_get_owner (msg);
-  int             i, ret;
-  size_t          total = 0;
+  mu_message_t msg = mu_body_get_owner (body);
+  mu_mime_t mime = mu_message_get_owner (msg);
+  int i, ret;
+  size_t total = 0;
 
   if (mime->nmtp_parts == 0)
     {
@@ -884,10 +882,10 @@ _mime_body_lines (mu_body_t body, size_t *plines)
 int
 mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
 {
-  mu_mime_t          mime = NULL;
-  int             ret = 0;
-  size_t          size;
-  mu_body_t          body;
+  mu_mime_t mime = NULL;
+  int ret = 0;
+  size_t size;
+  mu_body_t body;
 
   if (pmime == NULL)
     return EINVAL;
@@ -898,10 +896,9 @@ mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
     {
       if ((ret = mu_message_get_header (msg, &mime->hdrs)) == 0)
 	{
-	  if ((ret =
-	       mu_header_get_value (mime->hdrs,
-				    MU_HEADER_CONTENT_TYPE,
-				    NULL, 0, &size)) == 0 && size)
+	  if ((ret = mu_header_get_value (mime->hdrs,
+					  MU_HEADER_CONTENT_TYPE,
+					  NULL, 0, &size)) == 0 && size)
 	    {
 	      if ((mime->content_type = malloc (size + 1)) == NULL)
 		ret = ENOMEM;
@@ -1039,9 +1036,10 @@ mu_mime_get_part (mu_mime_t mime, size_t part, mu_message_t *msg)
 	      if (ret == 0)
 		{
 		  mu_stream_set_flags (stream,
-				       MU_STREAM_READ | (flags &
-							 (MU_STREAM_SEEK
-							  | MU_STREAM_NONBLOCK)));
+				       MU_STREAM_READ
+				       | (flags &
+					  (MU_STREAM_SEEK
+					   | MU_STREAM_NONBLOCK)));
 		  mu_body_set_stream (body, stream, mime_part->msg);
 		  mu_message_set_body (mime_part->msg, body, mime_part);
 		  mime_part->body_created = 1;
@@ -1079,8 +1077,8 @@ mu_mime_get_num_parts (mu_mime_t mime, size_t *nmtp_parts)
 int
 mu_mime_add_part (mu_mime_t mime, mu_message_t msg)
 {
-  int             ret;
-
+  int ret;
+  
   if (mime == NULL || msg == NULL || (mime->flags & MIME_NEW_MESSAGE) == 0)
     return EINVAL;
   if ((ret = _mime_append_part (mime, msg, 0, 0, 0)) == 0)
@@ -1091,9 +1089,9 @@ mu_mime_add_part (mu_mime_t mime, mu_message_t msg)
 int
 mu_mime_get_message (mu_mime_t mime, mu_message_t *msg)
 {
-  mu_stream_t        body_stream;
-  mu_body_t          body;
-  int                ret = 0;
+  mu_stream_t body_stream;
+  mu_body_t body;
+  int ret = 0;
 
   if (mime == NULL || msg == NULL)
     return EINVAL;
