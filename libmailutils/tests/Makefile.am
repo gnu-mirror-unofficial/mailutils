@@ -70,6 +70,7 @@ noinst_PROGRAMS = \
  tcli\
  url-comp\
  url-parse\
+ vexp\
  wicket\
  wordwrap\
  wsp
@@ -89,6 +90,7 @@ TESTSUITE_AT = \
  debugspec.at\
  decode2047.at\
  encode2047.at\
+ exp.at\
  fromflt.at\
  fsaf.at\
  fsaftomod.at\

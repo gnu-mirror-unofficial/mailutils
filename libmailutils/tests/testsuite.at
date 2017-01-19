@@ -51,6 +51,28 @@ MU_TEST_COMMAND < input],[$4],[$5],[$6],[$7],[$8])
 AT_CLEANUP
 ])
 
+dnl ------------------------------------------------------------
+dnl MU_GENERIC_TEST_CMD([NAME], [KW = `'], [ARGS],
+dnl                     [CODE], [STDOUT = `'], [STDERR = `'],
+dnl                     [RUN-IF-FAIL], [RUN-IF-PASS])
+dnl
+dnl NAME        $1
+dnl KW          $2
+dnl ARGS        $3
+dnl CODE        $4
+dnl STDOUT      $5
+dnl STDERR      $6
+dnl RUN-IF-FAIL $7
+dnl RUN-IF-PASS $8
+dnl
+m4_define([MU_GENERIC_TEST_CMD],[
+AT_SETUP([m4_if(MU_TEST_GROUP,[],,MU_TEST_GROUP: )m4_if([$1],[],[mu_firstline([$3])],[$1])])
+AT_KEYWORDS([MU_TEST_KEYWORDS $2])
+AT_CHECK([
+MU_TEST_COMMAND $3],[$4],[$5],[$6],[$7],[$8])
+AT_CLEANUP
+])
+
 AT_INIT
 
 AT_BANNER([Conversions])
@@ -131,6 +153,7 @@ m4_include([strerr.at])
 m4_include([list.at])
 m4_include([address.at])
 m4_include([wordsplit.at])
+m4_include([exp.at])
 m4_include([url.at])
 m4_include([url-comp.at])
 m4_include([mailcap.at])

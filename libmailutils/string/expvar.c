@@ -173,7 +173,7 @@ exp_shell (char **ret, char const *str, size_t len, void *closure)
 	--buflen;
       buffer[buflen] = 0;
     }
-  
+
   pclose (fp);
   free (cmd);
 
@@ -229,8 +229,8 @@ exp_runcmd (char **ret, const char *str, size_t len, char **argv, void *closure)
 
   if (strcmp (argv[0], SHELL_CMD) == 0)
     {
-      len -= sizeof SHELL_CMD;
-      str += sizeof SHELL_CMD;
+      len -= sizeof SHELL_CMD - 1;
+      str += sizeof SHELL_CMD - 1;
       while (len > 0 && mu_isspace (*str))
 	{
 	  len--;
@@ -282,8 +282,7 @@ int
 mu_str_expand (char **output, char const *input, mu_assoc_t assoc)
 {
   struct mu_wordsplit ws;
-  size_t wordc;
-  char **wordv;
+  int rc = 0;
   
   ws.ws_getvar = exp_getvar;
   ws.ws_command = exp_runcmd;
@@ -294,15 +293,36 @@ mu_str_expand (char **output, char const *input, mu_assoc_t assoc)
 		    MU_WRDSF_NOSPLIT | MU_WRDSF_GETVAR | MU_WRDSF_CLOSURE
 		    | MU_WRDSF_OPTIONS))
     {
-      char *p = strdup (mu_wordsplit_strerror (&ws));
-      if (p)
-	*output = p;
-      return MU_ERR_FAILURE;
+      if (ws.ws_errno == MU_WRDSE_NOSPACE)
+	rc = ENOMEM;
+      else
+	{
+	  char *p = strdup (mu_wordsplit_strerror (&ws));
+	  if (!p)
+	    rc = ENOMEM;
+	  else
+	    {
+	      *output = p;
+	      rc = MU_ERR_FAILURE;
+	    }
+	}
     }
-  mu_wordsplit_get_words (&ws, &wordc, &wordv);
-  *output = wordv[0];
+  else if (ws.ws_wordc == 0)
+    {
+      *output = strdup ("");
+      if (!*output)
+	rc = ENOMEM;
+    }
+  else
+    {
+      size_t wordc;
+      char **wordv;
+      
+      mu_wordsplit_get_words (&ws, &wordc, &wordv);
+      *output = wordv[0];
+    }
   mu_wordsplit_free (&ws);
-  return 0;
+  return rc;
 }
 
 int
