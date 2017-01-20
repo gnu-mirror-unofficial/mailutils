@@ -56,16 +56,14 @@ startup. For example, to debug `mimeview' utility, run
 
   mimeview --HANG [OTHER-OPTIONS]
 
-Then switch to another terminal, get the PID of the ivoked utility and
-attach to it using gdb: 
+The program will then display on the terminal its PID and instructions
+for attaching to it, e.g.:
 
-	gdb mimeview PID
-
-Once in gdb, issue the following command
-
-	set _argp_hang=0
-
-Now set your breakpoints and proceed as usual.
+  mimeview: process 13944 is waiting for debug (3600 seconds left)
+  mimeview: to attach: gdb -ex 'set variable mu_wd::_count_down=0' mailutils/mail/.libs/lt-mail 13944
+  
+Switch to another terminal, and run the suggested command.  Now set
+your breakpoints and proceed as usual. 
 
 * Copyright information:
 
