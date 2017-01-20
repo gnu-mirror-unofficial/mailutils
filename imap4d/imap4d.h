@@ -161,7 +161,7 @@ struct imap4d_command
 #define ERR_STREAM_CREATE     9
 
 /* Namespace numbers */
-#define NS_PRIVATE 0
+#define NS_PERSONAL 0
 #define NS_OTHER   1
 #define NS_SHARED  2
 #define NS_MAX     3

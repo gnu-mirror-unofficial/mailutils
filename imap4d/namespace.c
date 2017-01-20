@@ -19,9 +19,9 @@
 #include <mailutils/assoc.h>
 
 struct namespace namespace[NS_MAX] = {
-  [NS_PRIVATE] = { "private" },
-  [NS_OTHER]   = { "other" },
-  [NS_SHARED]  = { "shared" }
+  [NS_PERSONAL] = { "personal" },
+  [NS_OTHER]    = { "other" },
+  [NS_SHARED]   = { "shared" }
 };
   
 static mu_assoc_t prefixes;
@@ -124,7 +124,7 @@ namespace_init (void)
   pfx = mu_assoc_get (prefixes, "");
   if (pfx)
     {
-      if (pfx->ns != NS_PRIVATE)
+      if (pfx->ns != NS_PERSONAL)
 	{
 	  mu_error (_("empty prefix not allowed in the namespace %s"),
 		    namespace[pfx->ns].name);
@@ -139,7 +139,7 @@ namespace_init (void)
       pfx->prefix = mu_strdup ("");
       pfx->dir = mu_strdup ("$home");
       pfx->delim = '/';
-      priv = namespace_lookup ("private");
+      priv = namespace_lookup ("personal");
       mu_list_prepend (priv->prefixes, pfx);
       rc = mu_assoc_install (prefixes, pfx->prefix, pfx);
       if (rc)
@@ -167,7 +167,7 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 	url = 0;
       name += pfxlen;
 
-      if (pfx->ns == NS_PRIVATE && strcmp (name, "INBOX") == 0)
+      if (pfx->ns == NS_PERSONAL && strcmp (name, "INBOX") == 0)
 	{
 	  tmpl = mu_strdup (auth_data->mailbox);
 	  return tmpl;//FIXME
@@ -299,7 +299,7 @@ namespace_translate_name (char const *name, int url,
       
       switch (pfx->ns)
 	{
-	case NS_PRIVATE:
+	case NS_PERSONAL:
 	  mu_assoc_install (assoc, "user", auth_data->name);
 	  mu_assoc_install (assoc, "home", real_homedir);
 	  break;
@@ -423,7 +423,7 @@ imap4d_namespace (struct imap4d_session *session,
 
   io_sendf ("* NAMESPACE ");
 
-  print_namespace (NS_PRIVATE);
+  print_namespace (NS_PERSONAL);
   io_sendf (" ");
   print_namespace (NS_OTHER);
   io_sendf (" ");

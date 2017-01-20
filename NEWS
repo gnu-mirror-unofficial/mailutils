@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-01-16
+GNU mailutils NEWS -- history of user-visible changes. 2017-01-20
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -6,6 +6,52 @@ Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 
 Version 3.1.91 (Git)
+
+* configuration syntax
+
+Statements that allow for variable substitution also allow for command
+expansion.  Commands are invoked the same way as in shell:
+
+   $(command [args...])
+
+The following commands are defined:
+
+ - localpart X
+     Treats X as an email address and returns its part preceding
+     the @-sign.  If there is no @-sign, returns X unchanged.
+
+ - domainpart X
+     Treats X as an email address and returns the part following
+     the @-sign.  If there is no @-sign, returns empty string.
+
+ - shell CMD [ARGS...]
+     Runs the shell command CMD with the given arguments.  Returns
+     the standard output from the command.  The command is invoked
+     using "/bin/sh -c" and can contain any valid shell construct.
+
+* imap4d
+
+Namespace configuration completely rewritten.  The "namespace" block
+statement defines a particular namespaces.  Within it, one or more
+"prefix" statements define prefixes available in that namespace, along
+with their mappings to the server filesystem, hierarchy delimiters etc.
+
+An example of namespace configuration:
+
+     namespace personal {
+        prefix "" {
+           directory "$home/mailfolder";
+        }
+        prefix "#MH:" {
+           directory "$home/Mail";
+           delimiter "/";
+           mailbox-type "mh";
+        }
+     }
+
+The following configuration statements have been withdrawn: homedir,
+personal-namespace, other-namespace, shared-namespace,
+other-mailbox-mode, shared-mailbox-mode.
 
 * mail
 
@@ -24,7 +70,7 @@ description), and file name:
 
 Both options affect only the next `--attach' or `--attach-fd' option.
 
-** Constructing attachments from command line
+** Constructing attachments from the command line
 
 The new option `--attach-fd=N' instructs mail to read attachment from
 file descriptor N.  By default, the attachments created using this

@@ -830,6 +830,37 @@ value of @var{variable} is substituted.
 substituted, otherwise the expansion of @var{word} is substituted.
 @end table
 
+When a value is subject to variable expansion, it is also subject to
+@dfn{command expansion}.  Commands are invoked in string values using
+the following format:
+
+@example
+$(@var{cmd} @var{arg})
+@end example
+
+@noindent
+where @var{cmd} is the command name, and @var{args} is a list of
+arguments separated by whitespace.  Arguments can in turn contain
+variable and command references.
+
+The following commands are defined:
+
+@deffn {Command} localpart @var{string}
+Treats @var{string} as an email address and returns the part preceding
+the @samp{@@} sign.  If there is no @samp{@@} sign, returns @var{string}.
+@end deffn
+
+@deffn {Command} domainpart @var{string}
+Treats @var{string} as an email address and returns the part following
+the @samp{@@} sign.  If there is no @samp{@@} sign, returns empty string.
+@end deffn
+
+@deffn {Command} shell @var{cmd} @var{args}
+Runs the shell command @var{cmd} with the given arguments.  Returns
+the standard output from the command.  The command is invoked
+using @command{/bin/sh -c} and can contain any valid shell constructs.
+@end deffn
+
 The subsections below define variable names that are valid for use in
 each configuration statement.
 
@@ -1168,6 +1199,7 @@ time, using the @samp{_PATH_MAILDIR} define from the include file
 @end enumerate
 
 @deffn {Configuration} mailbox-type @var{type}
+@anchor{mailbox-type}
 @vrindex MU_DEFAULT_SCHEME
 Specifies the type of mailboxes.  By default, @samp{mbox} (UNIX mailbox)
 is assumed.  This can be changed while configuring the package by
@@ -7559,16 +7591,30 @@ be run either as a standalone program or from @file{inetd.conf} file.
 @cindex IMAP4 namespace
 
 GNU @command{imap4d} supports a notion of @dfn{namespaces} defined
-in RFC 2342.  A namespace is a set of directories upon which the user
-has certain permissions.  It should be understood that these permissions
-apply only if the underlying filesystem allows them.
+in RFC 2342.  A namespace can be regarded as a list of triplets,
+defining locations to which the user has certain access rights.  Each
+triplet defines the @dfn{prefix}, under which the mailboxes can be
+found, @dfn{hierarchy delimiter}, a character used to delimit parts of
+a path to a mailbox, and a @dfn{directory} on the file system on the
+server, which actually holds the mailboxes.  Among these three values,
+only first two are visible to the client using the IMAP
+@samp{NAMESPACE} command.
 
-The three namespaces supported by @command{imap4d} are:
+There are three namespaces:
 
 @table @asis
 @item Personal Namespace
 A namespace that is within the personal scope of the authenticated user
-on a particular connection.  The user has all permissions on this namespace.
+on a particular connection.  The user has all permissions on this
+namespace.
+
+By default, this namespace contains a single prefix:
+
+@example
+prefix: ""
+delimiter: /
+directory: home directory of the user
+@end example
 
 @item Other Users' Namespace
 A namespace that consists of mailboxes from the ``Personal Namespaces''
@@ -7577,63 +7623,43 @@ namespace.  However, he is not allowed to use @samp{%} and @samp{*}
 wildcards with @command{LIST} command, that is he can access a
 mailbox only if he knows exactly its location.
 
+By default, this namespace is empty.
+
 @item Shared Namespace
 A namespace that consists of mailboxes that are intended to be shared
 amongst users and do not exist within a user's Personal Namespace.
 The user has all permissions on this namespace.
+
+By default, this namespace is empty.
 @end table
 
-@noindent
-By default, @command{imap4d} starts with the following namespaces:
-
-@table @asis
-@item Personal Namespace
-The home directory of the user, if exists.
-
-@item Other Users' Namespace
-Empty
-
-@item Shared Namespace
-Empty
-@end table
-
-@emph{Note}, that this means that by default, a user won't be able to
+The default values ensure that each user is able to
 see or otherwise access mailboxes residing in the directories other than
 his own home.
 
-To change these defaults, use @code{shared-namespace} and
-@code{other-namespace} configuration statements:
-
-@table @command
-@item shared-namespace @var{list}
-Set shared namespace.
-
-@item other-namespace @var{list}
-Set other users' namespace.
-@end table
-
-For both statements, the argument is a list of directories that belong
-to this namespace, e.g.:
+These defaults can be changed using the @code{namespace} block
+statement:
 
 @example
-shared-namespace (/var/spool/mail,/var/mail);
+namespace @var{name} @{
+    mailbox-mode @var{mode};
+    prefix @var{pfx} @{
+      directory @var{path};
+      delimiter @var{chr};
+      mailbox-type @var{type};
+    @}
+@}
 @end example
 
-If during the session the user creates a mailbox within either of
-these namespaces, the mode of the mailbox is determined by the
-following configuration statements:
+The @var{name} argument to the @code{namespace} statement declares
+which namespace is being configured.  Allowed values are:
+@samp{personal}, @samp{other}, and @samp{shared}.
 
-@table @command
-@item shared-mailbox-mode @var{mode}
-Set file mode for mailboxes created in shared namespace.
-
-@item other-mailbox-mode @var{mode}
-Set file mode for mailboxes created in other users' namespace.
-@end table
-
-In both cases, the argument, @var{mode} is a list of symbolic mode
-settings, similar to that used by @command{chmod}.  It is a list of
-comma-separated mode change commands.  Each command begins with a
+The @code{mailbox-mode} statement configures the file mode for the
+mailboxes created within that namespace (provided that the directory
+permissions allow the user to create mailboxes).  The @var{mode}
+argument is a comma-delimited list of symbolic mode settings, similar
+to that used by @command{chmod}.  Each setting begins with a
 letter @samp{g}, which means set mode bits for file group, or
 @samp{o}, which means set mode bits for other users (note, that there
 is no @samp{u} specifier, since user ownership of his mailbox cannot
@@ -7645,7 +7671,79 @@ For example, the following statement sets read and write permissions
 for the group:
 
 @example
-shared-namespace-mode g=rw;
+mailbox-mode g=rw;
+@end example
+
+The @code{prefix} statement configures available prefixes and
+determines their mappings to the server's file system.  The @var{pfx}
+argument defines the prefix which will be visible to the IMAP client.
+
+The @code{directory} statement defines the directory in the file
+system to which @var{pfx} is mapped.  Its argument can contain
+references to the following variables(@pxref{Variables}):
+
+@table @asis
+@item user
+Login name of the user.
+
+@item home
+Home directory of the user.
+@end table
+
+Exactly one @code{directory} statement must be present in each
+@code{prefix} block.
+
+The @code{delimiter} statement defines the folder hierarchy delimiter
+for that prefix.  It is optional, the default value being @samp{"/"}.
+
+The @code{mailbox-type} statement declares the type of the mailboxes
+within that prefix.   If present, its argument must be a valid mailbox
+type (e.g. @samp{mailbox}, @samp{maildir}, or @samp{mh}).  The IMAP
+@code{LIST} command will display only mailboxes of that type.  The
+@code{CREATE} command will create mailboxes of that type.
+
+In the absence of the @code{mailbox-type} statement, the IMAP
+@code{LIST} command will display mailboxes of any type supported by
+Mailutils.  The type of newly-created mailboxes is then determined by
+the @code{mailbox-type} statement (@pxref{mailbox-type}).
+
+Any number of @code{prefix} blocks can be present.  
+
+Consider, for example, the following configuration:
+
+@example
+@group
+namespace personal @{
+   prefix "" @{
+      directory "$home/mailfolder";
+   @}   
+   prefix "#MH:" @{
+      directory "$home/Mail";
+      delimiter "/";
+      mailbox-type "mh";
+   @}
+@}
+@end group
+@end example
+
+It defines the personal namespace containing two prefixes.  The empty
+prefix is mapped to the directory @file{mailfolder} in the home
+directory of the currently authenticated user.  Any type of mailboxes
+is supported within that prefix.
+
+The prefix @samp{#MH:} is mapped to the directory @file{Mail} in the
+home directory of the user, and is limited to contain only mailboxes
+in MH format.
+
+Note that if the prefixes @samp{""} is not defined in the personal
+namespace, the following default will be automatically created:
+
+@example
+@group
+prefix "" @{
+  directory "$home";
+@}
+@end group
 @end example
 
 @node Conf-imap4d
@@ -7672,24 +7770,53 @@ configuration statements:
 @item tcp-wrappers  @tab @xref{tcp-wrappers statement}.
 @end multitable
 
-@deffn {Imap4d Conf} shared-namespace @var{list}
-Set shared namespace.  @var{List} is a list of
-strings.  @xref{Namespace}, for a detailed description.
+@deffn {Imap4d Conf} namespace @var{name} @{ ... @}
+Configures namespace.  The argument is one of: @samp{personal},
+@samp{other}, @samp{shared}.  The following statements (described
+below) are allowed within curly braces: @code{mailbox-mode} and
+@code{prefix}.
+
+@xref{Namespace}.
 @end deffn
 
-@deffn {Imap4d Conf} other-namespace @var{list}
-Set other users' namespace.  @var{List} is a list of
-strings.  @xref{Namespace}, for a detailed description.
+@deffn {Imap4d namespace} mailbox-mode @var{mode}
+Configures the file mode for the mailboxes created within that
+namespace.  The syntax for @var{mode} is:
+
+@example
+g(+|=)[wr]+,o(+|=)[wr]+
+@end example
+
+@xref{Namespace,mailbox-mode}.
 @end deffn
 
-@deffn {Imap4d Conf} shared-mailbox-mode @var{str}
-Set file mode for mailboxes created within shared namespace.
-@xref{Namespace}, for a detailed description.
+@deffn {Imap4d namespace} prefix @var{pfx} @{ ... @}
+Configures a prefix and determines its mapping to the server's file
+system.  The @var{pfx} argument is the prefix which will be
+visible to the IMAP client.  Available sub-statements are:
+@code{directory}, @code{delimiter}, and @code{mailbox-type}.
+
+@xref{Namespace,prefix}.
 @end deffn
 
-@deffn {Imap4d Conf} other-mailbox-mode @var{str}
-Set file mode for mailboxes created within other users' namespace.
-@xref{Namespace}, for a detailed description.
+@deffn {Imap4d namespace.prefix} directory @var{path}
+Defines the directory in the file system to which the prefix is
+mapped.
+
+@xref{Namespace,directory}.
+@end deffn
+
+@deffn {Imap4d namespace.prefix} delimiter @var{chr}
+Defines the folder hierarchy delimiter for the prefix.  Argument must
+be a single character.
+
+@xref{Namespace,delimiter}.
+@end deffn
+
+@deffn {Imap4d namespace.prefix} mailbox-type @var{type}
+Defines the type of the mailboxes inside that prefix.
+
+@xref{Namespace,mailbox-type}.
 @end deffn
 
 @deffn {Imap4d Conf} login-disabled @var{bool}
@@ -7706,11 +7833,6 @@ octal.
 
 The default value for @var{mode} is @samp{700} (@samp{drwx------} in
 @code{ls} terms).  
-@end deffn
-
-@deffn {Imap4d Conf} tls-required @var{bool}
-Require successful @code{STARTTLS} command before entering
-authentication phase.
 @end deffn
 
 @deffn {Imap4d Conf} preauth @var{mode}

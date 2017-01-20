@@ -419,10 +419,12 @@ static struct mu_cfg_param prefix_param[] = {
     N_("Directory in the file system") },
   { "delimiter", mu_cfg_callback,
     NULL, mu_offsetof (struct namespace_prefix, delim), cb_prefix_delim,
-    N_("Hierarchy delimiter character") },
+    N_("Hierarchy delimiter character"),
+    N_("arg: character") },
   { "mailbox-type", mu_cfg_callback,
     NULL, 0, cb_prefix_scheme,
-    N_("Type of mailboxes residing under this prefix") },
+    N_("Type of mailboxes residing under this prefix"),
+    N_("type: string") },
   { NULL }
 };
 
@@ -524,7 +526,7 @@ namespace_cfg_init (void)
   if (mu_create_canned_section ("namespace", &section))
     abort ();
   section->docstring = N_("Define a namespace");
-  section->label = "private | other | shared";
+  section->label = "personal | other | shared";
   section->parser = namespace_section_parser;
   mu_cfg_section_add_params (section, namespace_param);
 }
@@ -556,29 +558,6 @@ static struct mu_cfg_param imap4d_cfg_param[] = {
   
   { "namespace", mu_cfg_section },
   
-#if 0
-  { "homedir", mu_c_string, &modify_homedir, 0, NULL,
-    N_("Modify home directory.") },
-
-  { "personal-namespace", MU_CFG_LIST_OF(mu_c_string), &namespace[NS_PRIVATE],
-    0, NULL, 
-    N_("Set personal namespace.") },
-  { "other-namespace", MU_CFG_LIST_OF(mu_c_string), &namespace[NS_OTHER],
-    0, NULL, 
-    N_("Set other users' namespace.") },
-  { "shared-namespace", MU_CFG_LIST_OF(mu_c_string), &namespace[NS_SHARED],
-    0, NULL,
-    N_("Set shared namespace.") },
-  FIXME
-  { "other-mailbox-mode", mu_cfg_callback, &mailbox_mode[NS_OTHER], 0,
-    cb_mailbox_mode,
-    N_("File mode for mailboxes in other namespace."),
-    N_("mode: g(+|=)[wr]+,o(+|=)[wr]+") },
-  { "shared-mailbox-mode", mu_cfg_callback, &mailbox_mode[NS_SHARED], 0,
-    cb_mailbox_mode,
-    N_("File mode for mailboxes in shared namespace."),
-    N_("mode: g(+|=)[wr]+,o(+|=)[wr]+") },
-#endif
   { "login-disabled", mu_c_bool, &login_disabled, 0, NULL,
     N_("Disable LOGIN command.") },
   { "create-home-dir", mu_c_bool, &create_home_dir, 0, NULL,
