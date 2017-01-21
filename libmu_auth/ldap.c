@@ -442,9 +442,9 @@ _construct_attr_array (size_t *pargc, char ***pargv)
   for (i = 0, mu_iterator_first (itr); !mu_iterator_is_done (itr);
        mu_iterator_next (itr), i++)
     {
-      char **str;
+      char *str;
       mu_iterator_current (itr, (void**) &str); 
-      if ((argv[i] = strdup (*str)) == NULL)
+      if ((argv[i] = strdup (str)) == NULL)
         {
           mu_argcv_free (i, argv);
           return ENOMEM;
@@ -545,17 +545,15 @@ _mu_entry_to_auth_data (LDAP *ld, LDAPMessage *msg,
        mu_iterator_next (itr))
     {
       char *key;
-      char **pattr;
       char *attr;
       struct berval **values;
       
-      mu_iterator_current_kv (itr, (const void **)&key, (void**) &pattr);
-      attr = *pattr;
+      mu_iterator_current_kv (itr, (const void **)&key, (void**) &attr);
       values = ldap_get_values_len (ld, msg, attr);
       if (!values || !values[0])
 	{
 	  mu_error ("LDAP field `%s' (`%s') has NULL value",
-		    key, *pattr);
+		    key, attr);
 	  _free_partial_auth_data (&d);
 	  return MU_ERR_READ;
 	}
@@ -637,7 +635,7 @@ _mu_ldap_search (LDAP *ld, const char *filter_pat, const char *key,
 	return MU_ERR_FAILURE;
     }
 
-  rc = ldap_result (ld, msgid, LDAP_MSG_ALL, NULL, &res );
+  rc = ldap_result (ld, msgid, LDAP_MSG_ALL, NULL, &res);
   if (rc < 0)
     {
       mu_error ("ldap_result failed");
