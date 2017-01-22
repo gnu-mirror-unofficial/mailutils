@@ -93,7 +93,10 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   else if (is_atom (name))
     io_sendf ("%s\n", name);
   else
-    io_sendf ("\"%s\"\n", name);
+    {
+      io_send_qstring (name);
+      io_sendf ("\n", name);
+    }
   return 0;
 }
 

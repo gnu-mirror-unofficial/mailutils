@@ -234,15 +234,14 @@ io_sendf (const char *format, ...)
 }
 
 /* Send NIL if empty string, change the quoted string to a literal if the
-   string contains: double quotes, CR, LF, and '/'.  CR, LF will be changed
+   string contains: double quotes, CR, LF, and '\\'.  CR, LF will be changed
    to spaces.  */
 int
 io_send_qstring (const char *buffer)
 {
   if (buffer == NULL || *buffer == '\0')
     return io_sendf ("NIL");
-  if (strchr (buffer, '"') || strchr (buffer, '\r') || strchr (buffer, '\n')
-      || strchr (buffer, '\\'))
+  if (strpbrk (buffer, "\"\r\n\\"))
     {
       char *s;
       int ret;

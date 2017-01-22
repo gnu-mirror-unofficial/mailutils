@@ -65,8 +65,12 @@ imap4d_lsub (struct imap4d_session *session,
 	  mu_iterator_current_kv (itr, (const void **)&name, (void**)&val);
 
 	  if (mu_imap_wildmatch (pattern, name, MU_HIERARCHY_DELIMITER) == 0)
-	    io_untagged_response (RESP_NONE, "LSUB () \"%c\" \"%s\"",
-				  MU_HIERARCHY_DELIMITER, name);
+	    {
+	      mu_stream_printf (iostream, "* LSUB () \"%c\" ",
+				MU_HIERARCHY_DELIMITER);
+	      io_send_qstring (name);
+	      io_sendf ("\n");
+	    }
 	}
     }
   else
