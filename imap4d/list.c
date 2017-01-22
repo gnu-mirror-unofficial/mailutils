@@ -37,7 +37,9 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   size_t size;
   char *p;
 
-  if (refinfo->pfx->record && refinfo->pfx->record != resp->format)
+  if ((resp->type & MU_FOLDER_ATTRIBUTE_FILE)
+      && refinfo->pfx->record
+      && refinfo->pfx->record != resp->format)
     return 0;
   
   name = resp->name;
