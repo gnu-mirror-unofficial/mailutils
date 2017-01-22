@@ -212,6 +212,7 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
   mu_mailbox_t cmbox = NULL;
   int arg = IMAP4_ARG_1 + !!isuid;
   int mode = 0;
+  mu_record_t record;
   
   *err_text = NULL;
   if (imap4d_tokbuf_argc (tok) != arg + 2)
@@ -240,7 +241,7 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
       return RESP_BAD;
     }
 
-  mailbox_name = namespace_get_url (name, &mode);
+  mailbox_name = namespace_get_name (name, &record, &mode);
 
   if (!mailbox_name)
     {
@@ -251,7 +252,7 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
 
   /* If the destination mailbox does not exist, a server should return
      an error. */
-  status = mu_mailbox_create_default (&cmbox, mailbox_name);
+  status = mu_mailbox_create_from_record (&cmbox, record, mailbox_name);
   if (status == 0)
     {
       /* It SHOULD NOT automatifcllly create the mailbox. */
@@ -267,7 +268,8 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
       mu_mailbox_destroy (&cmbox);
     }
   mu_msgset_free (msgset);
-
+  free (mailbox_name);
+  
   if (status == 0)
     {
       *err_text = "Completed";

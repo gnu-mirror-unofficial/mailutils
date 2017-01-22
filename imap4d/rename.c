@@ -110,6 +110,7 @@ imap4d_rename (struct imap4d_session *session,
   const char *msg = "Completed";
   struct stat newst;
   int mode = 0;
+  mu_record_t newrec;
   
   if (imap4d_tokbuf_argc (tok) != 4)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
@@ -121,7 +122,7 @@ imap4d_rename (struct imap4d_session *session,
     return io_completion_response (command, RESP_NO, "Name Inbox is reservered");
 
   /* Allocates memory.  */
-  newname = namespace_get_url (newname, &mode);
+  newname = namespace_get_name (newname, &newrec, &mode);
   if (!newname)
     return io_completion_response (command, RESP_NO, "Permission denied");
 
@@ -158,7 +159,7 @@ imap4d_rename (struct imap4d_session *session,
 	  return io_completion_response (command, RESP_NO, 
 	                                 "Cannot be a directory");
 	}
-      if (mu_mailbox_create (&newmbox, newname) != 0
+      if (mu_mailbox_create_from_record (&newmbox, newrec, newname) != 0
 	  || mu_mailbox_open (newmbox,
 			      MU_STREAM_CREAT | MU_STREAM_RDWR | mode) != 0)
 	{
@@ -199,7 +200,7 @@ imap4d_rename (struct imap4d_session *session,
       return io_completion_response (command, RESP_OK, "Rename successful");
     }
 
-  oldname = namespace_get_url (oldname, NULL);
+  oldname = namespace_get_name (oldname, NULL, NULL);
 
   /* It must exist.  */
   /* FIXME: 1. What if odlname or newname is a remote mailbox?
@@ -240,6 +241,7 @@ imap4d_rename (struct imap4d_session *session,
 	}
       free (oldname);
     }
+
   free (newname);
   return io_completion_response (command, rc, "%s", msg);
 }

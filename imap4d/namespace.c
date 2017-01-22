@@ -91,8 +91,7 @@ namespace_init (void)
       
       if (mu_list_get_iterator (namespace[i].prefixes, &itr))
 	imap4d_bye (ERR_NO_MEM);
-      
-	
+      	
       for (mu_iterator_first (itr);
 	   !mu_iterator_is_done (itr); mu_iterator_next (itr))
 	{
@@ -105,6 +104,9 @@ namespace_init (void)
 	  pfx->ns = i;
 
 	  trim_delim (pfx->dir, '/');
+	  
+	  if (!pfx->scheme)
+	    mu_registrar_get_default_record (&pfx->record);
 	  
 	  rc = mu_assoc_install (prefixes, pfx->prefix, pfx);
 	  if (rc == MU_ERR_EXISTS)
@@ -351,20 +353,12 @@ namespace_translate_name (char const *name, int url,
 }
 
 char *
-namespace_get_url (char const *name, int *mode)
+namespace_get_name (char const *name, mu_record_t *rec, int *mode)
 {
   struct namespace_prefix const *pfx;
-  char *path = namespace_translate_name (name, 1, &pfx);
-
-  if (path && pfx->scheme)
-    {
-      char *p = mu_alloc (strlen (pfx->scheme) + 3 + strlen (path) + 1);
-      strcpy (p, pfx->scheme);
-      strcat (p, "://");
-      strcat (p, path);
-      free (path);
-      path = p;
-    }
+  char *path = namespace_translate_name (name, 0, &pfx);
+  if (rec)
+    *rec = pfx->record;
   if (mode)
     *mode = namespace[pfx->ns].mode;
   return path;

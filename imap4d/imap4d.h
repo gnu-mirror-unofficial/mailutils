@@ -413,7 +413,7 @@ struct namespace *namespace_lookup (char const *name);
 
 char *namespace_translate_name (char const *name, int url,
 				struct namespace_prefix const **pfx);
-char *namespace_get_url (char const *name, int *mode);
+char *namespace_get_name (char const *name, mu_record_t *rec, int *mode);
 
 void translate_delim (char *dst, char const *src, int dst_delim, int src_delim);
 

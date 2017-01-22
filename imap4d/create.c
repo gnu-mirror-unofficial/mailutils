@@ -39,9 +39,10 @@ imap4d_create (struct imap4d_session *session,
 {
   char *name;
   int isdir = 0;
-  int mode = 0;
   int rc = RESP_OK;
   const char *msg = "Completed";
+  mu_record_t record;
+  int mode;
 
   if (imap4d_tokbuf_argc (tok) != 3)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
@@ -67,8 +68,8 @@ imap4d_create (struct imap4d_session *session,
     isdir = 1;
   
   /* Allocates memory.  */
-  name = namespace_get_url (name, &mode);
-
+  name = namespace_get_name (name, &record, &mode);
+  
   if (!name)
     return io_completion_response (command, RESP_NO, "Cannot create mailbox");
 
@@ -76,47 +77,59 @@ imap4d_create (struct imap4d_session *session,
   if (access (name, F_OK) != 0)
     {
       if (make_interdir (name, MU_HIERARCHY_DELIMITER, MKDIR_PERMISSIONS))
-	{
-	  rc = RESP_NO;
-	  msg = "Cannot create mailbox";
-	}
+	rc = RESP_NO;
       
-      if (rc == RESP_OK && !isdir)
+      if (rc == RESP_OK)
 	{
-	  mu_mailbox_t mbox;
-	  
-	  rc = mu_mailbox_create_default (&mbox, name);
-	  if (rc)
+	  if (isdir)
 	    {
-	      mu_diag_output (MU_DIAG_ERR,
-			      _("Cannot create mailbox %s: %s"), name,
-			      mu_strerror (rc));
-	      rc = RESP_NO;
-	      msg = "Cannot create mailbox";
-	    }
-	  else if ((rc = mu_mailbox_open (mbox,
-					  MU_STREAM_RDWR | MU_STREAM_CREAT
-					  | mode)))
-	    {
-	      mu_diag_output (MU_DIAG_ERR,
-			      _("Cannot open mailbox %s: %s"),
-			      name, mu_strerror (rc));
-	      rc = RESP_NO;
-	      msg = "Cannot create mailbox";
+	      if (mkdir (name, MKDIR_PERMISSIONS))
+		{
+		  mu_diag_output (MU_DIAG_ERR,
+				  _("Cannot create directory %s: %s"), name,
+				  mu_strerror (errno));
+		  rc = RESP_NO;
+		}	  
 	    }
 	  else
 	    {
-	      mu_mailbox_close (mbox);
-	      mu_mailbox_destroy (&mbox);
-	      rc = RESP_OK;
+	      mu_mailbox_t mbox;
+
+	      rc = mu_mailbox_create_from_record (&mbox, record, name);
+	      if (rc)
+		{
+		  mu_diag_output (MU_DIAG_ERR,
+				  _("Cannot create mailbox (%s) %s: %s"), name,
+				  record->scheme,
+				  mu_strerror (rc));
+		  rc = RESP_NO;
+		}
+	      else if ((rc = mu_mailbox_open (mbox,
+					      MU_STREAM_RDWR | MU_STREAM_CREAT
+					      | mode)))
+		{
+		  mu_diag_output (MU_DIAG_ERR,
+				  _("Cannot open mailbox (%s) %s: %s"),
+				  record->scheme,
+				  name, mu_strerror (rc));
+		  rc = RESP_NO;
+		}
+	      else
+		{
+		  mu_mailbox_close (mbox);
+		  mu_mailbox_destroy (&mbox);
+		  rc = RESP_OK;
+		}
 	    }
 	}
+      if (rc != RESP_OK)
+	msg = "Cannot create mailbox";
     }
   else
     {
       rc = RESP_NO;
       msg = "already exists";
     }
-
+  free (name);
   return io_completion_response (command, rc, "%s", msg);
 }

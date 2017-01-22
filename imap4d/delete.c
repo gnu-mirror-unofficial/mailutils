@@ -36,6 +36,7 @@ imap4d_delete (struct imap4d_session *session,
   const char *msg = "Completed";
   char *name;
   mu_mailbox_t tmpbox;
+  mu_record_t record;
   
   if (imap4d_tokbuf_argc (tok) != 3)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
@@ -48,12 +49,12 @@ imap4d_delete (struct imap4d_session *session,
   if (mu_c_strcasecmp (name, "INBOX") == 0)
     return io_completion_response (command, RESP_NO, "Already exist");
 
- /* Allocates memory.  */
-  name = namespace_get_url (name, NULL);
+  /* Allocates memory.  */
+  name = namespace_get_name (name, &record, NULL);
   if (!name)
     return io_completion_response (command, RESP_NO, "Cannot remove");
 
-  rc = mu_mailbox_create (&tmpbox, name);
+  rc = mu_mailbox_create_from_record (&tmpbox, record, name);
   if (rc == 0)
     {
       imap4d_enter_critical ();
@@ -69,7 +70,8 @@ imap4d_delete (struct imap4d_session *session,
       if (rc)
 	mu_diag_funcall (MU_DIAG_ERROR, "remove", name, errno);
     }
-
+  free (name);
+  
   if (rc)
     {
       rc = RESP_NO;

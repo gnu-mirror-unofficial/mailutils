@@ -201,6 +201,7 @@ imap4d_append (struct imap4d_session *session,
 {
   int i;
   char *mboxname;
+  mu_record_t record;
   int flags = 0;
   mu_mailbox_t dest_mbox = NULL;
   int status;
@@ -252,12 +253,12 @@ imap4d_append (struct imap4d_session *session,
     }
 
   msg_text = imap4d_tokbuf_getarg (tok, i);
-  
-  mboxname = namespace_get_url (mboxname, NULL);
+
+  mboxname = namespace_get_name (mboxname, &record, NULL);
   if (!mboxname)
     return io_completion_response (command, RESP_NO, "Couldn't open mailbox"); 
 
-  status = mu_mailbox_create_default (&dest_mbox, mboxname);
+  status = mu_mailbox_create_from_record (&dest_mbox, record, mboxname);
   if (status == 0)
     {
       /* It SHOULD NOT automatically create the mailbox. */

@@ -132,19 +132,17 @@ quota_check (mu_off_t size)
   mu_mailbox_t mbox;
   mu_off_t total;
   int rc;
+  mu_record_t record;
   
   if (auth_data->quota == 0)
     return RESP_OK;
 
   total = used_size;
 
-  mailbox_name = namespace_get_url ("INBOX", NULL);
-  rc = mu_mailbox_create (&mbox, mailbox_name);
+  mailbox_name = namespace_get_name ("INBOX", &record, NULL);
+  rc = mu_mailbox_create_from_record (&mbox, record, mailbox_name);
   if (rc)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_create", mailbox_name, rc);
-      free (mailbox_name);
-    }
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_create", mailbox_name, rc);
   else
     {
       do

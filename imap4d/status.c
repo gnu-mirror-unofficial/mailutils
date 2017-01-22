@@ -75,13 +75,14 @@ imap4d_status (struct imap4d_session *session,
   int count = 0;
   char *err_msg = NULL;
   int argc = imap4d_tokbuf_argc (tok);
-
+  mu_record_t record;
+  
   if (argc < 4)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
   
   name = imap4d_tokbuf_getarg (tok, IMAP4_ARG_1);
 
-  mailbox_name = namespace_get_url (name, NULL);
+  mailbox_name = namespace_get_name (name, &record, NULL);
 
   if (!mailbox_name)
     return io_completion_response (command, RESP_NO, "Error opening mailbox");
@@ -92,7 +93,7 @@ imap4d_status (struct imap4d_session *session,
   mu_mailbox_sync (mbox);
   imap4d_leave_critical ();
   
-  status = mu_mailbox_create_default (&smbox, mailbox_name);
+  status = mu_mailbox_create_from_record (&smbox, record, mailbox_name);
   if (status == 0)
     {
       status = mu_mailbox_open (smbox, MU_STREAM_READ);
