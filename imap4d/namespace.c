@@ -141,6 +141,7 @@ namespace_init (void)
       pfx->prefix = mu_strdup ("");
       pfx->dir = mu_strdup ("$home");
       pfx->delim = '/';
+      mu_registrar_get_default_record (&pfx->record);
       priv = namespace_lookup ("personal");
       mu_list_prepend (priv->prefixes, pfx);
       rc = mu_assoc_install (prefixes, pfx->prefix, pfx);
