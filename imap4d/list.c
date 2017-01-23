@@ -121,9 +121,8 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
 	
   rc = mu_folder_create (&folder, cwd);
   if (rc)
-    {
-      return RESP_NO;
-    }
+    return RESP_NO;
+
   /* Force the right matcher */
   mu_folder_set_match (folder, mu_folder_imap_match);
 
