@@ -21,10 +21,10 @@
 
 struct refinfo
 {
-  char *refptr;   /* Original reference */
-  size_t reflen;  /* Length of the original reference */
+  char const *refptr;   /* Original reference */
+  size_t reflen;        /* Length of the original reference */
   struct namespace_prefix const *pfx;
-  size_t dirlen;  /* Length of the current directory prefix */
+  size_t dirlen;        /* Length of the current directory prefix */
   char *buf;
   size_t bufsize;
 };
@@ -78,7 +78,7 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   if (refinfo->refptr[0])
     {
       p = mu_stpcpy (refinfo->buf, refinfo->refptr);
-      if (refinfo->refptr[refinfo->reflen-1] != refinfo->pfx->delim)
+      if (refinfo->reflen == strlen (refinfo->pfx->prefix) - 1)
 	*p++ = refinfo->pfx->delim;
     }
   else
@@ -95,9 +95,70 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   else
     {
       io_send_qstring (name);
-      io_sendf ("\n", name);
+      io_sendf ("\n");
     }
   return 0;
+}
+
+static int
+list_ref (char const *ref, char const *wcard, char const *cwd,
+	  struct namespace_prefix const *pfx)
+{
+  int rc;
+  struct refinfo refinfo;
+  mu_folder_t folder;
+  char const *dir;
+  mu_url_t url;
+  
+  if (pfx->ns == NS_OTHER && strcmp (ref, pfx->prefix) == 0
+      && strpbrk (wcard, "*%"))
+    {
+      /* [A] server MAY return NO to such a LIST command, requiring that a
+	 user name be included with the Other Users' Namespace prefix
+	 before listing any other user's mailboxes */
+      return RESP_NO;
+    }	  
+	
+  rc = mu_folder_create (&folder, cwd);
+  if (rc)
+    {
+      return RESP_NO;
+    }
+  /* Force the right matcher */
+  mu_folder_set_match (folder, mu_folder_imap_match);
+
+  memset (&refinfo, 0, sizeof refinfo);
+
+  /* Note: original reference would always coincide with the pfx->prefix,
+     if it weren't for the special handling of NS_OTHER namespace, where
+     the part between the prefix and the first delimiter is considered to
+     be a user name and is handled as part of the actual prefix. */
+  refinfo.refptr = ref;
+  refinfo.reflen = strlen (ref);
+  refinfo.pfx = pfx;
+      
+  mu_folder_get_url (folder, &url);
+  mu_url_sget_path (url, &dir);
+  refinfo.dirlen = strlen (dir);
+	     
+  /* The special name INBOX is included in the output from LIST, if
+     INBOX is supported by this server for this user and if the
+     uppercase string "INBOX" matches the interpreted reference and
+     mailbox name arguments with wildcards as described above.  The
+     criteria for omitting INBOX is whether SELECT INBOX will return
+     failure; it is not relevant whether the user's real INBOX resides
+     on this or some other server. */
+  
+  if (!*ref &&
+      (mu_imap_wildmatch (wcard, "INBOX", MU_HIERARCHY_DELIMITER) == 0
+       || mu_imap_wildmatch (wcard, "inbox", MU_HIERARCHY_DELIMITER) == 0))
+    io_untagged_response (RESP_NONE, "LIST (\\NoInferiors) NIL INBOX");
+  
+  mu_folder_enumerate (folder, NULL, (void*) wcard, 0, 0, NULL,
+		       list_fun, &refinfo);
+  mu_folder_destroy (&folder);
+  free (refinfo.buf);
+  return RESP_OK;
 }
 
 /*
@@ -139,6 +200,12 @@ imap4d_list (struct imap4d_session *session,
 {
   char *ref;
   char *wcard;
+  int status = RESP_OK;
+  static char *resp_text[] = {
+    [RESP_OK]  = "Completed",
+    [RESP_NO]  = "The requested item could not be found",
+    [RESP_BAD] = "System error"
+  };
 
   if (imap4d_tokbuf_argc (tok) != 4)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
@@ -169,104 +236,56 @@ imap4d_list (struct imap4d_session *session,
     }
   else
     {
-      int status;
-      mu_folder_t folder;
-      mu_url_t url;
-      char *cwd;
-      char const *dir;
-      struct refinfo refinfo;
+      char *cwd = NULL;
       size_t i;
       struct namespace_prefix const *pfx;
       
-      cwd = namespace_translate_name (ref, 0, &pfx);
-      if (!cwd)
+      if (ref[0] == 0)
 	{
-	  return io_completion_response (command, RESP_NO,
-				      "The requested item could not be found.");
+	  cwd = namespace_translate_name (wcard, 0, &pfx);
+	  if (cwd)
+	    {
+	      char *p = wcard + strlen (pfx->prefix);
+	      ref = mu_strdup (pfx->prefix);
+	      memmove (wcard, p, strlen (p) + 1);
+	      free (cwd);
+	    }
+	  else
+	    ref = mu_strdup (ref);
 	}
-      free (cwd);
-
-      ref = mu_strdup (ref);
+      else
+	ref = mu_strdup (ref);
       
       /* Find the longest directory prefix */
       i = strcspn (wcard, "%*");
-      while (i > 0 && wcard[i - 1] != pfx->delim)
-	i--;
-      /* Append it to the reference */
-      if (i)
+      if (wcard[i])
 	{
-	  size_t reflen = strlen (ref);
-	  size_t len = i + reflen;
-
-	  ref = mu_realloc (ref, len);
-	  memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
-	  ref[len-1] = 0;
-
-	  wcard += i;
+	  while (i > 0 && wcard[i - 1] != pfx->delim)
+	    i--;
+	  /* Append it to the reference */
+	  if (i)
+	    {
+	      size_t reflen = strlen (ref);
+	      size_t len = i + reflen;
+	      
+	      ref = mu_realloc (ref, len);
+	      memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
+	      ref[len-1] = 0;
+	      
+	      wcard += i;
+	    }
 	}
 
       cwd = namespace_translate_name (ref, 0, &pfx);
-      if (!cwd)
-	{
-	  free (ref);
-	  return io_completion_response (command, RESP_NO,
-				      "The requested item could not be found.");
-	}
-      
-      if (pfx->ns == NS_OTHER
-	  && strcmp (ref, pfx->prefix) == 0
-	  && strpbrk (wcard, "*%"))
-	{
-	  /* [A] server MAY return NO to such a LIST command, requiring that a
-	     user name be included with the Other Users' Namespace prefix
-	     before listing any other user's mailboxes */
-	  free (ref);
-	  return io_completion_response (command, RESP_NO,
-			              "The requested item could not be found.");
-	}	  
-	
-      status = mu_folder_create (&folder, cwd);
-      if (status)
-	{
-	  free (ref);
-	  free (cwd);
-	  return io_completion_response (command, RESP_NO,
-			              "The requested item could not be found.");
-	}
-      /* Force the right matcher */
-      mu_folder_set_match (folder, mu_folder_imap_match);
+      if (cwd)
+	status = list_ref (ref, wcard, cwd, pfx);
+      else
+	status = RESP_NO;
 
-      memset (&refinfo, 0, sizeof refinfo);
-
-      refinfo.refptr = ref;
-      refinfo.reflen = strlen (ref);
-      refinfo.pfx = pfx;
-      
-      mu_folder_get_url (folder, &url);
-      mu_url_sget_path (url, &dir);
-      refinfo.dirlen = strlen (dir);
-	     
-      /* The special name INBOX is included in the output from LIST, if
-	 INBOX is supported by this server for this user and if the
-	 uppercase string "INBOX" matches the interpreted reference and
-	 mailbox name arguments with wildcards as described above.  The
-	 criteria for omitting INBOX is whether SELECT INBOX will return
-	 failure; it is not relevant whether the user's real INBOX resides
-	 on this or some other server. */
-
-      if (!*ref &&
-	  (mu_imap_wildmatch (wcard, "INBOX", MU_HIERARCHY_DELIMITER) == 0
-	   || mu_imap_wildmatch (wcard, "inbox", MU_HIERARCHY_DELIMITER) == 0))
-	io_untagged_response (RESP_NONE, "LIST (\\NoInferiors) NIL INBOX");
-
-      mu_folder_enumerate (folder, NULL, wcard, 0, 0, NULL,
-			   list_fun, &refinfo);
-      mu_folder_destroy (&folder);
-      free (refinfo.buf);
       free (cwd);
       free (ref);
     }
 
-  return io_completion_response (command, RESP_OK, "Completed");
+  return io_completion_response (command, status, resp_text[status]);
 }
 

@@ -22,7 +22,7 @@ namespace personal {
 	prefix "" {
 		directory "$HOMEDIR";
 	}
-	prefix "~" {
+	prefix "~/" {
 		directory "$HOMEDIR";
 	}
 }
