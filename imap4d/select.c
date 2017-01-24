@@ -38,6 +38,7 @@ imap4d_select0 (struct imap4d_command *command, const char *mboxname,
 {
   int status;
   char *mailbox_name;
+  mu_record_t record;
   
   /* FIXME: Check state.  */
 
@@ -59,24 +60,25 @@ imap4d_select0 (struct imap4d_command *command, const char *mboxname,
 
   if (strcmp (mboxname, "INBOX") == 0)
     flags |= MU_STREAM_CREAT;
-  mailbox_name = namespace_translate_name (mboxname, 1, NULL);
+  mailbox_name = namespace_get_name (mboxname, &record, NULL);
 
   if (!mailbox_name)
     return io_completion_response (command, RESP_NO, "Couldn't open mailbox");
 
   if (flags & MU_STREAM_WRITE)
     {
-      status = manlock_open_mailbox (&mbox, mailbox_name, 1, flags);
+      status = manlock_open_mailbox_from_record (&mbox, record,
+						 mailbox_name, flags);
       if (status)
 	flags &= ~MU_STREAM_WRITE;
     }
 
   if (!(flags & MU_STREAM_WRITE))
     {
-      status = mu_mailbox_create_default (&mbox, mailbox_name);
+      status = mu_mailbox_create_from_record (&mbox, record, mailbox_name);
 
       if (status)
-	mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_create_default",
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_create_from_record",
 			 mailbox_name,
 			 status);
       else

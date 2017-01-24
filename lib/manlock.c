@@ -182,8 +182,33 @@ manlock_open_mailbox (mu_mailbox_t *pmbox, const char *mailbox_name, int def,
   
   return status;
 }
-
 
+int
+manlock_open_mailbox_from_record (mu_mailbox_t *pmbox, mu_record_t record,
+				  const char *mailbox_name, int flags)
+{
+  mu_mailbox_t mbox;
+  int status;
+
+  status = mu_mailbox_create_from_record (&mbox, record, mailbox_name);
+  if (status)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_create_from_record",
+		       mailbox_name,
+		       status);
+      return 1;
+    }
+
+  status = mailbox_open_and_lock (mbox, flags);
+  
+  if (status == 0)
+    *pmbox = mbox;
+  else
+    mu_mailbox_destroy (&mbox);
+  
+  return status;
+}
+
 struct mu_cfg_param manlock_param[] = {
   { "enable", mu_c_bool, &manlock_mandatory_locking, 0, NULL,
     N_("Enable mandatory locking.") },

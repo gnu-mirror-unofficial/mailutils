@@ -24,6 +24,9 @@ extern char *manlock_lock_dir;
 
 int manlock_open_mailbox (mu_mailbox_t *pmbox, const char *mailbox_name,
 			  int def, int flags);
+int manlock_open_mailbox_from_record (mu_mailbox_t *pmbox, mu_record_t record,
+				      const char *mailbox_name, int flags);
+
 int manlock_lock (mu_mailbox_t mbox);
 int manlock_touchlock (mu_mailbox_t mbox);
 int manlock_unlock (mu_mailbox_t mbox);
