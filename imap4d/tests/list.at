@@ -18,15 +18,15 @@ m4_pushdef([IMAP4D_HOMEDIR],[spool])
 
 dnl LIST_CHECK([NAME],[KW],[ARG],[OUTPUT],[EXTRA-CODE],[filter,][expand]
 m4_define([LIST_CHECK],[
-AT_SETUP([$1])
+AT_SETUP([m4_if([$1],,[list $3],[$1])])
 AT_KEYWORDS([list $2])
 
 IMAP4D_CHECK([
 mkdir IMAP4D_HOMEDIR
-m4_foreach([MAILBOX],[bigto.mbox,mbox1,mbox,relational.mbox,relational.mbox,
- search.mbox,sieve.mbox,teaparty.mbox],[
-  MUT_MBCOPY($abs_top_srcdir/testsuite/spool/MAILBOX,IMAP4D_HOMEDIR)
-])
+for name in bigto relational search sieve teaparty
+do
+  cp $abs_top_srcdir/testsuite/spool/$name.mbox IMAP4D_HOMEDIR/$name
+done  
 $5
 ],
 [1 LIST $3
@@ -39,54 +39,246 @@ AT_CLEANUP
 ])
 
 dnl ----------------------------------------------------------------------
-LIST_CHECK([asterisk],[list00],
-["~" "*"],
-[dnl
-* LIST (\NoInferiors) "/" ~/bigto.mbox
-* LIST (\NoInferiors) "/" ~/mbox
-* LIST (\NoInferiors) "/" ~/mbox1
-* LIST (\NoInferiors) "/" ~/relational.mbox
-* LIST (\NoInferiors) "/" ~/search.mbox
-* LIST (\NoInferiors) "/" ~/sieve.mbox
-* LIST (\NoInferiors) "/" ~/teaparty.mbox
-])
-
-LIST_CHECK([percent],[list01],
-["~" "%"],
-[dnl
-* LIST (\NoInferiors) "/" ~/bigto.mbox
-* LIST (\NoInferiors) "/" ~/mbox
-* LIST (\NoInferiors) "/" ~/mbox1
-* LIST (\NoInferiors) "/" ~/relational.mbox
-* LIST (\NoInferiors) "/" ~/search.mbox
-* LIST (\NoInferiors) "/" ~/sieve.mbox
-* LIST (\NoInferiors) "/" ~/teaparty.mbox
-])
-
-LIST_CHECK([empty ref + asterisk],[list02],
+LIST_CHECK([],[list02],
 ["" "*"],
 [dnl
-* LIST (\NoInferiors) "/" bigto.mbox
-* LIST (\NoInferiors) "/" mbox
-* LIST (\NoInferiors) "/" mbox1
-* LIST (\NoInferiors) "/" relational.mbox
-* LIST (\NoInferiors) "/" search.mbox
-* LIST (\NoInferiors) "/" sieve.mbox
-* LIST (\NoInferiors) "/" teaparty.mbox
+* LIST (\NoInferiors) "/" bigto
+* LIST (\NoInferiors) "/" relational
+* LIST (\NoInferiors) "/" search
+* LIST (\NoInferiors) "/" sieve
+* LIST (\NoInferiors) "/" teaparty
 * LIST (\NoInferiors) NIL INBOX
+])
+
+LIST_CHECK([],[list02],
+["" "%"],
+[dnl
+* LIST (\NoInferiors) "/" bigto
+* LIST (\NoInferiors) "/" relational
+* LIST (\NoInferiors) "/" search
+* LIST (\NoInferiors) "/" sieve
+* LIST (\NoInferiors) "/" teaparty
+* LIST (\NoInferiors) NIL INBOX
+])
+
+LIST_CHECK([duplicate INBOX],[list02],
+["" "%"],
+[dnl
+* LIST (\NoInferiors) "/" bigto
+* LIST (\NoInferiors) "/" relational
+* LIST (\NoInferiors) "/" search
+* LIST (\NoInferiors) "/" sieve
+* LIST (\NoInferiors) "/" teaparty
+* LIST (\NoInferiors) NIL INBOX
+],
+[cp $abs_top_srcdir/testsuite/spool/mbox IMAP4D_HOMEDIR/INBOX
+])
+
+LIST_CHECK([],[list07],
+["" INBOX],
+[dnl
+* LIST (\NoInferiors) NIL INBOX
+])
+
+LIST_CHECK([],[list08],
+["" "search"],
+[dnl
+* LIST (\NoInferiors) "/" search
+])
+
+LIST_CHECK([],[],
+["" "#archive:*"],
+[* LIST (\NoInferiors) "." #archive:mbox
+* LIST (\NoInferiors) "." #archive:old.mbox1
+* LIST (\NoInferiors) "." #archive:old.very.saved
+* LIST (\NoSelect) "." #archive:old
+* LIST (\NoSelect) "." #archive:old.very
+],
+[mkdir archive archive/old archive/old/very
+cp $abs_top_srcdir/testsuite/spool/mbox archive
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
+])
+
+LIST_CHECK([],[],
+["" "#archive:%"],
+[* LIST (\NoInferiors) "." #archive:mbox
+* LIST (\NoSelect) "." #archive:old
+],
+[mkdir archive archive/old archive/old/very
+cp $abs_top_srcdir/testsuite/spool/mbox archive
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
+])
+
+LIST_CHECK([],[],
+["" "archive.*"],
+[* LIST (\NoInferiors) "." archive.mbox
+* LIST (\NoInferiors) "." archive.old.mbox1
+* LIST (\NoInferiors) "." archive.old.very.saved
+* LIST (\NoSelect) "." archive.old
+* LIST (\NoSelect) "." archive.old.very
+],
+[mkdir archive archive/old archive/old/very
+cp $abs_top_srcdir/testsuite/spool/mbox archive
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
+])
+
+LIST_CHECK([],[],
+["archive" "*"],
+[* LIST (\NoInferiors) "." archive.mbox
+* LIST (\NoInferiors) "." archive.old.mbox1
+* LIST (\NoInferiors) "." archive.old.very.saved
+* LIST (\NoSelect) "." archive.old
+* LIST (\NoSelect) "." archive.old.very
+],
+[mkdir archive archive/old archive/old/very
+cp $abs_top_srcdir/testsuite/spool/mbox archive
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
+])
+
+LIST_CHECK([],[],
+["archive." "*"],
+[* LIST (\NoInferiors) "." archive.mbox
+* LIST (\NoInferiors) "." archive.old.mbox1
+* LIST (\NoInferiors) "." archive.old.very.saved
+* LIST (\NoSelect) "." archive.old
+* LIST (\NoSelect) "." archive.old.very
+],
+[mkdir archive archive/old archive/old/very
+cp $abs_top_srcdir/testsuite/spool/mbox archive
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
+])
+
+LIST_CHECK([],[],
+["archive." "*"],
+[* LIST (\NoInferiors) "." archive.mbox
+* LIST (\NoInferiors) "." archive.old.mbox1
+* LIST (\NoInferiors) "." archive.old.very.saved
+* LIST (\NoSelect) "." archive.old
+* LIST (\NoSelect) "." archive.old.very
+],
+[mkdir archive archive/old archive/old/very
+cp $abs_top_srcdir/testsuite/spool/mbox archive
+cp $abs_top_srcdir/testsuite/spool/mbox archive/mbox.1
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
+cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
+])
+
+LIST_CHECK([],[],
+["~" "*"],
+[1 NO LIST The requested item could not be found
+])
+
+LIST_CHECK([],[],
+["~foo" "%"],
+[* LIST (\NoInferiors) "/" ~foo/mbox
+* LIST (\NoSelect) "/" ~foo/dir
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
+])
+
+LIST_CHECK([],[],
+["~foo" "*"],
+[* LIST (\NoInferiors) "/" ~foo/dir/saved
+* LIST (\NoInferiors) "/" ~foo/mbox
+* LIST (\NoSelect) "/" ~foo/dir
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
+])
+
+LIST_CHECK([],[],
+["" "~foo/*"],
+[* LIST (\NoInferiors) "/" ~foo/dir/saved
+* LIST (\NoInferiors) "/" ~foo/mbox
+* LIST (\NoSelect) "/" ~foo/dir
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
+])
+
+LIST_CHECK([],[],
+["~foo" "%/*"],
+[* LIST (\NoInferiors) "/" ~foo/dir/saved
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
+])
+
+# ###
+
+LIST_CHECK([],[],
+["other" "*"],
+[1 NO LIST The requested item could not be found
+])
+
+LIST_CHECK([],[],
+["other/foo" "%"],
+[* LIST (\NoInferiors) "/" other/foo/mbox
+* LIST (\NoSelect) "/" other/foo/dir
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
+])
+
+LIST_CHECK([],[],
+["other/foo" "*"],
+[* LIST (\NoInferiors) "/" other/foo/dir/saved
+* LIST (\NoInferiors) "/" other/foo/mbox
+* LIST (\NoSelect) "/" other/foo/dir
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
+])
+
+LIST_CHECK([],[],
+["" "other/foo/*"],
+[* LIST (\NoInferiors) "/" other/foo/dir/saved
+* LIST (\NoInferiors) "/" other/foo/mbox
+* LIST (\NoSelect) "/" other/foo/dir
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
+])
+
+LIST_CHECK([],[],
+["other/foo" "%/*"],
+[* LIST (\NoInferiors) "/" other/foo/dir/saved
+],
+[mkdir home home/foo home/foo/dir home/bar
+cp $abs_top_srcdir/testsuite/spool/mbox home/foo
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/foo/dir/saved
+cp $abs_top_srcdir/testsuite/spool/mbox1 home/bar
 ])
 
 # FIXME: I'm not sure whether it should include / in the reply.
 LIST_CHECK([root ref + asterisk],[list03],
 ["/" "*"],
 [dnl
-* LIST (\NoInferiors) "/" /bigto.mbox
-* LIST (\NoInferiors) "/" /mbox
-* LIST (\NoInferiors) "/" /mbox1
-* LIST (\NoInferiors) "/" /relational.mbox
-* LIST (\NoInferiors) "/" /search.mbox
-* LIST (\NoInferiors) "/" /sieve.mbox
-* LIST (\NoInferiors) "/" /teaparty.mbox
+* LIST (\NoInferiors) "/" /bigto
+* LIST (\NoInferiors) "/" /relational
+* LIST (\NoInferiors) "/" /search
+* LIST (\NoInferiors) "/" /sieve
+* LIST (\NoInferiors) "/" /teaparty
 ])
 
 LIST_CHECK([absolute reference + asterisk],[list04],
@@ -109,18 +301,6 @@ LIST_CHECK([absolute reference + mailbox],[list06],
 [mkdir IMAP4D_HOMEDIR/folder
  MUT_MBCOPY($abs_top_srcdir/testsuite/folder/one,IMAP4D_HOMEDIR/folder)
  MUT_MBCOPY($abs_top_srcdir/testsuite/folder/two,IMAP4D_HOMEDIR/folder)])
-
-LIST_CHECK([empty reference + INBOX],[list07],
-["" INBOX],
-[dnl
-* LIST (\NoInferiors) NIL INBOX
-])
-
-LIST_CHECK([empty reference + mailbox],[list08],
-["" "search.mbox"],
-[dnl
-* LIST (\NoInferiors) "/" search.mbox
-])
 
 dnl ----------------------------------------------------------------------
 

@@ -188,9 +188,11 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
       p = mu_stpcpy (p, pfx->dir);
       if (*name)
 	{
-	  if (pfx->ns == NS_OTHER
-	      && pfx->prefix[strlen(pfx->prefix) - 1] != pfx->delim)
+	  if (pfx->ns == NS_OTHER)
 	    {
+	      if (pfx->prefix[strlen (pfx->prefix) - 1] == pfx->delim)
+		++name;
+
 	      while (*name && *name != pfx->delim)
 		name++;
 	    }
@@ -246,10 +248,15 @@ translate_name (char const *name, struct namespace_prefix const **return_pfx)
 static char *
 extract_username (char const *name, struct namespace_prefix const *pfx)
 {
-  char const *p = name + strlen (pfx->prefix);
-  char *end = strchr (p, pfx->delim);
+  char const *p;
+  char *end;
   char *user;
   size_t len;
+
+  if (strlen (name) < strlen (pfx->prefix))
+    return NULL;
+  p = name + strlen (pfx->prefix);
+  end = strchr (p, pfx->delim);
   
   if (end)
     len = end - p;

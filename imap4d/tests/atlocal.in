@@ -22,8 +22,22 @@ namespace personal {
 	prefix "" {
 		directory "$HOMEDIR";
 	}
-	prefix "~/" {
-		directory "$HOMEDIR";
+	prefix "#archive:" {
+		directory "$CWD/archive";
+		delimiter ".";
+	}
+	prefix "archive." {
+		directory "$CWD/archive";
+		delimiter ".";
+	}
+}
+
+namespace other {
+	prefix "~" {
+		directory "$CWD/home/\$user";
+	}
+	prefix "other/" {
+		directory "$CWD/home/\$user";
 	}
 }
 

@@ -42,12 +42,17 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
       && refinfo->pfx->record != resp->format)
     return 0;
   
-  name = resp->name;
-  size = strlen (name);
-  if (size == refinfo->reflen + 6
-      && memcmp (name + refinfo->reflen + 1, "INBOX", 5) == 0)
+  name = resp->name + refinfo->dirlen;
+
+  /* There can be only one INBOX */
+  if (refinfo->reflen == 0 && strcmp (name, "INBOX") == 0)
     return 0;
-     
+
+  /* Ignore mailboxes that contain delimiter as part of their name */
+  if (refinfo->pfx->delim != resp->separator
+      && strchr (name, refinfo->pfx->delim))
+    return 0;
+  
   io_sendf ("* %s", "LIST (");
   if ((resp->type & (MU_FOLDER_ATTRIBUTE_FILE|MU_FOLDER_ATTRIBUTE_DIRECTORY))
        == (MU_FOLDER_ATTRIBUTE_FILE|MU_FOLDER_ATTRIBUTE_DIRECTORY))
@@ -59,7 +64,6 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   
   io_sendf (") \"%c\" ", refinfo->pfx->delim);
 
-  name = resp->name + refinfo->dirlen + 1;
   size = strlen (name) + refinfo->reflen + 2;
   if (size > refinfo->bufsize)
     {
@@ -77,9 +81,8 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
 
   if (refinfo->refptr[0])
     {
-      p = mu_stpcpy (refinfo->buf, refinfo->refptr);
-      if (refinfo->reflen == strlen (refinfo->pfx->prefix) - 1)
-	*p++ = refinfo->pfx->delim;
+      memcpy (refinfo->buf, refinfo->refptr, refinfo->reflen);
+      p = refinfo->buf + refinfo->reflen;
     }
   else
     p = refinfo->buf;
@@ -101,6 +104,21 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
 }
 
 static int
+match_pfx (struct namespace_prefix const *pfx, char const *ref)
+{
+  char const *p = pfx->prefix, *q = ref;
+
+  for (; *q; p++, q++)
+    {
+      if (*p == 0 || *p != *q)
+	return 0;
+    }
+  if (*p == pfx->delim)
+    p++;
+  return *p == 0;
+}
+
+static int
 list_ref (char const *ref, char const *wcard, char const *cwd,
 	  struct namespace_prefix const *pfx)
 {
@@ -110,8 +128,7 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
   char const *dir;
   mu_url_t url;
   
-  if (pfx->ns == NS_OTHER && strcmp (ref, pfx->prefix) == 0
-      && strpbrk (wcard, "*%"))
+  if (pfx->ns == NS_OTHER && match_pfx (pfx, ref) && strpbrk (wcard, "*%"))
     {
       /* [A] server MAY return NO to such a LIST command, requiring that a
 	 user name be included with the Other Users' Namespace prefix
@@ -128,18 +145,23 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
 
   memset (&refinfo, 0, sizeof refinfo);
 
+  refinfo.pfx = pfx;
   /* Note: original reference would always coincide with the pfx->prefix,
      if it weren't for the special handling of NS_OTHER namespace, where
      the part between the prefix and the first delimiter is considered to
      be a user name and is handled as part of the actual prefix. */
   refinfo.refptr = ref;
   refinfo.reflen = strlen (ref);
-  refinfo.pfx = pfx;
-      
+
   mu_folder_get_url (folder, &url);
   mu_url_sget_path (url, &dir);
   refinfo.dirlen = strlen (dir);
-	     
+
+  if (refinfo.refptr[refinfo.reflen-1] == pfx->delim)
+    refinfo.reflen--;
+  else if (strcmp (ref, pfx->prefix) == 0)
+    refinfo.dirlen++;
+  
   /* The special name INBOX is included in the output from LIST, if
      INBOX is supported by this server for this user and if the
      uppercase string "INBOX" matches the interpreted reference and
@@ -236,8 +258,7 @@ imap4d_list (struct imap4d_session *session,
   else
     {
       char *cwd = NULL;
-      size_t i;
-      struct namespace_prefix const *pfx;
+      struct namespace_prefix const *pfx = NULL;
       
       if (ref[0] == 0)
 	{
@@ -254,27 +275,37 @@ imap4d_list (struct imap4d_session *session,
 	}
       else
 	ref = mu_strdup (ref);
-      
-      /* Find the longest directory prefix */
-      i = strcspn (wcard, "%*");
-      if (wcard[i])
+
+      if (!pfx)
 	{
-	  while (i > 0 && wcard[i - 1] != pfx->delim)
-	    i--;
-	  /* Append it to the reference */
-	  if (i)
-	    {
-	      size_t reflen = strlen (ref);
-	      size_t len = i + reflen;
-	      
-	      ref = mu_realloc (ref, len);
-	      memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
-	      ref[len-1] = 0;
-	      
-	      wcard += i;
-	    }
+	  cwd = namespace_translate_name (ref, &pfx);
+	  if (cwd)
+	    free (cwd);
 	}
 
+      if (pfx)
+	{
+	  /* Find the longest directory prefix */
+	  size_t i = strcspn (wcard, "%*");
+	  if (wcard[i])
+	    {
+	      while (i > 0 && wcard[i - 1] != pfx->delim)
+		i--;
+	      /* Append it to the reference */
+	      if (i)
+		{
+		  size_t reflen = strlen (ref);
+		  size_t len = i + reflen;
+		  
+		  ref = mu_realloc (ref, len);
+		  memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
+		  ref[len-1] = 0;
+		  
+		  wcard += i;
+		}
+	    }
+	}
+	  
       cwd = namespace_translate_name (ref, &pfx);
       if (cwd)
 	status = list_ref (ref, wcard, cwd, pfx);

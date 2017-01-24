@@ -77,7 +77,8 @@ exp_getvar (char **ret, const char *vptr, size_t vlen, void *data)
 	return MU_WRDSE_NOSPACE;
       *ret = s;
     }
-  
+  else
+    rc = MU_WRDSE_UNDEF;
   return rc;
 }
 
