@@ -352,6 +352,11 @@ namespace_get_name (char const *name, mu_record_t *rec, int *mode)
 {
   struct namespace_prefix const *pfx;
   char *path = namespace_translate_name (name, &pfx);
+  if (strcmp (name, pfx->prefix) == 0)
+    {
+      free (path);
+      return NULL;
+    }
   if (rec)
     *rec = pfx->record;
   if (mode)
