@@ -241,7 +241,7 @@ imap4d_list (struct imap4d_session *session,
       
       if (ref[0] == 0)
 	{
-	  cwd = namespace_translate_name (wcard, 0, &pfx);
+	  cwd = namespace_translate_name (wcard, &pfx);
 	  if (cwd)
 	    {
 	      char *p = wcard + strlen (pfx->prefix);
@@ -275,7 +275,7 @@ imap4d_list (struct imap4d_session *session,
 	    }
 	}
 
-      cwd = namespace_translate_name (ref, 0, &pfx);
+      cwd = namespace_translate_name (ref, &pfx);
       if (cwd)
 	status = list_ref (ref, wcard, cwd, pfx);
       else

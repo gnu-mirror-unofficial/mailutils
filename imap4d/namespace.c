@@ -158,7 +158,7 @@ namespace_init (void)
       
 static char *
 prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
-		       size_t namelen, int url)
+		       size_t namelen)
 {
   size_t pfxlen = strlen (pfx->prefix);
   int delim = 0;
@@ -174,8 +174,6 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
     {
       char *tmpl, *p;
 
-      if (!pfx->scheme)
-	url = 0;
       name += pfxlen;
 
       if (pfx->ns == NS_PERSONAL && strcmp (name, "INBOX") == 0)
@@ -184,16 +182,8 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 	  return tmpl;//FIXME
 	}
       
-      tmpl = mu_alloc (namelen - pfxlen + strlen (pfx->dir)
-		       + (url ? strlen (pfx->scheme) + 3 : 0)
-		       + 2);
-      if (url)
-	{
-	  p = mu_stpcpy (tmpl, pfx->scheme);
-	  p = mu_stpcpy (p, "://");
-	}
-      else
-	p = tmpl;
+      tmpl = mu_alloc (namelen - pfxlen + strlen (pfx->dir) + 2);
+      p = tmpl;
       
       p = mu_stpcpy (p, pfx->dir);
       if (*name)
@@ -215,8 +205,7 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 }
 
 static char *
-i_translate_name (char const *name, int url, int ns,
-		  struct namespace_prefix const **return_pfx)
+translate_name (char const *name, struct namespace_prefix const **return_pfx)
 {
   mu_iterator_t itr;
   int rc;
@@ -241,10 +230,7 @@ i_translate_name (char const *name, int url, int ns,
 	  continue;
 	}
 
-      if (ns != NS_MAX && ns != pfx->ns)
-	continue;
-      
-      res = prefix_translate_name (pfx, name, namelen, url);
+      res = prefix_translate_name (pfx, name, namelen);
       if (res)
 	{
 	  if (return_pfx)
@@ -280,7 +266,7 @@ extract_username (char const *name, struct namespace_prefix const *pfx)
 }
 
 char *
-namespace_translate_name (char const *name, int url,
+namespace_translate_name (char const *name,
 			  struct namespace_prefix const **return_pfx)
 {
   char *res = NULL;
@@ -292,7 +278,7 @@ namespace_translate_name (char const *name, int url,
       pfx = mu_assoc_get (prefixes, "");
     }
   else
-    res = i_translate_name (name, url, NS_MAX, &pfx);
+    res = translate_name (name, &pfx);
 
   if (res)
     {
@@ -365,7 +351,7 @@ char *
 namespace_get_name (char const *name, mu_record_t *rec, int *mode)
 {
   struct namespace_prefix const *pfx;
-  char *path = namespace_translate_name (name, 0, &pfx);
+  char *path = namespace_translate_name (name, &pfx);
   if (rec)
     *rec = pfx->record;
   if (mode)
