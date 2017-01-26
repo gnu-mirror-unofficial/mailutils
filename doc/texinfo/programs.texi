@@ -7591,9 +7591,9 @@ be run either as a standalone program or from @file{inetd.conf} file.
 @cindex IMAP4 namespace
 
 GNU @command{imap4d} supports a notion of @dfn{namespaces} defined
-in RFC 2342.  A namespace can be regarded as a list of triplets,
+in RFC 2342.  A namespace can be regarded as a list of entities,
 defining locations to which the user has certain access rights.  Each
-triplet defines the @dfn{prefix}, under which the mailboxes can be
+entity includes the @dfn{prefix}, under which the mailboxes can be
 found, @dfn{hierarchy delimiter}, a character used to delimit parts of
 a path to a mailbox, and a @dfn{directory} on the file system on the
 server, which actually holds the mailboxes.  Among these three values,
@@ -7679,8 +7679,17 @@ determines their mappings to the server's file system.  The @var{pfx}
 argument defines the prefix which will be visible to the IMAP client.
 
 The @code{directory} statement defines the directory in the file
-system to which @var{pfx} is mapped.  Its argument can contain
-references to the following variables(@pxref{Variables}):
+system to which @var{pfx} is mapped.  Exactly one @code{directory}
+statement must be present in each @code{prefix} block.  The
+inerpretation of its argument depends on the namespace in which it
+occurs.
+
+When used in the @samp{namespace shared} block, the argument to this
+statement is interpreted verbatim, as an absolute pathname.
+
+When used in @samp{namespace personal} the argument to 
+@code{directory} statement can contain references to the following
+variables (@pxref{Variables}):
 
 @table @asis
 @item user
@@ -7690,8 +7699,47 @@ Login name of the user.
 Home directory of the user.
 @end table
 
-Exactly one @code{directory} statement must be present in each
-@code{prefix} block.
+For example, the following statement maps the default personal
+namespace to the directory @samp{imap} in the user's home directory:
+
+@example
+@group
+namespace personal @{
+  prefix "";
+  directory "$home/imap";
+@}
+@end group
+@end example
+
+If the @samp{directory} statement is used within the @samp{namespace
+other} block, its value can contain the @samp{$user} and
+@samp{$home} variables as well, but their meaning is different.  For
+the @samp{other} namespace, the @samp{$user} variable is expanded
+to the part of the actual reference contained between the prefix and
+first hierarchy delimiter (or the end of the reference, if no
+delimiter occurs to the right of the prefix).  Correspondingly,
+@samp{$home} expands to the home directory of that user.  Consider,
+for example, the following statement:
+
+@example
+@group
+namespace other @{
+  prefix "~";
+  directory "/var/imap/$user";
+@}  
+@end group
+@end example
+
+If the client issues the following statement:
+
+@example
+1 LIST "~smith" "%"
+@end example
+
+@noindent
+then @samp{$user} will expand to the string @samp{smith} and the
+server will look for all mailboxes in the directory 
+@file{/var/imap/smith}.
 
 The @code{delimiter} statement defines the folder hierarchy delimiter
 for that prefix.  It is optional, the default value being @samp{"/"}.
