@@ -171,8 +171,7 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
      on this or some other server. */
   
   if (!*ref &&
-      (mu_imap_wildmatch (wcard, "INBOX", MU_HIERARCHY_DELIMITER) == 0
-       || mu_imap_wildmatch (wcard, "inbox", MU_HIERARCHY_DELIMITER) == 0))
+      mu_imap_wildmatch_ci (wcard, "INBOX", MU_HIERARCHY_DELIMITER) == 0)
     io_untagged_response (RESP_NONE, "LIST (\\NoInferiors) NIL INBOX");
   
   mu_folder_enumerate (folder, NULL, (void*) wcard, 0, 0, NULL,

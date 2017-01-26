@@ -18,6 +18,7 @@
 #include <string.h>
 #include <mailutils/types.h>
 #include <mailutils/imaputil.h>
+#include <mailutils/cctype.h>
 
 /* Match STRING against the IMAP4 wildcard pattern PATTERN. */
 
@@ -26,7 +27,7 @@
 #define WILD_ABORT 2
 
 int
-_wild_match (const char *pat, const char *name, char delim)
+_wild_match (const char *pat, const char *name, char delim, int icase)
 {
   while (pat && *pat)
     {
@@ -41,7 +42,7 @@ _wild_match (const char *pat, const char *name, char delim)
 	    return WILD_TRUE;
 	  while (*name)
 	    {
-	      int res = _wild_match (pat, name++, delim);
+	      int res = _wild_match (pat, name++, delim, icase);
 	      if (res != WILD_FALSE)
 		return res;
 	    }
@@ -54,14 +55,15 @@ _wild_match (const char *pat, const char *name, char delim)
 	    return strchr (name, delim) ? WILD_FALSE : WILD_TRUE;
 	  while (*name && *name != delim)
 	    {
-	      int res = _wild_match (pat, name++, delim);
+	      int res = _wild_match (pat, name++, delim, icase);
 	      if (res != WILD_FALSE)
 		return res;
 	    }
-	  return _wild_match (pat, name, delim);
+	  return _wild_match (pat, name, delim, icase);
 	  
 	default:
-	  if (*pat != *name)
+	  if (icase ? mu_toupper (*pat) != mu_toupper (*name)
+	            : *pat != *name)
 	    return WILD_FALSE;
 	  pat++;
 	  name++;
@@ -73,6 +75,11 @@ _wild_match (const char *pat, const char *name, char delim)
 int
 mu_imap_wildmatch (const char *pattern, const char *name, int delim)
 {
-  return _wild_match (pattern, name, delim) != WILD_TRUE;
+  return _wild_match (pattern, name, delim, 0) != WILD_TRUE;
 }
 
+int
+mu_imap_wildmatch_ci (const char *pattern, const char *name, int delim)
+{
+  return _wild_match (pattern, name, delim, 1) != WILD_TRUE;
+}
