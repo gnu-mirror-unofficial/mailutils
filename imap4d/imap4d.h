@@ -229,6 +229,7 @@ extern int  io_untagged_response (int, const char *, ...) MU_PRINTFLIKE(2,3);
 extern int  io_sendf (const char *, ...) MU_PRINTFLIKE(1,2);
 extern int  io_send_bytes (const char *buf, size_t size);
 extern int  io_send_qstring (const char *);
+extern int  io_send_astring (const char *);
 extern int  io_send_literal (const char *);
 extern int  io_copy_out (mu_stream_t str, size_t size);
 extern int  io_completion_response (struct imap4d_command *, int,

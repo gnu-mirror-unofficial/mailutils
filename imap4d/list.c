@@ -97,7 +97,7 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
     io_sendf ("%s\n", name);
   else
     {
-      io_send_qstring (name);
+      io_send_astring (name);
       io_sendf ("\n");
     }
   return 0;
@@ -127,6 +127,26 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
   mu_folder_t folder;
   char const *dir;
   mu_url_t url;
+
+  if (!wcard[0])
+    {
+      /* An empty ("" string) mailbox name argument is a special request to
+	 return the hierarchy delimiter and the root name of the name given
+	 in the reference.
+      */ 
+      io_sendf ("* LIST (\\NoSelect) ");
+      if (mu_c_strcasecmp (ref, "INBOX") == 0)
+	{
+	  io_sendf ("NIL \"\"");
+	}
+      else
+	{
+	  io_sendf ("\"%c\" ", pfx->delim);
+	  io_send_astring (pfx->prefix);
+	}
+      io_sendf ("\n");
+      return RESP_OK;
+    }
   
   if (pfx->ns == NS_OTHER && match_pfx (pfx, ref) && strpbrk (wcard, "*%"))
     {
@@ -226,95 +246,77 @@ imap4d_list (struct imap4d_session *session,
     [RESP_NO]  = "The requested item could not be found",
     [RESP_BAD] = "System error"
   };
-
+  char *cwd = NULL;
+  struct namespace_prefix const *pfx = NULL;
+      
   if (imap4d_tokbuf_argc (tok) != 4)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
   
   ref = imap4d_tokbuf_getarg (tok, IMAP4_ARG_1);
   wcard = imap4d_tokbuf_getarg (tok, IMAP4_ARG_2);
 
-  /* If wildcard is empty, it is a special case: we have to
-     return the hierarchy.  */
-  if (*wcard == '\0')
+  if (ref[0] == 0)
     {
-      if (*ref)
-	io_untagged_response (RESP_NONE,
-			      "LIST (\\NoSelect) \"%c\" \"%c\"",
-			      MU_HIERARCHY_DELIMITER,
-			      MU_HIERARCHY_DELIMITER);
-      else
-	io_untagged_response (RESP_NONE,
-			      "LIST (\\NoSelect) \"%c\" \"\"",
-			      MU_HIERARCHY_DELIMITER);
-    }
-  
-  /* There is only one mailbox in the "INBOX" hierarchy ... INBOX.  */
-  else if (mu_c_strcasecmp (ref, "INBOX") == 0
-      || (ref[0] == 0 && mu_c_strcasecmp (wcard, "INBOX") == 0))
-    {
-      io_untagged_response (RESP_NONE, "LIST (\\NoInferiors) NIL INBOX");
-    }
-  else
-    {
-      char *cwd = NULL;
-      struct namespace_prefix const *pfx = NULL;
-      
-      if (ref[0] == 0)
+      cwd = namespace_translate_name (wcard, &pfx);
+      if (cwd)
 	{
-	  cwd = namespace_translate_name (wcard, &pfx);
-	  if (cwd)
+	  size_t p_len = strlen (pfx->prefix);
+	  size_t w_len = strlen (wcard);
+	  
+	  if (p_len <= w_len)
 	    {
-	      char *p = wcard + strlen (pfx->prefix);
+	      memmove (wcard, wcard + p_len, w_len - p_len + 1);
 	      ref = mu_strdup (pfx->prefix);
-	      memmove (wcard, p, strlen (p) + 1);
-	      free (cwd);
 	    }
 	  else
 	    ref = mu_strdup (ref);
+	  free (cwd);
 	}
       else
 	ref = mu_strdup (ref);
-
-      if (!pfx)
-	{
-	  cwd = namespace_translate_name (ref, &pfx);
-	  if (cwd)
-	    free (cwd);
-	}
-
-      if (pfx)
-	{
-	  /* Find the longest directory prefix */
-	  size_t i = strcspn (wcard, "%*");
-	  if (wcard[i])
-	    {
-	      while (i > 0 && wcard[i - 1] != pfx->delim)
-		i--;
-	      /* Append it to the reference */
-	      if (i)
-		{
-		  size_t reflen = strlen (ref);
-		  size_t len = i + reflen;
-		  
-		  ref = mu_realloc (ref, len);
-		  memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
-		  ref[len-1] = 0;
-		  
-		  wcard += i;
-		}
-	    }
-	}
-	  
+    }
+  else
+    ref = mu_strdup (ref);
+  
+  if (!pfx)
+    {
       cwd = namespace_translate_name (ref, &pfx);
       if (cwd)
-	status = list_ref (ref, wcard, cwd, pfx);
-      else
-	status = RESP_NO;
-
-      free (cwd);
-      free (ref);
+	free (cwd);
     }
+  
+  if (pfx)
+    {
+      /* Find the longest directory prefix */
+      size_t i = strcspn (wcard, "%*");
+      if (wcard[i])
+	{
+	  while (i > 0 && wcard[i - 1] != pfx->delim)
+	    i--;
+	  /* Append it to the reference */
+	  if (i)
+	    {
+	      size_t reflen = strlen (ref);
+	      size_t len = i + reflen;
+	      
+	      ref = mu_realloc (ref, len);
+	      memcpy (ref + reflen, wcard, i - 1); /* omit the trailing / */
+	      ref[len-1] = 0;
+	      
+	      wcard += i;
+	    }
+	}
+    }
+	  
+  cwd = namespace_translate_name (ref, &pfx);
+  if (cwd)
+    status = list_ref (ref, wcard, cwd, pfx);
+  else
+    status = RESP_NO;
 
+  free (cwd);
+  free (ref);
+  
   return io_completion_response (command, status, resp_text[status]);
 }
 

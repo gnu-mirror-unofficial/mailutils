@@ -68,7 +68,7 @@ imap4d_lsub (struct imap4d_session *session,
 	    {
 	      mu_stream_printf (iostream, "* LSUB () \"%c\" ",
 				MU_HIERARCHY_DELIMITER);
-	      io_send_qstring (name);
+	      io_send_astring (name);
 	      io_sendf ("\n");
 	    }
 	}

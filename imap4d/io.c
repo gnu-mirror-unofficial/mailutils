@@ -256,6 +256,27 @@ io_send_qstring (const char *buffer)
 }
 
 int
+io_send_astring (const char *buffer)
+{
+  if (buffer == NULL)
+    return io_sendf ("NIL");
+  else if (*buffer == 0)
+    return io_sendf ("\"\"");
+  if (strpbrk (buffer, "\"\r\n\\"))
+    {
+      char *s;
+      int ret;
+      char *b = mu_strdup (buffer);
+      while ((s = strchr (b, '\n')) || (s = strchr (b, '\r')))
+	*s = ' ';
+      ret = io_send_literal (b);
+      free (b);
+      return ret;
+    }
+  return io_sendf ("\"%s\"", buffer);
+}
+
+int
 io_send_literal (const char *buffer)
 {
   return io_sendf ("{%lu}\n%s", (unsigned long) strlen (buffer), buffer);

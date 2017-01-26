@@ -446,10 +446,10 @@ mu_folder_delete (mu_folder_t folder, const char *name)
 	 undesired results.  For example, a MH mailbox can hold another
 	 mailboxes, i.e. be a folder itself.  Removing it blindly would 
 	 result in removing these mailboxes as well, which is clearly not 
-	 indended.
+	 intended.
 
-	 To solve this folder and mailbox delete methods are tightly paired,
-	 but without looking into each-others internal mechanisms. */
+	 To solve this, both folder and mailbox delete methods are tightly
+	 paired, but without looking into each-others internal mechanisms. */
       mu_mailbox_t mbox;
       rc = mu_mailbox_create_at (&mbox, folder, name);
       if (rc == 0)

@@ -279,13 +279,7 @@ namespace_translate_name (char const *name,
   char *res = NULL;
   struct namespace_prefix const *pfx;
   
-  if (mu_c_strcasecmp (name, "INBOX") == 0 && auth_data->change_uid)
-    {
-      res = mu_strdup (auth_data->mailbox);
-      pfx = mu_assoc_get (prefixes, "");
-    }
-  else
-    res = translate_name (name, &pfx);
+  res = translate_name (name, &pfx);
 
   if (res)
     {
@@ -347,10 +341,16 @@ namespace_translate_name (char const *name,
       
       res = dir;
       trim_delim (res, '/');
-      
-      if (return_pfx)
-	*return_pfx = pfx;
     }
+  else if (mu_c_strcasecmp (name, "INBOX") == 0 && auth_data->change_uid)
+    {
+      res = mu_strdup (auth_data->mailbox);
+      pfx = mu_assoc_get (prefixes, "");
+    }
+      
+  if (res && return_pfx)
+    *return_pfx = pfx;
+
   return res;
 }
 
