@@ -144,6 +144,7 @@ enum mu_sieve_node_type
     mu_sieve_node_anyof,
     mu_sieve_node_allof,
     mu_sieve_node_not,
+    mu_sieve_node_end,
   };
 
 struct mu_sieve_node
@@ -169,6 +170,11 @@ struct mu_sieve_node
       mu_sieve_comparator_t comparator; /* Comparator (for tests) */
     } command;
   } v;
+};
+
+struct mu_sieve_node_list
+{
+  struct mu_sieve_node *head, *tail;
 };
 
 int mu_sieve_yyerror (const char *s);

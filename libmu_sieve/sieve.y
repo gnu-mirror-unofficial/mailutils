@@ -33,6 +33,10 @@ static struct mu_sieve_node *sieve_tree;
 static struct mu_sieve_node *node_alloc (enum mu_sieve_node_type,
 					 struct mu_locus_range *);
 
+static void node_list_add (struct mu_sieve_node_list *list,
+			   struct mu_sieve_node *node);
+
+ 
 #define YYLLOC_DEFAULT(Current, Rhs, N)                         \
   do								\
     {								\
@@ -86,10 +90,7 @@ static struct mu_sieve_node *node_alloc (enum mu_sieve_node_type,
     size_t first;
     size_t count;
   } command;
-  struct node_list
-  {
-    struct mu_sieve_node *head, *tail;
-  } node_list;
+  struct mu_sieve_node_list node_list;
   struct mu_sieve_node *node;
 }
 
@@ -112,7 +113,12 @@ input        : /* empty */
 		 sieve_tree = NULL;
 	       }
              | list
-               {
+	       {
+		 struct mu_locus_range lr;
+
+		 lr.beg = lr.end = @1.end;
+		 
+		 node_list_add (&$1, node_alloc (mu_sieve_node_end, &lr));
 		 sieve_tree = $1.head;
 	       }
              ;
@@ -123,15 +129,7 @@ list         : statement
 	       }
              | list statement
                {
-		 if ($2)
-		   {
-		     $2->prev = $1.tail;
-		     if ($1.tail)
-		       $1.tail->next = $2;
-		     else
-		       $1.head = $2;
-		     $1.tail = $2;
-		   }
+		 node_list_add (&$1, $2);
 		 $$ = $1;
 	       }
              ;
@@ -401,6 +399,20 @@ yyerror (const char *s)
   mu_diag_at_locus (MU_LOG_ERROR, &mu_sieve_locus, "%s", s);
   mu_i_sv_error (mu_sieve_machine);
   return 0;
+}
+
+static void
+node_list_add (struct mu_sieve_node_list *list, struct mu_sieve_node *node)
+{
+  if (!node)
+    return;
+
+  node->prev = list->tail;
+  if (list->tail)
+    list->tail->next = node;
+  else
+    list->head = node;
+  list->tail = node;
 }
 
 static struct mu_sieve_node *
@@ -804,6 +816,21 @@ dump_node_not (mu_stream_t str, struct mu_sieve_node *node, unsigned level,
   mu_stream_printf (str, "NOT\n");
   node_dump (str, node->v.node, level + 1, mach);
 }
+
+/* mu_sieve_node_end */
+static void
+code_node_end (struct mu_sieve_machine *mach, struct mu_sieve_node *node)
+{
+  mu_i_sv_code (mach, (sieve_op_t) (sieve_instr_t) 0);
+}
+
+static void
+dump_node_end (mu_stream_t str, struct mu_sieve_node *node, unsigned level,
+	       struct mu_sieve_machine *mach)
+{
+  indent (str, level);
+  mu_stream_printf (str, "END\n");
+}
 
 struct node_descr
 {
@@ -831,6 +858,7 @@ static struct node_descr node_descr[] = {
 			     free_node_x_of, dump_node_x_of },
   [mu_sieve_node_not]    = { code_node_not, optimize_node_not,
 			     free_node_not, dump_node_not },
+  [mu_sieve_node_end]    = { code_node_end, NULL, NULL, dump_node_end }
 };
 
 static void
