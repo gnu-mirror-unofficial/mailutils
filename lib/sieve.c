@@ -37,7 +37,8 @@ _sieve_action_log (mu_sieve_machine_t mach,
   mu_message_t msg = mu_sieve_get_message (mach);
 
   mu_sieve_get_diag_stream (mach, &stream);
-  mu_stream_printf (stream, "\033s<%d>", MU_LOG_NOTICE);
+  mu_stream_printf (stream, "\033s<%d>\033O<%d>", MU_LOG_NOTICE,
+		    MU_LOGMODE_LOCUS);
 
   if (ldat)
     {
