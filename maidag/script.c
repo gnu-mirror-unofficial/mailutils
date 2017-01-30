@@ -87,7 +87,7 @@ apply_script (void *item, void *data)
 	      progfile, mu_strerror (rc));
   else
     {
-      if (sieve_enable_log)
+      if (mu_script_sieve_log)
 	mu_script_log_enable (scr->scr, sd, clos->auth->name,
 			      message_id_header);
       rc = mu_script_process_msg (scr->scr, sd, clos->msg);

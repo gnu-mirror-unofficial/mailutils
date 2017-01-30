@@ -47,8 +47,6 @@ int forward_file_checks = FORWARD_FILE_PERM_CHECK;
 
 /* Debuggig options */
 int debug_level;           /* General debugging level */ 
-int sieve_debug_flags;     /* Sieve debugging flags */
-int sieve_enable_log;      /* Enables logging of executed Sieve actions */
 char *message_id_header;   /* Use the value of this header as message
 			      identifier when logging Sieve actions */
 
@@ -524,7 +522,7 @@ main (int argc, char *argv[])
 
   /* Default locker settings */
   mu_locker_set_default_flags (MU_LOCKER_PID|MU_LOCKER_RETRY,
-			    mu_locker_assign);
+			       mu_locker_assign);
   mu_locker_set_default_retry_timeout (1);
   mu_locker_set_default_retry_count (300);
 
