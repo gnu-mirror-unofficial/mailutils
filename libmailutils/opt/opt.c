@@ -285,61 +285,60 @@ find_long_option (struct mu_parseopt *po, char const *optstr,
   
   optlen = strcspn (optstr, "=");
   
-  for (i = 0; i < po->po_optc; i++)
+  for (i = 0; i < po->po_longcnt; i++)
     {
-      if (MU_OPTION_IS_VALID_LONG_OPTION (po->po_optv[i]))
+      size_t j = po->po_longidx[i];
+      size_t len = strlen (po->po_optv[j]->opt_long);
+      struct mu_option *opt = option_unalias (po, j);
+      neg = neg_nomatch;
+      if ((optlen <= len
+	   && memcmp (po->po_optv[j]->opt_long, optstr, optlen) == 0)
+	  || (neg = negmatch (po, j, optstr, optlen)))
 	{
-	  size_t len = strlen (po->po_optv[i]->opt_long);
-	  struct mu_option *opt = option_unalias (po, i);
-	  neg = neg_nomatch;
-	  if ((optlen <= len
-	       && memcmp (po->po_optv[i]->opt_long, optstr, optlen) == 0)
-	      || (neg = negmatch (po, i, optstr, optlen)))
+	  switch (found)
 	    {
-	      switch (found)
-		{
-		case 0:
-		  used_opt = po->po_optv[i];
-		  ret_opt = opt;
-		  found++;
-		  if (optlen == len || neg == neg_match_exact)
-		    i = po->po_optc - 1; /* exact match: break the loop */
-		  break;
+	    case 0:
+	      used_opt = po->po_optv[j];
+	      ret_opt = opt;
+	      found++;
+	      if (optlen == len || neg == neg_match_exact)
+		i = po->po_longcnt - 1; /* exact match: break the loop */
+	      break;
 		  
-		case 1:
-		  if (opt == ret_opt)
-		    continue;
-		  if (po->po_flags & MU_PARSEOPT_IGNORE_ERRORS)
-		    return NULL;
-		  mu_parseopt_error (po,
-				     _("option '%s%*.*s' is ambiguous; possibilities:"),
-				     po->po_long_opt_start,
-				     optlen, optlen, optstr);
-		  fprintf (stderr, "%s%s%s\n",
-			   po->po_long_opt_start,
-			   neg ? po->po_negation : "",
-			   used_opt->opt_long);
-		  if (neg == neg_nomatch && negmatch (po, i, optstr, optlen))
-		    fprintf (stderr, "%s%s%s\n",
-			     po->po_long_opt_start,
-			     po->po_negation,
-			     po->po_optv[i]->opt_long);
-		  found++;
+	    case 1:
+	      if (opt == ret_opt)
+		continue;
+	      if (po->po_flags & MU_PARSEOPT_IGNORE_ERRORS)
+		return NULL;
+	      mu_parseopt_error (po,
+				 _("option '%s%*.*s' is ambiguous; possibilities:"),
+				 po->po_long_opt_start,
+				 optlen, optlen, optstr);
+	      fprintf (stderr, "%s%s%s\n",
+		       po->po_long_opt_start,
+		       neg ? po->po_negation : "",
+		       used_opt->opt_long);
+	      if (neg == neg_nomatch && negmatch (po, j, optstr, optlen))
+		fprintf (stderr, "%s%s%s\n",
+			 po->po_long_opt_start,
+			 po->po_negation,
+			 po->po_optv[j]->opt_long);
+	      found++;
 		  
-		case 2:
-		  fprintf (stderr, "%s%s%s\n",
-			   po->po_long_opt_start,
-			   neg ? po->po_negation : "",
-			   po->po_optv[i]->opt_long);
-		  if (neg == neg_nomatch && negmatch (po, i, optstr, optlen))
-		    fprintf (stderr, "%s%s%s\n",
-			     po->po_long_opt_start,
-			     po->po_negation,
-			     po->po_optv[i]->opt_long);
-		}
+	    case 2:
+	      fprintf (stderr, "%s%s%s\n",
+		       po->po_long_opt_start,
+		       neg ? po->po_negation : "",
+		       po->po_optv[j]->opt_long);
+	      if (neg == neg_nomatch && negmatch (po, j, optstr, optlen))
+		fprintf (stderr, "%s%s%s\n",
+			 po->po_long_opt_start,
+			 po->po_negation,
+			 po->po_optv[j]->opt_long);
 	    }
 	}
     }
+
   
   switch (found)
     {
@@ -612,6 +611,29 @@ parse (struct mu_parseopt *po)
   return 0;
 }
 
+#define LONGOPT(po, i) po->po_optv[po->po_longidx[i]]->opt_long
+
+static void
+sort_longidx (struct mu_parseopt *po)
+{
+  /* Sort the po_longidx array so that its elements produce lexicographically
+     ascending list of long options.
+     Given relatively small number of command line options, simple insertion
+     sort is used.
+  */
+  size_t i, j;
+
+  for (i = 1; i < po->po_longcnt; i++)
+    {
+      for (j = i; j > 0 && strcmp (LONGOPT (po, j-1), LONGOPT (po, j)) > 0; j--)
+	{
+	  size_t tmp = po->po_longidx[j];
+	  po->po_longidx[j] = po->po_longidx[j-1];
+	  po->po_longidx[j-1] = tmp;
+	}
+    }
+}
+
 /* Initialize structure mu_parseopt with given options and flags. */
 static int
 parseopt_init (struct mu_parseopt *po, struct mu_option **options,
@@ -716,6 +738,20 @@ parseopt_init (struct mu_parseopt *po, struct mu_option **options,
 	}
     }
 
+  j = 0;
+  for (i = 0; i < po->po_optc; i++)
+    if (MU_OPTION_IS_VALID_LONG_OPTION (po->po_optv[i]))
+      j++;
+  po->po_longcnt = j;
+  
+  po->po_longidx = mu_calloc (j + 1, sizeof (po->po_longidx[0]));
+  j = 0;
+  for (i = 0; i < po->po_optc; i++)
+    if (MU_OPTION_IS_VALID_LONG_OPTION (po->po_optv[i]))
+      po->po_longidx[j++] = i;
+
+  sort_longidx (po);
+  
   po->po_ind = 0;
   po->po_opterr = 0;
   po->po_optlist = NULL;
@@ -772,6 +808,7 @@ void
 mu_parseopt_free (struct mu_parseopt *popt)
 {
   free (popt->po_optv);
+  free (popt->po_longidx);
   mu_list_destroy (&popt->po_optlist);
 }
 

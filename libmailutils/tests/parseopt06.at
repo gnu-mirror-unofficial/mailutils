@@ -29,6 +29,8 @@ a_option=0
 find_value=(null)
 d_option=2
 jobs=0
+debug_level_value=0
+debug_info_value=(null)
 argv:
 0: command
 1: line

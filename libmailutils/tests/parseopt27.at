@@ -14,26 +14,25 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_SETUP([mixed long and short options])
-AT_KEYWORDS([parseopt parseopt_long parseopt_short parseopt15.at])
+AT_SETUP([ambiguous abbreviated long options (3)])
+AT_KEYWORDS([parseopt parseopt_long parseopt_long_abbr parseopt_long_ambig parseopt27])
 AT_CHECK([
 PARSEOPT_DEFAULT
-parseopt --file=filename -o -xa --find word -j10 command line arguments
+parseopt --debug-i command line arguments
 ],
 [0],
 [rc=0
-file_name=filename
-opt_value=(null)
-x_option=1
-a_option=1
-find_value=word
+file_name=(null)
+opt_value=initial
+x_option=0
+a_option=0
+find_value=(null)
 d_option=0
-jobs=10
+jobs=0
 debug_level_value=0
-debug_info_value=(null)
+debug_info_value=command
 argv:
-0: command
-1: line
-2: arguments
+0: line
+1: arguments
 ])
 AT_CLEANUP

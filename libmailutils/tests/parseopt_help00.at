@@ -24,7 +24,7 @@ parseopt --help
 [[Usage: parseopt [OPTION...]
 
  Group A
-  -a, --all                  no arguments to this one
+  -a, --all, --debug-all     no arguments to this one
   -f, --file=FILE            set file name
   -o, --optional[=FILE]      optional argument
   -x                         short-only option
@@ -33,6 +33,10 @@ parseopt --help
   -d, -v, --debug, --verbose another option
   -F, --find=VALUE           find VALUE
   -j, --jobs=N               sets numeric value
+
+ Group C
+      --debug-info=S         debug information
+      --debug-level=NUM      debug level option
 
   -?, --help                 give this help list
       --usage                give a short usage message

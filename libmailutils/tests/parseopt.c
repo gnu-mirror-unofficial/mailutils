@@ -27,6 +27,8 @@ int jobs = 0;
 int x_option;
 int a_option;
 int d_option;
+int debug_level_value;
+char *debug_info_value;
 
 struct mu_option group_a[] = {
   MU_OPTION_GROUP("Group A"),
@@ -43,6 +45,7 @@ struct mu_option group_a[] = {
   { "all", 'a', NULL, MU_OPTION_DEFAULT,
     "no arguments to this one",
     mu_c_bool, &a_option },
+  { "debug-all", 0, NULL, MU_OPTION_ALIAS },
   MU_OPTION_END
 };
 
@@ -61,7 +64,18 @@ struct mu_option group_b[] = {
   MU_OPTION_END
 };
 
-struct mu_option *optv[] = { group_a, group_b, NULL };
+struct mu_option group_c[] = {
+  MU_OPTION_GROUP("Group C"),
+  { "debug-level", 0, "NUM", MU_OPTION_DEFAULT,
+    "debug level option",
+    mu_c_int, &debug_level_value },
+  { "debug-info", 0, "S", MU_OPTION_DEFAULT,
+    "debug information",
+    mu_c_string, &debug_info_value },
+  MU_OPTION_END
+};
+
+struct mu_option *optv[] = { group_a, group_b, group_c, NULL };
 
 static void
 version_hook (struct mu_parseopt *po, mu_stream_t str)
@@ -207,6 +221,9 @@ main (int argc, char *argv[])
   printf ("find_value=%s\n", S(find_value));
   printf ("d_option=%d\n", d_option);
   printf ("jobs=%d\n", jobs);
+
+  printf ("debug_level_value=%d\n", debug_level_value);
+  printf ("debug_info_value=%s\n", S(debug_info_value));
   
   printf ("argv:\n");
   for (i = 0; i < argc; i++)

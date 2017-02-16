@@ -171,6 +171,9 @@ struct mu_parseopt
   int po_arg_count;
 
   unsigned po_permuted:1;           /* Whether the arguments were permuted */
+
+  size_t po_longcnt;                /* Number of long options */
+  size_t *po_longidx;               /* Indices of long options in po_optv */
 };
 
 
