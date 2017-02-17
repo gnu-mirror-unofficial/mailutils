@@ -260,6 +260,12 @@ mu_stream_destroy (mu_stream_t *pstream)
       if (str && (str->ref_count == 0 || --str->ref_count == 0))
 	{
 	  mu_stream_close (str);
+	  if (str->buftype != mu_buffer_none)
+	    {
+	      free (str->buffer);
+	      str->buffer = NULL;
+	      str->buftype = mu_buffer_none;
+	    }
 	  if (str->done)
 	    str->done (str);
 	  if (str->destroy)
@@ -553,7 +559,7 @@ mu_stream_set_buffer (mu_stream_t stream, enum mu_buffer_type type,
       return 0;
     }
 
-  stream->buffer = mu_alloc (size);
+  stream->buffer = malloc (size);
   if (stream->buffer == NULL)
     {
       stream->buftype = mu_buffer_none;
@@ -899,7 +905,7 @@ mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
     {
       char *new_lineptr;
       n = 120;
-      new_lineptr = mu_realloc (lineptr, n);
+      new_lineptr = realloc (lineptr, n);
       if (new_lineptr == NULL) 
 	return ENOMEM;
       lineptr = new_lineptr;
@@ -925,7 +931,7 @@ mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
 	      break;
 	    }
 	    
-	  new_lineptr = mu_realloc (lineptr, needed);
+	  new_lineptr = realloc (lineptr, needed);
 	  if (new_lineptr == NULL)
 	    {
 	      rc = ENOMEM;
