@@ -286,17 +286,23 @@ mu_rfc2047_decode (const char *tocode, const char *input, char **ptostr)
 
    @return 0 on success
 */
+
+#define MAX_ENCODED_WORD 75
+
 int
 mu_rfc2047_encode (const char *charset, const char *encoding,
 		   const char *text, char **result)
 {
   mu_stream_t input_stream;
-  mu_stream_t output_stream;
+  mu_stream_t inter_stream;
   int rc;
   
   if (charset == NULL || encoding == NULL || text == NULL)
     return EINVAL;
 
+  if (strlen (charset) > MAX_ENCODED_WORD - 8)
+    return EINVAL;
+  
   if (strcmp (encoding, "base64") == 0)
     encoding = "B";
   else if (strcmp (encoding, "quoted-printable") == 0)
@@ -304,42 +310,67 @@ mu_rfc2047_encode (const char *charset, const char *encoding,
   else if (encoding[1] || !strchr ("BQ", encoding[0]))
     return MU_ERR_BAD_2047_ENCODING;
 
+
   rc = mu_static_memory_stream_create (&input_stream, text, strlen (text));
   if (rc)
     return rc;
-  rc = mu_filter_create (&output_stream, input_stream,
+  rc = mu_filter_create (&inter_stream, input_stream,
 			 encoding, MU_FILTER_ENCODE, MU_STREAM_READ);
   mu_stream_unref (input_stream);
   if (rc == 0)
     {
-      /* Assume strlen(qp_encoded_text) <= strlen(text) * 3 */
-      /* malloced length is composed of:
-	 "=?"  
-	 charset 
-	 "?"
-	 B or Q
-	 "?" 
-	 encoded_text
-	 "?="
-	 zero terminator */
-      
-      *result = malloc (2 + strlen (charset) + 3 + strlen (text) * 3 + 3);
-      if (*result)
+      mu_stream_t output_stream;
+      rc = mu_memory_stream_create (&output_stream, MU_STREAM_RDWR);
+      if (rc == 0)
 	{
-	  char *p = *result;
-	  size_t s;
-	  
-	  p += sprintf (p, "=?%s?%s?", charset, encoding);
-	  
-	  rc = mu_stream_read (output_stream,
-			       p,
-			       strlen (text) * 3, &s);
+	  char buf[MAX_ENCODED_WORD];
+	  size_t start, bs, n;
 
-	  strcpy (p + s, "?=");
+	  start = snprintf (buf, sizeof buf, "=?%s?%s?", charset, encoding);
+	  bs = sizeof buf - start - 2;
+	  
+	  while (1)
+	    {
+	      rc = mu_stream_read (inter_stream, buf + start, bs, &n);
+	      if (rc || n == 0)
+		break;
+	      rc = mu_stream_write (output_stream, buf, n + start, NULL);
+	      if (rc)
+		break;
+	      rc = mu_stream_write (output_stream, "?=", 2, NULL);
+	      if (rc)
+		break;
+	      if (n == bs)
+		rc = mu_stream_write (output_stream, "\n ", 2, NULL);
+	      else
+		break;
+	    }
+
+	  if (rc == 0)
+	    {
+	      mu_off_t sz;
+	      char *ptr;
+	      
+	      mu_stream_size (output_stream, &sz);
+	      ptr = malloc (sz + 1);
+	      if (!ptr)
+		rc = ENOMEM;
+	      else
+		{
+		  if ((rc = mu_stream_seek (output_stream, 0, MU_SEEK_SET,
+					    NULL)) == 0
+		      && (rc = mu_stream_read (output_stream, ptr, sz, NULL))
+		      == 0)
+		    {
+		      ptr[sz] = 0;
+		      *result = ptr;
+		    }
+		}
+	    }
+
+	  mu_stream_destroy (&output_stream);
 	}
-      else
-	rc = ENOMEM;
-      mu_stream_destroy (&output_stream);
+      mu_stream_destroy (&inter_stream);
     }
   else
     mu_stream_destroy (&input_stream);

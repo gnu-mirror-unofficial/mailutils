@@ -104,24 +104,23 @@ decode_octal (char *buf)
 int
 main (int argc, char *argv[])
 {
-  int c;
-  char buf[256];
-  char vbuf[256];
-  char *charset = strdup ("iso-8859-1");
-  char *encoding = strdup ("quoted-printable");
+  int rc;
+  char *buf = NULL;
+  size_t size = 0;
+  size_t n;
+  char *charset = "iso-8859-1";
+  char *encoding = "quoted-printable";
   int octal = 0;
   
-  while ((c = getopt (argc, argv, "c:e:hot")) != EOF)
-    switch (c)
+  while ((rc = getopt (argc, argv, "c:e:hot")) != EOF)
+    switch (rc)
       {
       case 'c':
-	free (charset);
-	charset = strdup (optarg);
+	charset = optarg;
 	break;
 	
       case 'e':
-	free (encoding);
-	encoding = strdup (optarg);
+	encoding = optarg;
 	break;
 
       case 'o':
@@ -140,67 +139,23 @@ main (int argc, char *argv[])
 	exit (1);
       }
 
-  while (fgets (buf, sizeof (buf), stdin))
+  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
+  while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
-      int len;
-      char *p = NULL;
-      char *cmd;
-      int rc;
-	
-      len = strlen (buf);
-      if (len > 0 && buf[len - 1] == '\n')
-	buf[len - 1] = 0;
-      strncpy(vbuf, buf, sizeof vbuf);
-      cmd = vbuf;
-      if (cmd[0] == '\\')
-	{
-	  if (cmd[1] == 0)
-	    {
-	      fprintf (stderr, "Unfinished command\n");
-	      continue;
-	    }
-	  
-	  for (p = cmd + 2; *p && *p == ' '; p++)
-	    ;
-	  switch (cmd[1])
-	    {
-	    case 'c':
-	      free (charset);
-	      charset = strdup (p);
-	      continue;
-	      
-	    case 'e':
-	      free (encoding);
-	      encoding = strdup (p);
-	      continue;
-	      
-	    case 'o':
-	      octal = 1;
-	      continue;
-	      
-	    case 't':
-	      octal = 0;
-	      continue;
-
-	    case '\\':
-	      cmd++;
-	      break;
-	      
-	    default:
-	      fprintf (stderr, "Unknown command\n");
-	      continue;
-	    }
-	}
-
+      char *p;
+      
+      mu_rtrim_class (buf, MU_CTYPE_ENDLN);
       if (octal)
-	decode_octal (cmd);
+	decode_octal (buf);
 	  
-      rc = mu_rfc2047_encode (charset, encoding, cmd, &p);
+      rc = mu_rfc2047_encode (charset, encoding, buf, &p);
       if (rc)
-	fprintf (stderr, "%s", mu_strerror (rc));
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_rfc2047_encode", NULL, rc);
       else if (p)
-	printf ("%s\n", p);
+	mu_printf ("%s\n", p);
       free (p);
     }
-    return 0;
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_getline", NULL, rc);
+  return 0;
 }

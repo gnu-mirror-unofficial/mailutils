@@ -37,7 +37,7 @@ _qp_decoder (void *xd,
   size_t isize;
   char *optr;
   size_t osize;
-  int underscore_special = *(int*)xd;
+  char *specials = xd;
   
   switch (cmd)
     {
@@ -143,7 +143,7 @@ _qp_decoder (void *xd,
 		  consumed += 2;
 		}
 	    }
-	  else if (underscore_special && c == '_')
+	  else if (c == '_' && specials && strchr (specials, c))
 	    {
 	      *optr++ = ' ';
 	      nbytes++;
@@ -175,7 +175,7 @@ _qp_encoder (void *xd,
   size_t isize;
   char *optr;
   size_t osize;
-  int underscore_special = *(int*)xd;
+  char *specials = xd;
 
   switch (cmd)
     {
@@ -203,7 +203,7 @@ _qp_encoder (void *xd,
       
       /* candidate byte to convert */
       c = *(unsigned char*) iptr;
-      if (underscore_special && c == '_')
+      if (specials && strchr (specials, c))
 	simple_char = 0;
       else
 	simple_char = (c >= 32 && c <= 60)
@@ -216,7 +216,7 @@ _qp_encoder (void *xd,
 	  /* a non-quoted character uses up one byte */
 	  if (nbytes + 1 > osize) 
 	    break;
-	  if (underscore_special && c == ' ')
+	  if (c == ' ' && specials && strchr (specials, '_'))
 	    *optr++ = '_';
 	  else
 	    *optr++ = c;
@@ -248,20 +248,9 @@ _qp_encoder (void *xd,
   return mu_filter_ok;
 }
 
-static int
-alloc_qp (void **pret, int mode MU_ARG_UNUSED, int argc, const char **argv)
-{
-  int *x = malloc (sizeof (*x));
-  if (!x)
-    return ENOMEM;
-  *x = 0;
-  *pret = x;
-  return 0;
-}
-
 static struct _mu_filter_record _qp_filter = {
   "quoted-printable",
-  alloc_qp,
+  NULL,
   _qp_encoder,
   _qp_decoder
 };
@@ -271,10 +260,7 @@ mu_filter_record_t mu_qp_filter = &_qp_filter;
 static int
 alloc_Q (void **pret, int mode MU_ARG_UNUSED, int argc, const char **argv)
 {
-  int *x = malloc (sizeof (*x));
-  if (!x)
-    return ENOMEM;
-  *x = 1;
+  char *x = strdup ("_?");
   *pret = x;
   return 0;
 }
