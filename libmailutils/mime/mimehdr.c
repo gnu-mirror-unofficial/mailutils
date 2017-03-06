@@ -48,10 +48,13 @@
 void
 mu_mime_param_free (struct mu_mime_param *p)
 {
-  free (p->lang);
-  free (p->cset);
-  free (p->value);
-  free (p);
+  if (p)
+    {
+      free (p->lang);
+      free (p->cset);
+      free (p->value);
+      free (p);
+    }
 }
 
 /* Treat ITEM as a pointer to struct mu_mime_param and reclaim all
