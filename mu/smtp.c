@@ -76,11 +76,12 @@ smtp_prompt_env (void)
   
   if (smtp_session_status == smtp_session_logged_in &&
       mu_smtp_get_param (smtp, MU_SMTP_PARAM_USERNAME, &value) == 0)
-    mu_assoc_install (assoc, "user", value);
+    mu_assoc_install (assoc, "user", (void*) value);
 
   if (smtp_session_status != smtp_session_disconnected)
     mu_assoc_install (assoc, "host", host);
-  mu_assoc_install (assoc, "status", smtp_session_str (smtp_session_status));
+  mu_assoc_install (assoc, "status",
+		    (void*) smtp_session_str (smtp_session_status));
 }
 
 static void

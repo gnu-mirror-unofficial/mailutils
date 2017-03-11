@@ -66,7 +66,7 @@ pop_prompt_env (void)
     mu_assoc_install (assoc, "host", host); 
 
   mu_assoc_install (assoc, "status",
-		    pop_session_str (pop_session_status));
+		    (void*) pop_session_str (pop_session_status));
 }
 
 
