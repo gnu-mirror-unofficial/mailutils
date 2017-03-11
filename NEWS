@@ -1,11 +1,11 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-01-20
+GNU mailutils NEWS -- history of user-visible changes. 2017-03-11
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 
-Version 3.1.91 (Git)
+Version 3.2 - 2017-03-11
 
 * configuration syntax
 
@@ -103,6 +103,21 @@ line sends them as attachments:
        --content-type=text/plain --content-name="mail.c source file"\
        --content-filename=mail.c --attach-fd=6 \
        root@example.org
+
+See http://mailutils.org/wiki/Mail:_sending_attachments, for details.
+       
+* Bugfixes
+
+** Fix memory leak in mu_stream_destroy.
+
+** Fix handling of ambiguous command line options.
+
+** Fix sieve logging in the maidag utility
+
+** Fixes in 'Q' encoder.
+
+Encode question mark properly;
+Limit the length of encoded words to 75 octets, as requested by RFC 2047.
 
 
 Version 3.1.1 - 2016-12-15

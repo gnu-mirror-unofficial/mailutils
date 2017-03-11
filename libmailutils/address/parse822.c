@@ -396,9 +396,9 @@ mu_parse822_special (const char **p, const char *e, char c)
 {
   mu_parse822_skip_lwsp (p, e);	/* not comments, they start with a special... */
 
-  if ((*p != e) && **p == c)
+  if (*p != e && **p == c)
     {
-      *p += 1;
+      ++*p;
       return EOK;
     }
   return EPARSE;
