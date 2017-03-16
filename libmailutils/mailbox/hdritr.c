@@ -172,6 +172,11 @@ hdr_itrctl (void *owner, enum mu_itrctl_req req, void *arg)
       else
 	itr->backwards = !!*(int*)arg;
       break;
+
+    case mu_itrctl_count:
+      if (!arg)
+	return EINVAL;
+      return mu_header_get_field_count (itr->header, arg);
       
     default:
       return ENOSYS;

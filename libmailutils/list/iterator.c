@@ -205,6 +205,11 @@ list_itrctl (void *owner, enum mu_itrctl_req req, void *arg)
 	itr->backwards = !!*(int*)arg;
       break;
       
+    case mu_itrctl_count:
+      if (!arg)
+	return EINVAL;
+      return mu_list_count (itr->list, arg);
+      
     default:
       return ENOSYS;
     }

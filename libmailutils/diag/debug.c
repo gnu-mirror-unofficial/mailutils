@@ -598,10 +598,12 @@ list_itrctl (void *owner, enum mu_itrctl_req req, void *arg)
   switch (req)
     {
     case mu_itrctl_tell:
-      /* Return current position in the object */
+      /* Return current position in the object.
+	 NOTE: Positions are 1-based.
+       */
       if (!arg)
 	return EINVAL;
-      *(size_t*)arg = itr->pos;
+      *(size_t*)arg = itr->pos + 1;
       break;
 
     case mu_itrctl_delete:
@@ -632,6 +634,12 @@ list_itrctl (void *owner, enum mu_itrctl_req req, void *arg)
 	itr->flags |= ITR_BACKWARDS;
       break;
 
+    case mu_itrctl_count:
+      if (!arg)
+	return EINVAL;
+      *(size_t*)arg = catcnt;
+      break;
+      
     default:
       return ENOSYS;
     }

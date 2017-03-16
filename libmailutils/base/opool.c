@@ -513,6 +513,31 @@ opitr_data_dup (void **ptr, void *owner)
   return 0;
 }
 
+static int
+opitr_itrctl (void *owner, enum mu_itrctl_req req, void *arg)
+{
+  struct opool_iterator *itr = owner;
+  switch (req)
+    {
+    case mu_itrctl_count:
+      if (!arg)
+	return EINVAL;
+      else
+	{
+	  size_t n = 0;
+	  union mu_opool_bucket *p;
+	  for (p = itr->opool->bkt_head; p; p = p->hdr.next)
+	    n++;
+	  *(size_t*)arg = n;
+	}
+      break;
+
+    default:
+      return ENOSYS;
+    }
+  return 0;
+}
+	  
 int
 mu_opool_get_iterator (mu_opool_t opool, mu_iterator_t *piterator)
 {
@@ -543,7 +568,8 @@ mu_opool_get_iterator (mu_opool_t opool, mu_iterator_t *piterator)
   mu_iterator_set_delitem (iterator, opitr_delitem);
   mu_iterator_set_destroy (iterator, opitr_destroy);
   mu_iterator_set_dup (iterator, opitr_data_dup);
-
+  mu_iterator_set_itrctl (iterator, opitr_itrctl);
+  
   opool->itr_count++;
 
   *piterator = iterator;

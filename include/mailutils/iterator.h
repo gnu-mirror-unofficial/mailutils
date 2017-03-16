@@ -35,7 +35,8 @@ enum mu_itrctl_req
     mu_itrctl_insert,        /* Insert new element in the current position */
     mu_itrctl_insert_list,   /* Insert a list of elements */
     mu_itrctl_qry_direction, /* Query iteration direction */
-    mu_itrctl_set_direction  /* Set iteration direction */
+    mu_itrctl_set_direction, /* Set iteration direction */
+    mu_itrctl_count          /* Get number of elements */
   };
 
 extern int mu_iterator_create   (mu_iterator_t *, void *);

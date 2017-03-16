@@ -175,6 +175,11 @@ mbx_itrctl (void *owner, enum mu_itrctl_req req, void *arg)
       else	
 	itr->backwards = !!*(int*)arg;
       break;
+
+    case mu_itrctl_count:
+      if (!arg)
+	return EINVAL;
+      return mu_mailbox_messages_count (itr->mbx, arg);
       
     default:
       return ENOSYS;
