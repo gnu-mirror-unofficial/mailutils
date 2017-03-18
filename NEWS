@@ -1,8 +1,79 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-03-11
+GNU mailutils NEWS -- history of user-visible changes. 2017-03-18
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+
+Version 3.2.90 (Git)
+
+* TLS configuration
+
+Note the following changes to the TLS configuration:
+
+** global tls section
+
+The following statements have been renamed:
+
+  ssl-cafile   renamed to  ssl-ca-file
+  ssl-cert     renamed to  ssl-certificate-file
+  ssl-key      renamed to  ssl-key-file
+
+The following statements have been removed:
+
+  enable
+  key-file-safety-checks
+  cert-file-safety-checks
+  ca-file-safety-checks
+
+The functionality of the latter three is now moved to the
+tls-file-checks section.
+
+Example of a valid global tls section:
+
+  tls {
+     ssl-certificate-file /etc/ssl/cert/imap.pem;
+     ssl-key-file /etc/ssl/private/imap.key;
+  }
+
+** global tls-file-checks statement
+
+The tls-file-checks statement configures safety checks for SSL
+certificate and key files.  It is a global section.  Its syntax is
+as follows:
+
+  tls-file-checks {
+    key-file <arg: list>;
+    cert-file <arg: list>;
+    ca-file <arg: list>;
+  }
+
+The <arg> list is a list or sequence of check names optionally
+prefixed with '+' to enable or '-' to disable the corresponding check.
+Valid check names are the same as in previous versions.
+
+Use this statement instead of the deprecated cert-file-safety-checks,
+key-file-safety-checks, and ca-file-safety-checks. 
+  
+* Per-server TLS support
+
+It is now possible to configure per-server SSL certificates in POP3
+and IMAP4 servers.  To do so, place a "tls" subsection within the
+corresponding "server" section.  The syntax of the "tls" subsection
+is the same as for the global section described above, e.g.:
+
+  server imap.example.com:143 {
+    tls-mode required;
+    tls {
+       ssl-certificate-file /etc/ssl/cert/imap.pem;
+       ssl-key-file /etc/ssl/private/imap.key;
+    }
+  }
+
+If the "tls" section is absent, but "tls-mode" is specified and it's
+value is anything but "no", the settings from the global "tls" section
+will be used.  Im this case, it is an error if the global "tls"
+section is not defined.
 
 
 Version 3.2 - 2017-03-11

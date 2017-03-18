@@ -216,6 +216,12 @@ mu_ip_server_set_data (mu_ip_server_t srv,
   return 0;
 }
 
+void *
+mu_ip_server_get_data (mu_ip_server_t tcpsrv)
+{
+  return tcpsrv->data;
+}
+
 int
 mu_address_family_to_domain (int family)
 {

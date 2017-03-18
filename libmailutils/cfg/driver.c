@@ -161,7 +161,7 @@ dup_container (struct mu_cfg_cont **pcont)
       newcont->v.section.ident = oldcont->v.section.ident;
       newcont->v.section.label = oldcont->v.section.label;
       newcont->v.section.parser = oldcont->v.section.parser;
-      newcont->v.section.target = oldcont->v.section.target;
+      newcont->v.section.data = oldcont->v.section.data;
       newcont->v.section.offset = oldcont->v.section.offset;
       newcont->v.section.docstring = oldcont->v.section.docstring;
       newcont->v.section.children = NULL;
@@ -281,11 +281,27 @@ mu_cfg_section_add_params (struct mu_cfg_section *sect,
 		  switch (c->type)
 		    {
 		    case mu_cfg_cont_section:
-		      c->v.section.offset += param->offset;
+		      if (param->data)
+			{
+			  c->v.section.data = param->data;
+			  c->v.section.offset = param->offset;
+			}
+		      else if (c->v.section.data)
+			/* Keep data & offset */;
+		      else
+			c->v.section.offset += param->offset;
 		      break;
 
 		    case mu_cfg_cont_param:
-		      container->v.param.offset += param->offset;
+		      if (param->data)
+			{
+			  container->v.param.data = param->data;
+			  container->v.param.offset = param->offset;
+			}
+		      else if (container->v.param.data)
+			/* Keep data & offset */;
+		      else
+			container->v.param.offset += param->offset;
 		      break;
 		    }
 		  mu_cfg_section_add_container (sect, c);
@@ -298,7 +314,7 @@ mu_cfg_section_add_params (struct mu_cfg_section *sect,
 	      mu_config_clone_container (container);
 	      if (mu_refcount_value (container->refcount) > 1)
 		dup_container (&container);
-	      container->v.section.target = param->data;
+	      container->v.section.data = param->data;
 	      container->v.section.offset = param->offset;
 	    }
 	}

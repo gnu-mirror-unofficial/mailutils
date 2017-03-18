@@ -77,7 +77,7 @@ struct _mu_m_server
   mu_list_t srvlist;             /* A list of configured mu_ip_server_t
 				    objects. It is cleared after the objects
 				    are opened and attached to the server. */
-  
+  mu_m_server_preflight_fp preflight; /* Pre-flight check function */
   mu_m_server_handler_fp conn;   /* Connection handler function. */
   mu_m_server_handler_fp prefork;/* Pre-fork function. */
   void *data;                    /* User-supplied data for conn and prefork. */
@@ -366,6 +366,12 @@ mu_m_server_set_strexit (mu_m_server_t srv, const char *(*fun) (int))
   srv->strexit = fun;
 }
 
+void
+mu_m_server_set_preflight (mu_m_server_t srv, mu_m_server_preflight_fp fun)
+{
+  srv->preflight = fun;
+}
+
 int
 mu_m_server_get_srvlist (mu_m_server_t srv, mu_list_t *plist)
 {
@@ -565,6 +571,7 @@ mu_m_server_destroy (mu_m_server_t *pmsrv)
 {
   mu_m_server_t msrv = *pmsrv;
   mu_list_remove (m_server_list, msrv);
+  mu_list_destroy (&msrv->srvlist);  
   mu_server_destroy (&msrv->server);
   free (msrv->child_pid);
   /* FIXME: Send processes the TERM signal here?*/
@@ -594,17 +601,16 @@ tcp_conn_free (void *conn_data, void *server_data)
 }
 
 static int
-_open_conn (void *item, void *data)
+open_connection (mu_ip_server_t tcpsrv, mu_m_server_t msrv)
 {
-  mu_ip_server_t tcpsrv = item;
-  mu_m_server_t msrv = data;
   int rc = mu_ip_server_open (tcpsrv);
   if (rc)
     {
       mu_error (_("cannot open connection on %s: %s"),
 		mu_ip_server_addrstr (tcpsrv), mu_strerror (rc));
-      return 0;
+      return rc;
     }
+
   rc = mu_server_add_connection (msrv->server,
 				 mu_ip_server_get_fd (tcpsrv),
 				 tcpsrv,
@@ -614,9 +620,8 @@ _open_conn (void *item, void *data)
       mu_error (_("cannot add connection %s: %s"),
 		mu_ip_server_addrstr (tcpsrv), mu_strerror (rc));
       mu_ip_server_shutdown (tcpsrv);
-      mu_ip_server_destroy (&tcpsrv);
     }
-  return 0;
+  return rc;
 }  
 
 int
@@ -624,16 +629,36 @@ mu_m_server_run (mu_m_server_t msrv)
 {
   int rc;
   size_t count;
-  mode_t saved_umask = umask (0117);
-  mu_list_foreach (msrv->srvlist, _open_conn, msrv);
+  mode_t saved_umask;
+  mu_iterator_t itr;
+  
+  saved_umask = umask (0117);
+  mu_list_get_iterator (msrv->srvlist, &itr);
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr); mu_iterator_next (itr))
+    {
+      mu_ip_server_t tcpsrv;
+      mu_iterator_current (itr, (void**) &tcpsrv);
+      if (open_connection (tcpsrv, msrv))
+	{
+	  mu_iterator_ctl (itr, mu_itrctl_delete_nd, NULL);
+	  mu_ip_server_destroy (&tcpsrv);
+	}
+    }
   umask (saved_umask);
-  mu_list_destroy (&msrv->srvlist);
+  mu_iterator_destroy (&itr);
+  
   MU_ASSERT (mu_server_count (msrv->server, &count));
   if (count == 0)
     {
       mu_error (_("no servers configured: exiting"));
       exit (1);
     }
+  if (msrv->preflight && msrv->preflight (msrv))
+    {
+      mu_error (_("%s: preflight check failed"), msrv->ident);
+      return MU_ERR_FAILURE;
+    }
+  
   if (msrv->ident)
     mu_diag_output (MU_DIAG_INFO, _("%s started"), msrv->ident);
   rc = mu_server_run (msrv->server);
@@ -642,8 +667,6 @@ mu_m_server_run (mu_m_server_t msrv)
     mu_diag_output (MU_DIAG_INFO, _("%s terminated"), msrv->ident);
   return rc;
 }
-
-
 
 int
 mu_m_server_check_acl (mu_m_server_t msrv, struct sockaddr *s, int salen)

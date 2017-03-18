@@ -417,6 +417,7 @@ configuration files.
 * sql statement::
 * ldap statement::
 * tls statement::
+* tls-file-checks statement::
 * gsasl statement::
 @end menu
 
@@ -1700,8 +1701,19 @@ server @var{ipaddr}[:@var{port}] @{
   backlog <number: callback>;
 
   # @r{Kind of TLS encryption to use for this server.}
-  tls @samp{no}|@samp{ondemand}|@samp{required}|@samp{connection};
-    
+  tls-mode @samp{no}|@samp{ondemand}|@samp{required}|@samp{connection};
+
+  tls @{
+    # @r{Specify SSL certificate file.}
+    ssl-certificate-file @var{string};
+    # @r{Specify SSL certificate key file.}
+    ssl-key-file @var{file};
+    # @r{Specify trusted CAs file.}
+    ssl-ca-file @var{file};
+    # @r{Set the priorities to use on the ciphers, methods, etc.}
+    ssl-priorities @var{string};
+  @}
+  
   # @r{Set server specific ACLs.}
   acl @{ /* @xref{ACL Statement}. */ @};
 @}
@@ -1756,7 +1768,7 @@ settings (@pxref{General Server Configuration, timeout}).
 Configures the size of the queue of pending connections
 @end deffn
 
-@deffn {Configuration} tls @var{mode};
+@deffn {Configuration} tls-mode @var{mode};
 Configure the use of TLS encryption.  The @var{mode} argument is one
 of the following:
 
@@ -1779,6 +1791,20 @@ TLS is always forced when the connection is established.  For
 @command{pop3d} this means using POP3S protocol (or IMAP4S, for
 @command{imap4d}).
 @end table
+@end deffn
+
+@deffn {Configuration} tls @{ ... @}
+The @code{tls} statement configures SSL certificate and key files, as
+well as other SSL settings for use in this server.  It is used when
+@code{tls-mode} is set to any of the following values:
+@code{ondemand}, @code{required}, @code{connection}.
+
+If @code{tls-mode} is set to any of the values above and @code{tls}
+section is absent, settings from the global @code{tls} section will
+be used.  In this case, it is an error if the global @code{tls}
+section is not defined.
+
+@xref{tls statement}, for a discussion of its syntax.
 @end deffn
 
 @deffn {Configuration} acl
@@ -2483,39 +2509,32 @@ default filter is:
 @subheading Syntax
 @example
 tls @{
-  # @r{Enable TLS support.}
-  enable @var{bool};
   # @r{Specify SSL certificate file.}
-  ssl-cert @var{string};
+  ssl-certificate-file @var{string};
   # @r{Specify SSL certificate key file.}
-  ssl-key @var{file};
+  ssl-key-file @var{file};
   # @r{Specify trusted CAs file.}
-  ssl-cafile @var{file};
+  ssl-ca-file @var{file};
   # @r{Set the priorities to use on the ciphers, methods, etc.}
   ssl-priorities @var{string};
-  # @r{Configure safety checks for SSL key file.}
-  key-file-safety-checks @var{list};
-  # @r{Configure safety checks for SSL certificate.}
-  cert-file-safety-checks @var{list};
-  # @r{Configure safety checks for SSL CA file.}
-  ca-file-safety-checks @var{list};
 @}
 @end example
 @subheading Description
 
-@deffn {Configuration} enable @var{bool}
-Enable TLS support.  If absent, @samp{enable On} is assumed.
-@end deffn
+The @samp{tls} statement configures TLS parameters to be used by
+servers.  It can appear both in the global scope and in server
+scope.  Global tls settings are applied for servers that are declared
+as supporting TLS encryption, but lack the @samp{tls} substatement.
 
-@deffn {Configuration} ssl-cert @var{string}
+@deffn {Configuration} ssl-certificate-file @var{string}
 Specify SSL certificate file.
 @end deffn
 
-@deffn {Configuration} ssl-key @var{file}
+@deffn {Configuration} ssl-key-file @var{file}
 Specify SSL certificate key file.
 @end deffn
 
-@deffn {Configuration} ssl-cafile @var{file}
+@deffn {Configuration} ssl-ca-file @var{file}
 Specify the trusted certificate authorities file.
 @end deffn
 
@@ -2524,7 +2543,27 @@ Set the priorities to use on the ciphers, key exchange methods, MACs
 and compression methods.
 @end deffn
 
-@deffn {Configuration} key-file-safety-checks @var{list}
+@node tls-file-checks statement
+@subsection The @code{tls-file-checks} Statement
+@kwindex tls-file-checks
+@subheading Syntax
+@example
+tls-file-checks @{
+  # @r{Configure safety checks for SSL key file.}
+  key-file @var{list};
+  # @r{Configure safety checks for SSL certificate.}
+  cert-file @var{list};
+  # @r{Configure safety checks for SSL CA file.}
+  ca-file @var{list};
+@}
+@end example
+
+@subheading Description
+
+This section configures security checks applied to the particular SSL
+configuration files in order to decide whether it is safe to use them.
+
+@deffn {Configuration} key-file @var{list}
 Configure safety checks for SSL key file.  Elements of the @var{list} are
 names of individual checks, optionally prefixed with @samp{+} to enable or 
 @samp{-} to disable the corresponding check.  Valid check names are:
@@ -2551,15 +2590,16 @@ Forbid files in world writable directories,
 @end table
 @end deffn
 
-@deffn {Configuration} cert-file-safety-checks @var{list}
+@deffn {Configuration} cert-file @var{list}
 Configure safety checks for SSL certificate.  See
-@code{key-file-safety-checks} for a description of @var{list}.
+@code{key-file} for a description of @var{list}.
 @end deffn
 
-@deffn {Configuration} ca-file-safety-checks @var{list}
+@deffn {Configuration} ca-file @var{list}
 Configure safety checks for SSL CA file.  See
-@code{key-file-safety-checks} for a description of @var{list}.
+@code{key-file} for a description of @var{list}.
 @end deffn
+
 
 @node gsasl statement
 @subsection The @code{gsasl} Statement
@@ -7494,6 +7534,7 @@ The following configuration file statements affect the behavior of
 @headitem Statement @tab Reference
 @item debug         @tab @xref{debug statement}.
 @item tls           @tab @xref{tls statement}.
+@item tls-file-checks @tab @xref{tls-file-checks statement}.
 @item mailbox       @tab @xref{mailbox statement}.
 @item locking       @tab @xref{locking statement}.
 @item logging       @tab @xref{logging statement}.
@@ -7804,6 +7845,7 @@ configuration statements:
 @headitem Statement @tab Reference
 @item debug         @tab @xref{debug statement}.
 @item tls           @tab @xref{tls statement}.
+@item tls-file-checks @tab @xref{tls-file-checks statement}.
 @item mailbox       @tab @xref{mailbox statement}.
 @item locking       @tab @xref{locking statement}.
 @item logging       @tab @xref{logging statement}.

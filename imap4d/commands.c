@@ -47,8 +47,6 @@ struct imap4d_command imap4d_command_table [] =
   { "NAMESPACE", imap4d_namespace, STATE_AUTH | STATE_SEL, STATE_NONE, STATE_NONE, NULL },
   { "ID", imap4d_id, STATE_AUTH | STATE_SEL, STATE_NONE, STATE_NONE, NULL },
   { "IDLE", imap4d_idle, STATE_SEL, STATE_NONE, STATE_NONE, NULL },
-#ifdef WITH_TLS
   { "STARTTLS", imap4d_starttls, STATE_NONAUTH, STATE_NONE, STATE_NONE, NULL },
-#endif /* WITH_TLS */
   { NULL, 0, 0, 0, 0, NULL }
 };

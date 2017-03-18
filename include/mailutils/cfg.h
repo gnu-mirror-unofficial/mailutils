@@ -180,13 +180,16 @@ typedef int (*mu_cfg_section_fp) (enum mu_cfg_section_stage stage,
 
 struct mu_cfg_section
 {
-  const char *ident;
-  char *label;
-  mu_cfg_section_fp parser;
-  void *target;
-  size_t offset;
+  const char *ident;              /* Section identifier */  
+  char *label;                    /* Label description */
+  mu_cfg_section_fp parser;       /* Parser function */
+  void *data;                     /* Data pointer */
+  size_t offset;                  /* Offset within target (see below) */
   mu_list_t /* of mu_cfg_cont */ children;
-  char *docstring;
+  char *docstring;                /* Documentation string */
+  void *target;                   /* Actual pointer to the data. It is
+				     recomputed each time the section is
+				     reduced. */
 };
 
 enum mu_cfg_cont_type

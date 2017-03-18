@@ -972,10 +972,14 @@ _scan_tree_helper (const mu_cfg_node_t *node, void *data)
 	}
       if (!sec->children)
 	return MU_CFG_ITER_SKIP;
-      if (sdata->list->sec->target)
+      if (sec->data)
+	sec->target = sec->data;
+      else if (sdata->list->sec->target)
 	sec->target = (char*)sdata->list->sec->target + sec->offset;
       else if (sdata->target)
 	sec->target = (char*)sdata->target + sec->offset;
+      else
+	sec->target = NULL;
       if (sec->parser)
 	{
 	  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 

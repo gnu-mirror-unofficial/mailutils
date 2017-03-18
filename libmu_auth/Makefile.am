@@ -29,8 +29,17 @@ libmu_auth_la_SOURCES = \
  radius.c\
  sql.c\
  sql.h\
- tls.c\
  virtual.c 
+
+libmu_auth_la_SOURCES += tlsconf.c tlsvar.c
+
+if MU_COND_GNUTLS
+  libmu_auth_la_SOURCES += \
+    tls.c\
+    tlsiostr.c
+else
+  libmu_auth_la_SOURCES += notls.c
+endif
 
 libmu_auth_la_LIBADD = ${MU_LIB_MAILUTILS} @MU_AUTHLIBS@ @SQLLIB@ @LTLIBINTL@
 libmu_auth_la_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@

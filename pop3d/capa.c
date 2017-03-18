@@ -104,17 +104,20 @@ capa_implementation (const char *name, struct pop3d_session *session)
     pop3d_outf ("%s %s\n", name, PACKAGE_STRING);
 }
 
-#ifdef WITH_TLS
 static void
 capa_stls (const char *name, struct pop3d_session *session)
 {
-  if ((session->tls == tls_ondemand || session->tls == tls_required)
-      && tls_available && tls_done == 0)
-    pop3d_outf ("%s\n", name);
+  switch (session->tls_mode)
+    {
+    case tls_ondemand:
+    case tls_required:
+      pop3d_outf ("%s\n", name);
+      break;
+      
+    default:
+      break;
+    }
 }
-#else
-# define capa_stls NULL
-#endif /* WITH_TLS */
 
 static void
 capa_user (const char *name, struct pop3d_session *session)

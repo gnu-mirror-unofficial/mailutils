@@ -193,6 +193,14 @@ enum tls_mode
 struct imap4d_session
 {
   enum tls_mode tls_mode;
+  struct mu_tls_config *tls_conf;
+};
+
+struct imap4d_srv_config
+{
+  struct mu_srv_config m_cfg;
+  enum tls_mode tls_mode;
+  struct mu_tls_config tls_conf;
 };
   
 extern struct imap4d_command imap4d_command_table[];
@@ -217,7 +225,8 @@ extern mu_list_t imap4d_id_list;
 extern int imap4d_argc;                 
 extern char **imap4d_argv;
 extern jmp_buf child_jmp;
-
+extern struct mu_tls_config global_tls_conf;
+  
 extern int test_mode;
 extern int silent_expunge;
 
@@ -240,7 +249,7 @@ extern int io_stream_completion_response (mu_stream_t str,
 					  const char *format, ...)
                                     MU_PRINTFLIKE(4,5);
 void io_getline (char **pbuf, size_t *psize, size_t *pnbytes);
-void io_setio (int, int, int);
+void io_setio (int, int, struct mu_tls_config *);
 void io_flush (void);
 int io_wait_input (int);
   
@@ -333,14 +342,10 @@ extern int  imap4d_select (struct imap4d_session *,
 			   struct imap4d_command *, imap4d_tokbuf_t);
 extern int  imap4d_select0 (struct imap4d_command *, const char *, int);
 extern int  imap4d_select_status (void);
-#ifdef WITH_TLS
 extern int  imap4d_starttls (struct imap4d_session *,
 			     struct imap4d_command *, imap4d_tokbuf_t);
-extern void starttls_init (void);
+int starttls_init (mu_m_server_t msrv);
 void tls_encryption_on (struct imap4d_session *);
-#else
-# define tls_encryption_on(s)
-#endif /* WITH_TLS */
 extern int  imap4d_status (struct imap4d_session *,
 			   struct imap4d_command *, imap4d_tokbuf_t);
 extern int  imap4d_store (struct imap4d_session *,
@@ -466,9 +471,7 @@ int util_trim_nl (char *s, size_t len);
 
 int set_xscript_level (int xlev);
 
-#ifdef WITH_TLS
-int imap4d_init_tls_server (void);
-#endif /* WITH_TLS */
+int imap4d_init_tls_server (struct mu_tls_config *);
 
 struct imap4d_auth
 {

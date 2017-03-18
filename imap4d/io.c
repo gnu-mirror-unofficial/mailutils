@@ -50,7 +50,7 @@ log_cipher (mu_stream_t stream)
 }
 
 void
-io_setio (int ifd, int ofd, int tls)
+io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 {
   mu_stream_t str, istream, ostream;
   
@@ -68,10 +68,12 @@ io_setio (int ifd, int ofd, int tls)
   mu_stream_set_buffer (ostream, mu_buffer_line, 0);
   
   /* Combine the two streams into an I/O one. */
-#ifdef WITH_TLS
-  if (tls)
+  if (tls_conf)
     {
-      int rc = mu_tls_server_stream_create (&str, istream, ostream, 0);
+      int rc = mu_tls_stream_create (&str, istream, ostream,
+				     tls_conf,
+				     MU_TLS_SERVER,
+				     0);
       if (rc)
 	{
 	  mu_stream_unref (istream);
@@ -81,9 +83,7 @@ io_setio (int ifd, int ofd, int tls)
 	}
       log_cipher (str);
     }
-  else
-#endif
-  if (mu_iostream_create (&str, istream, ostream))
+  else if (mu_iostream_create (&str, istream, ostream))
     imap4d_bye (ERR_STREAM_CREATE);
 
   /* Convert all writes to CRLF form.
@@ -120,9 +120,8 @@ io_setio (int ifd, int ofd, int tls)
     }
 }
 
-#ifdef WITH_TLS
 int
-imap4d_init_tls_server ()
+imap4d_init_tls_server (struct mu_tls_config *tls_conf)
 {
   mu_stream_t tlsstream, stream[2];
   int rc;
@@ -135,7 +134,12 @@ imap4d_init_tls_server ()
       return 1;
     }
   
-  rc = mu_tls_server_stream_create (&tlsstream, stream[0], stream[1], 0);
+  rc = mu_tls_stream_create (&tlsstream, stream[0], stream[1],
+			     tls_conf,
+			     MU_TLS_SERVER,
+			     0);
+  mu_stream_unref (stream[0]);
+  mu_stream_unref (stream[1]);
   if (rc)
     {
       mu_diag_output (MU_DIAG_ERROR, _("cannot open TLS stream: %s"),
@@ -145,8 +149,6 @@ imap4d_init_tls_server ()
 
   log_cipher (tlsstream);
 
-  mu_stream_unref (stream[0]);
-  mu_stream_unref (stream[1]);
   stream[0] = stream[1] = tlsstream;
 
   rc = mu_stream_ioctl (iostream, MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_SET, stream);
@@ -158,11 +160,9 @@ imap4d_init_tls_server ()
     }
   mu_stream_unref (stream[0]);
   mu_stream_unref (stream[1]);
-  
+
   return 0;
 }
-#endif
-
 
 /* Status Code to String.  */
 static const char *

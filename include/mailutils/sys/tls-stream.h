@@ -20,6 +20,7 @@
 # include <mailutils/types.h>
 # include <mailutils/stream.h>
 # include <mailutils/sys/stream.h>
+# include <mailutils/tls.h>
 
 enum _mu_tls_stream_state
   {
@@ -40,9 +41,16 @@ struct _mu_tls_stream
 {
   struct _mu_stream stream;
   enum _mu_tls_stream_state state;
+  int session_type; /* Either GNUTLS_CLIENT or GNUTLS_SERVER */
   gnutls_session_t session;
   int tls_err;
   mu_stream_t transport[2];
+  struct mu_tls_config conf;
+  gnutls_certificate_credentials_t cred;
 };
+
+extern int mu_tls_io_stream_create (mu_stream_t *pstream,
+				    mu_stream_t transport, int flags,
+				    struct _mu_tls_stream *master);
 
 #endif

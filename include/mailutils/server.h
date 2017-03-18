@@ -28,7 +28,7 @@ typedef int (*mu_conn_loop_fp) (int fd, void *conn_data, void *server_data);
 typedef void (*mu_conn_free_fp) (void *conn_data, void *server_data);
 typedef int (*mu_server_idle_fp) (void *server_data);
 typedef void (*mu_server_free_fp) (void *server_data);
-
+	       
 #define MU_SERVER_SUCCESS    0
 #define MU_SERVER_CLOSE_CONN 1
 #define MU_SERVER_SHUTDOWN   2
@@ -40,7 +40,8 @@ int mu_server_set_idle (mu_server_t srv, mu_server_idle_fp fp);
 int mu_server_set_data (mu_server_t srv, void *data, mu_server_free_fp fp);
 int mu_server_add_connection (mu_server_t srv,
 			      int fd, void *data,
-			      mu_conn_loop_fp loop, mu_conn_free_fp free);
+			      mu_conn_loop_fp loop,
+			      mu_conn_free_fp free);
 struct timeval;
 int mu_server_set_timeout (mu_server_t srv, struct timeval *to);
 int mu_server_count (mu_server_t srv, size_t *pcount);
@@ -100,6 +101,7 @@ typedef struct mu_m_server_connect_data mu_m_server_connect_data_t;
 typedef int (*mu_m_server_handler_fp) (int fd, struct sockaddr *sa, int salen,
 				       struct mu_srv_config *pconf,
 				       void *data);
+typedef int (*mu_m_server_preflight_fp) (mu_m_server_t);
 
 void mu_m_server_create (mu_m_server_t *psrv, const char *ident);
 void mu_m_server_destroy (mu_m_server_t *pmsrv);
@@ -109,6 +111,7 @@ void mu_m_server_get_type (mu_m_server_t srv, int *ptype);
 void mu_m_server_set_conn (mu_m_server_t srv, mu_m_server_handler_fp f);
 void mu_m_server_set_prefork (mu_m_server_t srv, mu_m_server_handler_fp fun);
 void mu_m_server_set_data (mu_m_server_t srv, void *data);
+void *mu_ip_server_get_data (mu_ip_server_t tcpsrv);
 void mu_m_server_set_max_children (mu_m_server_t srv, size_t num);
 int mu_m_server_set_pidfile (mu_m_server_t srv, const char *pidfile);
 int mu_m_server_set_foreground (mu_m_server_t srv, int enable);
@@ -119,6 +122,8 @@ void mu_m_server_set_sigset (mu_m_server_t srv, sigset_t *sigset);
 void mu_m_server_set_strexit (mu_m_server_t srv, const char *(*fun) (int));
 void mu_m_server_set_app_data_size (mu_m_server_t srv, size_t size);
 int mu_m_server_set_config_size (mu_m_server_t srv, size_t size);
+void mu_m_server_set_preflight (mu_m_server_t srv,
+				mu_m_server_preflight_fp fun);
 
 struct mu_srv_config *mu_m_server_listen (mu_m_server_t msrv,
 					  struct mu_sockaddr *s, int type);
@@ -143,6 +148,5 @@ int mu_m_server_check_acl (mu_m_server_t msrv, struct sockaddr *s, int salen);
 
 struct mu_cfg_param;
 void mu_m_server_cfg_init (mu_m_server_t msrv, struct mu_cfg_param *app_param);
-
 
 #endif

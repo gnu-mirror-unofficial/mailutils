@@ -19,8 +19,6 @@
 
 /* STLS command -- TLS/SSL encryption */
 
-#ifdef WITH_TLS
-
 int
 pop3d_stls (char *arg, struct pop3d_session *session)
 {
@@ -30,7 +28,7 @@ pop3d_stls (char *arg, struct pop3d_session *session)
   if (state != initial_state)
     return ERR_WRONG_STATE;
 
-  switch (session->tls)
+  switch (session->tls_mode)
     {
     case tls_ondemand:
     case tls_required:
@@ -39,26 +37,20 @@ pop3d_stls (char *arg, struct pop3d_session *session)
       return ERR_WRONG_STATE;
     }
   
-  if (tls_done)
-    return ERR_TLS_ACTIVE;
-
   pop3d_outf ("+OK Begin TLS negotiation\n");
   pop3d_flush_output ();
 
-  tls_done = pop3d_init_tls_server () == 0;
-
-  if (!tls_done)
+  if (pop3d_init_tls_server (session->tls_conf))
     {
       mu_diag_output (MU_DIAG_ERROR, _("Session terminated"));
       state = ABORT;
       return ERR_UNKNOWN;
     }
 
+  session->tls_mode = tls_no;
   state = AUTHORIZATION;  /* Confirm we're in this state. Necessary for
 			     "tls required" to work */
 
   return OK;
 }
-
-#endif /* WITH_TLS */
 

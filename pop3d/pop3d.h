@@ -145,31 +145,32 @@ extern int expire_on_exit;
 #define UPDATE		2
 #define ABORT           3
 
-#define OK		0
-#define ERR_WRONG_STATE	1
-#define ERR_BAD_ARGS	2
-#define ERR_BAD_LOGIN	3
-#define ERR_NO_MESG	4
-#define ERR_MESG_DELE   5
-#define ERR_NOT_IMPL	6
-#define ERR_BAD_CMD	7
-#define ERR_MBOX_LOCK	8
-#define ERR_TOO_LONG	9
-#define ERR_NO_MEM	10
-#define ERR_SIGNAL	11
-#define ERR_FILE        12
-#define ERR_NO_IFILE    13
-#define ERR_NO_OFILE    14
-#define ERR_IO          15
-#define ERR_PROTO       16
-#define ERR_TIMEOUT	17
-#define ERR_UNKNOWN	18
-#define ERR_MBOX_SYNC   19
-#define ERR_TLS_ACTIVE  20
-#define ERR_TLS_IO      21
-#define ERR_LOGIN_DELAY 22
-#define ERR_TERMINATE   23
-#define ERR_SYS_LOGIN   24
+enum pop3d_error {
+  OK = 0,
+  ERR_WRONG_STATE,	
+  ERR_BAD_ARGS,	
+  ERR_BAD_LOGIN,	
+  ERR_NO_MESG,	
+  ERR_MESG_DELE,   
+  ERR_NOT_IMPL,	
+  ERR_BAD_CMD,	
+  ERR_MBOX_LOCK,
+  ERR_TOO_LONG,	
+  ERR_NO_MEM,
+  ERR_SIGNAL,
+  ERR_FILE,
+  ERR_NO_IFILE,
+  ERR_NO_OFILE,
+  ERR_IO,
+  ERR_PROTO,
+  ERR_TIMEOUT,
+  ERR_UNKNOWN,
+  ERR_MBOX_SYNC,
+  ERR_TLS_IO,
+  ERR_LOGIN_DELAY,
+  ERR_TERMINATE,
+  ERR_SYS_LOGIN
+};
 
 enum tls_mode
   {
@@ -200,7 +201,15 @@ struct pop3d_capa
 struct pop3d_session
 {
   mu_list_t capa;
-  enum tls_mode tls;
+  enum tls_mode tls_mode;
+  struct mu_tls_config *tls_conf;
+};
+
+struct pop3d_srv_config
+{
+  struct mu_srv_config m_cfg;
+  enum tls_mode tls_mode;
+  struct mu_tls_config tls_conf;
 };
 
 void pop3d_session_init (struct pop3d_session *session);
@@ -227,10 +236,7 @@ extern char *md5shared;
 extern size_t children;
 extern struct daemon_param daemon_param;
 extern int debug_mode;
-#ifdef WITH_TLS
-extern int tls_available;
-extern int tls_done;
-#endif /* WITH_TLS */
+
 extern int undelete_on_startup;
 extern struct mu_auth_data *auth_data;
 extern unsigned int idle_timeout;
@@ -241,6 +247,8 @@ extern char *apop_database_name;
 extern int apop_database_safety;
 extern uid_t apop_database_owner;
 extern int apop_database_owner_set;
+
+extern struct mu_tls_config global_tls_conf;
 
 /* Safety checks for group-rw database files, such as stat and bulletin
    databases */
@@ -282,13 +290,12 @@ extern void pop3d_parse_command (char *cmd, char **pcmd, char **parg);
 extern RETSIGTYPE pop3d_master_signal  (int);
 extern RETSIGTYPE pop3d_child_signal  (int);
 
-#ifdef WITH_TLS
 extern int pop3d_stls           (char *, struct pop3d_session *);
-extern void enable_stls (void);
-#endif /* WITH_TLS */
+int stls_preflight (mu_m_server_t msrv);
+
 extern void pop3d_outf          (const char *fmt, ...) MU_PRINTFLIKE(1,2);
 
-extern void pop3d_setio         (int, int, int);
+extern void pop3d_setio         (int, int, struct mu_tls_config *);
 extern char *pop3d_readline     (char *, size_t);
 extern void pop3d_flush_output  (void);
 
@@ -299,10 +306,7 @@ extern int pop3d_is_deleted (mu_attribute_t attr);
 extern void pop3d_unset_deleted (mu_attribute_t attr);
 void pop3d_undelete_all (void);
 
-#ifdef WITH_TLS
-extern int pop3d_init_tls_server    (void);
-extern void pop3d_deinit_tls_server (void);
-#endif /* WITH_TLS */
+extern int pop3d_init_tls_server    (struct mu_tls_config *tls_conf);
 
 extern void pop3d_mark_retr (mu_attribute_t attr);
 extern int pop3d_is_retr (mu_attribute_t attr);

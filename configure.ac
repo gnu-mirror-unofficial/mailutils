@@ -16,7 +16,7 @@ dnl You should have received a copy of the GNU General Public License along
 dnl with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.63)
-AC_INIT([GNU Mailutils], [3.2], [bug-mailutils@gnu.org], [mailutils],
+AC_INIT([GNU Mailutils], [3.2.90], [bug-mailutils@gnu.org], [mailutils],
         [http://mailutils.org])
 AC_CONFIG_SRCDIR([libmailutils/mailbox/mailbox.c])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -306,6 +306,7 @@ MU_CHECK_GNUTLS([1.2.1],[
 ],[
   status_gnutls=no
 ])
+AM_CONDITIONAL([MU_COND_GNUTLS], [test "$status_gnutls" = yes])
 
 AC_SUBST(SITE_MAIL_RC)
 AC_ARG_WITH([mail-rc],

@@ -17,11 +17,7 @@
 
 #include "imap4d.h"
 
-int tls_available;
-
-#ifdef WITH_TLS
-
-static int tls_done;
+struct mu_tls_config global_tls_conf;
 
 /*
 6.2.1.  STARTTLS Command
@@ -39,7 +35,7 @@ imap4d_starttls (struct imap4d_session *session,
 {
   int status;
 
-  if (!tls_available || tls_done)
+  if (session->tls_mode == tls_no)
     return io_completion_response (command, RESP_BAD, "Invalid command");
 
   if (imap4d_tokbuf_argc (tok) != 2)
@@ -48,7 +44,7 @@ imap4d_starttls (struct imap4d_session *session,
   status = io_completion_response (command, RESP_OK, "Begin TLS negotiation");
   io_flush ();
 
-  if (imap4d_init_tls_server () == 0)
+  if (imap4d_init_tls_server (session->tls_conf) == 0)
     tls_encryption_on (session);
   else
     {
@@ -63,24 +59,101 @@ imap4d_starttls (struct imap4d_session *session,
 void
 tls_encryption_on (struct imap4d_session *session)
 {
-  tls_done = 1;
+  session->tls_mode = tls_no;
   imap4d_capability_remove (IMAP_CAPA_STARTTLS);
       
   login_disabled = 0;
   imap4d_capability_remove (IMAP_CAPA_LOGINDISABLED);
 
-  session->tls_mode = tls_no;
   imap4d_capability_remove (IMAP_CAPA_XTLSREQUIRED);
 }
 
-void
-starttls_init ()
+int
+starttls_init (mu_m_server_t msrv)
 {
-  tls_available = mu_check_tls_environment ();
-  if (tls_available)
-    imap4d_capability_add (IMAP_CAPA_STARTTLS);
-}
+  mu_list_t srvlist;
+  mu_iterator_t itr;
+  int errors = 0;
+  int tls_ok = mu_init_tls_libs ();
+  int tls_requested = 0;
+  int global_conf_status = 0;
 
-#endif /* WITH_TLS */
+  if (global_tls_conf.cert_file)
+    global_conf_status = mu_tls_config_check (&global_tls_conf, 1);
+  else
+    global_conf_status = MU_TLS_CONFIG_NULL;
+  
+  mu_m_server_get_srvlist (msrv, &srvlist);
+  mu_list_get_iterator (srvlist, &itr);
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr); mu_iterator_next (itr))
+    {
+      mu_ip_server_t ipsrv;
+      struct imap4d_srv_config *cfg;
+      mu_iterator_current (itr, (void**) &ipsrv);
+      cfg = mu_ip_server_get_data (ipsrv);
+      switch (cfg->tls_mode)
+	{
+	case tls_unspecified:
+	  if (cfg->tls_conf.cert_file)
+	    {
+	      cfg->tls_mode = tls_ondemand;
+	      break;
+	    }
+	  else
+	    cfg->tls_mode = tls_no;
+	  /* fall through */
+	case tls_no:
+	  continue;
+	  
+	default:
+	  break;
+	}
+
+      switch (mu_tls_config_check (&cfg->tls_conf, 1))
+	{
+	case MU_TLS_CONFIG_OK:
+	  if (!cfg->tls_conf.cert_file)
+	    {
+	      mu_error (_("server %s: no certificate set"),
+			mu_ip_server_addrstr (ipsrv));
+	      errors = 1;
+	    }
+	  break;
+	  
+	case MU_TLS_CONFIG_NULL:
+	  if (global_conf_status != MU_TLS_CONFIG_NULL)
+	    {
+	      cfg->tls_conf = global_tls_conf;
+	    }
+	  else
+	    {
+	      mu_error (_("server %s: no certificate set"),
+			mu_ip_server_addrstr (ipsrv));
+	      errors = 1;
+	    }
+	  break;
+
+	default:
+	  mu_error (_("server %s: TLS configuration failed"),
+		    mu_ip_server_addrstr (ipsrv));
+	  errors = 1;
+	}
+      
+      tls_requested = 1;
+    }
+  mu_iterator_destroy (&itr);
+
+  if (tls_requested && !tls_ok)
+    {
+      mu_error (_("TLS is not configured, but requested in the "
+		  "configuration"));
+      errors = 1;
+    }
+  
+  if (errors)
+    return 1;
+
+  return 0;
+}
 
 /* EOF */

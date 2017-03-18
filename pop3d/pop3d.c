@@ -37,15 +37,6 @@ int apop_database_safety = MU_FILE_SAFETY_ALL;
 uid_t apop_database_owner;
 int apop_database_owner_set;
 
-enum tls_mode tls_mode;
-
-#ifdef WITH_TLS
-int tls_available;
-int tls_done;
-#else
-# define tls_available 0
-#endif /* WITH_TLS */
-
 int initial_state = AUTHORIZATION; 
 
 /* Should all the messages be undeleted on startup */
@@ -169,13 +160,6 @@ cb_bulletin_db (void *data, mu_config_value_t *val)
 }
 #endif
 
-struct pop3d_srv_config
-{
-  struct mu_srv_config m_cfg;
-  enum tls_mode tls_mode;
-};
-
-#ifdef WITH_TLS
 static int
 cb_tls (void *data, mu_config_value_t *val)
 {
@@ -205,39 +189,14 @@ cb_tls (void *data, mu_config_value_t *val)
   return 0;
 }
 
-static int
-cb_tls_required (void *data, mu_config_value_t *val)
-{
-  int bv;
-  
-  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
-    return 1;
-  if (mu_str_to_c (val->v.string, mu_c_bool, &bv, NULL))
-    mu_error (_("Not a boolean value"));
-  else if (bv)
-    {
-      tls_mode = tls_required;
-      mu_diag_output (MU_DIAG_WARNING,
-		      "the \"tls-required\" statement is deprecated, "
-		      "use \"tls required\" instead");
-    }
-  else
-    mu_diag_output (MU_DIAG_WARNING,
-		    "the \"tls-required\" statement is deprecated, "
-		    "use \"tls\" instead");
-
-  return 0;
-}
-#endif
-
 static struct mu_cfg_param pop3d_srv_param[] = {
-#ifdef WITH_TLS
-  { "tls", mu_cfg_callback,
+  { "tls-mode", mu_cfg_callback,
     NULL, mu_offsetof (struct pop3d_srv_config, tls_mode), cb_tls,
     N_("Kind of TLS encryption to use for this server"),
     /* TRANSLATORS: words to the right of : are keywords - do not translate */
     N_("arg: false|true|ondemand|stls|requred|connection") },
-#endif
+  { "tls", mu_cfg_section,
+    NULL, mu_offsetof (struct pop3d_srv_config, tls_conf) },
   { NULL }
 };
     
@@ -272,16 +231,8 @@ static struct mu_cfg_param pop3d_cfg_param[] = {
        "  awrdir        forbid files in world writable directories\n"),
     N_("arg: list") },  
     
-#ifdef WITH_TLS
-  { "tls", mu_cfg_callback, &tls_mode, 0, cb_tls,
-    N_("Kind of TLS encryption to use"),
-    /* TRANSLATORS: words to the right of : are keywords - do not translate */
-    N_("arg: false|true|ondemand|stls|requred|connection") },
-  { "tls-required", mu_cfg_callback, &tls_mode, 0, cb_tls_required,
-    N_("Always require STLS before entering authentication phase.\n"
-       "Deprecated, use \"tls required\" instead."),
-    N_("arg: bool") },
-#endif
+  { "tls", mu_cfg_section, &global_tls_conf },
+  
 #ifdef ENABLE_LOGIN_DELAY
   { "login-delay", mu_c_time, &login_delay, 0, NULL,
     N_("Set the minimal allowed delay between two successive logins.") },
@@ -355,7 +306,7 @@ pop3d_get_client_address (int fd, struct sockaddr_in *pcs)
       ofd       --  output descriptor
       tls       --  initiate encrypted connection */
 int
-pop3d_mainloop (int ifd, int ofd, enum tls_mode tls)
+pop3d_mainloop (int ifd, int ofd, struct pop3d_srv_config *cfg)
 {
   int status = OK;
   char buffer[512];
@@ -365,24 +316,18 @@ pop3d_mainloop (int ifd, int ofd, enum tls_mode tls)
      
   mu_set_signals (pop3d_child_signal, sigtab, MU_ARRAY_SIZE (sigtab));
 
-  if (tls == tls_unspecified)
-    tls = tls_available ? tls_ondemand : tls_no;
-  else if (tls != tls_no && !tls_available)
-    {
-      mu_error (_("TLS is not configured, but requested in the "
-		  "configuration"));
-      tls = tls_no;
-    }
-  
-  pop3d_setio (ifd, ofd, tls == tls_connection);
+  pop3d_setio (ifd, ofd,
+	       cfg->tls_mode == tls_connection ? &cfg->tls_conf : NULL);
 
-  if (tls == tls_required)
+  if (cfg->tls_mode == tls_required)
     initial_state = INITIAL;
   
-  state = tls == tls_connection ? AUTHORIZATION : initial_state;
+  state = cfg->tls_mode == tls_connection ? AUTHORIZATION : initial_state;
 
   pop3d_session_init (&session);
-  session.tls = tls;
+  session.tls_mode = cfg->tls_mode;
+  session.tls_conf = &cfg->tls_conf;
+  
   /* FIXME: state should also be in the session? */
   
   /* Prepare the shared secret for APOP.  */
@@ -528,8 +473,7 @@ pop3d_connection (int fd, struct sockaddr *sa, int salen,
   else
     rc = 1;
 
-  pop3d_mainloop (fd, fd,
-		  cfg->tls_mode == tls_unspecified ? tls_mode : cfg->tls_mode);
+  pop3d_mainloop (fd, fd, cfg);
 
   if (rc == 0)
     clr_strerr_flt ();
@@ -569,6 +513,7 @@ main (int argc, char **argv)
   mu_tcpwrapper_cfg_init ();
   manlock_cfg_init ();
   mu_acl_cfg_init ();
+  mu_tls_cfg_init ();
   
   mu_m_server_create (&server, program_version);
   mu_m_server_set_config_size (server, sizeof (struct pop3d_srv_config));
@@ -645,11 +590,7 @@ main (int argc, char **argv)
   umask (S_IROTH | S_IWOTH | S_IXOTH);	/* 007 */
 
   /* Check TLS environment, i.e. cert and key files */
-#ifdef WITH_TLS
-  tls_available = mu_check_tls_environment ();
-  if (tls_available)
-    enable_stls ();
-#endif /* WITH_TLS */
+  mu_m_server_set_preflight (server, stls_preflight);
 
   /* Actually run the daemon.  */
   if (mu_m_server_mode (server) == MODE_DAEMON)
@@ -661,9 +602,12 @@ main (int argc, char **argv)
     }
   else
     {
+      struct pop3d_srv_config cfg;
+      memset (&cfg, 0, sizeof cfg);
+      cfg.tls_mode = tls_no;
       /* Make sure we are in the root directory.  */
       chdir ("/");
-      status = pop3d_mainloop (MU_STDIN_FD, MU_STDOUT_FD, tls_mode);
+      status = pop3d_mainloop (MU_STDIN_FD, MU_STDOUT_FD, &cfg);
     }
   
   if (status)

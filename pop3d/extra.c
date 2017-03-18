@@ -158,7 +158,7 @@ log_cipher (mu_stream_t stream)
 }
 
 void
-pop3d_setio (int ifd, int ofd, int tls)
+pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 {
   mu_stream_t str, istream, ostream;
   
@@ -175,10 +175,12 @@ pop3d_setio (int ifd, int ofd, int tls)
     pop3d_abquit (ERR_NO_OFILE);
 
   /* Combine the two streams into an I/O one. */
-#ifdef WITH_TLS
-  if (tls)
+  if (tls_conf)
     {
-      int rc = mu_tls_server_stream_create (&str, istream, ostream, 0);
+      int rc = mu_tls_stream_create (&str, istream, ostream,
+				     tls_conf,
+				     MU_TLS_SERVER,
+				     0);
       if (rc)
 	{
 	  mu_stream_unref (istream);
@@ -186,12 +188,9 @@ pop3d_setio (int ifd, int ofd, int tls)
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
 	  pop3d_abquit (ERR_FILE);
 	}
-      tls_done = 1;
       log_cipher (str);
     }
-  else
-#endif
-  if (mu_iostream_create (&str, istream, ostream))
+  else if (mu_iostream_create (&str, istream, ostream))
     pop3d_abquit (ERR_FILE);
 
   /* Convert all writes to CRLF form.
@@ -228,9 +227,8 @@ pop3d_setio (int ifd, int ofd, int tls)
     }
 }
 
-#ifdef WITH_TLS
 int
-pop3d_init_tls_server ()
+pop3d_init_tls_server (struct mu_tls_config *tls_conf)
 {
   mu_stream_t tlsstream, stream[2];
   int rc;
@@ -243,7 +241,10 @@ pop3d_init_tls_server ()
       return 1;
     }
   
-  rc = mu_tls_server_stream_create (&tlsstream, stream[0], stream[1], 0);
+  rc = mu_tls_stream_create (&tlsstream, stream[0], stream[1],
+			     tls_conf,
+			     MU_TLS_SERVER,
+			     0);
   mu_stream_unref (stream[0]);
   mu_stream_unref (stream[1]);
   if (rc)
@@ -263,7 +264,6 @@ pop3d_init_tls_server ()
     }
   return 0;
 }
-#endif
 
 void
 pop3d_bye ()

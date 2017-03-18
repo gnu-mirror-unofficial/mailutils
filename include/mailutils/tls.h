@@ -21,39 +21,67 @@
 
 #include <mailutils/types.h>
 #include <mailutils/cli.h>
+#include <mailutils/util.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct mu_tls_module_config
+struct mu_tls_config
 {
-  int enable;
-  
-  char *ssl_cert;
-  int ssl_cert_safety_checks;
-
-  char *ssl_key;
-  int ssl_key_safety_checks;
-  
-  char *ssl_cafile;
-  int ssl_cafile_safety_checks;
-
+  char *cert_file;
+  char *key_file;
+  char *ca_file;
   char *priorities;
 };
 
-extern int mu_tls_server_stream_create (mu_stream_t *stream, 
-			 	        mu_stream_t strin, mu_stream_t strout,
-				        int flags);
-extern int mu_tls_client_stream_create (mu_stream_t *stream,
-					mu_stream_t strin, mu_stream_t strout,
-					int flags);
-
-extern int mu_check_tls_environment (void);
-extern int mu_init_tls_libs (int x509);
-extern void mu_deinit_tls_libs (void);
+enum mu_tls_type
+  {
+    MU_TLS_CLIENT,
+    MU_TLS_SERVER
+  };
 
 extern int mu_tls_enable;
+extern int mu_tls_cert_file_checks;
+extern int mu_tls_key_file_checks;
+extern int mu_tls_ca_file_checks;
+
+#define MU_TLS_CERT_FILE_CHECKS			\
+  (MU_FILE_SAFETY_GROUP_WRITABLE		\
+   | MU_FILE_SAFETY_GROUP_WRITABLE		\
+   | MU_FILE_SAFETY_LINKED_WRDIR)
+
+#define MU_TLS_KEY_FILE_CHECKS			\
+  (MU_FILE_SAFETY_ALL & ~MU_FILE_SAFETY_OWNER_MISMATCH)
+
+#define MU_TLS_CA_FILE_CHECKS			\
+  (MU_FILE_SAFETY_GROUP_WRITABLE		\
+   | MU_FILE_SAFETY_GROUP_WRITABLE		\
+   | MU_FILE_SAFETY_LINKED_WRDIR)
+
+void mu_tls_cfg_init (void);
+  
+int mu_tls_stream_create (mu_stream_t *pstream,
+			  mu_stream_t strin, mu_stream_t strout,
+			  struct mu_tls_config const *conf,
+			  enum mu_tls_type type,
+			  int flags);
+int mu_tls_client_stream_create (mu_stream_t *pstream,
+				 mu_stream_t strin, mu_stream_t strout,
+				 int flags);
+
+void mu_deinit_tls_libs (void);
+int mu_init_tls_libs (void);
+
+enum mu_tls_config_status
+  {
+    MU_TLS_CONFIG_OK,         /* Configuration OK */
+    MU_TLS_CONFIG_NULL,       /* Configuration is empty */ 
+    MU_TLS_CONFIG_UNSAFE,     /* At least one file is considered unsafe */
+    MU_TLS_CONFIG_FAIL        /* Some files absent (or other system error) */
+  };
+
+int mu_tls_config_check (struct mu_tls_config const *conf, int verbose);
 
 extern struct mu_cli_capa mu_cli_capa_tls;
   
