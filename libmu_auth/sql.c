@@ -214,20 +214,23 @@ mu_sql_expand_query (const char *query, const char *ustr)
 static int
 get_field (mu_sql_connection_t conn, const char *id, char **ret, int mandatory)
 {
-  const char **name = mu_assoc_ref (mu_sql_module_config.field_map, id);
-  int rc = mu_sql_get_field (conn, 0, name ? *name : id, ret);
+  int rc;
+  const char *name = mu_assoc_get (mu_sql_module_config.field_map, id);
+  if (!name)
+    name = id;
+  rc = mu_sql_get_field (conn, 0, name, ret);
   if (rc)
     {
       if (mandatory || rc != MU_ERR_NOENT)
 	mu_error (_("cannot get SQL field `%s' (`%s'): %s"),
-		  id, name ? *name : id, mu_strerror (rc));
+		  id, name, mu_strerror (rc));
     }
   else if (!*ret)
     {
       if (mandatory)
 	{
 	  mu_error (_("SQL field `%s' (`%s') has NULL value"),
-		    id, name ? *name : id);
+		    id, name);
 	  rc = MU_ERR_READ;
 	}
       else

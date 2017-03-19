@@ -72,7 +72,7 @@ is the same as for the global section described above, e.g.:
 
 If the "tls" section is absent, but "tls-mode" is specified and it's
 value is anything but "no", the settings from the global "tls" section
-will be used.  Im this case, it is an error if the global "tls"
+will be used.  In this case, it is an error if the global "tls"
 section is not defined.
 
 

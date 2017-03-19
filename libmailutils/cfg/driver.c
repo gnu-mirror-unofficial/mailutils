@@ -617,10 +617,15 @@ static int
 parse_mapping (void *item, void *data)
 {
   struct mapping_closure *clos = data;
-  char *str = item;
+  struct mu_config_value *cval = item;
+  char const *str;
   size_t len;
   char *key, *val;
   int rc;
+
+  if (mu_cfg_assert_value_type (cval, MU_CFG_STRING))
+    return 1;
+  str = cval->v.string;
   
   len = strcspn (str, "=");
   if (str[len] == 0)
