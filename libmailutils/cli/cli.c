@@ -33,6 +33,7 @@
 #include <mailutils/io.h>
 #include <mailutils/syslog.h>
 #include <mailutils/mu_auth.h>
+#include <mailutils/gitinfo.h>
 
 #define MU_LEGACY_CONFIG_FILE SYSCONFDIR "/mailutils.rc"
 
@@ -59,10 +60,11 @@ const char mu_version_copyright[] =
 void
 mu_version_hook (struct mu_parseopt *po, mu_stream_t stream)
 {
-#ifdef GIT_DESCRIBE
-  mu_stream_printf (stream, "%s (%s) %s [%s]\n",
+#if MU_GIT_COMMIT_DISTANCE > 0  
+  mu_stream_printf (stream, "%s (%s) %s-%d [%s]\n",
 		    mu_program_name, PACKAGE_NAME, PACKAGE_VERSION,
-		    GIT_DESCRIBE);
+		    MU_GIT_COMMIT_DISTANCE,
+		    MU_GIT_DESCRIBE_STRING);
 #else
   mu_stream_printf (stream, "%s (%s) %s\n", mu_program_name,
 		    PACKAGE_NAME, PACKAGE_VERSION);

@@ -1370,6 +1370,12 @@ CPPFLAGS="$CPPFLAGS -DSYSCONFDIR=\\\"\$(sysconfdir)\\\""
 # Doc hints.
 IMPRIMATUR_INIT([doc/imprimatur])
 
+AC_PATH_PROG([PERL], perl)
+if test -z "$PERL"; then
+  PERL=false
+fi  
+AC_SUBST([GITINFO],'$(PERL) $(mu_aux_dir)/gitinfo.pl')
+
 AC_CONFIG_COMMANDS([status],[
 cat <<EOF
 

@@ -15,7 +15,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-BUILT_SOURCES=errno.h types.h
+BUILT_SOURCES=errno.h types.h gitinfo.h
 EXTRA_DIST=errno.hin types.hin
 errno.h: $(top_srcdir)/libmailutils/diag/errors errno.hin
 	$(AM_V_GEN)$(AWK) -f $(mu_aux_dir)/generr.awk $(top_srcdir)/libmailutils/diag/errors errno.hin > errno.h
@@ -24,7 +24,15 @@ types.h: $(top_srcdir)/include/mailutils/types.hin Makefile
 	$(AM_V_GEN)sed -e 's/_MU_OFF_TYPE_/$(MU_OFF_TYPE)/' \
                        -e 's/_MU_DEFAULT_RECORD_/$(MU_DEFAULT_RECORD)/' \
                        -e 's/_MU_PRI_OFF_T_/$(MU_PRI_OFF_T)/' \
-                   $(top_srcdir)/include/mailutils/types.hin > $@
+                   $(top_srcdir)/include/mailutils/types.hin > types.h
+
+gitinfo.h: $(top_srcdir)/ChangeLog
+	$(AM_V_GEN)if ! $(GITINFO) -Hc -ogitinfo.h \
+           && test ! -f $(srcdir)/gitinfo.h; then \
+	  echo '/* no info */' > gitinfo.h;\
+	fi
+
+
 DISTCLEANFILES = types.h
 
 pkginclude_HEADERS = \
@@ -51,6 +59,7 @@ pkginclude_HEADERS = \
  error.h\
  filter.h\
  folder.h\
+ gitinfo.h\
  glob.h\
  gsasl.h\
  guile.h\

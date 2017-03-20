@@ -108,6 +108,6 @@ mu-setup.h: Makefile.am $(MODULES) $(IDLE_MODULES)
 	$(AM_V_GEN)$(AWK) -f $(srcdir)/mu-setup.awk -v mode=h \
            $(MODULES) $(IDLE_MODULES) > mu-setup.h
 
-mu-setup.c: Makefile.am $(MODULES)
+mu-setup.c: Makefile.am $(MODULES) $(IDLE_MODULES)
 	$(AM_V_GEN)$(AWK) -f $(srcdir)/mu-setup.awk -v mode=c \
            $(MODULES) $(IDLE_MODULES) > mu-setup.c

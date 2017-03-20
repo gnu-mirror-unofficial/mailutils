@@ -120,9 +120,8 @@ SUBDIRS = . \
  $(MOVEMAIL_DIR)\
  $(MIMEVIEW_DIR)
 
-EXTRA_DIST = COPYING.LESSER paths git-describe git-describe.h
-BUILT_SOURCES = git-describe git-describe.h
-DISTCLEANFILES = pathdefs.h git-describe.h
+EXTRA_DIST = COPYING.LESSER paths
+DISTCLEANFILES = pathdefs.h
 
 gen_start_date = "2008-12-08"
 prev_change_log = "doc/ChangeLog.CVS"
@@ -155,20 +154,7 @@ ChangeLog:
 	  mv cl-t ChangeLog;                                               \
 	fi
 
-.PHONY: git-describe
-git-describe:
-	$(AM_V_GEN)if test -d .git; then \
-		dirty=`git diff-index --name-only HEAD 2>/dev/null` || dirty=;\
-		test -n "$$dirty" && dirty="-dirty"; \
-		descr=`git describe`; \
-		echo $${descr}$$dirty > git-describe.tmp; \
-		test -f git-describe && \
-                  cmp git-describe.tmp git-describe >/dev/null || \
-		  cp git-describe.tmp git-describe; \
-	        rm git-describe.tmp; \
-	fi
-
-dist-hook: ChangeLog git-describe
+dist-hook: ChangeLog
 	@PATCHLEV=`echo "$(PACKAGE_VERSION)" | \
                    sed -r "s/[0-9]+\.[0-9]+\.?//"`; \
 	if test $${PATCHLEV:-0} -lt 50; then \
@@ -178,30 +164,20 @@ dist-hook: ChangeLog git-describe
 		fi; \
 	fi
 
-git-describe.h: git-describe
-	$(AM_V_GEN)if test -f $(srcdir)/git-describe; then \
-	  sed '1s/.*/#define GIT_DESCRIBE "&"/' $(srcdir)/git-describe; \
+alpha:
+	version=`$(GITINFO) -H'$$refversion{?$$n>0??-$$n?}'`;\
+	if test -n "$$version"; then\
+	  $(MAKE) dist distdir=$(PACKAGE)-$$version; \
 	else \
-          echo "/* No git tag */"; \
-	fi > git-describe.h.tmp; \
-	test -f git-describe.h && \
-          cmp git-describe.h.tmp git-describe.h >/dev/null || \
-          cp git-describe.h.tmp git-describe.h; \
-	rm git-describe.h.tmp
+	  $(MAKE) dist; \
+	fi
 
-alpha: git-describe
-	$(AM_V_GEN)if test -f $(srcdir)/git-describe; then \
-	  tag=`head -n 1 $(srcdir)/git-describe`; \
-	else \
-	  tag=`date +"%Y%m%d"`; \
-	fi; \
-	$(MAKE) dist distdir=$(PACKAGE)-$(VERSION)-$$tag
 
 alphacheck:
-	$(AM_V_GEN)if test -f $(srcdir)/git-describe; then \
-	  tag=`head -n 1 $(srcdir)/git-describe`; \
+	version=`$(GITINFO) -H'$$refversion{?$$n>0??-$$n?}'`;\
+	if test -n "$$version"; then\
+	  $(MAKE) distcheck distdir=$(PACKAGE)-$$version; \
 	else \
-	  tag=`date +"%Y%m%d"`; \
-	fi; \
-	$(MAKE) distcheck distdir=$(PACKAGE)-$(VERSION)-$$tag
+	  $(MAKE) distcheck; \
+	fi
 

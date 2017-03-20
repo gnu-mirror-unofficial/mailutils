@@ -22,7 +22,8 @@ EXTRA_DIST = \
  mailutils.spec.in\
  texify.sed\
  sqlmod.sh\
- generr.awk
+ generr.awk\
+ gitinfo.pl
 
 m4datadir = $(datadir)/aclocal
 dist_m4data_DATA = mailutils.m4

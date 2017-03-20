@@ -34,19 +34,10 @@ dnl
 m4_define([MUT_VERSION],[
 AT_SETUP([$1 version])
 
-AT_CHECK([$1 --version | sed '1{s/ *[\[.*\]]//;q;}' ],
+AT_CHECK([$1 --version | sed ['1{s/-[0-9][0-9]* //;s/ *\[.*\]//;q;}'] ],
          [0],
          [$1 (AT_PACKAGE_NAME) AT_PACKAGE_VERSION
-],
-[],
-[cat >.xfailfile <<'_EOT'
-
-==============================================================
-WARNING: Not using the proper version, *all* checks dubious...
-==============================================================
-_EOT
-],
-[rm -f $[]XFAILFILE])
+])
 
 AT_CLEANUP
 ])
