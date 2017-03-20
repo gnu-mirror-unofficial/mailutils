@@ -20,8 +20,6 @@ struct mu_tls_config global_tls_conf;
 
 static struct pop3d_command command_table[] = {
   { "STLS", pop3d_stls },
-#define COMMAND_TABLE_STLS 0
-#define COMMAND_TABLE_PLAIN 1
   { "RETR", pop3d_retr },
   { "DELE", pop3d_dele },
   { "USER", pop3d_user },
@@ -38,13 +36,11 @@ static struct pop3d_command command_table[] = {
   { NULL }
 };
 
-static struct pop3d_command *command_table_head;
-
 pop3d_command_handler_t
 pop3d_find_command (const char *name)
 {
   struct pop3d_command *p;
-  for (p = command_table_head; p->name; p++)
+  for (p = command_table; p->name; p++)
     {
       if (mu_c_strcasecmp (name, p->name) == 0)
 	return p->handler;
@@ -137,11 +133,6 @@ stls_preflight (mu_m_server_t msrv)
   if (errors)
     return 1;
 
-  if (tls_requested)
-    command_table_head = command_table + COMMAND_TABLE_STLS;
-  else
-    command_table_head = command_table + COMMAND_TABLE_PLAIN;
-  
   return 0;
 }
 

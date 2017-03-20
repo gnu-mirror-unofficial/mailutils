@@ -22,6 +22,9 @@
 int
 pop3d_stls (char *arg, struct pop3d_session *session)
 {
+  if (session->tls_mode == tls_no)
+    return ERR_BAD_CMD;
+      
   if (strlen (arg) != 0)
     return ERR_BAD_ARGS;
 
