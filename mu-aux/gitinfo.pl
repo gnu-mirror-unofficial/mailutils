@@ -27,15 +27,14 @@ gitinfo.pl - build version tag for mailutils
 =head1 SYNOPSIS
 
 B<perl gitinfo.pl>
-[B<-sv>]
 [B<-C> I<DIR>]
 [B<-H> I<FORMAT>]    
 [B<-o> I<FILE>]
+[B<-r> B<recent> | B<released> | B<stable>]    
 [B<--directory=>I<DIR>]
 [B<--format=>I<FORMAT>]    
 [B<--output=>I<FILE>]
-[B<--stable>]
-[B<--verbose>]
+[B<--reference=>B<recent> | B<released> | B<stable>]    
 
 B<perl gitinfo.pl> B<-h> | B<--help> | B<--usage>
 
@@ -53,31 +52,79 @@ The following variables are defined:
 
 =over 4
 
-=item B<package>
+=item B<package_name>
 
 Package name, obtained from the B<AC_INIT> line in F<configure.ac>.
     
-=item B<version>
+=item B<package_version>
 
 Package version, from the same source.    
 
+=item B<recent_version>
+
+Most recent version as listed in the B<NEWS> file.
+    
+=item B<recent_date>
+
+Date when the most recent version was released (if it was).
+
+=item B<recent_commit>
+
+Hash of the commit corresponding to the resent version.    
+    
+=item B<recent_distance>
+
+Distance (number of commits) between B<recent_commit> and B<HEAD>.    
+    
+=item B<released_version>
+
+The most recent released version as per B<NEWS> file.
+
+=item B<released_date>
+
+Date when it was released.    
+
+=item B<released_commit>
+
+Hash of the commit corresponding to B<released_version>.    
+    
+=item B<released_distance>
+
+Distance (number of commits) between B<released_commit> and B<HEAD>.    
+    
+=item B<stable_version>
+
+The most recent stable version, i.e. most recently released version
+which number doesn't have patchlevel part.  Most often is the same
+as B<released_version>.    
+    
+=item B<stable_date>
+
+Date of the stable release.    
+
+=item B<stable_commit>
+    
+Hash of the commit corresponding to B<stable_version>.
+    
+=item B<stable_distance>
+
+Distance between B<stable_commit> and B<HEAD>.
+    
 =item B<refversion>
 
-Reference version.  By default, it is the same as B<version> above.  If,
-however, the B<-s> (B<--stable>) option is given, B<refversion> is set
-to the most recent stable release.  The B<NEWS> file is analyzed in order
-to find it.    
+Reference version, selected by the B<--reference> command line option.
+By default, it is the same as B<recent_version> above. 
 
 =item B<refdate>
 
-Date when B<refversion> was released.  Normally this is meaningful only for
-stable versions (in other words, when the B<-s> option is given).    
+Date when B<refversion> was released.  May be absent, if the reference
+version was never released.    
     
 =item B<refcommit>
 
 Hash of the commit corresponding to the B<refversion>.
     
-=item B<n>
+=item B<refdist>
 
 Number of commits between B<refcommit> and B<HEAD>.    
 
@@ -131,7 +178,7 @@ format:
     #define MU_GIT_COMMIT_HASH "$commit_hash"
     #define MU_GIT_COMMIT_TIME "$commit_time"
     #define MU_GIT_COMMIT_SUBJECT "$commit_subject"
-    {?$n>0??#define MU_GIT_COMMIT_DISTANCE $n
+    {?$refdist>0??#define MU_GIT_COMMIT_DISTANCE $refdist
     ?}#define MU_GIT_DESCRIBE_STRING "$describe{?$dirty??-dirty?}"
 
 =item B<all>
@@ -160,14 +207,11 @@ Select output format.  See B<DESCRIPTION> for the details.
 
 Output results to the I<FILE>, instead of the standard output.    
     
-=item B<-s>, B<--stable>
+=item B<-r>, B<--reference=>I<VERSION>
 
-Count versions from the most recent stable version.
+Select the reference version.  Argument is one of: B<recent> (the default),
+B<released>, or B<stable>.
     
-=item B<-v>, B<--verbose>
-
-Verbose output.
-
 =item B<-h>
 
 Display short help summary.
@@ -199,7 +243,7 @@ sub find_commit($) {
     return $s;
 }
 
-# find_count(VERSIN)
+# find_count(VERSION)
 # Returns number of commits between VERSION and the current commit.
 sub find_count($) {
     my $v = shift;
@@ -211,15 +255,10 @@ sub find_count($) {
     return $s;
 }
 
-# recent_version(STABLE)
-# Returns the most recent version described in the NEWS file.
-# If STABLE is true, returns the most recent stable version, i.e.
-# the one, for which release date is set.
-sub recent_version($) {
-    my ($stable) = @_;
+sub scan_news($) {
+    my ($hashref) = @_;
     my $file = 'NEWS';
     open(my $fd, '<', $file) or die "can't open $file: $!";
-    my ($version, $date);
     while (<$fd>) {
 	chomp;
 	if (/^(?:\*[[:space:]]+)?
@@ -227,13 +266,25 @@ sub recent_version($) {
 	      ([[:digit:]](?:[.,][[:digit:]]+){1,2}(?:[[:digit:]._-])*)
 	      (?:(?:.*)[[:punct:]][[:space:]]*
 	      ([[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}))?/x) {
-	    next if ($stable && !defined($2));
-	    ($version, $date) = ($1, $2);
-	    last;
+	    my ($ver, $date) = ($1, $2);
+	    unless (exists($hashref->{recent_version})) {
+		$hashref->{recent_version} = $ver;
+		$hashref->{recent_date} = $date if $date;
+	    }
+	    if ($date) {
+		if (!exists($hashref->{released_version})) {
+		    $hashref->{released_version} = $ver;
+		    $hashref->{released_date} = $date;
+		}
+		if ($ver =~ /^\d+\.\d+$/) {
+		    $hashref->{stable_version} = $ver;
+		    $hashref->{stable_date} = $date;
+		    last;
+		}
+	    }
 	}
     }
     close $fd;
-    return ($version, $date);
 }
 
 # this_version()
@@ -375,8 +426,7 @@ sub eval_format {
     return join('', @res);
 }
 
-my $from_stable;
-my $verbose;
+my $refpoint = 'recent';
 my $output;
 my $format = 'all';
 
@@ -385,7 +435,7 @@ my %fmtab = (
 #define MU_GIT_COMMIT_HASH "$commit_hash"
 #define MU_GIT_COMMIT_TIME "$commit_time"
 #define MU_GIT_COMMIT_SUBJECT "$commit_subject"
-{?$n>0??#define MU_GIT_COMMIT_DISTANCE $n
+{?$refdist>0??#define MU_GIT_COMMIT_DISTANCE $refdist
 ?}#define MU_GIT_DESCRIBE_STRING "$describe{?$dirty??-dirty?}"
 EOT
     ,
@@ -412,8 +462,7 @@ GetOptions("help" => sub {
 	      pod2usage(-exitstatus => 0, -verbose => 0);
 	   },
 	   "directory|C=s" => \$dir,
-	   "stable|s" => \$from_stable,
-	   "verbose|v" => \$verbose,
+	   "reference|r=s" => \$refpoint,
 	   "format|H=s" => \$format,
 	   "output|o=s" => \$output
     ) or exit(1);
@@ -431,26 +480,33 @@ if ($dir) {
 }
 
 if (-d '.git') {
-    ($gitinfo{refversion}, my $date) = recent_version($from_stable);
-    $gitinfo{refdate} = $date if defined $date;
-    if ($verbose) {
-	print STDERR "# counting from version $gitinfo{refversion}";
-	print STDERR ", released on $gitinfo{refdate}"
-	    if exists $gitinfo{refdate};
-	print STDERR "\n";
+    scan_news(\%gitinfo);
+    foreach my $pfx (qw(ref recent_ stable_ released_)) {
+	my $name = $pfx . 'version';
+	if (exists($gitinfo{$name})) {
+	    my $com = $gitinfo{$pfx . 'commit'} = find_commit($gitinfo{$name});
+	    my $n = find_count($com);
+	    if ($n =~ /^\d+$/) {
+		$gitinfo{$pfx . 'dist'} = $n;
+	    }
+	}
     }
 
-    $gitinfo{refcommit} = find_commit($gitinfo{refversion});
-    print STDERR "# commit $gitinfo{refcommit}\n"
-	if $verbose;
-    my $n = find_count($gitinfo{refcommit});
-
-    if ($n =~ /^[1-9][0-9]*$/) {
-	$gitinfo{n} = $n;
+    unless (exists($gitinfo{$refpoint . '_version'})) {
+	die "reference point '$refpoint' doesn't exist";
     }
+
+    @gitinfo{qw(refversion refdate refcommit refdist)} =
+        @gitinfo{map { "${refpoint}_$_" } qw(version date commit dist)};
+
     last_commit_info(\%gitinfo);
     git_describe(\%gitinfo);
-    ($gitinfo{package}, $gitinfo{version}) = this_version;
+    ($gitinfo{package_name}, $gitinfo{package_version}) = this_version;
+    if ($gitinfo{recent_version} =~ /^\d+\.\d+$/) {
+	$gitinfo{upload_dest} = 'ftp';
+    } else {
+	$gitinfo{upload_dest} = 'alpha';
+    }
 }
 
 $format = $fmtab{$format} while exists $fmtab{$format};

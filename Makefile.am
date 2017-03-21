@@ -165,7 +165,7 @@ dist-hook: ChangeLog
 	fi
 
 alpha:
-	version=`$(GITINFO) -H'$$refversion{?$$n>0??-$$n?}'`;\
+	version=`$(GITINFO) -H'$$refversion{?$$refdist>0??-$$refdist?}'`;\
 	if test -n "$$version"; then\
 	  $(MAKE) dist distdir=$(PACKAGE)-$$version; \
 	else \
@@ -174,7 +174,7 @@ alpha:
 
 
 alphacheck:
-	version=`$(GITINFO) -H'$$refversion{?$$n>0??-$$n?}'`;\
+	version=`$(GITINFO) -H'$$refversion{?$$refdist>0??-$$refdist?}'`;\
 	if test -n "$$version"; then\
 	  $(MAKE) distcheck distdir=$(PACKAGE)-$$version; \
 	else \
