@@ -614,19 +614,14 @@ struct mapping_closure
 };
 
 static int
-parse_mapping (void *item, void *data)
+parse_mapping_str (void *item, void *data)
 {
   struct mapping_closure *clos = data;
-  struct mu_config_value *cval = item;
-  char const *str;
+  char const *str = item;
   size_t len;
   char *key, *val;
   int rc;
 
-  if (mu_cfg_assert_value_type (cval, MU_CFG_STRING))
-    return 1;
-  str = cval->v.string;
-  
   len = strcspn (str, "=");
   if (str[len] == 0)
     {
@@ -642,6 +637,16 @@ parse_mapping (void *item, void *data)
   rc = mu_assoc_install (clos->assoc, key, val);
   free (key);
   return rc;
+}
+
+static int
+parse_mapping_val (void *item, void *data)
+{
+  struct mu_config_value *cval = item;
+
+  if (mu_cfg_assert_value_type (cval, MU_CFG_STRING))
+    return MU_ERR_PARSE;
+  return parse_mapping_str ((void*) cval->v.string, data);
 }
 
 int
@@ -665,12 +670,12 @@ mu_cfg_field_map (struct mu_config_value const *val, mu_assoc_t *passoc,
       mu_list_set_destroy_item (list, mu_list_free_item);
       rc = mu_string_split (val->v.string, ":", list);
       if (rc == 0)
-	rc = mu_list_foreach (list, parse_mapping, &clos);
+	rc = mu_list_foreach (list, parse_mapping_str, &clos);
       mu_list_destroy (&list);
       break;
 
     case MU_CFG_LIST:
-      rc = mu_list_foreach (val->v.list, parse_mapping, &clos);
+      rc = mu_list_foreach (val->v.list, parse_mapping_val, &clos);
       break;
 
     case MU_CFG_ARRAY:
