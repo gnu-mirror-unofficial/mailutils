@@ -103,7 +103,7 @@ main (int argc, char **argv)
 
 	      for (j = 0; j < nmatch; j++)
  		printf ("%02zu: %.*s\n", j,
-			matches[j].rm_eo - matches[j].rm_so,
+			(int) (matches[j].rm_eo - matches[j].rm_so),
 			a + matches[j].rm_so);
 	    }
 	}
