@@ -317,6 +317,6 @@ imap4d_list (struct imap4d_session *session,
   free (cwd);
   free (ref);
   
-  return io_completion_response (command, status, resp_text[status]);
+  return io_completion_response (command, status, "%s", resp_text[status]);
 }
 
