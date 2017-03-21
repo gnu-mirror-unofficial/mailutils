@@ -31,6 +31,8 @@ _parse_lc_all (const char *arg, struct mu_lc_all *str, int flags)
   char *s;
   size_t n;
   
+  str->flags = 0;
+  
   n = strcspn (arg, "_.@");
   if (flags & MU_LC_LANG)
     {
@@ -103,17 +105,22 @@ _parse_lc_all (const char *arg, struct mu_lc_all *str, int flags)
 void
 mu_lc_all_free (struct mu_lc_all *str)
 {
-  free (str->language);
-  free (str->territory);
-  free (str->charset);
-  free (str->modifier);
+  if (str->flags & MU_LC_LANG)
+    free (str->language);
+  if (str->flags & MU_LC_TERR)
+    free (str->territory);
+  if (str->flags & MU_LC_CSET)
+    free (str->charset);
+  if (str->flags & MU_LC_MOD)
+    free (str->modifier);
+  str->flags = 0;
 }
 
 int
 mu_parse_lc_all (const char *arg, struct mu_lc_all *str, int flags)
 {
   int rc;
-
+  
   memset (str, 0, sizeof (str[0]));
   if (!arg)
     {
@@ -125,18 +132,60 @@ mu_parse_lc_all (const char *arg, struct mu_lc_all *str, int flags)
 	}
       return 0;
     }
-  
-  rc = _parse_lc_all (arg, str, flags);
-  if (rc == 0 && !str->charset)
+
+  /* If charset is requested (MU_LC_CSET), request also language and
+     territory.  These will be used if ARG doesn't provide the charset
+     information.  In any case, the surplus data will be discarded before
+     returning. */
+  rc = _parse_lc_all (arg, str,
+		      (flags & MU_LC_CSET)
+		        ? (flags | MU_LC_LANG | MU_LC_TERR)
+		        : flags); 
+  if (rc == 0 && (flags & MU_LC_CSET))
     {
-      const char *charset = mu_charset_lookup (str->language, str->territory);
-      if (charset)
+      if (!str->charset)
 	{
-	  str->charset = strdup (charset);
-	  if (!str->charset)
-	    rc = ENOMEM;
+	  /* The caller requested charset, but we're unable to satisfy
+	     the request based on the ARG only.  Try the charset table
+	     lookup. */
+	  const char *charset =
+	    mu_charset_lookup (str->language, str->territory);
+	  if (charset)
+	    {
+	      /* Found it.  Fill in the charset field. */
+	      str->charset = strdup (charset);
+	      if (!str->charset)
+		{
+		  rc = ENOMEM;
+		  goto err;
+		}
+	      str->flags |= MU_LC_CSET;
+	    }
+	}
+
+      /* The STR struct most probably contains data not requested by
+	 the caller.  First, see what these are.  The following leaves
+	 in FLAGS only those bits that weren't requested, but were filled
+	 in just in case: */
+      flags = ~flags & str->flags;
+
+      /* Free the surplus data and clear the corresponding flag bits. */
+      if (flags & MU_LC_LANG)
+	{
+	  free (str->language);
+	  str->language = NULL;
+	  str->flags &= ~MU_LC_LANG;
+	}
+      
+      if (flags & MU_LC_TERR)
+	{
+	  free (str->territory);
+	  str->territory = NULL;
+	  str->flags &= ~MU_LC_TERR;
 	}
     }
+
+ err:
   if (rc)
     mu_lc_all_free (str);
   return rc;

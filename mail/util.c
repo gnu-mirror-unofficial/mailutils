@@ -1051,31 +1051,19 @@ util_rfc2047_decode (char **value)
   char *charset = NULL;
   char *tmp;
   int rc;
+  struct mu_lc_all lc_all = { .flags = 0 };
 
   if (!*value || mailvar_get (&charset, "charset", mailvar_type_string, 0))
     return;
 
   if (mu_c_strcasecmp (charset, "auto") == 0)
     {
-      static char *saved_charset;
+      tmp = getenv ("LC_ALL");
+      if (!tmp)
+	tmp = getenv ("LANG");
 
-      if (!saved_charset)
-	{
-	  /* Try to deduce the charset from LC_ALL or LANG variables */
-
-	  tmp = getenv ("LC_ALL");
-	  if (!tmp)
-	    tmp = getenv ("LANG");
-
-	  if (tmp)
-	    {
-	      struct mu_lc_all lc_all;
-	      
-	      if (mu_parse_lc_all (tmp, &lc_all, MU_LC_CSET) == 0)
-		saved_charset = lc_all.charset;
-	    }
-	}
-      charset = saved_charset; /* NOTE: a minor memory leak */
+      if (tmp && mu_parse_lc_all (tmp, &lc_all, MU_LC_CSET) == 0)
+	charset = lc_all.charset;		  
     }
 
   if (!charset)
@@ -1092,6 +1080,8 @@ util_rfc2047_decode (char **value)
       free (*value);
       *value = tmp;
     }
+  if (lc_all.flags)
+    mu_lc_all_free (&lc_all);
 }
 
 const char *
