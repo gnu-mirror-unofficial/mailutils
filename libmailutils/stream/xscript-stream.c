@@ -137,8 +137,10 @@ print_transcript (struct _mu_xscript_stream *str, int flag,
 		  if (buf[i] == '"')
 		    {
 		      for (i++; i < len && buf[i] != '"'; i++)
-			if (buf[i] == '\'')
+			if (buf[i] == '\\')
 			  i++;
+		      if (i < len && buf[i] == '"')
+			i++;
 		    }
 		  else
 		    {
