@@ -87,11 +87,11 @@ int mu_debug_get_iterator (mu_iterator_t *piterator, int skipunset);
 #define MU_ASSERT(expr)						\
  do								\
   {								\
-    int rc = expr;						\
-    if (rc)							\
+    int __rc = expr;						\
+    if (__rc)							\
       {								\
 	mu_error ("%s:%d: " #expr " failed: %s",                \
-                  __FILE__, __LINE__, mu_strerror (rc));	\
+                  __FILE__, __LINE__, mu_strerror (__rc));	\
 	abort ();						\
       }								\
   }                                                             \
