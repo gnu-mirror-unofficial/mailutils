@@ -1,0 +1,113 @@
+eval '(exit $?0)' && eval 'exec perl -wS "$0" "$@"'
+  & eval 'exec perl -wS "$0" $argv:q'
+    if 0;
+
+use strict;
+use POSIX qw(strftime);
+use Getopt::Long qw(:config gnu_getopt no_ignore_case);
+
+my @append_files;
+my $force;
+my $verbose;
+my $changelog_file = 'ChangeLog';
+
+GetOptions('append|a=s@' => \@append_files,
+	   'file|F=s' => \$changelog_file,
+	   'force|f' => \$force,
+	   'verbose|v' => \$verbose) or exit(1);
+
+if (! -d '.git') {
+    exit 0;
+}
+
+my ($hash, $date) = split / /, `git log --max-count=1 --pretty=format:'%H %ad' --date=short HEAD`;
+
+my @modlines;
+if (open(my $fd, '-|', 'git diff-index --name-status HEAD 2>/dev/null')) {
+    chomp(@modlines = map {chomp; [split /\s+/, $_, 2]} <$fd>);
+    close $fd;
+}
+
+if (@modlines) {
+    $date = strftime '%Y-%m-%d', localtime;
+}
+
+my @header;
+
+push @header, "$date  Automatically generated  <bug-mailutils\@gnu.org>";
+push @header, '';
+push @header, "\tHEAD $hash";
+push @header, '';
+
+my %status = (
+    A => 'New file',
+    C => 'Copied file',
+    D => 'Removed file',
+    M => 'Changed',
+    R => 'Renamed',
+    T => 'Type change',
+    U => 'Unmerged',
+    X => 'Unknown'
+);
+
+if (@modlines) {
+    push @header, "\tUncommitted changes:";
+    push @header, '';
+
+    push @header, map {
+	"\t* $_->[1]: " . ($status{$_->[0]} || 'Unknown') . ";"
+    } @modlines;
+    push @header, '';
+}
+
+sub headcmp {
+    my $file = shift;
+    if (open(my $fd, '<', $changelog_file)) {
+	while (<$fd>) {
+	    my $line = shift;
+	    last unless defined($line);
+	    chomp;
+	    return 0 unless $line eq $_;
+	}
+	return 1 unless @_;
+    }
+    return 0;
+}
+
+if (!$force && headcmp($changelog_file, @header)) {
+    exit 0;
+}
+
+print "  GEN $changelog_file\n" if $verbose;
+close STDOUT;
+
+open(STDOUT, '>', $changelog_file)
+    or die "Can't open $changelog_file for writing: $!";
+
+for (@header) {
+    print "$_\n";
+}
+
+system(@ARGV);
+foreach my $file (@append_files) {
+    if (open(my $fd, '<', $file)) {
+	while (<$fd>) {
+	    chomp;
+	    last if /^Local Variables:/;
+	    next if /^\f$/;
+	    print "$_\n";
+	}
+	close $fd;
+    } else {
+	warn "can't open $file: $!";
+    }
+}
+
+print "\f\nLocal Variables:\n";
+print <<'EOT';
+mode: change-log
+version-control: never
+buffer-read-only: t
+End:
+EOT
+;

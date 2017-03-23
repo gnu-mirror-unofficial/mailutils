@@ -123,45 +123,45 @@ SUBDIRS = . \
 EXTRA_DIST = COPYING.LESSER paths
 DISTCLEANFILES = pathdefs.h
 
+# Trigger creation of the ChangeLog
+noinst_DATA = ChangeLog
+
 gen_start_date = "2008-12-08"
 prev_change_log = "doc/ChangeLog.CVS"
 amend_file=ChangeLog.amend
 
 .PHONY: ChangeLog
-ChangeLog:
-	@if test -d .git; then                                             \
-	  cmd="$(top_srcdir)/build-aux/gitlog-to-changelog";               \
-	  if test -n "$(amend_file)"; then                                 \
-            cmd="$$cmd --amend=$(amend_file)";                             \
-          fi;                                                              \
-	  if test -n "$(gen_start_date)"; then                             \
-	    cmd="$$cmd --since=\"$(gen_start_date)\"";                     \
-	  fi;                                                              \
-	  $$cmd --format='%s%n%n%b%n' |                                    \
-            sed '/<unknown>$$/d' | fmt -s > cl-t;                          \
-          if test -n "$(prev_change_log)" && test -f "$(prev_change_log)"; \
-	  then                                                             \
-	    echo "" >> cl-t;                                               \
-	    cat "$(prev_change_log)" |                                     \
-	      sed '/^Local Variables:/,/^End:/d' >> cl-t;                  \
-	  fi;                                                              \
-	  echo "Local Variables:" >> cl-t;                                 \
-	  echo "mode: change-log" >> cl-t;                                 \
-	  echo "version-control: never"  >> cl-t;                          \
-	  echo "buffer-read-only: t" >> cl-t;                              \
-	  echo "End:" >> cl-t;                                             \
-	  rm -f ChangeLog;                                                 \
-	  mv cl-t ChangeLog;                                               \
+ChangeLog: 
+	$(AM_V_at)if test -d .git; then					\
+	    cmd="$(top_srcdir)/mu-aux/gencl --file=ChangeLog --verbose";\
+            if test -n "$(prev_change_log)" && test -f "$(prev_change_log)"; \
+	    then							\
+		cmd="$$cmd --append=$(prev_change_log)";		\
+	    fi;								\
+	    cmd="$$cmd -- $(top_srcdir)/build-aux/gitlog-to-changelog"; \
+	    if test -n "$(amend_file)"; then                                 \
+              cmd="$$cmd --amend=$(amend_file)";                             \
+            fi;                                                              \
+	    if test -n "$(gen_start_date)"; then                             \
+	      cmd="$$cmd --since=\"$(gen_start_date)\"";                     \
+	    fi;                                                              \
+	    $$cmd --format='%s%n%n%b%n' | fmt -s;	                     \
 	fi
 
 dist-hook: ChangeLog
-	@PATCHLEV=`echo "$(PACKAGE_VERSION)" | \
-                   sed -r "s/[0-9]+\.[0-9]+\.?//"`; \
-	if test $${PATCHLEV:-0} -lt 50; then \
-		if grep -q FIXME NEWS; then \
-			echo >&2 "NEWS file contains FIXMEs"; \
-			exit 1; \
-		fi; \
+	@if head -n 6 ChangeLog | grep -q 'Uncommitted changes' ;	     \
+	then								     \
+	  echo >&2 "*** Source tree contains uncommitted changes";	     \
+	  echo >&2 "*** Aborting";					     \
+	  exit 1;							     \
+	fi;								     \
+	PATCHLEV=`echo "$(PACKAGE_VERSION)" | sed -r "s/[0-9]+\.[0-9]+\.?//"`;\
+	if test $${PATCHLEV:-0} -lt 50; then				     \
+	  if grep -q FIXME NEWS; then					     \
+	    echo >&2 "*** NEWS file contains FIXMEs";			     \
+	    echo >&2 "*** Aborting";					     \
+	    exit 1;							     \
+	  fi;								     \
 	fi
 
 alpha:
