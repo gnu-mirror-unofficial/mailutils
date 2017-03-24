@@ -73,7 +73,8 @@ noinst_PROGRAMS = \
  vexp\
  wicket\
  wordwrap\
- wsp
+ wsp\
+ xscript
 
 LDADD = ${MU_LIB_MAILUTILS}
 
@@ -169,7 +170,8 @@ TESTSUITE_AT = \
  wordwrap00.at\
  wordwrap01.at\
  wordwrap02.at\
- wordwrap03.at
+ wordwrap03.at\
+ xscript.at
 
 TESTSUITE = $(srcdir)/testsuite
 M4=m4

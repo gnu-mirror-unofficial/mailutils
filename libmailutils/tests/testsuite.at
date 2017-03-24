@@ -207,3 +207,5 @@ m4_include([mimehdr.at])
 m4_include([msgset.at])
 
 m4_include([globtest.at])
+
+m4_include([xscript.at])
