@@ -9,7 +9,6 @@ use Text::Wrap;
 use Data::Dumper;
 use threads;
 use Thread::Queue;
-use Time::ParseDate;
 use Safe;
 use Pod::Usage;
 use Pod::Man;
@@ -25,15 +24,9 @@ my $strip_cherry_pick;
 my $amend_file;
 my %amendment;
 my $append_dot;
+my $ignore_errors;
 
-sub set_date {
-    my ($time, $err) = parsedate($_[1], PREFER_PAST => 1, UK => 1);
-    unless (defined($time)) {
-	print STDERR "--$_[0]=$_[1]: $err\n";
-	exit(1);
-    }
-    return strftime('%Y-%m-%d', localtime($time));
-}
+my $exit_status = 0;
 
 =head1 NAME
 
@@ -42,7 +35,7 @@ gencl - generate ChangeLog from git log output
 =head1 SYNOPSIS
 
 B<gencl>
-[B<-fv>]    
+[B<-fiv>]    
 [B<-a> I<FILE>]
 [B<-F> I<FILE>]
 [B<--amend=>I<FILE>]
@@ -50,6 +43,7 @@ B<gencl>
 [B<--append=>I<FILE>]
 [B<--file=>I<FILE>]
 [B<--force>]
+[B<--ignore-errors>]    
 [B<--since=>I<DATE>]
 [B<--strip-cherry-pick>]
 [B<--until=>I<DATE>]    
@@ -101,6 +95,11 @@ Create I<FILE> instead of the B<ChangeLog>.
 
 Force recreating the ChangeLog, even if no new commits were added to the
 repository since its creation.
+
+=item B<-i>, B<--ignore-errors>
+
+Ignore non-fatal errors.  With this option in effect, B<gencl> exits with
+code 0 even if some errors were encountered while running.    
     
 =item B<-v>, B<--verbose>
 
@@ -108,13 +107,11 @@ Increase output verbosity.
 
 =item B<--since=>I<DATE>
 
-Convert only the logs since I<DATE>.  See B<Time::ParseDate>(3), for
-a list of valid I<DATE> formats.
+Convert only the logs since I<DATE> (B<YYYY-MM-DD>).
 
 =item B<--until=>I<DATE>
 
-Convert only the logs until I<DATE>.  See B<Time::ParseDate>(3), for
-a list of valid I<DATE> formats.
+Convert only the logs until I<DATE> (B<YYYY-MM-DD>).
     
 =item B<--strip-cherry-pick>
 
@@ -132,6 +129,25 @@ punctuation the end.
     
 =back
 
+=head1 EXIT CODES
+
+=over 4
+
+=item B<0>
+
+Success.
+
+=item B<1>
+
+Fatal error.
+
+=item B<2>
+
+Non-fatal error.  The B<--ignore-errors> (B<-i>) option instructs B<gencl>
+to exit with code B<0>, instead of B<2>.
+
+=back    
+    
 =head1 DIFFERENCES FROM GITLOG-TO-CHANGELOG
 
 =over 4
@@ -163,7 +179,7 @@ Each entry is reformatted using B<Text::Wrap>.
 =item 6
 
 The following B<gitlab-to-changelog> options are not implemented: B<--cluster>,
-B<--ignore-matching>, B<--ignore_line>.
+B<--ignore-matching>, B<--ignore-line>.
     
 =back
     
@@ -204,11 +220,12 @@ GetOptions(
     'file|F=s' => \$changelog_file,
     'force|f' => \$force,
     'verbose|v' => \$verbose,
-    'since=s' => sub { $since_date = set_date(@_) },
-    'until=s' => sub { $until_date = set_date(@_) },
+    'since=s' => \$since_date,
+    'until=s' => \$until_date,
     'strip-cherry-pick' => \$strip_cherry_pick,
     'amend=s' => \$amend_file,
-    'append-dot' => \$append_dot
+    'append-dot' => \$append_dot,
+    'ignore-errors|i' => \$ignore_errors
     ) or exit(1);
 
 if (! -d '.git') {
@@ -218,9 +235,12 @@ if (! -d '.git') {
 read_amend_file($amend_file) if $amend_file;
     
 $Text::Wrap::columns = 72;
-
+# Work over bug #79766 in Text::Wrap
+$Text::Wrap::huge = 'overflow' if $Text::Wrap::VERSION eq '2012.0818';
+    
 create_changelog();
-
+$exit_status = 0 if $ignore_errors;
+exit $exit_status;
 
 sub toplevel_entry {
     my ($hash, $date) = split / /,
@@ -303,6 +323,7 @@ sub read_amend_file {
 		if (exists($amendment{$hash})) {
 		    warn "$file:$.: duplicate SHA1 hash";
 		    warn $amendment{$hash}{locus} . ": previously defined here";
+		    $exit_status = 2;
 		}
 		$code = '';
 		$locus = "$file:$.";
@@ -313,6 +334,7 @@ sub read_amend_file {
 	    } else {
 		warn "$file:$.: expected SHA1, but found $_"
 		    unless $silent;
+		$exit_status = 2;
 		$silent = 1;
             }
 	} elsif ($state == STATE_HASH) {
@@ -348,6 +370,7 @@ sub tokenize_gitlog {
 	my %ent = ();
 	unless (/^log size (\d+)/) {
 	    warn "unexpected input: '$_'";
+	    $exit_status = 2;
 	    next;
 	}
 	my $size = $1;
@@ -369,6 +392,7 @@ sub tokenize_gitlog {
 	    } else {
 		warn "$.:$ent{hash}: failed to eval \"$code\" on \"$_\": \n$@\n";
 		warn $amendment{$ent{hash}}{locus} . ": code was defined here";
+		$exit_status = 2;
 	    }
 	}
 
@@ -433,10 +457,12 @@ sub tokenize_gitlog {
 	$line =~ s/^.*://;
 	push @unused, [ $line, $ref->{locus}, $hash ];
     }
-    foreach my $ent (sort { $a->[0] <=> $b->[0] } @unused) {
-	warn "$ent->[1]: unused entry: $ent->[2]\n";
+    if (@unused) {
+	$exit_status = 2;
+	foreach my $ent (sort { $a->[0] <=> $b->[0] } @unused) {
+	    warn "$ent->[1]: unused entry: $ent->[2]\n";
+	}
     }
-    
     print STDERR "tokenize_gitlog finished\n" if $verbose > 1;
 }
 
@@ -492,7 +518,10 @@ sub create_changelog {
     my $cvt_thr = threads->create(\&convert_entry, $q);
     $tok_thr->join();
     $cvt_thr->join();
-
+    if ($tok_thr->error() || $cvt_thr->error()) {
+	exit 1;
+    }
+    
     # Print additional files
     foreach my $file (@append_files) {
 	if (open(my $in, '<', $file)) {
@@ -505,6 +534,7 @@ sub create_changelog {
 	    close $in;
 	} else {
 	    warn "can't open $file: $!";
+	    $exit_status = 2;
 	}
     }
 

@@ -133,7 +133,7 @@ amend_file=ChangeLog.amend
 .PHONY: ChangeLog
 ChangeLog: 
 	$(AM_V_at)if test -d .git; then					\
-	    cmd="$(top_srcdir)/mu-aux/gencl --file=ChangeLog --verbose --append-dot";\
+	    cmd="$(top_srcdir)/mu-aux/gencl --verbose --append-dot";    \
             if test -n "$(prev_change_log)" && test -f "$(prev_change_log)"; \
 	    then							\
 		cmd="$$cmd --append=$(prev_change_log)";		\
@@ -148,14 +148,14 @@ ChangeLog:
 	fi
 
 dist-hook: ChangeLog
-	@if head -n 6 ChangeLog | grep -q 'Uncommitted changes' ;	     \
-	then								     \
-	  echo >&2 "*** Source tree contains uncommitted changes";	     \
-	  echo >&2 "*** Aborting";					     \
-	  exit 1;							     \
-	fi;								     \
-	PATCHLEV=`echo "$(PACKAGE_VERSION)" | sed -r "s/[0-9]+\.[0-9]+\.?//"`;\
+	@PATCHLEV=`echo "$(PACKAGE_VERSION)" | sed -r "s/[0-9]+\.[0-9]+\.?//"`;\
 	if test $${PATCHLEV:-0} -lt 50; then				     \
+	  if head -n 6 ChangeLog | grep -q 'Uncommitted changes' ;	     \
+	  then								     \
+	    echo >&2 "*** Source tree contains uncommitted changes";	     \
+	    echo >&2 "*** Aborting";					     \
+	    exit 1;							     \
+	  fi;								     \
 	  if grep -q FIXME NEWS; then					     \
 	    echo >&2 "*** NEWS file contains FIXMEs";			     \
 	    echo >&2 "*** Aborting";					     \
