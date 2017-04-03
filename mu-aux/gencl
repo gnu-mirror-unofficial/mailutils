@@ -5,59 +5,265 @@ eval '(exit $?0)' && eval 'exec perl -wS "$0" "$@"'
 use strict;
 use POSIX qw(strftime);
 use Getopt::Long qw(:config gnu_getopt no_ignore_case);
+use Text::Wrap;
+use Data::Dumper;
+use threads;
+use Thread::Queue;
+use Time::ParseDate;
+use Safe;
+use Pod::Usage;
+use Pod::Man;
+use Pod::Find qw(pod_where);
 
 my @append_files;
 my $force;
 my $verbose;
 my $changelog_file = 'ChangeLog';
+my $since_date;
+my $until_date;
+my $strip_cherry_pick;
+my $amend_file;
+my %amendment;
+my $append_dot;
 
-GetOptions('append|a=s@' => \@append_files,
-	   'file|F=s' => \$changelog_file,
-	   'force|f' => \$force,
-	   'verbose|v' => \$verbose) or exit(1);
+sub set_date {
+    my ($time, $err) = parsedate($_[1], PREFER_PAST => 1, UK => 1);
+    unless (defined($time)) {
+	print STDERR "--$_[0]=$_[1]: $err\n";
+	exit(1);
+    }
+    return strftime('%Y-%m-%d', localtime($time));
+}
+
+=head1 NAME
+
+gencl - generate ChangeLog from git log output
+
+=head1 SYNOPSIS
+
+B<gencl>
+[B<-fv>]    
+[B<-a> I<FILE>]
+[B<-F> I<FILE>]
+[B<--amend=>I<FILE>]
+[B<--append-dot>]
+[B<--append=>I<FILE>]
+[B<--file=>I<FILE>]
+[B<--force>]
+[B<--since=>I<DATE>]
+[B<--strip-cherry-pick>]
+[B<--until=>I<DATE>]    
+[B<--verbose>]
+
+B<gencl> B<-h> | B<--help> | B<--usage>
+
+=head1 DESCRIPTION
+
+Retrieves git log messages and reformats them as a valid ChangeLog
+file.  The file begins with an automatically generated entry stating
+the SHA1 hash of the git HEAD commit.  This entry is followed by
+the log entries recreated from the git log, in reverse chronological
+order.  By default, entire log is converted.  This can be changed by
+using B<--since> and/or B<--until> options.  Files specified with the
+B<--append> options (if any), are appended after the converted entries.
+The file ends with the B<emacs> B<Local Variables> stanza.
+
+If the B<ChangeLog> file exists, B<gencl> verifies if the source tree
+has changed since the file was created.  The file is re-created only if
+there were some changes (whether committed or not).  The the B<--force>
+(B<-f>) option instructs B<gencl> to recreate the file unconditionally.
+
+The file supplied with the B<--amend> option is used to correct spelling
+(and other) errors in the log entries.  It consists of entries delimited
+with one or more empty lines.  Each entry begins with a full SHA1 hash
+of the commit it applies to.  The hash is followed by one or more lines
+with a valid Perl code (typically, B<s///> statements).  Comments are
+introduced with the B<#> sign.  For each git log entry, its hash is looked
+up in that file.  If found, the B<$_> variable is set to the commit subject,
+followed by the commit body and the code is evaluated.
+        
+=head1 OPTIONS
+
+=over 4
+
+=item B<-a>, B<--append=>I<FILE>
+
+Append I<FILE> to the end of the generated file.  Multiple B<--append>
+are processed in the order of their occurrence on the command line.
+The content of I<FILE> is appended verbatim, except that the line beginning
+with the text B<Local Variables:> is taken to mark the end of file.
+   
+=item B<-F>, B<--file=>I<FILE>
+
+Create I<FILE> instead of the B<ChangeLog>.
+
+=item B<-f>, B<--force>
+
+Force recreating the ChangeLog, even if no new commits were added to the
+repository since its creation.
+    
+=item B<-v>, B<--verbose>
+
+Increase output verbosity.
+
+=item B<--since=>I<DATE>
+
+Convert only the logs since I<DATE>.  See B<Time::ParseDate>(3), for
+a list of valid I<DATE> formats.
+
+=item B<--until=>I<DATE>
+
+Convert only the logs until I<DATE>.  See B<Time::ParseDate>(3), for
+a list of valid I<DATE> formats.
+    
+=item B<--strip-cherry-pick>
+
+Remove data inserted by B<git cherry-pick>.  This includes the "cherry picked
+from commit ..." line, and the possible final "Conflicts:" paragraph.
+
+=item B<--amend=>I<FILE>
+
+Read amendment instructions from I<FILE>.
+
+=item B<--append-dot>
+
+Append a dot to the subject line of each commit message if there is no other
+punctuation the end.     
+    
+=back
+
+=head1 DIFFERENCES FROM GITLOG-TO-CHANGELOG
+
+=over 4
+
+=item 1
+
+B<gencl> writes output to the disk file, whereas B<gitlog-to-changelog>
+prints it to the standard output.
+
+=item 2
+
+The created B<ChangeLog> begins with an automatically generated entry and
+ends with the B<Local Variables> stanza.
+
+=item 3
+
+The B<ChangeLog> file is re-created only if the source tree was changed
+since it was written (whether these changes have been committed or not).
+
+=item 4
+
+Arbitrary number of files can be concatenated to the produced file.  This
+is handy for projects that switched to B<git> from other VCS.
+
+=item 5
+
+Each entry is reformatted using B<Text::Wrap>.
+
+=item 6
+
+The following B<gitlab-to-changelog> options are not implemented: B<--cluster>,
+B<--ignore-matching>, B<--ignore_line>.
+    
+=back
+    
+=cut    
+    
+sub pod_usage_msg {
+    my ($obj) = @_;
+    open my $fd, '>', \my $msg;
+
+    pod2usage(-verbose => 99,
+              -sections => 'NAME',
+              -output => $fd,
+              -exitval => 'NOEXIT');
+    my @a = split /\n/, $msg;
+    $msg = $a[1];
+    $msg =~ s/^\s+//;
+    $msg =~ s/ - /: /;
+    return $msg;
+}
+
+GetOptions(
+    'h' => sub {
+	pod2usage(-message => pod_usage_msg(),
+		  -exitstatus => 0,
+		  -input => pod_where({-inc => 1}, $0))
+    },
+    'help' => sub {
+	pod2usage(-exitstatus => 0,
+		  -verbose => 2,
+		  -input => pod_where({-inc => 1}, $0));
+    },
+    'usage' => sub {
+	pod2usage(-exitstatus => 0,
+                  -verbose => 0,
+                  -input => pod_where({-inc => 1}, $0));
+    },
+    'append|a=s@' => \@append_files,
+    'file|F=s' => \$changelog_file,
+    'force|f' => \$force,
+    'verbose|v' => \$verbose,
+    'since=s' => sub { $since_date = set_date(@_) },
+    'until=s' => sub { $until_date = set_date(@_) },
+    'strip-cherry-pick' => \$strip_cherry_pick,
+    'amend=s' => \$amend_file,
+    'append-dot' => \$append_dot
+    ) or exit(1);
 
 if (! -d '.git') {
     exit 0;
 }
 
-my ($hash, $date) = split / /, `git log --max-count=1 --pretty=format:'%H %ad' --date=short HEAD`;
+read_amend_file($amend_file) if $amend_file;
+    
+$Text::Wrap::columns = 72;
 
-my @modlines;
-if (open(my $fd, '-|', 'git diff-index --name-status HEAD 2>/dev/null')) {
-    chomp(@modlines = map {chomp; [split /\s+/, $_, 2]} <$fd>);
-    close $fd;
-}
+create_changelog();
 
-if (@modlines) {
-    $date = strftime '%Y-%m-%d', localtime;
-}
+
+sub toplevel_entry {
+    my ($hash, $date) = split / /,
+          `git log --max-count=1 --pretty=format:'%H %ad' --date=short HEAD`;
 
-my @header;
+    my @modlines;
+    if (open(my $fd, '-|', 'git diff-index --name-status HEAD 2>/dev/null')) {
+	chomp(@modlines = map {chomp; [split /\s+/, $_, 2]} <$fd>);
+	close $fd;
+    }
 
-push @header, "$date  Automatically generated  <bug-mailutils\@gnu.org>";
-push @header, '';
-push @header, "\tHEAD $hash";
-push @header, '';
+    if (@modlines) {
+	$date = strftime '%Y-%m-%d', localtime;
+    }
 
-my %status = (
-    A => 'New file',
-    C => 'Copied file',
-    D => 'Removed file',
-    M => 'Changed',
-    R => 'Renamed',
-    T => 'Type change',
-    U => 'Unmerged',
-    X => 'Unknown'
-);
+    my @header;
 
-if (@modlines) {
-    push @header, "\tUncommitted changes:";
+    push @header, "$date  Automatically generated  <bug-mailutils\@gnu.org>";
+    push @header, '';
+    push @header, "\tHEAD $hash.";
     push @header, '';
 
-    push @header, map {
-	"\t* $_->[1]: " . ($status{$_->[0]} || 'Unknown') . ";"
-    } @modlines;
-    push @header, '';
+    my %status = (
+	A => 'New file',
+	C => 'Copied file',
+	D => 'Removed file',
+	M => 'Changed',
+	R => 'Renamed',
+	T => 'Type change',
+	U => 'Unmerged',
+	X => 'Unknown'
+    );
+
+    if (@modlines) {
+	push @header, "\tUncommitted changes:";
+	push @header, '';
+	
+	push @header, map {
+	    "\t* $_->[1]: " . ($status{$_->[0]} || 'Unknown') . ";"
+	} @modlines;
+	push @header, '';
+    }
+    return @header;
 }
 
 sub headcmp {
@@ -73,41 +279,244 @@ sub headcmp {
     }
     return 0;
 }
-
-if (!$force && headcmp($changelog_file, @header)) {
-    exit 0;
-}
-
-print "  GEN $changelog_file\n" if $verbose;
-close STDOUT;
-
-open(STDOUT, '>', $changelog_file)
-    or die "Can't open $changelog_file for writing: $!";
-
-for (@header) {
-    print "$_\n";
-}
-
-system(@ARGV);
-foreach my $file (@append_files) {
-    if (open(my $fd, '<', $file)) {
-	while (<$fd>) {
-	    chomp;
-	    last if /^Local Variables:/;
-	    next if /^\f$/;
-	    print "$_\n";
+
+sub read_amend_file {
+    my ($file) = @_;
+    open(my $fd, '<', $file)
+	or die "can't open $file for reading: $!";
+    use constant {
+	STATE_INIT => 1,
+	STATE_HASH => 2,
+    };
+    my $state = STATE_INIT;
+    my $silent;
+    my $hash;
+    my $code;
+    my $locus;
+    while (<$fd>) {
+	chomp;
+	s/^\s+//;
+	next if /^#/;
+	if ($state == STATE_INIT) {
+	    if (/^([0-9a-fA-F]{40})$/) {
+		$hash = lc $1;
+		if (exists($amendment{$hash})) {
+		    warn "$file:$.: duplicate SHA1 hash";
+		    warn $amendment{$hash}{locus} . ": previously defined here";
+		}
+		$code = '';
+		$locus = "$file:$.";
+		$state = STATE_HASH;
+		$silent = 0;
+	    } elsif (/^$/) {
+		next;
+	    } else {
+		warn "$file:$.: expected SHA1, but found $_"
+		    unless $silent;
+		$silent = 1;
+            }
+	} elsif ($state == STATE_HASH) {
+	    if (/^$/) {
+		$amendment{$hash}{code} = $code;
+		$amendment{$hash}{locus} = $locus;
+		$state = STATE_INIT;
+	    } else {
+		$code .= "$_\n";
+	    }
 	}
-	close $fd;
-    } else {
-	warn "can't open $file: $!";
     }
-}
+    if ($state == STATE_HASH) {
+	$amendment{$hash}{code} .= $code;
+	$amendment{$hash}{locus} = $locus;
+    }
+}	
+
+sub tokenize_gitlog {
+    my ($q) = @_;
+    my @cmd = qw(git log --log-size --no-merges
+                 --pretty=format:%H:%ct:%an:%ae%n%s%n%b);
 
-print "\f\nLocal Variables:\n";
-print <<'EOT';
+    push @cmd, "--since=$since_date" if defined $since_date;
+    push @cmd, "--until=$until_date" if defined $until_date;
+    print STDERR "starting @cmd\n" if $verbose > 1;
+    
+    open(my $fd, '-|', @cmd)
+	or die "failed to run git log: $!";
+    while (<$fd>) {
+	chomp;
+	next if /^$/;
+	my %ent = ();
+	unless (/^log size (\d+)/) {
+	    warn "unexpected input: '$_'";
+	    next;
+	}
+	my $size = $1;
+	my $log;
+	read($fd, $log, $size) == $size or die "unexpected EOF";
+
+	my ($head, $text) = split /\n/, $log, 2;
+	($ent{hash},$ent{date},$ent{author},$ent{email}) = split /:/, $head;
+	
+	if (defined($amendment{$ent{hash}})) {
+	    my $code = $amendment{$ent{hash}}{code};
+	    print STDERR "amending $ent{hash}\n" if $verbose > 1;
+	    print STDERR "code: $code\n" if $verbose > 1;
+	    my $s = new Safe;
+	    $_ = $text;
+	    if (defined(my $r = $s->reval($code))) {
+		$text = $_;
+		delete $amendment{$ent{hash}};
+	    } else {
+		warn "$.:$ent{hash}: failed to eval \"$code\" on \"$_\": \n$@\n";
+		warn $amendment{$ent{hash}}{locus} . ": code was defined here";
+	    }
+	}
+
+	my @body;
+	($ent{subject}, @body) = split /\n/, $text;
+
+	if ($append_dot && $ent{subject} !~ /[[:punct:]]$/) {
+	    $ent{subject} .= '.';
+	}
+	
+	foreach my $line (@body) {
+	    if ($line =~ /^Co-authored-by:(.*)$/) {
+		my $author = $1;
+		if ($author =~ /\s*(.*?)<.+?>$/) {
+		    push @{$ent{coauthor}}, [ $1, $2 ];
+		}
+	    } elsif ($line =~ /^(?:Signed-off-by
+                                 |Copyright-paperwork-exempt
+                                 |Tiny-change):\s*$/x) {
+		next;
+	    } elsif ($strip_cherry_pick
+		     && $line =~ /^\s*
+                                   (?:Conflicts:
+                                    |\(cherry picked from commit [\da-f]+\)$)
+                                 /x) {
+		next;
+	    } elsif ($line =~ /^\*/) {
+		push @{$ent{body}}, $line;
+	    } elsif ($line =~ /^(?:\s
+                                 |(?:\(.+?\)\s*
+                                   |\[.+?\]\s*
+                                   |<.+?>\s*)+:)/x) {
+		push @{$ent{body}}, $line;
+	    } elsif (exists($ent{body})) {
+		${$ent{body}}[-1] .= "\n" . $line;
+	    } else {
+		if (!exists($ent{description})
+		    || ${$ent{description}}[-1] eq ''
+		    || $line eq '') {
+		    push @{$ent{description}}, $line;
+		} else {
+		    ${$ent{description}}[-1] .= "\n" . $line;
+		}
+	    }
+	}
+	if (exists($ent{body}) && ${$ent{body}}[-1] ne '') {
+	    push @{$ent{body}}, '';
+	}
+	if (exists($ent{description}) && ${$ent{description}}[-1] ne '') {
+	    push @{$ent{description}}, '';
+	}
+	    
+	$q->enqueue(\%ent);
+
+    }
+    $q->enqueue(undef);
+    close $fd;
+
+    my @unused;
+    while (my ($hash, $ref) = each %amendment) {
+        my $line = $ref->{locus};
+	$line =~ s/^.*://;
+	push @unused, [ $line, $ref->{locus}, $hash ];
+    }
+    foreach my $ent (sort { $a->[0] <=> $b->[0] } @unused) {
+	warn "$ent->[1]: unused entry: $ent->[2]\n";
+    }
+    
+    print STDERR "tokenize_gitlog finished\n" if $verbose > 1;
+}
+
+sub convert_entry {
+    my ($q) = @_;
+    while (my $ent = $q->dequeue()) {
+	print STDERR "Writing $ent->{hash}\n" if $verbose > 1;
+	my $date = strftime('%Y-%m-%d', localtime($ent->{date}));
+	print $date, '  ', $ent->{author}, '  <', $ent->{email}, ">\n";
+	if (exists($ent->{coauthor})) {
+	    foreach my $coauthor (@{$ent->{coauthor}}) {
+		print '            ', $coauthor->[0], '  ', $coauthor->[1], "\n";
+	    }
+	}
+	print "\n";
+
+	my $tabs = "\t";
+	print wrap($tabs, $tabs, $ent->{subject}), "\n\n";
+	if (exists($ent->{description})) {
+	    foreach my $para (@{$ent->{description}}) {
+		print fill($tabs, $tabs, $para), "\n";
+	    }
+	}
+	if (exists($ent->{body})) {
+	    foreach my $para (@{$ent->{body}}) {
+		print fill($tabs, $tabs, $para), "\n";
+	    }
+	}
+    }
+    print STDERR "convert_entry finished\n" if $verbose > 1;
+}
+
+sub create_changelog {
+    my @header = toplevel_entry;
+    if (!$force && headcmp($changelog_file, @header)) {
+	print STDERR "$changelog_file is up to date\n" if $verbose > 1;
+	return;
+    }
+    open(my $fd, '>', $changelog_file)
+	or die "can't open $changelog_file for writing: $!";
+    
+    print "  GEN $changelog_file\n" if $verbose;
+    print STDERR "updating $changelog_file\n" if $verbose > 1;
+    $fd = select($fd);
+    # Print header
+    for (@header) {
+	print "$_\n";
+    }
+
+    # Print converted entries
+    my $q = Thread::Queue->new();
+    my $tok_thr = threads->create(\&tokenize_gitlog, $q);
+    my $cvt_thr = threads->create(\&convert_entry, $q);
+    $tok_thr->join();
+    $cvt_thr->join();
+
+    # Print additional files
+    foreach my $file (@append_files) {
+	if (open(my $in, '<', $file)) {
+	    while (<$in>) {
+		chomp;
+		last if /^Local Variables:/;
+		next if /^\f$/;
+		print "$_\n";
+	    }
+	    close $in;
+	} else {
+	    warn "can't open $file: $!";
+	}
+    }
+
+    # Print trailer
+    print "\f\nLocal Variables:\n";
+    print <<'EOT';
 mode: change-log
 version-control: never
 buffer-read-only: t
 End:
 EOT
 ;
+    $fd = select($fd);
+    close $fd;
+}   

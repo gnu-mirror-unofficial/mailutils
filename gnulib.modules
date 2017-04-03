@@ -6,7 +6,6 @@
 autobuild
 crypto/des
 gettext
-gitlog-to-changelog
 inttostr
 mbchar
 mbiter

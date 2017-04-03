@@ -284,7 +284,7 @@
 
 2008-10-28  Sergey Poznyakoff  <gray@gnu.org.ua>
 
-	Make maidag hanlde mailer URLs.
+	Make maidag handle mailer URLs.
 
 	This makes it possible to `deliver' mails to mailers without
 	explicitly specifying `remote+mailer' mailbox URLs.  In
@@ -302,7 +302,7 @@
 	(lmtp_set_privs): New function. Sets primary and
 	supplementary group privileges.
 	(maidag_lmtp_server): Call lmtp_set_privs.
-	* maidag/maidag.c (lmtp_group): Remove.  It is superceded by
+	* maidag/maidag.c (lmtp_group): Remove.  It is superseded by
 	lmtp_groups.
 	(maidag_cfg_param): Allow to specify supplementary groups.
 	* maidag/maidag.h (lmtp_group): Replace with lmtp_groups.
@@ -819,7 +819,7 @@
 	(mu_list_intersect_dup, mu_list_intersect): New functions.
 
 	Fix GSASL in imap4d.
-	* auth/gsasl.c (_gsasl_readline): Prevent stucking in
+	* auth/gsasl.c (_gsasl_readline): Prevent getting stuck in
 	blocking streams.
 	* imap4d/auth_gsasl.c: Remove deprecated functions and data types.
 	* imap4d/auth_gss.c (auth_gssapi): Fix signature.
@@ -851,8 +851,8 @@
 	Never print .PEEK, it confuses some clients (notably Thunderbird).
 	I need to verify RFC, though.
 	All callers updated.
-	* imap4d/idle.c: Use imap4d_getline to get the reply, to avod modifying
-	tok and command.
+	* imap4d/idle.c: Use imap4d_getline to get the reply, to avoid
+	modifying tok and command.
 	* imap4d/imap4d.h (util_send_bytes, util_trim_nl): New prototypes.
 	* imap4d/util.c (util_trim_nl): New function.
 	(imap4d_getline): Use util_trim_nl.
@@ -1376,7 +1376,7 @@
 	* libargp/muinit.c (get_canonical_name): Do not use xmalloc.
 	* mailbox/ipsrv.c (mu_ip_server_get_sockaddr): Return
 	MU_ERR_BUFSPACE if provided buffer is not long enough to
-	accomodate the result.
+	accommodate the result.
 	* mailbox/msrv.c (mu_m_server_set_foreground)
 	(mu_m_server_foreground,mu_m_server_pidfile)
 	(mu_m_server_set_default_address)
@@ -1777,7 +1777,7 @@
 	inheritance bit.
 	* mailbox/gocs.c (mu_gocs_mailbox_init): Set mailbox pattern.
 	* mailbox/mailbox.c (_create_mailbox): Bugfix.
-	* mailbox/mbx_default.c (mu_set_mailbox_pattern): New finction.
+	* mailbox/mbx_default.c (mu_set_mailbox_pattern): New function.
 	(mu_set_mail_directory): Rewrite.
 	(user_mailbox_name): Rewrite.
 	* mailbox/mutil.c (mu_normalize_mailbox_url): Remove.
@@ -1812,7 +1812,7 @@
 	* mailbox/acl.c: mu_acl_log expands its argument.
 	* mailbox/cfg_driver.c (mu_create_canned_section)
 	(mu_create_canned_param): Avoid creating container twice.
-	* mailbox/cfg_format.c (format_param): Do not pring type if
+	* mailbox/cfg_format.c (format_param): Do not print type if
 	argname contains a colon.
 	* mailbox/cfg_parser.y (_scan_tree_helper): Compute target
 	pointer.
@@ -2050,7 +2050,7 @@
 	libcfg/init.c, libcfg/virtdomain.c, maidag/maidag.c,
 	mail.local/main.c, mail.remote/mail.remote.c, mimeview/mimeview.c,
 	movemail/movemail.c, pop3d/pop3d.c, readmsg/readmsg.c,
-	sieve/sieve.c: Change option parsing, usig mu_cfg_tree_ functions.
+	sieve/sieve.c: Change option parsing, using mu_cfg_tree_ functions.
 	
 	* mailbox/argcv.c: Fix a typo in comment.
 	* mailbox/cfg_lexer.c (mu_parse_config_tree): New function.
@@ -2132,7 +2132,7 @@
 	* mailbox/syslog.c (mu_diag_level_to_syslog): New function.
 	(mu_diag_syslog_printer): New function.
 
-	* mh/mh_argp.c (mh_argp_parse): Set prigram name using
+	* mh/mh_argp.c (mh_argp_parse): Set program name using
 	mu_set_program_name.
 	* mh/mh_init.c (mu_error_printer): No longer needed.
 	* movemail/movemail.c (movemail_error_printer): No longer needed.
@@ -2828,7 +2828,7 @@
 	* include/mailutils/argp.h (mu_argp_set_config_param): New
 	function.
 	* include/mailutils/cfg.h (mu_cfg_time): New value
-	(struct mu_cfg_section): Rewamp using lists.
+	(struct mu_cfg_section): Revamp using lists.
 	(enum mu_cfg_cont_type, struct mu_cfg_cont): New types.
 	(mu_config_create_container, mu_config_clone_container)
 	(mu_config_destroy_container): New functions.
@@ -2858,7 +2858,7 @@
 	(mu_authorization_clear_list,mu_authentication_clear_list): New
 	functions. 
 	
-	* include/mailutils/refcount.h (struct _mu_refcount): Move ro
+	* include/mailutils/refcount.h (struct _mu_refcount): Move to
 	refcount.c
 	(mu_refcount_inc,mu_refcount_dec): Change return value.
 	(mu_refcount_value): New function.
@@ -2946,7 +2946,7 @@
 
 2007-09-03  Darel Henman  <dhenman@gmail.com>
 
-	* README:  Editted text in README file related to the
+	* README:  Edited text in README file related to the
 	-enable-mh-utils option.  This was to correct a reference from
 	a now non-existent mh README file to the ..doc/texinfo/mh-mh.texi file.
 
@@ -2963,7 +2963,7 @@
 
 2007-08-21  Sergey Poznyakoff  <gray@gnu.org.ua>
 
-	* examples/mta.c: Accomodate for the change from 2007-08-09
+	* examples/mta.c: Accommodate for the change from 2007-08-09
 
 2007-08-18  Wojciech Polak  <polak@gnu.org>
 
@@ -3333,7 +3333,7 @@
 	(mu_address_sget_local_part,mu_address_sget_personal)
 	(mu_address_sget_domain,mu_address_sget_route)
 	(mu_address_sget_email): New functions
-	* mailbox/address.c: LIkewise
+	* mailbox/address.c: Likewise
 
 2007-06-22  Sergey Poznyakoff  <gray@gnu.org.ua>
 
@@ -3679,7 +3679,7 @@
 	clashes with mysql
 	
 	* config/Makefile.am (mailutils_config_CFLAGS): Define I18NLIBS
-	inconditionally.
+	unconditional.
 	* examples/Makefile.am (muath): New target
 
 	* include/mailutils/mu_auth.h (enum mu_auth_key_type): New data
@@ -3932,7 +3932,7 @@
 	failure (either I/O, or memory allocation or EOF).
 	(action_echo): Rewritten to use shell-like syntax
 	(run_user_action): Rewritten main loop to make it cleaner. In
-	particular, expand agruments after word splitting. Use new echo
+	particular, expand arguments after word splitting. Use new echo
 	semantics.
 	
 	* mail/table.c (mail_escape_table): Add ~x
@@ -5593,7 +5593,7 @@
 	* examples/argcv.c: Include <mailutils/error.h>
 	* examples/base64.c: Include <config.h>
 	* readmsg/readmsg.h: Likewise
-	* mail/z.c (z_parse_args): change tyoe of return_count
+	* mail/z.c (z_parse_args): change type of return_count
 	(mail_z): Change type of count to off_t
 	* include/mailutils/stream.h: Fix indentation
 
@@ -5790,14 +5790,14 @@
 	* imap4d/copy.c, imap4d/fetch.c, imap4d/store.c: Always pass
 	format string as a third argument to util_finish. Although this is not
 	necessary, since 'buffer' is guaranteed to contain a normal error
-	string, without format specifiers, yet this will simplify maintainence.
+	string, without format specifiers, yet this will simplify maintenance.
 
 2005-08-31  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* examples/lsf.c: New test program. List folders
 	* examples/Makefile.am: Add lsf
 	* mailbox/imap/folder.c (guess_level,list_copy): Fixed
-	(imap_parse): Handle NO case explicitely.
+	(imap_parse): Handle NO case explicitly.
 	* mailbox/mbox/folder.c: Minor fix.
 
 2005-08-30  Sergey Poznyakoff  <gray@gnu.org.ua>
@@ -5811,13 +5811,13 @@
 	member
 	(struct mu_folder_list): Removed. Use mu_list_t instead
 	(mu_folder_list): Use mu_list_t. Take an extra argument: a maximum
-	recusion level.
+	recursion level.
 	(mu_folder_lsub): Change typo of the last argument (mu_list_t
 	now).
 	(mu_folder_list_destroy): Removed
 	(mu_list_response_free): New function
 	* lib/mu_asprintf.h: Remove vestiges of __P(). Define _GNU_SOURCE,
-	if not alrerady defined.
+	if not already defined.
 
 	* mailbox/imap/folder.c: Rewritten for new
 	mu_folder_list,mu_folder_lsub semantics.  
@@ -6709,7 +6709,7 @@
 2005-05-27  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
 
 	* mailbox/amd.c (amd_envelope_date): Reformat Delivery-Date value
-	to standart ctime format. Fix memory leak.
+	to standard ctime format. Fix memory leak.
 	(amd_envelope_sender): Propagate return from header_aget_value()
 	back to the caller.
 	* mailbox/mbox/mbox.c (restore_sender,restore_date): New
@@ -7332,7 +7332,7 @@
 
 	* mail/mail.h (MAIL_ATTRIBUTE_SHOWN): New attribute. Shows
 	that the message has been displayed during the current session.
-	* mail/next.c (mail_next): Rewritten in accordance with posix:
+	* mail/next.c (mail_next): Rewritten in accordance with POSIX:
 	if the current message has not been shown yet, then show
 	it. Otherwise advance to the nearest next non-deleted message.
 	* mail/print.c (mail_print_msg): Set MAIL_ATTRIBUTE_SHOWN after
@@ -7458,7 +7458,7 @@
 	* include/mailutils/libsieve.h (sieve_get_identifier): New
 	function.
 	(sieve_arg_error): New function.
-	* libsieve/actions.c: Removed spurions indications of action
+	* libsieve/actions.c: Removed spurious indications of action
 	names in diagnostic messages. Sieve_error prepends them
 	automatically now.
 	* libsieve/tests.c: Likewise.
@@ -7912,7 +7912,7 @@
 	some time ago (went unnoticed so far due to fuzzy matching
 	technique + ordering-dependent output).
 	* imap4d/testsuite/lib/imap4d.exp (imap4d_test): New flag -sort
-	toggles on sorting of untagged responces. Notice that -sort
+	toggles on sorting of untagged responses. Notice that -sort
 	and -re are mutually exclusive.
 	* testsuite/lib/mailutils.exp (mu_test): Upvar expect_out	
 	
@@ -7943,7 +7943,7 @@
 2004-12-17  Sergey Poznyakoff
 
 	* configure.ac: Do not allow to specify modules more than once
-	* auth/sql.c (sql_escape_string): Escape ocurrences of ' and "
+	* auth/sql.c (sql_escape_string): Escape occurrences of ' and "
 	in string.
 	(mu_sql_expand_query): prevent possible sql injection
 	* mail.local/mailquota.c (sql_retrieve_quota): Allow for NULL
@@ -7997,7 +7997,7 @@
 	to be propagated back to the caller.
 	(imap_parse): Display "NO/Bad Tagged" error diagnostics only if
 	status != MU_ERR_AUTH_FAILURE. Should we display it at all?
-	* movemail/movemail.c: Emacs-iteraction mode (--emacs)
+	* movemail/movemail.c: Emacs-interaction mode (--emacs)
 
 2004-11-17  Wojciech Polak
 
@@ -8074,7 +8074,7 @@
 	* imap4d/imap4d.h (IMAP_CAPA_STARTTLS,IMAP_CAPA_LOGINDISABLED)
 	(IMAP_CAPA_XTLSREQUIRED): New defines
 	* imap4d/starttls.c (imap4d_starttls): Clear tls_required upon
-	successfull TLS handshake.
+	successful TLS handshake.
 	(starttls_init): Use IMAP_CAPA_STARTTLS instead of hardcoded
 	literal.
 	* include/mailutils/header.h (MU_HEADER_X_EXPIRE_TIMESTAMP): New
@@ -8323,9 +8323,9 @@
 	* include/mailutils/sys/nntp.h: Add new declarations.
 	* include/mailutils/pop3.h: NAdd new declarations.
 
-	* example/Makefile.am: Adusted to new API.
-	* example/nntpclient.c: Adusted to new API.
-	* example/pop3client.c: Adusted to new API.
+	* example/Makefile.am: Adjusted to new API.
+	* example/nntpclient.c: Adjusted to new API.
+	* example/pop3client.c: Adjusted to new API.
 	* example/.cvsignore: Add nntpclient.
 
 2004-06-30  Alain Magloire
@@ -8367,7 +8367,7 @@
 	* include/mailutils/nntp.h: Declarations.
 	* include/mailutils/sys/nntp.h: Declarations.
 
-	* examples/nntpclient.c: Adujsted.
+	* examples/nntpclient.c: Adjusted.
 	* examples/pop3client.c: Minor bug fixes.
 
 2004-06-28  Sergey Poznyakoff
@@ -8480,7 +8480,7 @@
 	* mailbox/nntp/nntp_article.c: New file
 	* mailbox/nntp/nntp_header.c: New file
 	* mailbox/nntp/nntp_body.c: New file
-	* include/mailutils/nntp.h: adjustement.
+	* include/mailutils/nntp.h: adjustment.
 
 2004-06-12 Alain Magloire
 
@@ -8637,7 +8637,7 @@
 
 2004-06-04  Sergey Poznyakoff
 
-	Use adbstract transport layer in streams, instead of
+	Use abstract transport layer in streams, instead of
 	integer file descriptors. Among other things, this
 	fixes a long standing bug in imap4d: now it can use
 	SASL over TLS.
@@ -8691,7 +8691,7 @@
 2004-06-02  Sergey Poznyakoff
 
 	* configure.ac: Raised version number to 0.4.90
-	* NEWS: LIkewise
+	* NEWS: Likewise
         * mailbox/muerrno.c (MU_ERR_CONN_CLOSED,MU_ERR_PARSE):
         New error codes.
         (MU_ERR_NOENT): New error code. Use it instead
@@ -9001,7 +9001,7 @@
 2004-01-14  Sergey Poznyakoff
 
 	* mailbox/mbox/mbox.c (mbox_append_message0): Truncate the
-	stream back to its original size if an error occured.
+	stream back to its original size if an error occurred.
 	* mail.local/main.c (deliver): Likewise.
 	* frm/frm.c: Minor fix in help output.
 
@@ -9447,7 +9447,7 @@
 	* mh/mhn.c (stream_getline): Bugfix
 	* mailbox/parse822.c (parse822_route_addr): Handle empty
 	addresses. Patch provided by Rob Casey <rob.casey@bluebottle.com>
-	* mailbox/smtp.c (smtp_send_message): Send sender and receipient
+	* mailbox/smtp.c (smtp_send_message): Send sender and recipient
 	addresses enclosed in angle brackets.
 	* mailbox/testsuite/Addrs: Fixed null address test.
 
@@ -9557,11 +9557,11 @@
 	First try of implementing CAPA EXPIRE in pop3d.
 
 	* pop3d/expire.c: New file.
-	* pop3d/pop3d.c: New options --expire, expire new gloval variable.
+	* pop3d/pop3d.c: New options --expire, expire new global variable.
 	* pop3d/quit.c (pop3d_fix_mark): Set the X-Expire-Timestamp for
 	RETR messages.
 	* pop3d/capa.c: Advertise EXPIRE.
-	* pop3d/pop3d.h: Declaration of global variale expire.
+	* pop3d/pop3d.h: Declaration of global variable expire.
 	* pop3d/retr.c: Set a flag on downloaded messages.
 
 2003-10-17  Sergey Poznyakoff
@@ -9613,7 +9613,7 @@
 
 2003-10-10  Alain Magloire
 
-	* mailbos/pop/pop3_readline.c (pop3_getline): Use
+	* mailbox/pop/pop3_readline.c (pop3_getline): Use
 	stream_sequential_readline() instead of stream_readline() and do
 	not maintain any offsets.
 	* include/mailutils/sys/pop3d.h (struct mu_pop3_work_buf): Remove
@@ -9680,7 +9680,7 @@
 	* include/mailutils/pop3.h: New declaration mu_pop3_set_debug.
 	* include/mailutils/sys/pop3.h: new field mu_debug_t in structure.
 	* mailbox/pop/pop3_debug.c:  Use of mu_debug_t object.
-	* examples/pop3client.c: Fix sigsegv and print error messages.
+	* examples/pop3client.c: Fix SIGSEGV and print error messages.
 
 2003-10-06  Alain Magloire
 
@@ -9690,7 +9690,7 @@
 	* mailbox/pop/pop3_apop.c: Obscure the buffer with the digest for
         security reasons.
 	* include/mailutils/pop3.h: Declaration mu_pop3_stls().
-	* include/mailutils/sys/pop3.h: New states added to accomodate STLS
+	* include/mailutils/sys/pop3.h: New states added to accommodate STLS
         command.
 	* doc/texinfo/pop3.texi: Corrected some typos.
 
@@ -9777,7 +9777,7 @@
 	function:
 
 	extern int list_set_destroy_item __P ((list_t list,
-	       void (*destoy_item) __P((void *))));
+	       void (*destroy_item) __P((void *))));
 
 	This function let us register a function to call on the item
 	when the list is being destroy.
@@ -10019,7 +10019,7 @@
 	* mailbox/imap/folder.c (read_capa): New function.
 	(check_capa): Call read_capa.
 	(authenticate_imap_login): Check for LOGINDISABLED.
-	(tls): Reread the capabilities after successfull TLS
+	(tls): Reread the capabilities after successful TLS
 	negotiation.
 
 2003-09-09  Sergey Poznyakoff
@@ -10382,7 +10382,7 @@
 	result of the last comparison.
 	* mh/mh_format.c (mh_format): Count the newline as output
 	character (for compatibility with other implementations).
-	Set arg_num whe evaluating headers.
+	Set arg_num when evaluating headers.
 	(mh_format,mh_format_dump): Handle mhop_nop.
 	* mh/repl.c: New option --format.
 
@@ -10721,7 +10721,7 @@
 
 	* mail.local/mail.local.h: include <sys/types.h> (necessary for
 	  Darwin).
-	* mail/mail.h (struct message_set): Changed type fo msg_part to
+	* mail/mail.h (struct message_set): Changed type of msg_part to
 	  size_t.
 	* libsieve/comparator.c (i_ascii_casemap_contains): Fixed
 	  obsolete label usage.
@@ -11558,7 +11558,7 @@
 
 2003-01-28  Sergey Poznyakoff
 
-	* comsat/comsat.c: Removed unneded colon in the argument to perror.
+	* comsat/comsat.c: Removed unneeded colon in the argument to perror.
 	* imap4d/imap4d.c: Likewise.
 	* guimb/main.c: Fixed help output.
 	* mailbox/mailutils-config.c: Likewise.
@@ -11712,7 +11712,7 @@
 	* configure.ac: Renamed AUTHOBJS to IMAP_AUTHOBJS for
 	  clarity. Added call to MU_CHECK_GSASL.
 
-	* m4/gsasl.m4: New file. Detect the presense of libgsasl library.
+	* m4/gsasl.m4: New file. Detect the presence of libgsasl library.
 	* m4/Makefile.am: Added gsasl.m4
 
 	* auth/gsasl.c: New file. Placeholder for gsasl stream support.
@@ -11776,7 +11776,7 @@
 	  (imap4d_parse_opt): Handle --login-disabled option.
 	  (main): Call imap4d_capability_init().
 	  Register "STARTTLS" capability if tls is OK.
-	* imap4d/starttls.c: When TLS negotiation succeedes, remove
+	* imap4d/starttls.c: When TLS negotiation succeeds, remove
 	  "STARTTLS" capability and reset login_disabled.
 
 	* imap4d/login.c: Fail if login_disabled is set.
@@ -11937,7 +11937,7 @@
 	  (ERR_TLS): New define.
 	* imap4d/starttls.c: New file. The STARTTLS command support.
 	* imap4d/util.c: Added TLS support (via GnuTLS).
-	  (ifile, ofile, sfile): Added as a static variables.
+	  (ifile, ofile, sfile): Added static variables.
 	  (util_send_lowlevel): New function.
 	  (imap4d_init_tls_server): Likewise.
 	  (imap4d_deinit_tls_server): Likewise.
@@ -12172,7 +12172,7 @@
 	  a non-existent envelope structures.
 	  Thanks Nic Ferrier <nferrier@tapsellferrier.co.uk> for
 	  reporting the bug.
-	* imap4d/testsuite/imap4d/fetch.exp: Test new fetch responces.
+	* imap4d/testsuite/imap4d/fetch.exp: Test new fetch responses.
 	* imap4d/testsuite/imap4d/create.exp: Likewise.
 
 2003-01-11  Sergey Poznyakoff
@@ -12295,7 +12295,7 @@
 2003-01-02  Sergey Poznyakoff
 
 	* configure.ac: New ac_subst variable BUILD_MH_EXEC_HOOK
-	* mh/Makefile.am: Enble install-exec-hook only if
+	* mh/Makefile.am: Enable install-exec-hook only if
 	  BUILD_MH_EXEC_HOOK is set.
 
 2003-01-01  Wojciech Polak
@@ -12373,7 +12373,7 @@
 	  for libmu_scm.h
 	* include/mailutils/Makefile.am: Added guile.h.
 	* libmu_scm/mu_scm.h: Include <mailutils/guile.h>
-	* libmu_scm/mu_mime.c: Removed unneded inlcudes.
+	* libmu_scm/mu_mime.c: Removed unneeded includes.
 	* libmu_scm/mu_scm.c: Likewise.
 	* libmu_scm/mu_util.c: Likewise.
 
@@ -12473,7 +12473,7 @@
 
 2002-12-29  Sergey Poznyakoff
 
-	* mail/util.c: Removed unneded global env_cursor.
+	* mail/util.c: Removed unneeded global env_cursor.
 	* mailbox/mailutils-config.c: Reflect addition
 	  of NLS libraries.
 
@@ -12719,7 +12719,7 @@
 
 2002-12-22  Jeff Bailey <jbailey@nisa.net>
 
-	* mailbox/mbx_maildir.c: Initial checkin of template
+	* mailbox/mbx_maildir.c: Initial checking of template
 
 	* mailbox/Makefile.am: (libmailbox_la_SOURCES) Add mbx_maildir.c
 
@@ -12746,7 +12746,7 @@
 2002-12-15  Sergey Poznyakoff
 
 	* configure.ac: Raised version number to 0.2
-	* doc/texinfo/libmuauth.texi: Spellcheck.
+	* doc/texinfo/libmuauth.texi: Spell check.
 	* doc/texinfo/libsieve.texi: Likewise.
 	* TODO: Updated.
 
@@ -12846,7 +12846,7 @@
 2002-12-10  Sergey Poznyakoff
 
 	* mailbox/filter_trans.c (qp_decode): Bugfix: extend chr to
-	  accomodate three characters and terminate it with zero.
+	  accommodate three characters and terminate it with zero.
 	* libsieve/comparator.c (i_octet_regex): Removed misleading
 	  comment.
 	* mail/mail.h: Include mu_asprintf.h
@@ -12945,7 +12945,7 @@
 	* lib/Makefile.am: Moved pin.c from lib to mailbox
 	* mailbox/Makefile.am: Likewise.
 
-	* comsat/comsat.h: Removed unneded inclusion of getopt.h
+	* comsat/comsat.h: Removed unneeded inclusion of getopt.h
 	* frm/frm.c: Likewise.
 	* imap4d/imap4d.h: Likewise.
 	* pop3d/pop3d.h: Likewise.
@@ -12960,7 +12960,7 @@
 
 2002-12-05  Sergey Poznyakoff
 
-	* configure.ac: Check for presense of getopt.h
+	* configure.ac: Check for presence of getopt.h
 	* examples/mta.c: Do not use program_invocation_short_name:
 	  examples are not linked against libmailutils.
 	* frm/testsuite/frm/test.exp: Override FOLDER environment
@@ -13180,7 +13180,7 @@
 	  (sieve_require_test): New functions.
 	* libsieve/register.c: Likewise.
 	* sieve/Makefile.am (sieve_LDFLAGS): Added -export-dynamic
-	* sieve/sieve.c (main): Removed unneded goto. Added call
+	* sieve/sieve.c (main): Removed unneeded goto. Added call
 	  to sieve_machine_destroy at the end.
 	* sieve/testsuite/Reject: Use regexp instead of hardcoded
 	  version number.
@@ -13227,17 +13227,17 @@
 	  been called.
 	  (mail_exit): Call mail_stop
 	* mail/testsuite/mail/alias.exp: Call mail_stop at the end.
-	* mail/testsuite/mail/folder.exp: LIkewise.
-	* mail/testsuite/mail/read.exp: LIkewise.
-	* mail/testsuite/mail/send.exp: LIkewise.
-	* mail/testsuite/mail/tag.exp: LIkewise.
-	* mail/testsuite/mail/write.exp: LIkewise.
+	* mail/testsuite/mail/folder.exp: Likewise.
+	* mail/testsuite/mail/read.exp: Likewise.
+	* mail/testsuite/mail/send.exp: Likewise.
+	* mail/testsuite/mail/tag.exp: Likewise.
+	* mail/testsuite/mail/write.exp: Likewise.
 
 	* pop3d/testsuite/lib/pop3d.exp: Fixed exit functions.
 
 	* mailbox/mailbox.c (mailbox_flush,mailbox_append_message)
 	  (mailbox_save_attributes,mailbox_expunge): Return EACCES
-	  if mailbox was open readonly.
+	  if mailbox was open read only.
 
 2002-11-21  Sergey Poznyakoff
 
@@ -13378,7 +13378,7 @@
 	  mailer and daemon_email.
 	* libsieve/sieve.l: Call multiline_add for each line in ML state.
 	* libsieve/sieve.y (sieve_get_mailer,sieve_set_mailer)
-	  (sieve_get_daemo_email,sieve_set_daemon_email): New functions.
+	  (sieve_get_daemon_email,sieve_set_daemon_email): New functions.
 
 	* sieve/Makefile.am: Enable testsuite subdir.
 	* sieve/sieve.c: New option --email sets user email address.
@@ -13747,7 +13747,7 @@
 
 	* mail.remote/testsuite/mail.remote/send.exp: Broke long lines.
 
-	Added testsute framework for mail.local:
+	Added testsuite framework for mail.local:
 
 	* mail.local/Makefile.am: Added SUBDIRS.
 	* mail.local/testsuite: New directory
@@ -13788,7 +13788,7 @@
 	* mail.remote/testsuite/Makefile.am: New file.
 	* mail.remote/testsuite/.cvsignore: New file.
 	* mail.remote/testsuite/Data: New file. Data for testing mail.remote.
-	* mail.remote/testsuite/lib: New direcory
+	* mail.remote/testsuite/lib: New directory
 	* mail.remote/testsuite/lib/mail.remote.exp: New file.
 	* mail.remote/testsuite/lib/DISTFILES: New file.
 	* mail.remote/testsuite/mail.remote: New directory
@@ -13807,7 +13807,7 @@
 	* mailbox/file_stream.c: Some applications (e.g. mail.remote)
 	  implicitly rely on the possibility to seek on stdin streams.
 	  To provide this functionality:
-	  (struct _file_stram): Added cache member.
+	  (struct _file_stream): Added cache member.
 	  It is a memory stream used to provide seeking capability for
 	  stdio streams.
 	  (_file_destroy): Destroy cache if necessary.
@@ -13991,7 +13991,7 @@
 	  Expand aliases in every address-related header.
 	* mail/alias.c (alias_expand): Return NULL if no suitable
 	  expansion was found.
-	* mail/followup.c: Removed unneded typecasts.
+	* mail/followup.c: Removed unneeded typecasts.
 	* mail/mailline.c: Likewise.
 	* mail/shell.c: Likewise.
 	* mail/util.c (util_header_expand): New function. Expand
@@ -14041,7 +14041,7 @@
 2002-10-01  Sergey Poznyakoff
 
 	* guimb/scm/sieve-core.scm: Added :regex tag -- an
-	  extension allowing to use posix regexp in address
+	  extension allowing to use POSIX regexp in address
 	  and header tests.
 	* mh/repl.c: New file. A framework for the `repl' program.
 	* mh/Makefile.am: Added repl
@@ -14120,7 +14120,7 @@
 
 2002-09-24  Sergey Poznyakoff
 
-	* mail/mail.c (mail_cmdline): removed unnecesary conditional.
+	* mail/mail.c (mail_cmdline): removed unnecessary conditional.
 	* mail/send.c (mail_send0): Bugfix. A dot ends the message
 	  only if it is the only character on the line. Thanks
 	  to Thomas Esser <te@dbs.uni-hannover.de> for noticing.
@@ -14343,7 +14343,7 @@
 	* include/mailutils/argcv.h: ... here
 	* include/mailutils/argp.h: Conditionally include <gnu/argp.h>
 
-	* mailbox/mu_argp.c: Changed licence to Lesser GPL
+	* mailbox/mu_argp.c: Changed license to Lesser GPL
 	* mailbox/mu_auth.c: Likewise.
 	* mailbox/system.c: Likewise.
 
@@ -14515,7 +14515,7 @@
 	* README: Updated.
 	* TODO: Updated.
 	* doc/texinfo/mailer.texi: Removed confusing note: yes, one
-	  always has to give -t to sendmail to force it to get recepient
+	  always has to give -t to sendmail to force it to get recipient
 	  addresses from the headers.
 	* doc/texinfo/mailutils.texi: Commented out references to
 	  mailbox2 stuff.
@@ -14549,7 +14549,7 @@
 	* examples/mimetest.c: Likewise.
 
 	* testsuite/lib/mailutils.exp: Couple of fixes.
-	* sieve/testsuite/sieve/DISTFILES: Temporarly removed compile.exp:
+	* sieve/testsuite/sieve/DISTFILES: Temporarily removed compile.exp:
 	  it uses files not included in the distribution.
 
 2002-08-29  Sergey Poznyakoff
@@ -14621,7 +14621,7 @@
 
 2002-08-28  Sergey Poznyakoff
 
-	* sieve/interp.c (sieve_interp_alloc): Fill allocalted memory
+	* sieve/interp.c (sieve_interp_alloc): Fill allocated memory
 	  with zeroes.
 	* sieve/svcb.c: Implemented envelope test (see comment, though)
 	* sieve/sieve-gram.y: Include "sieve.h"
@@ -14794,7 +14794,7 @@
 	* imap4d/testsuite/imap4d/DISTFILES: Added fetch.exp, x.exp
 	* imap4d/testsuite/imap4d/search.exp: Added comments
 
-	* testsuite/spool/mbox: Changed `organisation' header
+	* testsuite/spool/mbox: Changed `organization' header
 	* testsuite/spool/mbox1: Likewise.
 	* mail/testsuite/mail/write.exp: Adjusted tests to the changes in
 	  mbox and mbox1.
@@ -15190,7 +15190,7 @@
 	  need it anymore.
 	* mail/testsuite/makespool: New file. Prepares data
 	  for testsuite.
-	* mail/testsuite/Makefile.am: Added EXTA_DIST and
+	* mail/testsuite/Makefile.am: Added EXTRA_DIST and
 	  distclean-local
 	* mail/testsuite/lib/mail.exp: Fixed paths.
 	  (mail_prepare_spools,mail_cleanup_spools): new procedures.
@@ -15351,7 +15351,7 @@
 	* imap4d/sync.c: Rearranged functions to let implicit prototyping
 	  work.
 	* imap4d/fetch.c: include argcv.h
-	  (fetch_send_address): Added const specifier to the declaraton.
+	  (fetch_send_address): Added const specifier to the declaration.
 
 2002-08-01  Sergey Poznyakoff
 
@@ -15427,7 +15427,7 @@
 	* pop3d/top.c:  Likewise.
 	* pop3d/uidl.c: Likewise.
 	* pop3d/user.c: Likewise.
-	  (pop3d_user): Removed unneded PAM_ERROR.
+	  (pop3d_user): Removed unneeded PAM_ERROR.
 	* pop3d/pop3d.c: Likewise.
 	  (struct daemon_param): Initialize transcript member.
 
@@ -15578,7 +15578,7 @@
 	* include/mailutils/registrar.h: change all callback function
 	  specs from __P to __PMT
 	* include/mailutils/filter.h: Likewise.
-	* include/mailutils/envelope.h: Add coditional closing bracket
+	* include/mailutils/envelope.h: Add conditional closing bracket
 	  to balance earlier extern "C" {
 
 2002-05-16  Sergey Poznyakoff
@@ -15863,9 +15863,9 @@
 
 	* mail.local/main.c: split mailutils capabilities
 	* frm/frm.c: mailutils capabilities were split, and it now reports
-	  failure, rather than calling failure seccess.
+	  failure, rather than calling failure success.
 	* comsat/comsat.c, guimb/main.c, imap4d/imap4d.c: mailutils
-	  capbilities were split up
+	  capabilities were split up
 	* mail.remote/: Makefile.am, mail.remote.c: A stub mail.remote. It
 	  is waiting on completion of the smtp mailer_t.
 	* lib/mu_argp.c: Default per-utility config files are ~/.programrc.
@@ -16022,9 +16022,9 @@
 	  system-like signal handling.
 	* configure.in: Check for vfork().
 	* mail/echo.c: %d fmt not matching long arg
-	* mail/msgset.y: fixed warning about included regex.h redefineing
+	* mail/msgset.y: fixed warning about included regex.h redefining
 	  RE_DUP_MAX from limits.h
-	* TODO: Added alains suggestions about read/write lock
+	* TODO: Added Alain's suggestions about read/write lock
 	  optimization, etc.
 	* include/mailutils/*.h, comsat/comsat.h, frm/frm.c, from/from.h,
 	  imap4d/imap4d.h, url.h, mail/mail.h, mail.local/mail.local.h,
@@ -16066,7 +16066,7 @@
 	  (yet).
 	* lib/: mu_argp.c, mu_argp.h: Added ~/.<progname>rc to be last
 	  config file.  Fixed segv for NULL capa and added header file blurb.
-	* mailbox/locker.c: Implemented NFS-safe locking, useing link()
+	* mailbox/locker.c: Implemented NFS-safe locking, using link()
 	  from a uniquely named file.
 
 2002-03-15  Alain Magloire
@@ -16218,7 +16218,7 @@
 2002-03-09  Sergey Poznyakoff
 
 	* lib/mu_argp.c: Process user's private initialization file
-	  after processig the site-wide one.
+	  after processing the site-wide one.
 	  (mu_create_argcv): was allocating an extra slot in argv array.
 	* mail.local/main.c: Added `auth' capability.
 	* doc/texinfo/programs.texi: Documented new configuration file
@@ -16411,7 +16411,7 @@
 
 	* mailbox/: message.c, smtp.c: Include <mailutils/mutil.h> for
 	  mu_getpwuid() prototype.
-	* doc/texinfo/programs.texi: A # must be preceeded by whitespace to
+	* doc/texinfo/programs.texi: A # must be preceded by whitespace to
 	  start an rcfile comment.
 
 2002-02-20 Sam Roberts
@@ -16428,7 +16428,7 @@
 	  until argcv_scan return is  > len. Thanks Sam for noticing.
 
 	  More fixes:
-	  (argcv_scan): Correclty handle comments without intervening
+	  (argcv_scan): Correctly handle comments without intervening
 	  whitespace between the comment character and remaining text,
 	  e.g.:
              set a=2 #comment
@@ -16455,14 +16455,14 @@
 	* messages/messages.c: Likewise.
 
 	* frm/Makefile.am: Added ARGP stuff.
-	* guimb/Makefile.am: LIkewise.
+	* guimb/Makefile.am: Likewise.
 	* imap4d/Makefile.am: Restored imap4d_DEPENDENCIES. Without it
 	  @AUTHOBJS@ do not get into dependencies.
 
 2002-02-21  Jeff Bailey  <jbailey@outpost.dnsalias.org>
 
 	* sieve/Makefile.am: Link @ARGPLIBS@ before libmailutils.la to
-	compensate for lack of interlibrary dependancies
+	compensate for lack of interlibrary dependencies
 
 	* configure.in: Detect either curses or ncurses
 
@@ -16507,7 +16507,7 @@
 
 2002-02-20  Jeff Bailey  <jbailey@outpost.dnsalias.org>
 
-	* argp/Makefile.am: Remove inter-library dependancy.  Until QNX
+	* argp/Makefile.am: Remove inter-library dependency.  Until QNX
 	has a recent libtool that will support this.  Thanks Sam,
 	Sergey for reporting and finding the fix.
 
@@ -16516,13 +16516,13 @@
 	* frm/Makefile.am, from/Makefile.am, imap4d/Makefile.am,
 	  messages/Makefile.am, readmsg/Makefile.am, sieve/Makefile.am: The
 	  exe_DEPENDENCIES lines prevent the _LDADD lines being used for
-	  dependencies, so the exes dont' get rebuilt when the libraries are
+	  dependencies, so the exes don't' get rebuilt when the libraries are
 	  rebuilt, unless explicitly listed.
 
 2002-02-19  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
 
 	Use of system getpwuid() in many places of the code
-	actually broke mu_getpwnam() pardigm. To fix it,
+	actually broke mu_getpwnam() paradigm. To fix it,
 	a wrapper function, mu_getpwuid(), is introduced.
 	It allows to use 'overloaded' getpwuid calls. In the
 	simplest case, it boils down to calling getpuid().
@@ -16625,7 +16625,7 @@
 2002-02-13  Jeff Bailey  <jbailey@outpost.dnsalias.org>
 
         This change permits linking on systems that don't support
-	interlibrary dependancies inherently like SCO Openserver.
+	interlibrary dependencies inherently like SCO Openserver.
 
 	* sieve/Makefile.am: Link in libtool-based libmailutils.
 
@@ -16673,7 +16673,7 @@
 	* sieve/: sieve.c, svcb.c: better logging and error reporting
 	* include/mailutils/debug.h, mailbox/debug.c,
 	  mailbox/include/debug0.h: Added level argument of mu_debug_print()
-	  to the print callback, useful for determing the level and
+	  to the print callback, useful for determining the level and
 	  forwarding to syslog, or something.
 
 2002-02-09 Sam Roberts
@@ -16684,9 +16684,9 @@
 
 	* TODO: More things I think should be done, or did.
 	* mailbox/wicket.c: wicket: a ticket file now can contain multiple
-	  urls, when looking for a ticket, the first one which contains
+	  URLs, when looking for a ticket, the first one which contains
 	  authentication information for the incomplete url is returned.
-	  wildcards are ok, so you can do:
+	  wildcards are OK, so you can do:
             # my ~/.tickets
 	    pop://sam:pass@pop.uniserve.com
 	    *://sroberts:gnuless@mail.certicom.com
@@ -16949,7 +16949,7 @@
 	  mailbox_has_debug(): wasn't a way to see if a mailbox had one
 	* mailbox/folder_mbox.c: Give mbox folders a null authentication
 	  object, mailbox_get_authority() will now return one instead of
-	  suceeding, but not returning an object.
+	  succeeding, but not returning an object.
 	* include/mailutils/folder.h, mailbox/folder.c: folder_has_debug():
 	  there wasn't a way to see if folder had a debug object
 	* include/mailutils/auth.h, mailbox/auth.c:
@@ -16985,7 +16985,7 @@
 	examples/t-complex.sv, examples/t-mailutils.sv: More testing and
 	resultant polishing, -k switch to sieve to keep on going after an
 	error sieving a message, don't discard a message unless the script
-	completed all the actions sucesfully on a message, better error
+	completed all the actions successfully on a message, better error
 	reporting and logging, workarounds around problems/differences
 	between mailbox types, and a test script that exercises sieve on an
 	mbox.
@@ -17041,7 +17041,7 @@
 
 2001-12-31 Alain Magloire
 
-	* doc/texinfo/programs.texi:  Descibe the readmsg utility.
+	* doc/texinfo/programs.texi:  Describe the readmsg utility.
 	* configure.in: Enable readmsg.
 	* Makefile.in: Enable readmsg.
 	* readmsg/readmsg.c: Implementation.
@@ -17166,8 +17166,8 @@
 
 2001-12-03  Alain Magloire
 
-	Suprisingly some OSes do not have getpass()
-	drop a dumb version in lib/getpass.c for missing plaforms.
+	Surprisingly some OSes do not have getpass()
+	drop a dumb version in lib/getpass.c for missing platforms.
 
 	* configure.in: Check for getpass ();
 	* lib/getpass.c: New file.
@@ -17246,7 +17246,7 @@
 	(myticket_pop): Take an url in argument.
 	* mailbox/include/auth0.h: field _pop() prototype changed.
 	* include/mailutils/auth.h: ticket_pop and ticket_set_pop
-	proptotype changed, add url. Include <mailutils/url.h>
+	prototype changed, add url. Include <mailutils/url.h>
 
 2001-11-17  Alain Magloire
 
@@ -17272,7 +17272,7 @@
 	  size_t n = 0;
 
 	  message_create (mesg, NULL);
-	  file_stream_crete (&stream, "/home/user/mh/mesg_1");
+	  file_stream_create (&stream, "/home/user/mh/mesg_1");
 	  message_set_stream (mesg, stream, NULL);
 
 	  stream = NULL;
@@ -17343,7 +17343,7 @@
 
 2001-11-14  Alain Magloire
 
-	To provide an easy way to crete a ticket_t from
+	To provide an easy way to create a ticket_t from
 	a file, one can create a wicket_t and fetch ticket_t's
 	for different users to set on the authority.
 	{
@@ -17381,7 +17381,7 @@
 	variable i and size unneeded.
 	variable c initialize to zero.
 	(expand_line): obstack_1grow() pass *p instead of c.
-	(defaul_action): const char*.
+	(default_action): const char*.
 	(run_user_action): fprintf () missing argument.
 	(open_rc): const char *filename.
 	* comsat/comsat.c (username): const char *username.
@@ -17429,7 +17429,7 @@
 
 2001-11-12  Alain Magloire
 
-	Support in POP3 maibox client for APOP authentication.
+	Support in POP3 mailbox client for APOP authentication.
 	This should work, now:
 	#MAIL='pop://alain;AUTH=+APOP@localhost' ./frm
 	Pop passwd: secret  <--- apop secret
@@ -17437,7 +17437,7 @@
 
 	* mailbox/folder_pop.c (folder_pop_get_authority):
 	Enable APOP code.
-	* mailbx/mbx_pop.c: Add md5-rsa.h.
+	* mail bx/mbx_pop.c: Add md5-rsa.h.
 	(_pop_apop): New function to do APOP authentication.
 	(_pop_user): Factor some code in pop_get_user() and
 	pop_get_passwd() to share with _pop_apop().
@@ -17448,14 +17448,14 @@
 	* pop3d/apop.c: Remove trailing spaces.
 
 	* frm/frm.c: New option -d, --debug.
-	To put the mailbox_t in debug mode, very practicle
+	To put the mailbox_t in debug mode, very practical
 	to watch the traffic.
 
 2001-11-11  Alain Magloire
 
 	Most daemon will share the same code to daemonize(), we use
 	a generic one, lib/daemon.c, so any bug fix will impact the
-	others and reduce maintainance/duplication.
+	others and reduce maintenance/duplication.
 
 	* lib/Makefile.am: Addition daemon.c
 	* lib/daemon.c: New file.
@@ -17525,7 +17525,7 @@
 2001-11-05  Alain Magloire
 
 	* mailbox/mutil.c (mu_parse_imap_date_time): This one is so
-	obvious that it is embarrasing.  In a struct tm { }
+	obvious that it is embarrassing.  In a struct tm { }
 	tv_wday [0,6] Sunday == 0.  Change the Array for it to
 	start with "Sun" instead of "Mon".
 
@@ -17562,7 +17562,7 @@
 2001-11-01  Alain Magloire
 
 	There were confusion, about the authority_t and the ticket_t.
-	An authority_t is an object that implementes an authentication
+	An authority_t is an object that implements an authentication
 	mechanism i.e. APOP, SASL, User/Passwd.  To retrieve or get
 	information from the client/user, authority_t will use the
 	ticket_t, it will call ticket_pop ().  For example, on an
@@ -17578,7 +17578,7 @@
 	or on the folder_t structure.  This was leading to use the wrong one,
 	folder->ticket or mailbox->ticket.  Same problem occurs for
 	authority_t.  To clear this up, ticket_t can only be set on the
-	authority_t and autority_t can only be on a folder.  Having only one
+	authority_t and authority_t can only be on a folder.  Having only one
 	way to get at the authority or at the ticket fix the race conditions:
 	{
 	   // No error checking is done.
@@ -17723,7 +17723,7 @@
 
 	The message_t object makes no guaranty about the size and the lines
 	that it returns, if it is pointing to non-local file messages,
-	i.e POP3, IMAP4, the entire message may not have been dowloaded yet.
+	i.e POP3, IMAP4, the entire message may not have been downloaded yet.
 	IMAP is very susceptible on the size, example:
 	 A003 APPEND saved-messages (\Seen) {310}
 	 Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
@@ -17759,7 +17759,7 @@
 2001-10-23  Alain Magloire
 
 	* mailbox/body.c: body_lines () nd body_size () were not
-	properly overriden given the wrong size and line number, fixed.
+	properly overridden given the wrong size and line number, fixed.
 	* mailbox/mbx_imap.c (mailbox_imap_close): Not to send another SELECT
 	but rather just close the mailbox if not selected.
 	(imap_scan0): If there is no messages in the mailbox no need to
@@ -17900,9 +17900,9 @@ v	which will do the right thing.
 	According to rfc2060 the minimum timeout is 30 minutes.  But
 	it is not unusual to see server with a shorter timeout.  When
 	the timeout occurs, the server sends a BYE.  To catch this
-	all functions in folder_imap.c and mbx_imap.c use a proloque
+	all functions in folder_imap.c and mbx_imap.c use a prologue
 	folder_open() or imap_messages_count to check if the server
-	timedout and reconnect.  This is not bullet proof since the
+	timed out and reconnect.  This is not bullet proof since the
 	"* BYE" will be act upon on the second request, the first
 	is where we catch "* BYE".  On mailbox2 this behaviour will
 	be disable/enable with a property and make more reliable,
@@ -17910,7 +17910,7 @@ v	which will do the right thing.
 
 	* mailbox/folder_imap.c: Prologue to must functions calling
 	folder_open().
-	* mailbox/mbx_imap.c: Proloque to must functions calling
+	* mailbox/mbx_imap.c: Prologue to must functions calling
 	folder_open() or imap_messages_count.
 	(section_name): Buglet passed the wrong argument to sizeof().
 
@@ -17963,7 +17963,7 @@ v	which will do the right thing.
 	smart caching, the current buffered stream is not good enough.
 
 	* configure.in: VERSION is set to 0.0.9a for the alpha.
-	* frm/frm.c: Protype for usage(). get_personal() should use
+	* frm/frm.c: Prototype for usage(). get_personal() should use
 	const char *.
 	* mail/mail.c (main): Use mailbox_scan() instead of
 	mailbox_messages_count () it is faster for IMAP.
@@ -17998,15 +17998,15 @@ v	which will do the right thing.
 
 	The code for property.c has been changed for a more simple approach,
 	it is the same approach as mail/util.c(environment) settings.
-	The old code was simply overkill, property_t was seldomly used,
+	The old code was simply overkill, property_t was seldom used,
 	if at all, no need for heavy hash table and all that jazz.
 
 	* mailbox/property.c:  New code, the same as mail/util.c environment.
 	* mailbox/mbx_mbox.c (_mbx_init): Remove property_add_defaults() etc ..
-	no longer in use in the initialisation code.
-	* mailbox/mbx_imap.c: Likewised
-	* mailbox/mbx_pop.c: Likewised
-	* mailbox/mbx_mh.c: Likewised
+	no longer in use in the initialization code.
+	* mailbox/mbx_imap.c: Likewise
+	* mailbox/mbx_pop.c: Likewise
+	* mailbox/mbx_mh.c: Likewise
 	* mailbox/header.c: Removed property code.
 	* mailbox/body.c: Removed property code.
 	* mailbox/message.c: Removed property code.
@@ -18030,8 +18030,8 @@ v	which will do the right thing.
 	SEARCH is not implemented yet, STATUS neither and EXPUNGE is not used.
 
 	* mailbox/list.c: Renamed variable index to indx to shutup
-	gcc whos confusing with index() when warning level was high.
-	* mailbox/md5-rsa.c: Likewised.
+	gcc that was confused with index() when warning level was high.
+	* mailbox/md5-rsa.c: Likewise.
 
 	* mailbox/mailbox.c (mailbox_get_debug mailbox_set_debug):
 	The debug object was being set on the folder not the mailbox.
@@ -18040,7 +18040,7 @@ v	which will do the right thing.
 	if the connection timeout.  Is this wise?
 	(imap_scan0): Moved gut of imap_scan() code here.
 	(imap_scan): Stub calling imap_scan0() with notification enable.
-	(imap_expunge): After CLOSE, call imap_scan0() wiht notification
+	(imap_expunge): After CLOSE, call imap_scan0() with notification
 	disable.
 
 	Memory leak in parse822, this was a real pain to trace, because
@@ -18147,14 +18147,14 @@ v	which will do the right thing.
         * doc/rfc/rfc821.txt: Likewise.
         * doc/rfc/rfc822.txt: Likewise.
 
-2001-10-13  Alain Malgoire
+2001-10-13  Alain Magloire
 
-	* mail/mail.c: Possibility to enable debuging output.
+	* mail/mail.c: Possibility to enable debugging output.
 	It should probably be a runtime option via set debug=1 or something
 	for now it is disable between if (0) {...}.
 
 	More cleanup in the IMAP code.  A memory stream buffer is
-	use to save the string literal sended by the IMAP server.
+	use to save the string literal sent by the IMAP server.
 	The allocation is handle by the memory_stream which simplifies
 	the code.
 
@@ -18184,7 +18184,7 @@ v	which will do the right thing.
 
 	A small cleanup of the IMAP code.
 
-	* mailbox/folder_imap.c (imap_body):  Destry the cache header
+	* mailbox/folder_imap.c (imap_body):  Destroy the cache header
 	if it was previously set on a SCAN.
 	* mailbox/mbx_imap.c (delete_to_string): New function, to generate
 	a string of IMAP message numbers.
@@ -18212,7 +18212,7 @@ v	which will do the right thing.
 	issues because we were doing a lot of small transactions on
 	the TCP/IP stack.  By bundling the entire thing in one request
 	"a0000 FETCH 1:* (FLAGS RFC822.SIZE BODY.PEEK[HEADER.FIELDS(..)])\r\n"
-	there were less transcations and the speed was increase
+	there were less transactions and the speed was increase
 	by a factor of 100+.
 	The Imap code folder_imap.c and mbx_imap.c is now messy.
 	The rewrite in mailbox2 should clean this up though.
@@ -18235,10 +18235,10 @@ v	which will do the right thing.
 
 	* mailbox/header.c (header_get_fvalue): When it fails set the number
 	of byte written to 0.
-	(header_get_value): Likewised.
+	(header_get_value): Likewise.
 	* mailbox/mbx_imap.c (imap_envelope_sender): Go through
 	header_get_value() to fetch the "Sender" field, it may be cache.
-	(imap_header_get_fvalue): Put parenthesies around the FETCH, the
+	(imap_header_get_fvalue): Put parentheses around the FETCH, the
 	WU-IMAPD likes it that way.
 
 2001-10-10 Alain Magloire
@@ -18265,7 +18265,7 @@ v	which will do the right thing.
 
 	* mail/print.c:  Lines number are not always known for
 	example for POP or IMAP, it is not known until the mail
-	is dowloaded so take a guess base on the size.
+	is downloaded so take a guess base on the size.
 
 2001-10-08 Sergey Poznyakoff
 
@@ -18281,7 +18281,7 @@ v	which will do the right thing.
 	* mailbox/header.c (header_get_fvalue): Return 0 as the
 	number of byte returned by the last  argument, even when no header
 	field matched.
-	(header_get_value): Likewised.
+	(header_get_value): Likewise.
 	* mailbox/mbx_imap.c (imap_header_get_fvalue): Also cache
 	the message size and the FLAGS.
 	(imap_message_size): If we already have the size do not request
@@ -18307,7 +18307,7 @@ v	which will do the right thing.
 	(header_get_value): Check the cache provided by the header object
 	then the cache from _get_fvalue() and fall back to downloading
 	the entire header.
-	* mailbox/mbx_imap.c (imap_hader_get_fvalue): Implement a cache
+	* mailbox/mbx_imap.c (imap_header_get_fvalue): Implement a cache
 	in IMAP for the most use headers like "FROM, SUBJECT ....".
 	* mailbox/include/imap0.h: New field in _m_imap to hold the
 	header cache.
@@ -18318,7 +18318,7 @@ v	which will do the right thing.
 	* mailbox/mbx_imap.c (imap_attr_set_flags): Do not send
 	the \\Delete flag and just keep it locally.  The expunge
 	will take care of resending it.
-	(imap_attr_unset_flags): Likewised.
+	(imap_attr_unset_flags): Likewise.
 
 2001-10-03 Sergey Poznyakoff
 
@@ -18333,13 +18333,13 @@ v	which will do the right thing.
 	To be compatible with the old mailbox, all stream read
 	and write take an offset. Removed stream_seek () and add
 	stream_is_seekable() instead.
-	* mailbox2/stream.c: Likewised.
-	* mailbox2/bstream.c: Likewised.
-	* mailbox2/fdstream.c: Likewised.
-	* mailbox2/fstream.c: Likewised.
-	* mailbox2/mapstream.c: Likewised.
-	* mailbox2/memstream.c: Likewised.
-	* mailbox2/tcpstream.c: Likewised.
+	* mailbox2/stream.c: Likewise.
+	* mailbox2/bstream.c: Likewise.
+	* mailbox2/fdstream.c: Likewise.
+	* mailbox2/fstream.c: Likewise.
+	* mailbox2/mapstream.c: Likewise.
+	* mailbox2/memstream.c: Likewise.
+	* mailbox2/tcpstream.c: Likewise.
 
 	* mailbox2/include/mailutils/error.h: Add EBADFD.
 
@@ -18354,7 +18354,7 @@ v	which will do the right thing.
 2001-09-23 Alain Magloire
 
 	First draft of the mailbox/mbox2.  Not functional.
-	Changes are too numerous to enumarate.
+	Changes are too numerous to enumerate.
 
 	* mailbox2/mbox/*.[ch]: First mbox implementation.
 	* mailbox2/mbox/Makefile.am: New file.
@@ -18379,7 +18379,7 @@ v	which will do the right thing.
 	Also the name of the functions have change to match there purpose.
 
 	* mailbox2/Makefile.am: lockfile.c added.
-	* mailbox2/bstream.c: Reoganisation to make the
+	* mailbox2/bstream.c: Reorganization to make the
 	functions visible.
 	* mailbox2/dattribute.c: Likewise.
 	* mailbox2/dotlock.c: Likewise.
@@ -18428,20 +18428,20 @@ v	which will do the right thing.
 	mu_debug_print().
 	* mailbox2/sdebug.c (mu_debug_stream_create): New function
 	replace mu_debug_stdio_create().
-	* mailbox2/fdstream.c (_fds_desroy): Do not close the stream
-	when destroying, it should have been done explicitely with
+	* mailbox2/fdstream.c (_fds_destroy): Do not close the stream
+	when destroying, it should have been done explicitly with
 	stream_close ();
-	* mailbox2/fstream.c (_fs_desroy): Do not close the stream
-	when destroying, it should have been done explicitely with
+	* mailbox2/fstream.c (_fs_destroy): Do not close the stream
+	when destroying, it should have been done explicitly with
 	stream_close ();
-	* mailbox2/mapstream.c (_map_desroy): Do not close the stream
-	when destroying, it should have been done explicitely with
+	* mailbox2/mapstream.c (_map_destroy): Do not close the stream
+	when destroying, it should have been done explicitly with
 	stream_close ();
-	* mailbox2/memstream.c (_memory_desroy): Do not close the stream
-	when destroying, it should have been done explicitely with
+	* mailbox2/memstream.c (_memory_destroy): Do not close the stream
+	when destroying, it should have been done explicitly with
 	stream_close ();
-	* mailbox2/tcpstream.c (_tcp_desroy): Do not close the stream
-	when destroying, it should have been done explicitely with
+	* mailbox2/tcpstream.c (_tcp_destroy): Do not close the stream
+	when destroying, it should have been done explicitly with
 	stream_close ();
 
 2001-09-18 Sam Roberts
@@ -18538,14 +18538,14 @@ v	which will do the right thing.
 	* doc/mbox.texi: Starts to document the concrete Unix mbox
 	API.
 	* doc/pop3.texi: Typos.
-	* mailbox/mbx_mh.c: Initialised variables. Typecast to void
+	* mailbox/mbx_mh.c: Initialized variables. Typecast to void
 	expunge since it is never used.
 	* mail/delete.c : Typo.
 
 2001-09-16  Alain Magloire
 
 	This is after a exchange with Dave Inglis and Sam Roberts.
-	Basically they recommand to drop the XX_release() functions
+	Basically they recommend to drop the XX_release() functions
 	and only to keep XX_create (), XX_destroy ().  We have simple
 	reference count strategy for memory management.
 
@@ -18585,7 +18585,7 @@ v	which will do the right thing.
 	(mail_decode): Cast when calling util_msgset_iterate().
 	(display_message): Prototype change.
 	(display_headers): unsigned issues.
-	* mail/delete.c: Buglet was caling mail_delete0() instead of
+	* mail/delete.c: Buglet was calling mail_delete0() instead of
 	mail_delete.
 	* mail/eq.c: Unused arguments.
 	* mail/exit.c: Unused arguments.
@@ -18597,7 +18597,7 @@ v	which will do the right thing.
 	* mail/if.c: Unused arguments.
 	* mail/inc.c: Unused arguments.
 	* mail/list.c: Use const char *.
-	* mail/mail.c: options[], argp[] initialised all elements.
+	* mail/mail.c: options[], argp[] initialized all elements.
 	(mail_cmdline): Unused arguments.
 	(main): Unsigned issues.
 	(mail_warranty): Unused arguments.
@@ -18610,10 +18610,10 @@ v	which will do the right thing.
 	typecast for const char *.
 	(ml_reread): Typecast.
 	* mail/msgset.y: Declare yyerror() and yylex().
-	(msgset_select): Change of prototpe to let the compiler do checks.
-	(selec_sender): Unsused arguments.
+	(msgset_select): Change of prototype to let the compiler do checks.
+	(selec_sender): Unused arguments.
 	* mail/pipe.c: Rename variable pipe to tube.
-	* mail/print.c: Unsigness and some shadow variables.
+	* mail/print.c: Unsignedness and some shadow variables.
 	* mail/quit.c: Shadow variables.
 	* mail/send.c: Typecast when necessary. Use the second (escfunc)
 	field now. Some shadow variables.
@@ -18628,8 +18628,8 @@ v	which will do the right thing.
 	(util_screen_columns): Change atoi() to strtoul().
 	(util_find_env): Signedness.
 	(util_fullpath): Prototype changed(const).
-	(util_slist_to_string):Protorype changed (const).
-	(util_strcat) :Protorype changed (const).
+	(util_slist_to_string):Prototype changed (const).
+	(util_strcat) :Prototype changed (const).
 	(util_tempfile): const.
 	* mail/var.c: Unsignedness, Unused arguments.
 	(var_quote):  Use new function util_msglist_esccmd().
@@ -18647,7 +18647,7 @@ v	which will do the right thing.
 	working order, except that it ignores -form and -header
 	options.
 
-	* configure.in: Check for presense of GNU obstack functions.
+	* configure.in: Check for presence of GNU obstack functions.
 	* lib/Makefile.am: Added obstack.[ch]
 	* lib/obstack.c: (new)
 	* lib/obstack.h: (new)
@@ -18761,7 +18761,7 @@ v	which will do the right thing.
 
 2001-09-06  Alain Magloire
 
-	* mailbox/folder_mbox.c (folder_mbox_open): Implemeted.
+	* mailbox/folder_mbox.c (folder_mbox_open): Implemented.
 
 2001-09-05 Sergey Poznyakoff
 
@@ -18824,7 +18824,7 @@ v	which will do the right thing.
 	* mutil.c (mu_hex2ul): GNU coding std.
 	(parse822_time): Do not use tzname as a variable name tzname
 	is global variable in libc, better clear away.
-	(parse822_date_time): Likewised.
+	(parse822_date_time): Likewise.
 
 	* pop3d/Makefile.am: add virtual.c
 	* pop3d/pop3d.c (main): register getpwnam_ip_virtual,
@@ -18836,7 +18836,7 @@ v	which will do the right thing.
 2001-09-02  Alain Magloire
 
 	* mailbox/mutil.c (getpwma_virtual): Memory overrun, did not
-	reserve enough space to accomodate the extra slash, when
+	reserve enough space to accommodate the extra slash, when
 	doing the sprintf().
 	Include <string.h>, since we use strdup().
 
@@ -18888,14 +18888,14 @@ v	which will do the right thing.
 
 	In the virtual code, change the chdir() and build the full
 	pathname in a buffer.  For a daemon, it is better to stay
-	in "/" the root.  Moving in subdirecteris, will not permit
+	in "/" the root.  Moving in subdirectories, will not permit
 	the volume to be unmounted.  But we do not follow the
 	same rule for imap4d, it should be fix.
 
-	* pop3d/signal.c: Shutup unused parameter warrning from gcc.
+	* pop3d/signal.c: Shutup unused parameter warning from gcc.
 	* pop3d/user.c: Define macro VIRTUAL_PWDDIR. use sprintf()
 	to build filename instead of chdir().
-	(PAM_gnupop3d_conv): Shutup unused parameter warrning from gcc.
+	(PAM_gnupop3d_conv): Shutup unused parameter warning from gcc.
 	Make sure variable mailbox_name is initialized.
 
 	* include/mailutils/mutil.h: Typo "struct password" instead of
@@ -18939,7 +18939,7 @@ v	which will do the right thing.
 	Return values were allocated dynamically but never freed, this
 	caused memory leaks if authentication functions were called more
 	than once. Made them static, so that they get reallocated at each
-	new invocation of getM functions, thus reclaming lost storage.
+	new invocation of getM functions, thus reclaiming lost storage.
 	Made <config.h> the first file to be included and guard it with
 	#ifdef HAVE_CONFIG_H
 	Reindented text to conform to GNU coding style.
@@ -19063,7 +19063,7 @@ v	which will do the right thing.
 2001-08-12 Alain Magloire
 
 	* mailbox2/*: Move more code from the original mailbox
-	To much to enumarate.
+	To much to enumerate.
 
 2001-08-07 Alain Magloire
 
@@ -19085,7 +19085,7 @@ v	which will do the right thing.
 	* mail/msgset.y:  Draft implementation of a proposition
 	to allow regular expressions.
 	(REGEXP): Passing the address of the pointer instead of the pointer.
-	(INDENT): Likewised.
+	(INDENT): Likewise.
 	* mail/Makefile.am: Add in EXTRA_DIST msgset.c to force its
 	generation when doing the distribution, having yacc should
 	not be required.
@@ -19126,7 +19126,7 @@ v	which will do the right thing.
 	* sieve/message.h:  lcase() change for strlower ().
 	* sieve/script.c: Include md5-rsa.h.
 	* sieve/sieve-gram.y: lcase changed for strlower ().
-	* sieve/util.c: Remove all the unnecassary code and
+	* sieve/util.c: Remove all the unnecessary code and
 	only implement strlower() and strupper().
 	* sieve/util.h: Only export strlower and struppper ().
 
@@ -19243,7 +19243,7 @@ v	which will do the right thing.
 	../lib.
 	* examples/mbox-explode.c: Don't mkdir unless the mailbox can be
 	opened, and better cleanup on error detection.
-	* sieve/examples/: Test, test.out: Commiting my example/test sieve
+	* sieve/examples/: Test, test.out: Committing my example/test sieve
 	scripts so I can maintain them with cvs (I use them at work and
 	home).
 	* mail/util.c: Not all systems have <sys/fcntl.h>, changed to use
@@ -19256,7 +19256,7 @@ v	which will do the right thing.
 	ex-3.2.sv, ex-4.1.sv, ex-4.2.sv, ex-4.4a.sv, ex-4.4b.sv, ex-4.5.sv,
 	ex-5.1.sv, ex-5.7.sv, ex-9.sv, ex-null.sv, ex-save-all.sv,
 	example.sv, exn-2.3b.sv, exn-5.4.sv, t-exists.sv, t-fileinto.sv,
-	t-mailutils.sv: Commiting my example/test sieve scripts so I can
+	t-mailutils.sv: Committing my example/test sieve scripts so I can
 	maintain them with cvs (I use them at work and home).
 
 2001-08-01  Alain Magloire
@@ -19273,7 +19273,7 @@ v	which will do the right thing.
 	not yet done.
 
 	* mail/decode.c: Aware of the content_type and the encoding
-	for mime message, will superced [Pp]rint.
+	for mime message, will supersede [Pp]rint.
 
 	* mail/mail.c: Set the columns variable at startup.
 	* mail/mail.h: Prototype fpr util_screen_columns().
@@ -19288,7 +19288,7 @@ v	which will do the right thing.
 2001-07-31  Alain Magloire
 
 	* mailbox2/Makefile.am: add new files.
-	* mailbox2/fstream.c (_fs_write): n uninitialize.
+	* mailbox2/fstream.c (_fs_write): n uninitialized.
 	(_fs_open): Use S_ISREG() macro.
 	* mailbox2/include/mailutils/base.h: Remove superfluous.
 	* mailbox2/iterator.c: Define struct _iterator.
@@ -19397,7 +19397,7 @@ v	which will do the right thing.
 
 	* mail/Makefile.am (mail_SOURCES): add decode.c
 
-	* mail/mail.h: add mail_decode protoype
+	* mail/mail.h: add mail_decode prototype
 
 	* mail/decode.c (mail_decode): new file, new function
 
@@ -19424,9 +19424,9 @@ v	which will do the right thing.
 	* mailbox/include/Makefile.am: Removed misc.h in dependencies.
 	* mailbox/address.c: Use util_cpystr() instead of _cpystr().
 	Added <mailutils/mutil.h> prototype.
-	* mailbox/auth.c: Likewised.
-	* mailbox/url.c: Likewised.
-	* mailbox/folder.c: Likewised.
+	* mailbox/auth.c: Likewise.
+	* mailbox/url.c: Likewise.
+	* mailbox/folder.c: Likewise.
 
 2001-07-19 Sergey Poznyakoff
 	Added guile interface library.
@@ -19441,7 +19441,7 @@ v	which will do the right thing.
           documentation strings from C sources. The reason for
 	  their presence is that guile-doc-snarf scripts distributed
 	  with guile up to version 1.4 do not work. The comment at
-          the beginnig of scripts/guile-doc-snarf describes why. We'll
+          the beginning of scripts/guile-doc-snarf describes why. We'll
 	  have to use these until next version of guile fixes the bug.
 	* scripts/{Makefile.am,guile-doc-snarf,guile-func-name-check,
           guile-snarf.awk: (new)
@@ -19554,7 +19554,7 @@ v	which will do the right thing.
 
 2001-07-06  Alain Magloire
 
-	* mail/mailline.c: "interupt" is actually a key word
+	* mail/mailline.c: "interrupt" is actually a key word
 	for some C compiler i.e. Watcomm C, rename it to "interrupted".
 	* mail/util.c: The macros O_CREAT etc needs <sys/fnct.h>.
 
@@ -19580,7 +19580,7 @@ v	which will do the right thing.
 2001-07-05  Alain Magloire
 
 	* mail/send.c(mail_send0): Put the mailer in debug mode
-	if util_find_env("verbose")->set, good for debuging.
+	if util_find_env("verbose")->set, good for debugging.
 
 2001-07-05  Alain Magloire
 
@@ -19629,8 +19629,8 @@ v	which will do the right thing.
 	made char *buf local where it is needed.  Save the message
 	to outfiles when set.
 	(isfilename): New function.
-	* mail/followup.c: Initialise the struct send_environ new fields.
-	* mail/reply.c: Initialise the struct send_environ new fields.
+	* mail/followup.c: Initialize the struct send_environ new fields.
+	* mail/reply.c: Initialize the struct send_environ new fields.
 
 	* lib/argcv.c: Add support to consider string between
 	single quote like one word(same as double quotes).
@@ -19641,7 +19641,7 @@ v	which will do the right thing.
 	change prototype to be "void *" instead of "char *".
 	* mailbox2/bstream.c: Adjust bstream_{read,write} to the
 	new prototypes.
-	* mailbox2/pop3/pop3_stream.c: Likewised.
+	* mailbox2/pop3/pop3_stream.c: Likewise.
 	* mailbox2/Makefile.am: New file.
 	* mailbox2/pop3/Makefile.am: New file.
 	* mailbox2/mstream.c: Mapfile stream Implementation.
@@ -19657,17 +19657,17 @@ v	which will do the right thing.
 2001-07-03  Alain Magloire
 
 	* mail/headers.c:  Catch the overflow in the calculation by
-	reseting the number of lines to default screen lines.
+	resetting the number of lines to default screen lines.
 	* mail/mail.c (main): Add a "summary" call also for the
 	initial commands on startup(in interactive).
 	* mail.h: Proto for mail_summary() and mail_version().
 	* table.c: Add mail_summary() and mail_version() in the cmd table.
 	* util.c (util_getcols): First try an ioctl(TIOCGWINSZ,..) call
 	not all shells set the COLUMNS environ.
-	(util_getlines): Likewised. Also take to account the prompt
+	(util_getlines): Likewise. Also take to account the prompt
 	in the lines number.
-	* z.c (mail_z): Change the behaviour of "z." to show a screenfull
-	when the lastpage is reach.  This is very practical when starting
+	* z.c (mail_z): Change the behaviour of "z." to show a screenful
+	when the last page is reach.  This is very practical when starting
 	mail, since "z." is the initial command to show the header summary.
 	* mail/version.c: New file, show mail version, mail_version().
 	* mail/summary.c: New file, display a short summary of the mailbox.
@@ -19689,7 +19689,7 @@ v	which will do the right thing.
 	* mail/inc.c: (new) inc[orporate] command.
 	* mail/{mail.c,mail.h,table.c}: Ditto.
 	* mail/print.c: Handle interrupts when fetching message body.
-	* mail/followup.c: insert ',' between recepients' addresses.
+	* mail/followup.c: insert ',' between recipients' addresses.
 	* mail/quit.c: use mailbox_save_attributes(). Implemented
 	"hold" variable. Raise MU_ATTRIBUTE_READ on every message with
 	MU_ATTRIBUTE_SEEN bit set (compatibility with existing mails).
@@ -19934,7 +19934,7 @@ v	which will do the right thing.
 	* mail/mail.c: A read-eval loop function shared between mail.c and
 		source.c. Quits gracefully upon reading EOF.
 		Expand '~' in pathnames.
-		Upon startup in read mode, display first screenfull of from
+		Upon startup in read mode, display first screenful of from
 		lines, instead of listing the whole mailbox. This is
 	        compatible with existing implementations.
 		Do not display prompt when not reading from a terminal.
@@ -20027,7 +20027,7 @@ v	which will do the right thing.
 	necessary files into the distribution.
 	* sieve/ylwrap: Portable wrapper for lex/yacc invocations, by Tom
 	Tromey <tromey@cygnus.com>, modified by Sergey Poznyakoff
-	<gray@farlep.net> to replace yy prefixes, so multiple grammers can
+	<gray@farlep.net> to replace yy prefixes, so multiple grammars can
 	co-exist.
 	* sieve/sieve.c: Define EOK ifndefed.
 	* examples/showmail.c: No longer relevant to the current APIs.
@@ -20041,7 +20041,7 @@ v	which will do the right thing.
 	* doc/url.texi: Noted the IMAP url syntax.
 	* doc/mailutils.texi: Some of the RFCs were missing, or
 	miscategorized in the references sect.
-	* doc/.cvsignore: Ignoreing files.
+	* doc/.cvsignore: Ignoring files.
 	* doc/rfc1939.txt: Was checked in with DOS line terminators,
 	converted to Unix.
 
@@ -20075,7 +20075,7 @@ v	which will do the right thing.
 	* examples/mbox-explode.c: message_save_attachment, should take
 	the part.  Continue if the message does have a Date or Subject field.
 
-	* mailbox/mapfile_stream.c (_mapfile_open): Identation.
+	* mailbox/mapfile_stream.c (_mapfile_open): Indentation.
 
 2001-06-09  Alain Magloire
 
@@ -20191,7 +20191,7 @@ v	which will do the right thing.
 2001-05-30  Dave Inglis
 
 	* mailbox/mbx_pop.c (CHECK_ERROR): Force the mailbox to call connect
-	again when an error occured.  For example the QPopper(Qalcomm) POP3
+	again when an error occurred.  For example the QPopper(Qalcomm) POP3
 	server timeout very quickly, 30 seconds violating the RFC.  So when
 	Readin the stream again we reconnect.
 
@@ -20200,7 +20200,7 @@ v	which will do the right thing.
 	* mailbox/filter_trans.c (base64_decode): The variable should
 	be unsigned char not signed char.  By default gcc treats a
 	declaration of "char*" like "signed char*", CC Watcom did not.
-	(base64_encode): Likewised.
+	(base64_encode): Likewise.
 	* mailbox/mime.c: Read 'itl the end of the stream.
 
 2001-05-29  Sergey Poznyakoff
@@ -20255,7 +20255,7 @@ v	which will do the right thing.
 2001-05-23  Sergey Poznyakoff
 
 	* pop3d/user.c: check for NULL return from getpwnam()
-	* imap4d/login.c: Likewised.
+	* imap4d/login.c: Likewise.
 
 2001-05-21  Alain Magloire
 
@@ -20273,12 +20273,12 @@ v	which will do the right thing.
 	* mailbox/mbx_mbox.c (mbox_tempfile): Remove
 	the dependency from lib/basename.c
 
-	* lib/signame.c: Replace in favor of the wellknown strsignal().
+	* lib/signame.c: Replace in favor of the well-known strsignal().
 	* lib/strsignal.c: New file, use the mu_signame() written by
 	Sergey.
 
-	* pop3d/signal.c: Use strsignal() unconditionnaly.
-	* imap4d/signal.c: Use strsignal() unconditionnaly.
+	* pop3d/signal.c: Use strsignal() unconditionally.
+	* imap4d/signal.c: Use strsignal() unconditionally.
 
 	* configure.in: autoconf-2.50 is having difficulty parsing
 	a long AC_CHECK_LIB, break it in two.
@@ -20348,7 +20348,7 @@ v	which will do the right thing.
 	the buffer, prune them out before.
 	* mailbox/mime.c (_mime_parse_mpart_message): The mime->stream
 	was destroy when doing mime_get_part () better get it every time.
-	(_mime_body_fd): Likewised.
+	(_mime_body_fd): Likewise.
 	* mailbox/smtp.c: Do not close the stream on destroy.
 
 2001-05-11  Alain Magloire
@@ -20389,7 +20389,7 @@ v	which will do the right thing.
 2001-05-07  Alain Magloire
 
 	Now we can have multiple access to the mailbox and the server
-	will update the mailbox and send the unsollicited responses.
+	will update the mailbox and send the unsolicited responses.
 	This is implemented in imap4d/sync.c.
 
 	* imap4d/copy.c: Move the code into imap4d_copy0() to allow
@@ -20416,7 +20416,7 @@ v	which will do the right thing.
 	* imap4d/sync.c: New file.
 
 	* include/mailutils/header.c: Added some new headers.
-	* mailbox/attribute.c (attribute_copy): Do a shalow copy.
+	* mailbox/attribute.c (attribute_copy): Do a shallow copy.
 	* mailbox/file_stream.c: Check if FILE * is null in all functions.
 	* mailbox/mailbox.c (mailbox_is_updated): Should not return ENOSYS
 	but rather 1.
@@ -20438,7 +20438,7 @@ v	which will do the right thing.
 
 	* argp/argp-help.c (hol_entry_help): Some compiler like Watcomm
 	can not initialize a local structure struct ..  = { .. }.  Do it
-	explicitely field by field.
+	explicitly field by field.
 	* argp/arpg-parse.c: Watcomm choke on N_() macro.
 	(parser_init): Watcomm does not like operation on a void * pointer.
 
@@ -20588,18 +20588,18 @@ v	which will do the right thing.
 
 	It is often convenient to separate log outputs from POP and SMTP
 	servers. --with-log-facility flag which allows to specify to which
-	log facility the loggin output should be directed.
-	System administrators often prefere to have more information about
-	unsuccessfull authentications. I have added more verbose logging
+	log facility the logging output should be directed.
+	System administrators often prefer to have more information about
+	unsuccessful authentications. I have added more verbose logging
 	to pop3d/user.c. Both failed attempts and possible account probes
 	(USER immediately followed by QUIT) are logged.
 	Made pop3d to be less verbose about its WELCOME prompt. When the
 	symbol TERSE_MODE is defined, pop3d introduces itself just as
 	+OK POP3 ready <apop_hash>
-	insead of divulging its type and version. This is a bit paranoid,
+	instead of divulging its type and version. This is a bit paranoid,
 	but it is better to be on the safe side...
 
-	* configure.in: ARGPINC gets assigne a relative path, due
+	* configure.in: ARGPINC gets assigned a relative path, due
 	to which the compilation fails if the package is configure with
 	--srdir=<path> option.
 	* configure.in: --with-log-facility new option.
@@ -20650,7 +20650,7 @@ v	which will do the right thing.
 
 	* pop3d/pop3d.c (main): maxchildren boosted to 20.
 	(pop3_daemon_init): Use sigaction() for SIGCHLD,
-	the sematics of signal() is unreliable on some platforms.
+	the semantics of signal() is unreliable on some platforms.
 	* pop3d/signal.c: Save errno.
 
 2001-04-22  Alain Magloire
@@ -20663,7 +20663,7 @@ v	which will do the right thing.
 	(util_tilde_expansion): expand ~.
 	(util_unquote): Remove surrounding double quotes.
 	(util_getfullpath): Expand the path to absolute.
-	* imap4d/fetch.c:  Did not cycle throught the items.
+	* imap4d/fetch.c:  Did not cycle through the items.
 	(fetch_send_address): Patch from Sam Roberts, did not
 	use the index.
 
@@ -20698,14 +20698,14 @@ v	which will do the right thing.
 	* imap4d/fetch.c: Cleanup the fetch code, and broke
 	the fetch_operation() routine in multiple routines.
 	(fetch_message): New function.
-	(fetch_header): Likewised
-	(fetch_content): Likewised
-	(fetch_io): Likewised
-	(fetch_header_fields): Likewised
-	(fetch_header_fields_not): Likewised
-	(fetch_send_address): Likewised
+	(fetch_header): Likewise
+	(fetch_content): Likewise
+	(fetch_io): Likewise
+	(fetch_header_fields): Likewise
+	(fetch_header_fields_not): Likewise
+	(fetch_send_address): Likewise
 
-	* mailbox/header.c: Some functions were usefull while
+	* mailbox/header.c: Some functions were useful while
 	programming the imap server, put them here.
 	(header_aget_value): New function.
 	(header_aget_field_name): New function.
@@ -20721,8 +20721,8 @@ v	which will do the right thing.
 
 	To get things to compile on Solaris, change configure to check
 	for -lpthread since in libc the thread functions are defined
-	but all return ENOSYS, you need to explicitely link with -lphtread.
-	the ctype functions is*() arguments should be explicitely cast
+	but all return ENOSYS, you need to explicitly link with -lphtread.
+	the ctype functions is*() arguments should be explicitly cast
 	since Solaris use them as indexes.  __REENTRANT as to be define
 	if compile with support for threads.  Never realize this but
 	setenv() is a BSD/GNU thing, so took a variant from libiberty
@@ -20750,7 +20750,7 @@ v	which will do the right thing.
 	we need to assign it.  In GNU lib C, it was not error since stdout
 	stderr, and stdin are variables, but to be portable we can not
 	assume this.  The way out is to always use fprintf () and have
-	a global varialbe "ofile" pointing to stdout.
+	a global variable "ofile" pointing to stdout.
 
 	* mail/*: All the files under mail been change to use fprintf()
 	and ofile as the default stdout.
@@ -20768,8 +20768,8 @@ v	which will do the right thing.
 
 	* mail/mail.c:  Comment out the code that use readline
 	specifics WITH_READLINE.
-	* mail/mail.h: Likewised.
-	* mail/util.c: Likewised.
+	* mail/mail.h: Likewise.
+	* mail/util.c: Likewise.
 
 2001-04-15  Alain Magloire
 
@@ -20786,9 +20786,9 @@ v	which will do the right thing.
 	* frm/Makefile.am: Remove -DTESTING in CFLAGS.
 	* from/Makefile.am: Remove -DTESTING in CFLAGS.
 	Add AUTOMAKE_OPTIONS.
-	* imapd/Makefile.am: Likewised.
-	* pop3d/Makefile.am: Likewised.
-	* mail/Makefile.am: Likewised. Added ARGPLIB macro
+	* imapd/Makefile.am: Likewise.
+	* pop3d/Makefile.am: Likewise.
+	* mail/Makefile.am: Likewise. Added ARGPLIB macro
 
 2001-04-14  Sam Roberts
 	* examples/{Makefile,Addrs,addr.c,Addrs.good}: address test f/w.
@@ -20802,7 +20802,7 @@ v	which will do the right thing.
 	* mailbox/folder_imap.c: When calling imap_writeline () the
 	cookie for the tag should be unsigned %d --> %u.
 	(imap_send) : The number of bytes in memmove was wrong.
-	* mailbox/mbx_imap.c: Some duplicate degug calls MAILBOX_DEBUG0()
+	* mailbox/mbx_imap.c: Some duplicate debug calls MAILBOX_DEBUG0()
 	removed.
 	(attribute_string): IMAP does not have a \\Read flag it should be
 	the same as \\Seen so attribute_read() == attribute_seen().
@@ -20816,9 +20816,9 @@ v	which will do the right thing.
 
 	* imap4d/imap4d.h: Add HAVE_SECURITY_PAM_APPL_H.
 	* imap4d/login.c: PAM_ERROR wrongly define.
-	* imap4d/expunge.c: Initialise variable sp.
-	* imap4d/logout.c: Initialise variable sp.
-	* imap4d/noop.c: Initialise variable sp.
+	* imap4d/expunge.c: Initialize variable sp.
+	* imap4d/logout.c: Initialize variable sp.
+	* imap4d/noop.c: Initialize variable sp.
 
 	* mailbox/attachement.c (message_create_attachment): Use base_name().
 	* mailbox/mbx_mbox.c (mbox_tmpfile): Use base_name().
@@ -20888,17 +20888,17 @@ v	which will do the right thing.
 	filter_create().
 	(message_save_attachment): use filter_create().
 	* mailbox/body.c (body_set_lines): Wrong comparison for the owner.
-	* mailbox/mbx_mbox.c: Do not count the line separtor of part
+	* mailbox/mbx_mbox.c: Do not count the line separator of part
 	of the mailbox.
 
-	* mailbox/url.c (url_is_same_sheme): New function.
+	* mailbox/url.c (url_is_same_scheme): New function.
 	(url_is_same_user): New function.
 	(url_is_same_path): New function.
 	(url_is_same_host): New function.
 	(url_is_same_port): New function.
 	* mailbox/folder.c : Moved the is_same_*() functions in url.c
-	they can be generally usefull.
-	(is_same_sheme): Removed.
+	they can be generally useful.
+	(is_same_scheme): Removed.
 	(is_same_user): Removed.
 	(is_same_path): Removed.
 	(is_same_host): Removed.
@@ -20953,13 +20953,13 @@ v	which will do the right thing.
 	* mailbox/Makefile.am : Add filter.c filter_rfc822.c.
 	* mailbox/body.c : When creating a floating body i.e creating
 	a temporary file, the stream was not "own" by the body_t.
-	(_body_get_fd): Likewised.
-	(_body_read):_ Likewised.
-	(_body_readline): Likewised.
-	(_body_write): Likewised.
-	(_body_truncate): Likewised.
-	(_body_size): Likewised.
-	(_body_flush): Likewised.
+	(_body_get_fd): Likewise.
+	(_body_read):_ Likewise.
+	(_body_readline): Likewise.
+	(_body_write): Likewise.
+	(_body_truncate): Likewise.
+	(_body_size): Likewise.
+	(_body_flush): Likewise.
 
 	* mailbox/folder_imap.c (imap_literal_string): Check if the
 	callback.buffer is NULL.
@@ -20968,7 +20968,7 @@ v	which will do the right thing.
 
 	* mailbox/header.c: Remove the support for RFC822 it will be part
 	of the filter_t object.
-	* mailbox/mbx_mbox.c: Likewised.
+	* mailbox/mbx_mbox.c: Likewise.
 	* mailbox/mailbox.c (mailbox_size): Rename to mailbox_get_size().
 
 	* mailbox/stream.c (stream_is_seekable): New function.
@@ -21031,14 +21031,14 @@ v	which will do the right thing.
 	* imap4d/fetch.c: Cleanup the fetch code, and broke
 	the fetch_operation() routine in multiple routines.
 	(fetch_message): New function.
-	(fetch_header): Likewised
-	(fetch_content): Likewised
-	(fetch_io): Likewised
-	(fetch_header_fields): Likewised
-	(fetch_header_fields_not): Likewised
-	(fetch_send_address): Likewised
+	(fetch_header): Likewise
+	(fetch_content): Likewise
+	(fetch_io): Likewise
+	(fetch_header_fields): Likewise
+	(fetch_header_fields_not): Likewise
+	(fetch_send_address): Likewise
 
-	* mailbox/header.c: Some functions were usefull while
+	* mailbox/header.c: Some functions were useful while
 	programming the imap server, put them here.
 	(header_aget_value): New function.
 	(header_aget_field_name): New function.
@@ -21054,8 +21054,8 @@ v	which will do the right thing.
 
 	To get things to compile on Solaris, change configure to check
 	for -lpthread since in libc the thread functions are defined
-	but all return ENOSYS, you need to explicitely link with -lphtread.
-	the ctype functions is*() arguments should be explicitely cast
+	but all return ENOSYS, you need to explicitly link with -lphtread.
+	the ctype functions is*() arguments should be explicitly cast
 	since Solaris use them as indexes.  __REENTRANT as to be define
 	if compile with support for threads.  Never realize this but
 	setenv() is a BSD/GNU thing, so took a variant from libiberty
@@ -21101,8 +21101,8 @@ v	which will do the right thing.
 
 	* mail/mail.c:  Comment out the code that use readline
 	specifics WITH_READLINE.
-	* mail/mail.h: Likewised.
-	* mail/util.c: Likewised.
+	* mail/mail.h: Likewise.
+	* mail/util.c: Likewise.
 
 2001-04-15  Alain Magloire
 
@@ -21119,9 +21119,9 @@ v	which will do the right thing.
 	* frm/Makefile.am: Remove -DTESTING in CFLAGS.
 	* from/Makefile.am: Remove -DTESTING in CFLAGS.
 	Add AUTOMAKE_OPTIONS.
-	* imapd/Makefile.am: Likewised.
-	* pop3d/Makefile.am: Likewised.
-	* mail/Makefile.am: Likewised. Added ARGPLIB macro
+	* imapd/Makefile.am: Likewise.
+	* pop3d/Makefile.am: Likewise.
+	* mail/Makefile.am: Likewise. Added ARGPLIB macro
 
 2001-04-14  Sam Roberts
 	* examples/{Makefile,Addrs,addr.c,Addrs.good}: address test f/w.
@@ -21135,7 +21135,7 @@ v	which will do the right thing.
 	* mailbox/folder_imap.c: When calling imap_writeline () the
 	cookie for the tag should be unsigned %d --> %u.
 	(imap_send) : The number of bytes in memmove was wrong.
-	* mailbox/mbx_imap.c: Some duplicate degug calls MAILBOX_DEBUG0()
+	* mailbox/mbx_imap.c: Some duplicate debug calls MAILBOX_DEBUG0()
 	removed.
 	(attribute_string): IMAP does not have a \\Read flag it should be
 	the same as \\Seen so attribute_read() == attribute_seen().
@@ -21149,9 +21149,9 @@ v	which will do the right thing.
 
 	* imap4d/imap4d.h: Add HAVE_SECURITY_PAM_APPL_H.
 	* imap4d/login.c: PAM_ERROR wrongly define.
-	* imap4d/expunge.c: Initialise variable sp.
-	* imap4d/logout.c: Initialise variable sp.
-	* imap4d/noop.c: Initialise variable sp.
+	* imap4d/expunge.c: Initialize variable sp.
+	* imap4d/logout.c: Initialize variable sp.
+	* imap4d/noop.c: Initialize variable sp.
 
 	* mailbox/attachement.c (message_create_attachment): Use base_name().
 	* mailbox/mbx_mbox.c (mbox_tmpfile): Use base_name().
@@ -21221,17 +21221,17 @@ v	which will do the right thing.
 	filter_create().
 	(message_save_attachment): use filter_create().
 	* mailbox/body.c (body_set_lines): Wrong comparison for the owner.
-	* mailbox/mbx_mbox.c: Do not count the line separtor of part
+	* mailbox/mbx_mbox.c: Do not count the line separator of part
 	of the mailbox.
 
-	* mailbox/url.c (url_is_same_sheme): New function.
+	* mailbox/url.c (url_is_same_scheme): New function.
 	(url_is_same_user): New function.
 	(url_is_same_path): New function.
 	(url_is_same_host): New function.
 	(url_is_same_port): New function.
 	* mailbox/folder.c : Moved the is_same_*() functions in url.c
-	they can be generally usefull.
-	(is_same_sheme): Removed.
+	they can be generally useful.
+	(is_same_scheme): Removed.
 	(is_same_user): Removed.
 	(is_same_path): Removed.
 	(is_same_host): Removed.
@@ -21286,13 +21286,13 @@ v	which will do the right thing.
 	* mailbox/Makefile.am : Add filter.c filter_rfc822.c.
 	* mailbox/body.c : When creating a floating body i.e creating
 	a temporary file, the stream was not "own" by the body_t.
-	(_body_get_fd): Likewised.
-	(_body_read):_ Likewised.
-	(_body_readline): Likewised.
-	(_body_write): Likewised.
-	(_body_truncate): Likewised.
-	(_body_size): Likewised.
-	(_body_flush): Likewised.
+	(_body_get_fd): Likewise.
+	(_body_read):_ Likewise.
+	(_body_readline): Likewise.
+	(_body_write): Likewise.
+	(_body_truncate): Likewise.
+	(_body_size): Likewise.
+	(_body_flush): Likewise.
 
 	* mailbox/folder_imap.c (imap_literal_string): Check if the
 	callback.buffer is NULL.
@@ -21301,7 +21301,7 @@ v	which will do the right thing.
 
 	* mailbox/header.c: Remove the support for RFC822 it will be part
 	of the filter_t object.
-	* mailbox/mbx_mbox.c: Likewised.
+	* mailbox/mbx_mbox.c: Likewise.
 	* mailbox/mailbox.c (mailbox_size): Rename to mailbox_get_size().
 
 	* mailbox/stream.c (stream_is_seekable): New function.
@@ -21346,18 +21346,18 @@ v	which will do the right thing.
 	* mailbox/property.c (property_set_double): Removed.
 	* mailbox/property.c (property_set_set_value): Removed.
 	* mailbox/property.c (property_set_get_value): Removed.
-	* mailbox/property.c (property_add_propety): New function.
-	* mailbox/property.c (hash): Renamed poperty_hash.
+	* mailbox/property.c (property_add_property): New function.
+	* mailbox/property.c (hash): Renamed property_hash.
 	* include/mailutils/property.h (struct property_list): New structure.
 
 	* mailbox/include/mailbox0.h: new fields properties, properties_count.
 	* mailbox/mailbox.c (mailbox_get_property): The function will create
-	the proprety and add the default properties.
-	(mailbox_destroy): The default poperties and property are freed.
-	(mailbox_is_updated): Return ENOSYS if the argumets are wrong.
-	(mailbox_scan): Return ENOSYS if the argumets are wrong.
-	(mailbox_uidvalidity): Return ENOSYS if the argumets are wrong.
-	(mailbox_uidnext): Return ENOSYS if the argumets are wrong.
+	the propriety and add the default properties.
+	(mailbox_destroy): The default properties and property are freed.
+	(mailbox_is_updated): Return ENOSYS if the arguments are wrong.
+	(mailbox_scan): Return ENOSYS if the arguments are wrong.
+	(mailbox_uidvalidity): Return ENOSYS if the arguments are wrong.
+	(mailbox_uidnext): Return ENOSYS if the arguments are wrong.
 
 	* mailbox/mbx_mbox.c (mbx_init): Set its default properties.
 	(mbx_header_get_fvalue): Return the len, even if buffer is null.
@@ -21373,12 +21373,12 @@ v	which will do the right thing.
 
 	* mailbox/mbx_pop.c (pop_init): Set its default properties.
 	(pop_open): Remove MU_STREAM_POP flag obsolete.
-	(pop_readline):  Do the converstion if rfc822 is set.
+	(pop_readline):  Do the conversion if rfc822 is set.
 
 	* mailbox/mbx_imap.c (mbx_imap_init): Set its default properties.
 	* mailbox/folder_imap.c (folder_imap_open): Remove MU_STREAM_IMAP,
 	no longer pertinent.
-	(imap_readline): If propety rfc822 is set don't strip '\r'.
+	(imap_readline): If property rfc822 is set don't strip '\r'.
 
 	* mailbox/header.c (header_set_property): New functions.
 	(header_get_property): New functions.
@@ -21397,7 +21397,7 @@ v	which will do the right thing.
 	properties of each object.
 
 	* mailbox/mailer.c (mailer_destroy): Free the properties.
-	* mailbox/mailer.c (mailer_get_poperty): New function, return the
+	* mailbox/mailer.c (mailer_get_property): New function, return the
 	property of the mailbox.
 
 	* mailbox/smtp.c (_mailer_smtp_init): Set its default properties.
@@ -21416,7 +21416,7 @@ v	which will do the right thing.
 	* mailbox/parse822.c: implementation of address_create0(),
 	which handles groups, routes, and the hoary old comment phrase
 	* addr/addr.c - parses addresses from its command line or
-	stding using create() or create0().
+	stdin using create() or create0().
 	* mailbox/mbx_imap.c: need strings.h on some systems, like Nto
 
 2001-03-12  Sam Roberts
@@ -21431,7 +21431,7 @@ v	which will do the right thing.
 2001-03-09  Alain Magloire
 
 	* mailbox/Makefile.am: add property.c in the src list.
-	* doc/mailutils.texi: add Sam to the list of acknowlegment.
+	* doc/mailutils.texi: add Sam to the list of acknowledgment.
 
 2001-03-09  Sam Roberts
 
@@ -21447,10 +21447,10 @@ v	which will do the right thing.
 2001-03-03  Alain Magloire
 
 	* imap4d/fetch.c (fetch_operation) : HEADER.FIELDS.NOT implemented.
-	fetch_opertaion() take a new argument.
+	fetch_operation() take a new argument.
 	* imap4d/util.c (util_upper) : New function string upper.
 
-	* mailbox/heder.c: Added new functionnalities to help the imap4d
+	* mailbox/heder.c: Added new functionality to help the imap4d
 	fetch command.
 	(header_get_field_count) : New function returns the number of header
 	fields in the header.
@@ -21460,29 +21460,29 @@ v	which will do the right thing.
 2001-03-03  Alain Magloire
 
 	* include/mailutils/address.h: s/_cplusplus/__cplusplus/g
-	(include/mailutils/auth.h): Likewised.
-	(include/mailutils/body.h): Likewised.
-	(include/mailutils/debug.h): Likewised.
-	(include/mailutils/header.h): Likewised.
-	(include/mailutils/iterator.h): Likewised.
-	(include/mailutils/list.h): Likewised.
-	(include/mailutils/mailer.h): Likewised.
-	(include/mailutils/message.h): Likewised.
-	(include/mailutils/mime.h): Likewised.
-	(include/mailutils/observer.h): Likewised.
-	(include/mailutils/property.h): Likewised.
-	(include/mailutils/registrar.h): Likewised.
-	(mailbox/include/address0.h): Likewised.
-	(mailbox/include/auth0.h): Likewised.
-	(mailbox/include/body0.h): Likewised.
-	(mailbox/include/debug0.h): Likewised.
-	(mailbox/include/header0.h): Likewised.
-	(mailbox/include/iterator0.h): Likewised.
-	(mailbox/include/list0.h): Likewised.
-	(mailbox/include/mailer0.h): Likewised.
-	(mailbox/include/message0.h): Likewised.
-	(mailbox/include/mime0.h): Likewised.
-	(mailbox/include/observer0.h): Likewised.
+	(include/mailutils/auth.h): Likewise.
+	(include/mailutils/body.h): Likewise.
+	(include/mailutils/debug.h): Likewise.
+	(include/mailutils/header.h): Likewise.
+	(include/mailutils/iterator.h): Likewise.
+	(include/mailutils/list.h): Likewise.
+	(include/mailutils/mailer.h): Likewise.
+	(include/mailutils/message.h): Likewise.
+	(include/mailutils/mime.h): Likewise.
+	(include/mailutils/observer.h): Likewise.
+	(include/mailutils/property.h): Likewise.
+	(include/mailutils/registrar.h): Likewise.
+	(mailbox/include/address0.h): Likewise.
+	(mailbox/include/auth0.h): Likewise.
+	(mailbox/include/body0.h): Likewise.
+	(mailbox/include/debug0.h): Likewise.
+	(mailbox/include/header0.h): Likewise.
+	(mailbox/include/iterator0.h): Likewise.
+	(mailbox/include/list0.h): Likewise.
+	(mailbox/include/mailer0.h): Likewise.
+	(mailbox/include/message0.h): Likewise.
+	(mailbox/include/mime0.h): Likewise.
+	(mailbox/include/observer0.h): Likewise.
 	Pointed by Sam Roberts.
 
 2001-02-28  Alain Magloire
@@ -21500,7 +21500,7 @@ v	which will do the right thing.
 
 	* mailbox/mbx_imap.c (imap_submessage_size): New function to
 	retrieve message size of attachments.
-	* imap4d/fetch.c: More functionnality for the FETCH command.
+	* imap4d/fetch.c: More functionality for the FETCH command.
 	(fetch_operation): New operation.
 	* imap4d/util.c (util_token): little helper function.
 
@@ -21619,7 +21619,7 @@ v	which will do the right thing.
 	"Whether the removal was successful or not, the server
         then releases any exclusive-access lock on the maildrop
         and closes the TCP connection."  This was not done if error
-	occured while expunging, now we will close the connection and
+	occurred while expunging, now we will close the connection and
 	notify the client of the error(ERR_FILE).
 
 2001-02-01  Alain Magloire
@@ -21629,7 +21629,7 @@ v	which will do the right thing.
 	* mailbox/attachment.c: Typo should be "Content-Disposition"
 
 	* mailbox/mbx_mbox.c mailbox/mbx_mboxscan.c mailbox/header.c:
-	Attempt to optimze the header, header_get_fvalue() is created,
+	Attempt to optimize the header, header_get_fvalue() is created,
 	The mailbox save/cache the most common headers, when doing a
 	header_get_value(), header_get_fvalue() is call first hoping
 	that the requested header was cache, if it fails we fall back
@@ -21651,7 +21651,7 @@ v	which will do the right thing.
 2001-01-25  Alain Magloire
 
 	* pop3d/capa.c: Add UIDL in the capability list.
-	and update Copyrigth.
+	and update Copyright.
 	* pop3d/pop3d.c: Remove mbox_record register, only need path_record.
 	* pop3d/retr.c: When retrieve a message should be mark as read.
 	since we do not strip out the header "Status:".
@@ -21659,9 +21659,9 @@ v	which will do the right thing.
 
 2001-01-25  Alain Magloire
 
-	While working on the new version of the API mailbox, Changelog was
-	discontinued, since the API could literaly change overnight a
-	maintenace of the entries were of a particular burden.
+	While working on the new version of the API mailbox, ChangeLog was
+	discontinued, since the API could literally change overnight a
+	maintenance of the entries were of a particular burden.
 	The API of the library, and some utilities like pop3d are
 	stable enough to restart normal entries.
 
@@ -21931,7 +21931,7 @@ v	which will do the right thing.
 1999-10-04 Sean 'Shaleh' Perry
 
 	* changed lock(int mode) to lock(mailbox_lock_t mode), this will allow
-	the type to be chnaged later without affecting code compatibility
+	the type to be changed later without affecting code compatibility
 	* added name to AUTHORS
 	* noticed mention of IMAP4 server and went back to coding it (-:
 
@@ -22022,7 +22022,7 @@ v	which will do the right thing.
 	* pop3d/pop3d.c (main): moved setgid() call to after option parsing
 	(main): make --version report PACKAGE and VERSION
 
-	* libmailbox/mailbox.c (mbox_open): changed paramater type to const
+	* libmailbox/mailbox.c (mbox_open): changed parameter type to const
 
 	* pop3d/Makefile.am (INCLUDES): change relative directories to
 	top_srcdir base
@@ -22060,10 +22060,12 @@ v	which will do the right thing.
 
 1999-09-10  Jeff Bailey
 
-	* */*: Accomidate directory rearrange
+	* */*: Accommodate directory rearrange
 
 
 Local Variables:
 mode: change-log
 version-control: never
 End:
+
+	

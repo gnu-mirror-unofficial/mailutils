@@ -133,19 +133,18 @@ amend_file=ChangeLog.amend
 .PHONY: ChangeLog
 ChangeLog: 
 	$(AM_V_at)if test -d .git; then					\
-	    cmd="$(top_srcdir)/mu-aux/gencl --file=ChangeLog --verbose";\
+	    cmd="$(top_srcdir)/mu-aux/gencl --file=ChangeLog --verbose --append-dot";\
             if test -n "$(prev_change_log)" && test -f "$(prev_change_log)"; \
 	    then							\
 		cmd="$$cmd --append=$(prev_change_log)";		\
 	    fi;								\
-	    cmd="$$cmd -- $(top_srcdir)/build-aux/gitlog-to-changelog"; \
-	    if test -n "$(amend_file)"; then                                 \
-              cmd="$$cmd --amend=$(amend_file)";                             \
-            fi;                                                              \
-	    if test -n "$(gen_start_date)"; then                             \
-	      cmd="$$cmd --since=\"$(gen_start_date)\"";                     \
-	    fi;                                                              \
-	    $$cmd --format='%s%n%n%b%n' | fmt -s;	                     \
+	    if test -n "$(amend_file)"; then                            \
+              cmd="$$cmd --amend=$(amend_file)";                        \
+            fi;                                                         \
+	    if test -n "$(gen_start_date)"; then                        \
+	      cmd="$$cmd --since=$(gen_start_date)";			\
+	    fi;                                                         \
+	    $$cmd;	                                                \
 	fi
 
 dist-hook: ChangeLog
