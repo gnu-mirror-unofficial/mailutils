@@ -25,6 +25,7 @@ my $amend_file;
 my %amendment;
 my $append_dot;
 my $ignore_errors;
+my $email;
 
 my $exit_status = 0;
 
@@ -37,10 +38,12 @@ gencl - generate ChangeLog from git log output
 B<gencl>
 [B<-fiv>]    
 [B<-a> I<FILE>]
+[B<-m> I<EMAIL>]    
 [B<-F> I<FILE>]
 [B<--amend=>I<FILE>]
 [B<--append-dot>]
 [B<--append=>I<FILE>]
+[B<--email=>I<EMAIL>]    
 [B<--file=>I<FILE>]
 [B<--force>]
 [B<--ignore-errors>]    
@@ -86,7 +89,13 @@ Append I<FILE> to the end of the generated file.  Multiple B<--append>
 are processed in the order of their occurrence on the command line.
 The content of I<FILE> is appended verbatim, except that the line beginning
 with the text B<Local Variables:> is taken to mark the end of file.
-   
+
+=item B<-m>, B<--email=>I<EMAIL>
+
+Sets email address to use in the topmost automatically generated entry.
+In the absense of this option, B<gencl> constructs the email from the
+current user name and the domain (or host) name.    
+    
 =item B<-F>, B<--file=>I<FILE>
 
 Create I<FILE> instead of the B<ChangeLog>.
@@ -225,11 +234,38 @@ GetOptions(
     'strip-cherry-pick' => \$strip_cherry_pick,
     'amend=s' => \$amend_file,
     'append-dot' => \$append_dot,
-    'ignore-errors|i' => \$ignore_errors
+    'ignore-errors|i' => \$ignore_errors,
+    'email|m=s' => \$email
     ) or exit(1);
 
 if (! -d '.git') {
     exit 0;
+}
+
+unless (defined($email)) {
+    if (exists($ENV{EMAIL})) {
+	$email = $ENV{EMAIL};
+    } else {
+	my ($user, $domain);
+	if (exists($ENV{USER})) {
+	    $user = $ENV{USER};
+	} elsif (my ($name) = getpwuid(getuid())) {
+	    $user = $name;
+	} else {
+	    die "can't get user name";
+	}
+
+	if (chomp($domain = `domainname`) && $domain ne "(none)") {
+	    ;
+	} elsif (exists($ENV{HOSTNAME})) {
+	    $domain = $ENV{HOSTNAME};
+	} elsif ($domain = `hostname`) {
+	    chomp $domain;
+	} else {
+	    $domain = 'localhost';
+	}
+	$email = $user . '@' . $domain;
+    }
 }
 
 read_amend_file($amend_file) if $amend_file;
@@ -258,7 +294,7 @@ sub toplevel_entry {
 
     my @header;
 
-    push @header, "$date  Automatically generated  <bug-mailutils\@gnu.org>";
+    push @header, "$date  Automatically generated  <$email>";
     push @header, '';
     push @header, "\tHEAD $hash.";
     push @header, '';
@@ -289,6 +325,9 @@ sub toplevel_entry {
 sub headcmp {
     my $file = shift;
     if (open(my $fd, '<', $changelog_file)) {
+	# Skip first line
+	$_ = <$fd>;
+	shift;
 	while (<$fd>) {
 	    my $line = shift;
 	    last unless defined($line);
