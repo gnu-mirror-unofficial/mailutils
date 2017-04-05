@@ -123,13 +123,12 @@ SUBDIRS = . \
 EXTRA_DIST = COPYING.LESSER paths
 DISTCLEANFILES = pathdefs.h
 
-# Trigger creation of the ChangeLog
-noinst_DATA = ChangeLog
-
 gen_start_date = "2008-12-08"
 prev_change_log = "doc/ChangeLog.CVS"
-amend_file=ChangeLog.amend
+amend_file = ChangeLog.amend
 
+# Trigger creation of the ChangeLog
+noinst_DATA = ChangeLog
 .PHONY: ChangeLog
 ChangeLog: 
 	$(AM_V_at)if test -d .git; then					\
@@ -138,6 +137,8 @@ ChangeLog:
 		    --append=$(prev_change_log)     		        \
                     --amend=$(amend_file)                               \
 	            --since=$(gen_start_date);    			\
+	elif test "$(builddir)" = "$(srcdir)" && test ! -e ChangeLog; then \
+	    echo "This file is a placeholder." > ChangeLog;             \
 	fi
 
 dist-hook: ChangeLog

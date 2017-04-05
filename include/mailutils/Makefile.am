@@ -27,11 +27,12 @@ types.h: $(top_srcdir)/include/mailutils/types.hin Makefile
                    $(top_srcdir)/include/mailutils/types.hin > types.h
 
 gitinfo.h: $(top_srcdir)/ChangeLog
-	$(AM_V_GEN)if ! $(GITINFO) -Hc -ogitinfo.h \
-           && test ! -f $(srcdir)/gitinfo.h; then \
-	  echo '/* no info */' > gitinfo.h;\
+	$(AM_V_GEN)if test "$(builddir)" = "$(srcdir)"; then	\
+	   test -d $(top_srcdir)/.git && $(GITINFO) -Hc -ogitinfo.h; \
+	   if test ! -f gitinfo.h; then \
+	     echo '/* no info */' > gitinfo.h;\
+	   fi; \
 	fi
-
 
 DISTCLEANFILES = types.h
 

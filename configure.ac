@@ -1374,7 +1374,7 @@ AC_PATH_PROG([PERL], perl)
 if test -z "$PERL"; then
   PERL=false
 fi  
-AC_SUBST([GITINFO],'$(PERL) $(mu_aux_dir)/gitinfo.pl')
+AC_SUBST([GITINFO],'$(PERL) $(mu_aux_dir)/gitinfo')
 
 AC_CONFIG_COMMANDS([status],[
 cat <<EOF

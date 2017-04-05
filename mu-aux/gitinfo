@@ -1,3 +1,7 @@
+eval '(exit $?0)' && eval 'exec perl -wS "$0" "$@"'
+  & eval 'exec perl -wS "$0" $argv:q'
+    if 0;
+
 # This file is part of GNU Mailutils.
 # Copyright (C) 2017 Free Software Foundation, Inc.
 #
@@ -443,6 +447,7 @@ EOT
     'all' => sub {
 	foreach my $name (sort keys %gitinfo) {
 	    my $val = $gitinfo{$name};
+	    next unless defined $val;
 	    $val =~ s/(["\\])/\\$1/g;
 	    print "$name=\"$val\"\n";
 	}
