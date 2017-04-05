@@ -695,7 +695,7 @@ merge (struct _mu_assoc_elem *left, struct _mu_assoc_elem *right,
 
   while (left && right)
     {
-      if (cmp (left->name, left->data, right->name, right->data, data) < 0)
+      if (cmp (left->name, left->data, right->name, right->data, data) <= 0)
 	{
 	  tmp = left->next;
 	  *tailptr = left;
