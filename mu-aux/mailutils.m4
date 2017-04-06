@@ -14,6 +14,16 @@ dnl
 dnl You should have received a copy of the GNU General Public License
 dnl along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
+m4_define([am_mu_vercmp],[
+m4_pushdef([_ver_A_],m4_car($1))dnl
+m4_pushdef([_ver_B_],m4_car($2))dnl
+m4_if(_ver_B_,,,[if test m4_if(_ver_A_,,0,_ver_A_) -lt _ver_B_; then
+  $3
+fi
+m4_popdef([_ver_A_])dnl
+m4_popdef([_ver_B_])dnl
+am_mu_vercmp(m4_cdr($1),m4_cdr($2),[$3])])])
+
 dnl AM_GNU_MAILUTILS(minversion, link-req, [act-if-found], [ac-if-not-found])
 dnl                      $1         $2           $3              $4
 dnl Verify if GNU Mailutils is installed and if its version is `minversion'
@@ -23,8 +33,10 @@ dnl
 dnl If Mailutils is found, set:
 dnl     MAILUTILS_CONFIG to the full name of the mailutils-config program;
 dnl     MAILUTILS_VERSION to the Mailutils version (string);
-dnl     MAILUTILS_VERSION_NUMBER to the packed numeric representation of the
-dnl         GNU Mailutils version (major * 1000 + minor * 100 + patch);
+dnl     MAILUTILS_VERSION_MAJOR  Mailutils version: major number
+dnl     MAILUTILS_VERSION_MINOR  Mailutils version: minor number
+dnl     MAILUTILS_VERSION_PATCH  Mailutils version: patchlevel number (or 0,
+dnl                              if not defined)
 dnl     MAILUTILS_LIBS to the list of cc(1) flags needed to link in the
 dnl         libraries requested by `link-req';
 dnl     MAILUTILS_INCLUDES to the list of cc(1) flags needed to set include
@@ -36,25 +48,34 @@ dnl
 AC_DEFUN([AM_GNU_MAILUTILS],
  [AC_PATH_PROG(MAILUTILS_CONFIG, mailutils-config, none, $PATH)
   if test "$MAILUTILS_CONFIG" = "none"; then
-    ifelse($4,,[AC_MSG_ERROR(cannot find GNU Mailutils)], [$4])
+    m4_if($4,,[AC_MSG_ERROR(cannot find GNU Mailutils)], [$4])
   fi
   AC_SUBST(MAILUTILS_CONFIG)
   AC_SUBST(MAILUTILS_VERSION)
   AC_SUBST(MAILUTILS_INCLUDES)
   AC_SUBST(MAILUTILS_LIBS)
+
+  m4_ifndef([MU_VERSION_PARSE_DEFINED],[[
+mu_version_parse() {
+    set -- `echo "@S|@1" | sed 's/^\([0-9\.][0-9\.]*\).*/\1/;s/\./ /g'`
+    major=@S|@{1:-0}
+    minor=@S|@{2:-0}
+    patch=@S|@{3:-0}
+}]
+  m4_pushdef([MU_VERSION_PARSE_DEFINED])])
+
   MAILUTILS_VERSION=`$MAILUTILS_CONFIG --info version|sed 's/VERSION=//'`
-  VEX=`echo $MAILUTILS_VERSION | sed 's/\./ \\\\* 1000 + /;s/\./ \\\\* 100 + /'`
-  MAILUTILS_VERSION_NUMBER=`eval expr "$VEX"`
-  AC_SUBST(MAILUTILS_VERSION_NUMBER)
+  mu_version_parse $MAILUTILS_VERSION
+  AC_DEFINE_UNQUOTED([MAILUTILS_VERSION_MAJOR], $major, [Mailutils version major number])
+  AC_DEFINE_UNQUOTED([MAILUTILS_VERSION_MINOR], $minor, [Mailutils version minor number])
+  AC_DEFINE_UNQUOTED([MAILUTILS_VERSION_PATCH], $patch, [Mailutils version patchlevel number])
+  
   AC_DEFINE_UNQUOTED(MAILUTILS_VERSION, "$MAILUTILS_VERSION", [Mailutils version number]) 
-  AC_DEFINE_UNQUOTED(MAILUTILS_VERSION_NUMBER, $MAILUTILS_VERSION_NUMBER,
-                     [Packed Mailutils version number])
-  ifelse($1,,,[
-   VEX=`echo $1 | sed 's/\./ \\\\* 1000 + /;s/\./ \\\\* 100 + /'`
-   min=`eval expr "$VEX"`
-   if test $MAILUTILS_VERSION_NUMBER -lt $min; then
-     AC_MSG_ERROR([Mailutils version too old; required is at least ]$1)
-   fi])
+  m4_if($1,,,[
+   am_mu_vercmp(m4_quote($major, $minor, $patch),
+                m4_dquote(m4_bpatsubst($1, [\.],[,])),
+      [AC_MSG_ERROR([Mailutils v. $MAILUTILS_VERSION is too old; required is at least ]$1)])
+  ])
   req=""
   for x in $2
   do
@@ -65,6 +86,6 @@ AC_DEFUN([AM_GNU_MAILUTILS],
   done
   MAILUTILS_LIBS=`$MAILUTILS_CONFIG --link $req`
   MAILUTILS_INCLUDES=`$MAILUTILS_CONFIG --compile`
-  ifelse($3,,[LIBS="$LIBS $MAILUTILS_LIBS"], [$3])
+  m4_if($3,,[LIBS="$LIBS $MAILUTILS_LIBS"], [$3])
 ])  
   

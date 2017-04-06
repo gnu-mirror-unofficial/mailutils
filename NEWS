@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-03-18
+GNU mailutils NEWS -- history of user-visible changes. 2017-04-06
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -74,6 +74,17 @@ If the "tls" section is absent, but "tls-mode" is specified and it's
 value is anything but "no", the settings from the global "tls" section
 will be used.  In this case, it is an error if the global "tls"
 section is not defined.
+
+* AM_GNU_MAILUTILS autoconf macro
+
+Required version must be literal string.
+
+The packed version number (MAILUTILS_VERSION_NUMBER) is no longer
+defined.  Instead, the following constants are defined in config.h:
+
+ MAILUTILS_VERSION_MAJOR  Major version number
+ MAILUTILS_VERSION_MINOR  Minor version number
+ MAILUTILS_VERSION_PATCH  Patchlevel number (or 0, for stable releases).
 
 
 Version 3.2 - 2017-03-11
