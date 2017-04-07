@@ -38,7 +38,7 @@ set_from_init_file('AFTER_BODY_OPEN', qq{
 <ul class='tabs'>
   <li><a href="${top_html_dir}/">Main</a></li>
   <li><a href="${top_html_dir}/download.html">Downloads</a></li>
-  <li><a class="active" href="${top_html_dir}/manual.html">Documentation</a></li>
+  <li><a class="active" href="${top_html_dir}/manual">Documentation</a></li>
   <li><a href="${top_html_dir}/wiki">Wiki</a></li>
 </ul>
 });
