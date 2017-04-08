@@ -22,8 +22,6 @@
 #include <mailutils/types.h>
 #include <signal.h>
 
-extern unsigned long mu_session_id;
-
 typedef int (*mu_conn_loop_fp) (int fd, void *conn_data, void *server_data);
 typedef void (*mu_conn_free_fp) (void *conn_data, void *server_data);
 typedef int (*mu_server_idle_fp) (void *server_data);
@@ -71,7 +69,6 @@ int mu_ip_server_set_data (mu_ip_server_t srv,
 int mu_ip_server_open (mu_ip_server_t srv);
 int mu_ip_server_shutdown (mu_ip_server_t srv);
 int mu_ip_server_accept (mu_ip_server_t srv, void *call_data);
-int mu_ip_server_loop (mu_ip_server_t srv, void *call_data);
 int mu_ip_server_get_fd (mu_ip_server_t srv);
 int mu_ip_server_get_sockaddr (mu_ip_server_t srv, struct mu_sockaddr **psa);
 const char *mu_ip_server_addrstr (mu_ip_server_t srv);
@@ -95,7 +92,6 @@ struct mu_srv_config       /* Configuration data for a single TCP server. */
   time_t timeout;          /* Idle timeout for this server. */
     /* Application-dependent data may follow */
 };
-
 
 typedef struct mu_m_server_connect_data mu_m_server_connect_data_t;
 typedef int (*mu_m_server_handler_fp) (int fd, struct sockaddr *sa, int salen,
@@ -148,5 +144,7 @@ int mu_m_server_check_acl (mu_m_server_t msrv, struct sockaddr *s, int salen);
 
 struct mu_cfg_param;
 void mu_m_server_cfg_init (mu_m_server_t msrv, struct mu_cfg_param *app_param);
+
+int mu_sid (char **);
 
 #endif

@@ -676,7 +676,6 @@ mu_m_server_check_acl (mu_m_server_t msrv, struct sockaddr *s, int salen)
       mu_acl_result_t res;
       int rc;
 
-      mu_acl_set_session_id (msrv->acl);
       rc = mu_acl_check_sockaddr (msrv->acl, s, salen, &res);
       if (rc)
 	{

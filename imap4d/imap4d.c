@@ -17,8 +17,8 @@
 
 #include "imap4d.h"
 #include <mailutils/gsasl.h>
-#include "mailutils/cli.h"
-#include "mailutils/kwd.h"
+#include <mailutils/cli.h>
+#include <mailutils/kwd.h>
 #include "tcpwrap.h"
 
 mu_m_server_t server;
@@ -705,83 +705,6 @@ imap4d_session_setup (char *username)
     }
   return imap4d_session_setup0 ();
 }
-
-int
-get_client_address (int fd, struct sockaddr_in *pcs)
-{
-  socklen_t len = sizeof *pcs;
-
-  if (getpeername (fd, (struct sockaddr *) pcs, &len) < 0)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "getpeername", NULL, errno);
-      return 1;
-    }
-  return 0;
-}
-
-static int
-set_strerr_flt (void)
-{
-  mu_stream_t flt, trans[2];
-  int rc;
-  
-  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET, trans);
-  if (rc == 0)
-    {
-      char sessidstr[10];
-      char *argv[] = { "inline-comment", NULL, "-S", NULL };
-
-      snprintf (sessidstr, sizeof sessidstr, "%08lx:", mu_session_id);
-      argv[1] = sessidstr;
-      rc = mu_filter_create_args (&flt, trans[0], "inline-comment", 3,
-				  (const char **)argv,
-				  MU_FILTER_ENCODE, MU_STREAM_WRITE);
-      mu_stream_unref (trans[0]);
-      if (rc == 0)
-	{
-	  mu_stream_set_buffer (flt, mu_buffer_line, 0);
-	  trans[0] = flt;
-	  trans[1] = NULL;
-	  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM,
-				MU_IOCTL_OP_SET, trans);
-	  mu_stream_unref (trans[0]);
-	  if (rc)
-	    mu_error (_("%s failed: %s"), "MU_IOCTL_SET_STREAM",
-		      mu_stream_strerror (mu_strerr, rc));
-	}
-      else
-	mu_error (_("cannot create log filter stream: %s"), mu_strerror (rc));
-    }
-  else
-    {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_GET_STREAM",
-		mu_stream_strerror (mu_strerr, rc));
-    }
-  return rc;
-}
-
-static void
-clr_strerr_flt (void)
-{
-  mu_stream_t flt, trans[2];
-  int rc;
-
-  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET, trans);
-  if (rc == 0)
-    {
-      flt = trans[0];
-
-      rc = mu_stream_ioctl (flt, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET, trans);
-      if (rc == 0)
-	{
-	  mu_stream_unref (trans[0]);
-	  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM,
-				MU_IOCTL_OP_SET, trans);
-	  if (rc == 0)
-	    mu_stream_unref (flt);
-	}
-    }
-}
 
 void
 imap4d_child_signal_setup (RETSIGTYPE (*handler) (int signo))
@@ -895,27 +818,18 @@ imap4d_mainloop (int ifd, int ofd, struct imap4d_srv_config *cfg)
 
   return 0;
 }
-
+
 int
 imap4d_connection (int fd, struct sockaddr *sa, int salen,
 		   struct mu_srv_config *pconf, void *data)
 {
   struct imap4d_srv_config *cfg = (struct imap4d_srv_config *) pconf;
-  int rc;
   
-  idle_timeout = pconf->timeout;
-  imap4d_transcript = pconf->transcript;
+  idle_timeout = cfg->m_cfg.timeout;
+  imap4d_transcript = cfg->m_cfg.transcript;
 
-  if (mu_log_session_id)
-    rc = set_strerr_flt ();
-  else
-    rc = 1;
-  
   imap4d_mainloop (fd, fd, cfg);
 
-  if (rc == 0)
-    clr_strerr_flt ();
-  
   return 0;
 }
 
@@ -1057,7 +971,7 @@ main (int argc, char **argv)
       if (setgid (gr->gr_gid) == -1)
 	{
 	  mu_error (_("error setting mail group: %s"), mu_strerror (errno));
-	  exit (EX_OSERR);
+	  //exit (EX_OSERR);
 	}
     }
 

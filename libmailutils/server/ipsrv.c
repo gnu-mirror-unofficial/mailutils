@@ -36,7 +36,10 @@
 #include <mailutils/errno.h>
 #include <mailutils/nls.h>
 #include <mailutils/sockaddr.h>
-
+#include <mailutils/stream.h>
+#include <mailutils/stdstream.h>
+#include <mailutils/filter.h>
+#include <mailutils/syslog.h>
 
 struct _mu_ip_server
 {
@@ -386,7 +389,6 @@ mu_ip_tcp_accept (mu_ip_server_t srv, void *call_data)
       mu_acl_result_t res;
       int rc;
       
-      mu_acl_set_session_id (srv->acl);
       rc = mu_acl_check_sockaddr (srv->acl, &client.sa, size, &res);
       if (rc)
 	mu_debug (MU_DEBCAT_SERVER, MU_DEBUG_ERROR,
@@ -470,7 +472,6 @@ mu_ip_udp_accept (mu_ip_server_t srv, void *call_data)
       mu_acl_result_t res;
       int rc;
 
-      mu_acl_set_session_id (srv->acl);
       rc = mu_acl_check_sockaddr (srv->acl, &client.sa, size, &res);
       if (rc)
 	mu_debug (MU_DEBCAT_SERVER, MU_DEBUG_ERROR,
@@ -488,12 +489,91 @@ mu_ip_udp_accept (mu_ip_server_t srv, void *call_data)
   return rc;
 }
 
+static int
+set_strerr_flt (void)
+{
+  mu_stream_t flt, trans[2];
+  int rc;
+
+  if (!mu_log_session_id)
+    return ENOSYS;
+  
+  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET, trans);
+  if (rc == 0)
+    {
+      char *sid;
+      char *argv[] = { "inline-comment", NULL, "-S", NULL };
+
+      rc = mu_sid (&sid);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERR, "mu_sid", NULL, rc);
+	  return 0;
+	}
+      
+      argv[1] = sid;
+      rc = mu_filter_create_args (&flt, trans[0], "inline-comment", 3,
+				  (const char **)argv,
+				  MU_FILTER_ENCODE, MU_STREAM_WRITE);
+      free (sid);
+      mu_stream_unref (trans[0]);
+      if (rc == 0)
+	{
+	  mu_stream_set_buffer (flt, mu_buffer_line, 0);
+	  trans[0] = flt;
+	  trans[1] = NULL;
+	  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM,
+				MU_IOCTL_OP_SET, trans);
+	  mu_stream_unref (trans[0]);
+	  if (rc)
+	    mu_error (_("%s failed: %s"), "MU_IOCTL_SET_STREAM",
+		      mu_stream_strerror (mu_strerr, rc));
+	}
+      else
+	mu_error (_("cannot create log filter stream: %s"), mu_strerror (rc));
+    }
+  else
+    {
+      mu_error (_("%s failed: %s"), "MU_IOCTL_GET_STREAM",
+		mu_stream_strerror (mu_strerr, rc));
+    }
+  return rc;
+}
+
+static void
+clr_strerr_flt (void)
+{
+  mu_stream_t flt, trans[2];
+  int rc;
+
+  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET, trans);
+  if (rc == 0)
+    {
+      flt = trans[0];
+
+      rc = mu_stream_ioctl (flt, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET, trans);
+      if (rc == 0)
+	{
+	  mu_stream_unref (trans[0]);
+	  rc = mu_stream_ioctl (mu_strerr, MU_IOCTL_TOPSTREAM,
+				MU_IOCTL_OP_SET, trans);
+	  if (rc == 0)
+	    mu_stream_unref (flt);
+	}
+    }
+}
+
 int
 mu_ip_server_accept (mu_ip_server_t srv, void *call_data)
 {
   int rc;
+  int flt;
+  
   if (!srv || srv->fd == -1)
     return EINVAL;
+
+  flt = set_strerr_flt ();
+  
   switch (srv->type)
     {
     case MU_IP_UDP:
@@ -510,24 +590,9 @@ mu_ip_server_accept (mu_ip_server_t srv, void *call_data)
                 mu_strerror (rc));
       mu_ip_server_shutdown (srv);
     }
+  if (flt == 0)
+    clr_strerr_flt ();
   return rc;
-}
-
-int
-mu_ip_server_loop (mu_ip_server_t srv, void *call_data)
-{
-  if (!srv)
-    return EINVAL;
-  while (srv->fd != -1)
-    {
-      int rc = mu_ip_server_accept (srv, call_data);
-      if (rc && rc != EINTR)
-	{
-	  mu_ip_server_shutdown (srv);
-	  return rc;
-	}
-    }
-  return 0;
 }
 
 int

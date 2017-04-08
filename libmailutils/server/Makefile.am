@@ -21,6 +21,7 @@ libserver_la_SOURCES = \
  acl.c\
  server.c\
  msrv.c\
- ipsrv.c
+ ipsrv.c\
+ sid.c
 
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
