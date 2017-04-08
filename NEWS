@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-04-06
+GNU mailutils NEWS -- history of user-visible changes. 2017-04-08
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -86,6 +86,8 @@ defined.  Instead, the following constants are defined in config.h:
  MAILUTILS_VERSION_MINOR  Minor version number
  MAILUTILS_VERSION_PATCH  Patchlevel number (or 0, for stable releases).
 
+* movemail: new option --progress-meter
+ 
 
 Version 3.2 - 2017-03-11
 

@@ -29,6 +29,10 @@
 #include <mailutils/tls.h>
 #include "mailutils/cli.h"
 #include <muaux.h>
+#ifdef HAVE_TERMIOS_H
+# include <termios.h>
+#endif
+#include <sys/ioctl.h>
 
 static int reverse_order;
 static int preserve_mail; 
@@ -39,6 +43,7 @@ static int ignore_errors;
 static char *program_id_option;
 static size_t max_messages_option;
 static int notify;
+static int progress_meter_option;
 
   /* These bits tell what to do when an error occurs: */
 #define ONERROR_SKIP     0x01  /* Skip to the next message */
@@ -302,6 +307,10 @@ static struct mu_option movemail_options[] = {
   { "notify",        0, NULL,   MU_OPTION_DEFAULT,
     N_("enable biff notification"),
     mu_c_bool, &notify },
+
+  { "progress-meter", 'm', NULL,   MU_OPTION_DEFAULT,
+    N_("enable progress meter"),
+    mu_c_bool, &progress_meter_option },
 
   MU_OPTION_END
 }, *options[] = { movemail_options, NULL };
@@ -840,6 +849,76 @@ set_program_id (const char *source_name, const char *dest_name)
   mu_stdstream_strerr_setup (MU_STRERR_STDERR);
 }
 
+static int
+screen_width (void)
+{
+  struct winsize ws;
+  ws.ws_col = 0;
+  if (ioctl(1, TIOCGWINSZ, (char *) &ws) < 0)
+    {
+      char *p = getenv ("COLUMNS");
+      if (p)
+	ws.ws_col = atol (p);
+    }
+  if (ws.ws_col == 0)
+    return 80;
+  return ws.ws_col;
+}
+
+static void
+progress_format (size_t pos, size_t count)
+{
+  int n;
+  
+  fputc ('\r', stdout);
+  n = printf ("message %zu/%zu", pos, count);
+  n = screen_width () - n;
+  while (n--)
+    fputc (' ', stdout);
+  fflush (stdout);
+}
+
+void
+progress_start (mu_iterator_t itr)
+{
+  size_t count;
+  
+  if (!progress_meter_option)
+    return;
+
+  if (mu_iterator_ctl (itr, mu_itrctl_count, &count))
+    {
+      progress_meter_option = 0;
+      return;
+    }
+  progress_format (0, count);
+}
+
+void
+progress_mark (mu_iterator_t itr)
+{
+  size_t count, pos;
+  
+  if (!progress_meter_option)
+    return;
+
+  if (mu_iterator_ctl (itr, mu_itrctl_count, &count)
+      || mu_iterator_ctl (itr, mu_itrctl_tell, &pos))
+    {
+      progress_meter_option = 0;
+      return;
+    }
+  if (reverse_order)
+    pos = count - pos + 1;
+  progress_format (pos, count);
+}
+
+void
+progress_stop (void)
+{
+  if (progress_meter_option)
+    fputc ('\n', stdout);
+}
 
 int
 main (int argc, char **argv)
@@ -871,6 +950,9 @@ main (int argc, char **argv)
 
   if (ignore_errors)
     onerror_flags |= ONERROR_SKIP|ONERROR_COUNT;
+
+  if (!isatty (1))
+    progress_meter_option = 0;
   
   if (emacs_mode)
     {      
@@ -965,6 +1047,7 @@ main (int argc, char **argv)
 	  exit (1);
 	}
       
+      progress_start (itr);
       for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
 	   mu_iterator_next (itr))
 	{
@@ -980,6 +1063,7 @@ main (int argc, char **argv)
 	      get_err_count++;
 	      continue;
 	    }
+	  progress_mark (itr);
 	  if (movemail (dest, msg, uidl->msgno))
 	    break;
 	}
@@ -1000,7 +1084,8 @@ main (int argc, char **argv)
 		    mu_strerror (rc));
 	  return 1;
 	}
-      
+
+      progress_start (itr);
       for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
 	   mu_iterator_next (itr))
 	{
@@ -1026,8 +1111,10 @@ main (int argc, char **argv)
 	  
 	  if (movemail (dest, msg, msgno))
 	    break;
+	  progress_mark (itr);
 	}
     }
+  progress_stop ();
   mu_iterator_destroy (&itr);
   
   if (verbose_option)
