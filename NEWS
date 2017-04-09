@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-04-08
+GNU mailutils NEWS -- history of user-visible changes. 2017-04-09
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -87,7 +87,16 @@ defined.  Instead, the following constants are defined in config.h:
  MAILUTILS_VERSION_PATCH  Patchlevel number (or 0, for stable releases).
 
 * movemail: new option --progress-meter
- 
+
+* scheme implementation of the Sieve language discontinued
+
+There's no reason to keep two different implementations of the Sieve
+language within the same package.  The principal implementation
+(libmu_sieve) is faster, much more advanced and rich in features than
+the implementation in Scheme.  The decision has therefore been taken to
+discontinue the latter and to concentrate all efforts on the further
+development of the former.
+
 
 Version 3.2 - 2017-03-11
 

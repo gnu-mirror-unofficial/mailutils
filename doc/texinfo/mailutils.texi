@@ -257,7 +257,6 @@ Reading Mail
 @command{sieve}
 
 * sieve interpreter::   A Sieve Interpreter
-* sieve2scm::           A Sieve to Scheme Translator and Filter
 
 A Sieve Interpreter
 

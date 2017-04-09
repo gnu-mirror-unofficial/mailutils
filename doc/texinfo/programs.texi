@@ -5902,14 +5902,11 @@ only the first.
 @UNREVISED
 
 Sieve is a language for filtering e-mail messages at time of final
-delivery, described in RFC 3028.  GNU Mailutils provides two
-implementations of this language: a stand-alone @dfn{sieve interpreter}
-and a @dfn{sieve translator and filter}.  The following sections describe these
-utilities in detail.
+delivery, described in RFC 3028.  GNU Mailutils contains
+stand-alone @dfn{sieve interpreter}, which is described in detail below.
 
 @menu
 * sieve interpreter::   A Sieve Interpreter
-* sieve2scm::           A Sieve to Scheme Translator and Filter
 @end menu
 
 @node sieve interpreter
@@ -6250,41 +6247,6 @@ source for the required action NAME is not available
 @end enumerate
  
 @c ***********************************************************************
-
-@page
-@node sieve2scm
-@subsection A Sieve to Scheme Translator and Filter
-@UNREVISED
-
-A Sieve to Scheme Translator @command{sieve2scm} translates a given
-Sieve script into an equivalent Scheme program and optionally executes
-it.  The program itself is written in Scheme and requires presence of
-Guile version 1.8 or newer on the system.  For more information on
-Guile refer to @ref{Top,,Overview,guile,The Guile Reference Manual}.
-
-@table @option
-@item -f @var{filename}
-@itemx --file @var{filename}
-Set input file name.
-
-@item -o @var{filename}
-@itemx --output @var{filename}
-Set output file name
-
-@item -L @var{dirname}
-@itemx --lib-dir @var{dirname}
-Set sieve library directory name
-
-@item -d @var{level}
-@itemx --debug @var{level}
-Set debugging level
-@end table            
-
-The Scheme programs produced by @command{sieve2scm} can be used with
-@command{guimb} or @command{maidag}.
-
-@c ***********************************************************************
-
 @page
 @node guimb
 @section @command{guimb} --- A Mailbox Scanning and Processing Language
