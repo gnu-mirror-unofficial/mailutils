@@ -1462,7 +1462,7 @@ mu_cfg_find_node (mu_cfg_tree_t *tree, const char *path, mu_cfg_node_t **pval)
 	  *pval = (mu_cfg_node_t *) data.node;
 	  return 0;
 	}
-      else
+      else if (rc != 0)
 	mu_diag_funcall (MU_DIAG_ERR, "mu_cfg_preorder", NULL, rc);
     }
   return MU_ERR_NOENT;
