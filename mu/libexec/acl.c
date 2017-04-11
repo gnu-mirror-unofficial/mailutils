@@ -14,6 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#include <config.h>
+#include <mailutils/mailutils.h>
+#include <mailutils/nls.h>
+#include <sysexits.h>
 #include "mu.h"
 
 char acl_docstring[] = N_("test access control lists");
@@ -41,7 +45,7 @@ static struct mu_cfg_param acl_cfg_param[] = {
 };
 
 int
-mutool_acl (int argc, char **argv)
+main (int argc, char **argv)
 {
   int rc;
   mu_acl_result_t result;
@@ -126,10 +130,3 @@ mutool_acl (int argc, char **argv)
 
   return 0;
 }
-
-/*
-  MU Setup: acl
-  mu-handler: mutool_acl
-  mu-docstring: acl_docstring
-  End MU Setup:
-*/

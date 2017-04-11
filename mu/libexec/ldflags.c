@@ -14,6 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#include <config.h>
+#include <mailutils/mailutils.h>
+#include <mailutils/nls.h>
+#include <sysexits.h>
 #include "mu.h"
 
 char ldflags_docstring[] = N_("list libraries required to link");
@@ -121,7 +125,7 @@ sort_entries (void)
 
 
 int
-mutool_ldflags (int argc, char **argv)
+main (int argc, char **argv)
 {
   int j;
 
@@ -181,10 +185,3 @@ mutool_ldflags (int argc, char **argv)
   mu_printf ("\n");
   return 0;
 }
-
-/*
-  MU Setup: ldflags
-  mu-handler: mutool_ldflags
-  mu-docstring: ldflags_docstring
-  End MU Setup:
-*/

@@ -18,17 +18,22 @@
 # include <config.h>
 #endif
 #include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/un.h>
-#include <arpa/inet.h>
-#include <sysexits.h>
+#include <stdarg.h>
 #include <mailutils/mailutils.h>
 
-typedef int (*mutool_action_t) (int argc, char **argv);
+void mu_action_getopt (int *pargc, char ***pargv, struct mu_option *opt,
+		       char const *docstring, char const *argdoc);
+int mu_vgetans (const char *variants, const char *fmt, va_list ap);
+int mu_getans (const char *variants, const char *fmt, ...);
+int get_bool (const char *str, int *pb);
+int get_port (const char *port_str, int *pn);
+int mu_vgetyn (const char *fmt, va_list ap);
+int mu_getyn (const char *fmt, ...);
+int port_from_sa (struct mu_sockaddr *sa);
 
 #define CMD_COALESCE_EXTRA_ARGS 0x01
+
+typedef int (*mutool_action_t) (int argc, char **argv);
 
 struct mutool_command
 {
@@ -48,12 +53,6 @@ mu_assoc_t mutool_shell_prompt_assoc (void);
 int mutool_shell (const char *name, struct mutool_command *cmd);
 mu_stream_t mutool_open_pager (void);
 
-int mu_help (void);
-mutool_action_t dispatch_find_action (const char *name);
-void subcommand_help (mu_stream_t str);
-
-int port_from_sa (struct mu_sockaddr *sa);
-
 
 #define VERBOSE_MASK(n) (1<<((n)+1))
 #define SET_VERBOSE_MASK(n) (shell_verbose_flags |= VERBOSE_MASK (n))
@@ -68,12 +67,4 @@ extern int shell_verbose_flags;
 int shell_verbose (int argc, char **argv,
 		   void (*set_verbose) (void), void (*set_mask) (void));
 
-
-int get_bool (const char *str, int *pb);
-int get_port (const char *port_str, int *pn);
-
-int mu_getans (const char *variants, const char *fmt, ...);
-
-void mu_action_getopt (int *pargc, char ***pargv, struct mu_option *opt,
-		       char const *docstring, char const *argdoc);
 

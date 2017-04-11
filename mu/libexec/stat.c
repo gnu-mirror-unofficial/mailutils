@@ -14,6 +14,11 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#if defined(HAVE_CONFIG_H)
+# include <config.h>
+#endif
+#include <mailutils/mailutils.h>
+#include <sysexits.h>
 #include "mu.h"
 
 char stat_docstring[] = N_("display mailbox status");
@@ -235,7 +240,7 @@ format_stat (char const *fmt, mu_mailbox_t mbx, const char *name)
 }
 
 int
-mutool_stat (int argc, char **argv)
+main (int argc, char **argv)
 {
   int rc;
   mu_mailbox_t mbox;
@@ -363,20 +368,3 @@ get_name (mu_mailbox_t mbox, char const *mbname, mu_c_storage_t *cstor)
   cstor->c_string = mu_strdup (mbname);
   return 0;
 }
-
-/*
-  MU Setup: stat
-  mu-handler: mutool_stat
-  mu-docstring: stat_docstring
-  End MU Setup:
-*/
-
-  
-
-
-
-
-
-  
-  
-  

@@ -14,14 +14,17 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include "mu.h"
+#include <config.h>
+#include <mailutils/mailutils.h>
 #include <mailutils/dbm.h>
 #include <fnmatch.h>
 #include <regex.h>
 #include <sys/stat.h>
 #include <grp.h>
+#include <sysexits.h>
+#include "mu.h"
 
-static char dbm_doc[] = N_("mu dbm - DBM management tool\n"
+static char dbm_doc[] = N_("DBM management tool\n"
 "Valid COMMANDs are:\n"
 "\n"
 "  create or load - create the database\n"
@@ -1765,7 +1768,7 @@ struct mu_kwd mode_tab[] =
 };
 
 int
-mutool_dbm (int argc, char **argv)
+main (int argc, char **argv)
 {
   int index;
     
@@ -1851,13 +1854,4 @@ mutool_dbm (int argc, char **argv)
     }
   return 0;
 }
-
-/*
-  MU Setup: dbm
-  mu-handler: mutool_dbm
-  mu-docstring: dbm_docstring
-  mu-cond: ENABLE_DBM
-  End MU Setup:
-*/
-  
 

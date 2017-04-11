@@ -196,20 +196,19 @@ sieve/sieve.c
 
 sql/mysql.c
 
-mu/acl.c
-mu/dispatch.c
-mu/filter.c
-mu/flt2047.c
-mu/help.c
-mu/info.c
 mu/mu.c
-mu/pop.c
-mu/query.c
-mu/shell.c
-mu/cflags.c
-mu/ldflags.c
-mu/wicket.c
-mu/logger.c
+mu/libexec/acl.c
+mu/libexec/filter.c
+mu/libexec/flt2047.c
+mu/libexec/info.c
+mu/libexec/pop.c
+mu/libexec/query.c
+mu/libexec/shell.c
+mu/libexec/cflags.c
+mu/libexec/ldflags.c
+mu/libexec/wicket.c
+mu/libexec/logger.c
+mu/libexec/stat.c
 
 # EOF
 

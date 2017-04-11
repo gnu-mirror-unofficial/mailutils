@@ -345,19 +345,21 @@ mu_option_describe_options (mu_stream_t str, struct mu_parseopt *po)
 static void print_program_usage (struct mu_parseopt *po, int optsum,
 				 mu_stream_t str);
 
+int
+mu_parseopt_help_stream_create (mu_stream_t *retstr,
+				struct mu_parseopt *po, mu_stream_t outstr)
+{
+  init_usage_vars (po);
+  return mu_wordwrap_stream_create (retstr, outstr, 0, rmargin);
+}
+
 void
 mu_program_help (struct mu_parseopt *po, mu_stream_t outstr)
 {
   mu_stream_t str;
-  int rc;
 
-  init_usage_vars (po);
-
-  rc = mu_wordwrap_stream_create (&str, outstr, 0, rmargin);
-  if (rc)
-    {
-      abort ();//FIXME
-    }
+  if (mu_parseopt_help_stream_create (&str, po, outstr))
+    abort ();
 
   print_program_usage (po, 0, str);
   
@@ -575,16 +577,10 @@ print_program_usage (struct mu_parseopt *po, int optsum, mu_stream_t str)
 void
 mu_program_usage (struct mu_parseopt *po, int optsum, mu_stream_t outstr)
 {
-  int rc;
   mu_stream_t str;
-  
-  init_usage_vars (po);
 
-  rc = mu_wordwrap_stream_create (&str, outstr, 0, rmargin);
-  if (rc)
-    {
-      abort ();//FIXME
-    }  
+  if (mu_parseopt_help_stream_create (&str, po, outstr))
+    abort ();
   print_program_usage (po, optsum, str);
   mu_stream_destroy (&str);
 }
@@ -592,16 +588,11 @@ mu_program_usage (struct mu_parseopt *po, int optsum, mu_stream_t outstr)
 void
 mu_program_version (struct mu_parseopt *po, mu_stream_t outstr)
 {
-  int rc;
   mu_stream_t str;
-  
-  init_usage_vars (po);
 
-  rc = mu_wordwrap_stream_create (&str, outstr, 0, rmargin);
-  if (rc)
-    {
-      abort ();//FIXME
-    }  
+  if (mu_parseopt_help_stream_create (&str, po, outstr))
+    abort ();
+
   po->po_version_hook (po, str);
 
   mu_stream_destroy (&str);

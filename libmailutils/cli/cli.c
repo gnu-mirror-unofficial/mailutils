@@ -483,6 +483,7 @@ run_commit (void *item, void *data)
     | MU_PARSEOPT_BUG_ADDRESS				\
     | MU_PARSEOPT_EXTRA_INFO				\
     | MU_PARSEOPT_VERSION_HOOK				\
+    | MU_PARSEOPT_PROG_NAME   				\
     | MU_PARSEOPT_NEGATION)
 
 void
@@ -520,8 +521,13 @@ mu_cli_ext (int argc, char **argv,
   /* Set program name */
   if (!(hints.flags & MU_CFHINT_PROGRAM))
     {
-      mu_set_program_name (argv[0]);
-      hints.program = (char*) mu_program_name;
+      if (pohint->po_flags & MU_PARSEOPT_PROG_NAME)
+	hints.program = (char *) pohint->po_prog_name;
+      else
+	{
+	  mu_set_program_name (argv[0]);
+	  hints.program = (char*) mu_program_name;
+	}
       hints.flags |= MU_CFHINT_PROGRAM;
     }
 
@@ -610,7 +616,9 @@ mu_cli_ext (int argc, char **argv,
     po.po_version_hook = pohint->po_version_hook;
   if (flags & MU_PARSEOPT_NEGATION)
     po.po_negation = pohint->po_negation;
-
+  if (flags & MU_PARSEOPT_PROG_NAME)
+    po.po_prog_name = pohint->po_prog_name;
+      
   appd.setup = setup;
   appd.hints = &hints;
   appd.append_tree = NULL;

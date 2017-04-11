@@ -14,6 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#if defined(HAVE_CONFIG_H)
+# include <config.h>
+#endif
+#include <mailutils/mailutils.h>
 #include "mu.h"
 
 char query_docstring[] = N_("query configuration values");
@@ -45,7 +49,7 @@ static struct mu_option query_options[] = {
 };
 
 int
-mutool_query (int argc, char **argv)
+main (int argc, char **argv)
 {
   static struct mu_cfg_parse_hints hints;
   mu_cfg_tree_t *tree = NULL;
@@ -89,12 +93,3 @@ mutool_query (int argc, char **argv)
     }
   return 0;
 }
- 
-
-/*
-  MU Setup: query
-  mu-handler: mutool_query
-  mu-docstring: query_docstring
-  End MU Setup:
-*/
-  

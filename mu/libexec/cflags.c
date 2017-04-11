@@ -14,12 +14,16 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#include <config.h>
+#include <mailutils/mailutils.h>
+#include <mailutils/nls.h>
+#include <sysexits.h>
 #include "mu.h"
 
 char cflags_docstring[] = N_("show compiler options");
 
 int
-mutool_cflags (int argc, char **argv)
+main (int argc, char **argv)
 {
   mu_action_getopt (&argc, &argv, NULL, cflags_docstring, NULL);
   if (argc)
@@ -30,11 +34,4 @@ mutool_cflags (int argc, char **argv)
   mu_printf ("%s\n", COMPILE_FLAGS);
   return 0;
 }
-
-/*
-  MU Setup: cflags
-  mu-handler: mutool_cflags
-  mu-docstring: cflags_docstring
-  End MU Setup:
-*/
 

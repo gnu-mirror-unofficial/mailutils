@@ -1292,7 +1292,7 @@ struct mutool_command imap_comtab[] = {
 };
 
 int
-mutool_imap (int argc, char **argv)
+main (int argc, char **argv)
 {
   mu_action_getopt (&argc, &argv, NULL, imap_docstring, NULL);
 
@@ -1308,11 +1308,3 @@ mutool_imap (int argc, char **argv)
   mutool_shell ("imap", imap_comtab);
   return 0;
 }
-
-/*
-  MU Setup: imap
-  mu-handler: mutool_imap
-  mu-docstring: imap_docstring
-  mu-cond: ENABLE_IMAP
-  End MU Setup:
-*/

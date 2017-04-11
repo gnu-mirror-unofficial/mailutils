@@ -92,7 +92,7 @@ negate_filter_mode (int mode)
 }
 
 int
-mutool_filter (int argc, char **argv)
+main (int argc, char **argv)
 {
   int rc;
   mu_stream_t flt, prev_stream;
@@ -173,10 +173,3 @@ mutool_filter (int argc, char **argv)
   
   return 0;
 }
-
-/*
-  MU Setup: filter
-  mu-handler: mutool_filter
-  mu-docstring: filter_docstring
-  End MU Setup:
-*/

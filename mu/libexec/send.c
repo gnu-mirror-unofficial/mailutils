@@ -14,6 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#if defined(HAVE_CONFIG_H)
+# include <config.h>
+#endif
+#include <mailutils/mailutils.h>
 #include "mu.h"
 
 static int read_recipients;
@@ -68,7 +72,7 @@ static struct mu_option send_options[] = {
 };
 
 int
-mutool_send (int argc, char **argv)
+main (int argc, char **argv)
 {
   char *infile;
   mu_stream_t instr;
@@ -76,7 +80,9 @@ mutool_send (int argc, char **argv)
   size_t count;
   mu_url_t urlhint, url;
   mu_mailer_t mailer;
-  
+
+  MU_AUTH_REGISTER_ALL_MODULES ();
+
   MU_ASSERT (mu_address_create_null (&rcpt_addr));
   mu_register_all_mailer_formats ();
 

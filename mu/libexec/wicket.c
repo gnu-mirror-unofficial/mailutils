@@ -14,6 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#if defined(HAVE_CONFIG_H)
+# include <config.h>
+#endif
+#include <mailutils/mailutils.h>
 #include "mu.h"
 
 char wicket_docstring[] = N_("scan wickets for matching URLs");
@@ -97,7 +101,7 @@ wicket_match (mu_stream_t stream, const char *str)
 }
 
 int
-mutool_wicket (int argc, char **argv)
+main (int argc, char **argv)
 {
   mu_stream_t stream;
   int rc, i, exit_code;
@@ -142,11 +146,3 @@ mutool_wicket (int argc, char **argv)
   mu_stream_destroy (&stream);
   return exit_code;
 }
-
-
-/*
-  MU Setup: wicket
-  mu-handler: mutool_wicket
-  mu-docstring: wicket_docstring
-  End MU Setup:
-*/

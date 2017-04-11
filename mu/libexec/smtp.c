@@ -908,7 +908,7 @@ struct mutool_command smtp_comtab[] = {
 };  
 
 int
-mutool_smtp (int argc, char **argv)
+main (int argc, char **argv)
 {
   mu_registrar_record (mu_smtp_record);
   mu_registrar_record (mu_smtps_record);
@@ -929,10 +929,3 @@ mutool_smtp (int argc, char **argv)
 
   return 0;
 }
-
-/*
-  MU Setup: smtp
-  mu-handler: mutool_smtp
-  mu-docstring: smtp_docstring
-  End MU Setup:
-*/

@@ -14,6 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#if defined(HAVE_CONFIG_H)
+# include <config.h>
+#endif
+#include <mailutils/mailutils.h>
 #include "mu.h"
 
 char flt2047_docstring[] = N_("decode/encode email message headers");
@@ -51,7 +55,7 @@ static struct mu_option flt2047_options[] = {
 };
   
 int
-mutool_flt2047 (int argc, char **argv)
+main (int argc, char **argv)
 {
   int rc;
   char *p;
@@ -103,10 +107,3 @@ mutool_flt2047 (int argc, char **argv)
   
   return 0;
 }
-
-/*
-  MU Setup: 2047
-  mu-handler: mutool_flt2047
-  mu-docstring: flt2047_docstring
-  End MU Setup:
-*/

@@ -14,12 +14,13 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
+#if defined(HAVE_CONFIG_H)
+# include <config.h>
+#endif
+#include <mailutils/mailutils.h>
 #include "mu.h"
 
-static char info_doc[] = N_("mu info - print a list of configuration\
- options used to build mailutils; optional arguments are interpreted\
- as a list of configuration options to check for.");
-char info_docstring[] = N_("show Mailutils configuration");
+static char info_doc[] = N_("show Mailutils configuration");
 static char info_args_doc[] = N_("[capa...]");
 
 static int verbose;
@@ -32,7 +33,7 @@ static struct mu_option info_options[] = {
 };
 
 int
-mutool_info (int argc, char **argv)
+main (int argc, char **argv)
 {
   mu_action_getopt (&argc, &argv, info_options, info_doc, info_args_doc);
 
@@ -55,10 +56,3 @@ mutool_info (int argc, char **argv)
     }
   return 0;
 }
-
-/*
-  MU Setup: info
-  mu-handler: mutool_info
-  mu-docstring: info_docstring
-  End MU Setup:
-*/

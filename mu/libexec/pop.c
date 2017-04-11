@@ -597,8 +597,12 @@ struct mutool_command pop_comtab[] = {
 
 
 int
-mutool_pop (int argc, char **argv)
+main (int argc, char **argv)
 {
+
+  mu_registrar_record (mu_pop_record);
+  mu_registrar_record (mu_pops_record);
+  
   mu_action_getopt (&argc, &argv, NULL, pop_docstring, NULL);
 
   if (argc)
@@ -613,11 +617,3 @@ mutool_pop (int argc, char **argv)
   mutool_shell ("pop", pop_comtab);
   return 0;
 }
-
-/*
-  MU Setup: pop
-  mu-handler: mutool_pop
-  mu-docstring: pop_docstring
-  mu-cond: ENABLE_POP
-  End MU Setup:
-*/

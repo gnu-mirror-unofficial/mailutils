@@ -185,6 +185,9 @@ void mu_parseopt_error (struct mu_parseopt *po, char const *fmt, ...);
 int mu_parseopt_apply (struct mu_parseopt *p);
 void mu_parseopt_free (struct mu_parseopt *p);
 
+int mu_parseopt_help_stream_create (mu_stream_t *retstr,
+				    struct mu_parseopt *po,
+				    mu_stream_t outstr);
 unsigned mu_parseopt_getcolumn (const char *name);
 
 void mu_option_describe_options (mu_stream_t str, struct mu_parseopt *p);
