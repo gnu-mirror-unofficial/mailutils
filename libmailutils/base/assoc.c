@@ -740,7 +740,7 @@ merge_sort (struct _mu_assoc_elem *list, size_t length,
   if (length == 2)
     {
       elt = list->next;
-      if (cmp (list->name, list->data, elt->name, elt->data, cmp) > 0)
+      if (cmp (list->name, list->data, elt->name, elt->data, data) > 0)
 	{
 	  elt->next = list;
 	  list->next = NULL;
