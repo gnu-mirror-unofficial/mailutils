@@ -879,6 +879,9 @@ _mime_body_lines (mu_body_t body, size_t *plines)
   return 0;
 }
 
+#define MIME_MULTIPART_FLAGS \
+  (MU_MIME_MULTIPART_MIXED|MU_MIME_MULTIPART_ALT)
+
 int
 mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
 {
@@ -886,9 +889,19 @@ mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
   int ret = 0;
   size_t size;
   mu_body_t body;
-
+  
   if (pmime == NULL)
     return EINVAL;
+  
+  switch (flags & MIME_MULTIPART_FLAGS)
+    {
+    case MIME_MULTIPART_FLAGS:
+      return EINVAL;
+
+    case 0:
+      flags |= MU_MIME_MULTIPART_MIXED;
+    }
+  
   *pmime = NULL;
   if ((mime = calloc (1, sizeof (*mime))) == NULL)
     return ENOMEM;
@@ -931,7 +944,7 @@ mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
     }
   else
     {
-      mime->flags |= MIME_NEW_MESSAGE | MU_MIME_MULTIPART_MIXED;
+      mime->flags |= MIME_NEW_MESSAGE;
     }
   if (ret != 0)
     {

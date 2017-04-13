@@ -99,10 +99,13 @@ typedef int function_t (int, char **);
 typedef struct compose_env
 {
   mu_header_t header;   /* The message headers */
-  mu_stream_t compstr;    /* Temporary compose stream */
-  char **outfiles;   /* Names of the output files. The message is to be
-		        saved in each of these. */
-  int nfiles;        /* Number of output files */
+  mu_stream_t compstr;  /* Temporary compose stream */
+  char **outfiles;      /* Names of the output files. The message is to be
+		           saved in each of these. */
+  int nfiles;           /* Number of output files */
+  int alt;              /* Use multipart/alternative type */
+  mu_list_t attlist;    /* Attachments */
+  mu_mime_t mime;       /* Associated MIME object */
 } compose_env_t;
 
 #define MAIL_COMMAND_COMMON_MEMBERS \
@@ -174,7 +177,8 @@ extern const char *program_version;
 extern char *default_encoding;
 extern char *default_content_type;
 extern int skip_empty_attachments;
-  
+extern int multipart_alternative;
+
 /* Functions */
 extern int mail_alias (int argc, char **argv);
 extern int mail_alt (int argc, char **argv);	/* command alternates */
@@ -259,11 +263,11 @@ extern char *mail_expand_name (const char *name);
 
 extern void send_append_header (char const *text);
 extern void send_append_header2 (char const *name, char const *value, int mode);
-extern int send_attach_file (int fd,
-			     const char *filename,
-			     const char *content_filename,
-			     const char *content_name,
-			     const char *content_type, const char *encoding);
+extern void send_attach_file (int fd,
+			      const char *filename,
+			      const char *content_filename,
+			      const char *content_name,
+			      const char *content_type, const char *encoding);
 
 extern int escape_check_args (int argc, char **argv, int minargs, int maxargs);
 
@@ -292,6 +296,8 @@ extern int escape_list_attachments  (int argc, char **argv,
 extern int escape_attach (int argc, char **argv, compose_env_t *env);
 extern int escape_remove_attachment (int argc, char **argv,
 				     compose_env_t *env);
+extern int escape_toggle_multipart_type (int argc, char **argv,
+					 compose_env_t *env);
 
 enum
   {

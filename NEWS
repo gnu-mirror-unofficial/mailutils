@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-04-09
+GNU mailutils NEWS -- history of user-visible changes. 2017-04-13
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -87,6 +87,21 @@ defined.  Instead, the following constants are defined in config.h:
  MAILUTILS_VERSION_PATCH  Patchlevel number (or 0, for stable releases).
 
 * movemail: new option --progress-meter
+
+* mail: sending multipart messages
+
+** New option --alternative
+
+When used with --attach or --attach-fd options, this option sets the
+Content-Type of the constructed message to "multipart/alternative".
+In the absense of this option, the type is "multipart/mixed".
+
+** New escape ~/
+
+New escape ~/ toggles the Content-Type of the message being composed
+between "multipart/mixed" and "multipart/alternative".
+
+The actual Content-Type is displayed by the ~l (list attachments) escape.
 
 * scheme implementation of the Sieve language discontinued
 

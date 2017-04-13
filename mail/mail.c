@@ -146,9 +146,8 @@ cli_attach (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
       arg = NULL;
       fd = 0;
     }
-  if (send_attach_file (fd, arg, content_filename, content_name,
-			default_content_type, default_encoding))
-    exit (1);
+  send_attach_file (fd, arg, content_filename, content_name,
+		    default_content_type, default_encoding);
 
   free (content_name);
   content_name = NULL;
@@ -169,9 +168,8 @@ cli_attach_fd (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
       exit (po->po_exit_error);
     }
   
-  if (send_attach_file (fd, NULL, content_filename, content_name,
-			default_content_type, default_encoding))
-    exit (1);
+  send_attach_file (fd, NULL, content_filename, content_name,
+		    default_content_type, default_encoding);
 
   free (content_name);
   content_name = NULL;
@@ -240,6 +238,10 @@ static struct mu_option mail_options[] = {
     N_("append given header to the message being sent"),
     mu_c_string, NULL, cli_append },
 
+  { "alternative", 0, NULL, MU_OPTION_DEFAULT,
+    N_("force multipart/alternative content type"),
+    mu_c_bool, &multipart_alternative },
+    
   { "skip-empty-attachments", 0, NULL, MU_OPTION_DEFAULT,
     N_("skip attachments with empty body"),
     mu_c_bool, &skip_empty_attachments },

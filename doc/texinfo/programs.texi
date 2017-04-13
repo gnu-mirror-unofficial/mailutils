@@ -3420,11 +3420,18 @@ To list the files attached so far, use the @samp{~l} escape:
 
 @example
 ~l
+multipart/mixed
    1 myfile.html text/html base64
 @end example
 
-Each line of the listing contains the ordinal number of the attachment,
+The first line of the output shows the content type of the message.
+Each subsequent line contains the ordinal number of the attachment,
 the name of the file, content-type and transfer encoding used.
+
+@cindex ~/, mail escape
+The @samp{~/} escape toggles the content type bewteen
+@samp{multipart/mixed}, and @samp{multipart/alternative}.  The new
+value of the content type is displayed on the screen.
 
 @cindex ~^, mail escape
 The @samp{~^} escape removes attachments.  Its argument is the number
@@ -3567,6 +3574,12 @@ either or both of them using the @option{--content-name} and
 @option{--content-filename}, correspondingly.  Both of these options
 affect only the next @option{--attach} (or @option{--attach-fd}, see
 below) option.
+
+By default, the message will be assigned the content type
+@samp{multipart/mixed}.  To change it to @samp{multipart/alternative},
+use the @option{--alternative} command line option.  Using this option
+also sets the @samp{Content-Disposition} header of each attached
+message to @samp{inline}.
 
 All the examples above will enter the usual interactive shell,
 allowing you to compose the body of the message.  If that's not

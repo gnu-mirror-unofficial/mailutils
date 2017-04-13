@@ -706,7 +706,7 @@ util_save_outgoing (mu_message_t msg, char *savefile)
       if (rc)
 	{
 	  mu_error (_("Cannot create output mailbox `%s': %s"),
-		      filename, strerror (rc));
+		      filename, mu_strerror (rc));
 	  free (filename);
 	  return;
 	}
@@ -714,13 +714,13 @@ util_save_outgoing (mu_message_t msg, char *savefile)
       rc = mu_mailbox_open (outbox, MU_STREAM_WRITE | MU_STREAM_CREAT);
       if (rc)
 	mu_error (_("Cannot open output mailbox `%s': %s"),
-		    filename, strerror (rc));
+		    filename, mu_strerror (rc));
       else
 	{
 	  rc = mu_mailbox_append_message (outbox, msg);
 	  if (rc)
 	    mu_error (_("Cannot append message to `%s': %s"),
-			filename, strerror (rc));
+			filename, mu_strerror (rc));
 	}
 
       mu_mailbox_close (outbox);

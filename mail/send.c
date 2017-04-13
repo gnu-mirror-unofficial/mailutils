@@ -24,6 +24,8 @@
 static int isfilename (const char *);
 static int msg_to_pipe (const char *cmd, mu_message_t msg);
 
+int multipart_alternative;
+
 
 /* Additional message headers */
 struct add_header
@@ -143,8 +145,6 @@ struct atchinfo
   int skip_empty;
 };
 
-static mu_list_t attlist;
-
 static void
 atchinfo_free (void *p)
 {
@@ -158,19 +158,63 @@ atchinfo_free (void *p)
   free (ap);
 }
 
+static mu_list_t
+attlist_new (void)
+{
+  mu_list_t lst;
+  int rc = mu_list_create (&lst);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_create", NULL, rc);
+      exit (1);
+    }
+  mu_list_set_destroy_item (lst, atchinfo_free);
+  return lst;
+}
+
+static void
+attlist_add (mu_list_t attlist, char *id, char const *encoding,
+	     char const *content_type, char const *content_name,
+	     char const *content_filename,
+	     mu_stream_t stream, int skip_empty)
+{
+  struct atchinfo *aptr;
+  int rc;
+  
+  aptr = mu_alloc (sizeof (*aptr));
+
+  aptr->id = id ? mu_strdup (id) : id;
+  aptr->encoding = mu_strdup (encoding);  
+  aptr->content_type = mu_strdup (content_type ?
+				  content_type : "application/octet-stream");
+  aptr->name = content_name ? mu_strdup (content_name) : NULL;
+  aptr->filename = content_filename ? mu_strdup (content_filename) : NULL;
+  aptr->source = stream;
+  if (stream)
+    mu_stream_ref (stream);
+  aptr->skip_empty = skip_empty;
+  rc = mu_list_append (attlist, aptr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_append", NULL, rc);
+      exit (1);
+    }
+}
+
 int
-send_attach_file (int fd,
-		  const char *realname,
-		  const char *content_filename, const char *content_name,
-		  const char *content_type, const char *encoding)
+attlist_attach_file (mu_list_t *attlist_ptr,
+		     int fd,
+		     const char *realname,
+		     const char *content_filename, const char *content_name,
+		     const char *content_type, const char *encoding)
 {
   int rc;
   struct stat st;
-  struct atchinfo *aptr;
   mu_list_t list;
   mu_stream_t stream = NULL;
   char *id = NULL;
-
+  mu_list_t attlist;
+  
   if (fd >= 0)
     {
       rc = mu_fd_stream_create (&stream, NULL, fd, MU_STREAM_READ);
@@ -238,32 +282,75 @@ send_attach_file (int fd,
       return 1;
     }
   
-  if (!attlist)
+  if (!*attlist_ptr)
     {
-      rc = mu_list_create (&attlist);
-      if (rc)
-	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_list_create", NULL, rc);
-	  exit (1);
-	}
-      mu_list_set_destroy_item (attlist, atchinfo_free);
+      attlist = attlist_new ();
+      *attlist_ptr = attlist;
     }
-  aptr = mu_alloc (sizeof (*aptr));
+  else
+    attlist = *attlist_ptr;
+    
+  attlist_add (attlist, id, encoding, content_type,
+	       content_name, content_filename,
+	       stream, skip_empty_attachments);
+  if (stream)
+    mu_stream_unref (stream);
+  free (id);
 
-  aptr->id = id;
-  aptr->encoding = mu_strdup (encoding);  
-  aptr->content_type = mu_strdup (content_type ?
-				  content_type : "application/octet-stream");
-  aptr->name = content_name ? mu_strdup (content_name) : NULL;
-  aptr->filename = content_filename ? mu_strdup (content_filename) : NULL;
-  aptr->source = stream;
-  aptr->skip_empty = skip_empty_attachments;
-  rc = mu_list_append (attlist, aptr);
-  if (rc)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_append", NULL, rc);
-      exit (1);
-    }
+  return 0;
+}
+
+static int
+attlist_helper (void *item, void *data)
+{
+  struct atchinfo *aptr = item;
+  mu_list_t list = data;
+  attlist_add (list, aptr->id, aptr->encoding, aptr->content_type,
+	       aptr->name, aptr->filename, aptr->source, aptr->skip_empty);
+  return 0;
+}
+
+static mu_list_t
+attlist_copy (mu_list_t src)
+{
+  mu_list_t dst;
+
+  if (!src)
+    return NULL;
+  dst = attlist_new ();
+  mu_list_foreach (src, attlist_helper, dst);
+  return dst;
+}
+
+static mu_list_t attachment_list;
+
+void
+send_attach_file (int fd,
+		  const char *realname,
+		  const char *content_filename, const char *content_name,
+		  const char *content_type, const char *encoding)
+{
+  attlist_attach_file (&attachment_list,
+		       fd,
+		       realname,
+		       content_filename,
+		       content_name,
+		       content_type,
+		       encoding);
+}
+
+static void
+report_multipart_type (compose_env_t *env)
+{
+  mu_printf ("multipart/%s\n", env->alt ? "alternative" : "mixed");
+}
+
+/* ~/ - toggle between multipart/mixed and multipart/alternative */
+int
+escape_toggle_multipart_type (int argc, char **argv, compose_env_t *env)
+{
+  env->alt = !env->alt;
+  report_multipart_type (env);
   return 0;
 }
 
@@ -273,8 +360,10 @@ escape_list_attachments (int argc, char **argv, compose_env_t *env)
   mu_iterator_t itr;
   int i;
   
-  if (mu_list_is_empty (attlist) ||
-      mu_list_get_iterator (attlist, &itr))
+  report_multipart_type (env);
+
+  if (mu_list_is_empty (env->attlist) ||
+      mu_list_get_iterator (env->attlist, &itr))
     {
       mu_printf ("%s\n", _("No attachments"));
       return 0;
@@ -308,8 +397,9 @@ escape_attach (int argc, char **argv, compose_env_t *env)
     case 3:
       content_type = argv[2];
     case 2:
-      return send_attach_file (-1, argv[1], argv[1], argv[1],
-			       content_type, encoding);
+      return attlist_attach_file (&env->attlist,
+				  -1, argv[1], argv[1], argv[1],
+				  content_type, encoding);
     default:
       return escape_check_args (argc, argv, 2, 4);
     }
@@ -332,21 +422,21 @@ escape_remove_attachment (int argc, char **argv, compose_env_t *env)
       return 1;
     }
   
-  mu_list_count (attlist, &count);
+  mu_list_count (env->attlist, &count);
   if (n == 0 || n > count)
     {
       mu_error (_("index out of range"));
       return 1;
     }
 
-  return mu_list_remove_nth (attlist, n - 1);
+  return mu_list_remove_nth (env->attlist, n - 1);
 }
-
+
 static int
 saveatt (void *item, void *data)
 {
   struct atchinfo *aptr = item;
-  mu_mime_t mime = data;
+  compose_env_t *env = data;
   mu_message_t part;
   mu_header_t hdr;
   int rc;
@@ -390,13 +480,15 @@ saveatt (void *item, void *data)
 	return 0;
     }
       
-  mu_mime_get_num_parts	(mime, &nparts);
+  mu_mime_get_num_parts	(env->mime, &nparts);
   mu_message_get_header (part, &hdr);
+  if (env->alt)
+    mu_header_set_value (hdr, MU_HEADER_CONTENT_DISPOSITION, "inline", 1);
   mu_rfc2822_msg_id (nparts, &p);
   mu_header_set_value (hdr, MU_HEADER_CONTENT_ID, p, 1);
   free (p);
 
-  rc = mu_mime_add_part (mime, part);
+  rc = mu_mime_add_part (env->mime, part);
   mu_message_unref (part);
   if (rc)
     {
@@ -418,7 +510,7 @@ add_body (mu_message_t inmsg, mu_iterator_t itr, mu_mime_t mime)
   int rc;
   
   mu_message_get_body (inmsg, &body);
-  if (skip_empty_attachments)
+  if (skip_empty_attachments || multipart_alternative)
     {
       size_t size;
       rc = mu_body_size (body, &size);
@@ -483,7 +575,7 @@ add_body (mu_message_t inmsg, mu_iterator_t itr, mu_mime_t mime)
 }  
 
 static int
-add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
+add_attachments (compose_env_t *env, mu_message_t *pmsg)
 {
   mu_message_t inmsg, outmsg;
   mu_header_t inhdr, outhdr;
@@ -491,16 +583,15 @@ add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
   mu_mime_t mime;  
   int rc;
   
-  if (mu_list_is_empty (attlist))
-    {
-      *pmime = NULL;
-      return 0;
-    }
+  if (mu_list_is_empty (env->attlist))
+    return 0;
   
   inmsg = *pmsg;
 
   /* Create a mime object */
-  rc = mu_mime_create (&mime, NULL, 0);
+  rc = mu_mime_create (&mime, NULL,
+		       env->alt ?
+		         MU_MIME_MULTIPART_ALT : MU_MIME_MULTIPART_MIXED);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_create", NULL, rc);
@@ -517,8 +608,10 @@ add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
       return 1;
     }
 
+  env->mime = mime;
+
   /* Add the respective attachments */
-  rc = mu_list_foreach (attlist, saveatt, mime);
+  rc = mu_list_foreach (env->attlist, saveatt, env);
   if (rc)
     {
       mu_mime_destroy (&mime);
@@ -559,7 +652,6 @@ add_attachments (mu_message_t *pmsg, mu_mime_t *pmime)
   mu_message_unref (inmsg);
 
   *pmsg = outmsg;
-  *pmime = mime;
   return 0;
 }
 
@@ -785,6 +877,8 @@ void
 compose_init (compose_env_t *env)
 {
   memset (env, 0, sizeof (*env));
+  env->alt = multipart_alternative;
+  env->attlist = attlist_copy (attachment_list);
   mu_list_foreach (add_header_list, seed_headers, env);
 }
 
@@ -873,6 +967,9 @@ compose_destroy (compose_env_t *env)
 {
   mu_header_destroy (&env->header);
   free (env->outfiles);
+  mu_mime_destroy (&env->mime);
+  mu_list_destroy (&env->attlist);
+  mu_stream_destroy (&env->compstr);
 }
 
 static int
@@ -1112,7 +1209,6 @@ mail_send0 (compose_env_t *env, int save_to)
   if (rc)
     {
       mu_error (_("Cannot open temporary file: %s"), mu_strerror (rc));
-      mu_list_destroy (&attlist);
       return 1;
     }
 
@@ -1208,8 +1304,6 @@ mail_send0 (compose_env_t *env, int save_to)
   if (int_cnt)
     {
       save_dead_message_env (env);
-      mu_stream_destroy (&env->compstr);
-      mu_list_destroy (&attlist);
       return 1;
     }
 
@@ -1225,7 +1319,6 @@ mail_send0 (compose_env_t *env, int save_to)
 
   if (util_header_expand (&env->header) == 0)
     {
-      mu_mime_t mime = NULL;
       mu_message_t msg = NULL;
       int status = 0;
       int sendit = (compose_header_get (env, MU_HEADER_TO, NULL) ||
@@ -1246,7 +1339,7 @@ mail_send0 (compose_env_t *env, int save_to)
 	  mu_message_set_header (msg, env->header, NULL);
 	  env->header = NULL;
 	  
-	  status = add_attachments (&msg, &mime);
+	  status = add_attachments (env, &msg);
 	  if (status)
 	    break;
 	  
@@ -1323,14 +1416,10 @@ mail_send0 (compose_env_t *env, int save_to)
 
       mu_stream_destroy (&env->compstr);
       mu_message_destroy (&msg, NULL);
-      mu_mime_destroy (&mime);
       return status;
     }
   else
     save_dead_message_env (env);
-  
-  mu_stream_destroy (&env->compstr);
-  mu_list_destroy (&attlist);
   return 1;
 }
 

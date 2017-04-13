@@ -228,6 +228,7 @@ static const struct mail_escape_entry mail_escape_table[] = {
   {"-",	"-",	"-[mail-command]",  escape_command },
   {"+",	"+",	"+name [content-type [encoding]]", escape_attach },
   {"^",	"^",	"^N",               escape_remove_attachment },
+  {"/", "/",    "/",                escape_toggle_multipart_type },
   {"?",	"?",	"?",		    escape_help },
   {"A",	"A",	"A",		    escape_sign },
   {"a",	"a",	"a",		    escape_sign },
