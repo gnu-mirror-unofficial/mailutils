@@ -406,7 +406,7 @@ message_finalize (mu_message_t msg, int warn)
 	  return 1;
 	}
       sprintf (warn, "%s %s", pwd->pw_name, SENDER_WARNING);
-      mu_header_set_value (header, "X-Authentication-Warning", warn, 0);
+      mu_header_append (header, "X-Authentication-Warning", warn);
       free (warn);
     }
   

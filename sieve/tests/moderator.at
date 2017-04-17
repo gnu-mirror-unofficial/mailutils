@@ -31,8 +31,8 @@ sed 's/ENVELOPE FROM:.*/ENVELOPE FROM/' ./mta.diag
 ],
 [ENVELOPE FROM
 ENVELOPE TO: <bug-foobar-request@example.org>
-   0: Subject: confirm 7e02c99a82a21a2349291a4f142ee2347bb5fd0b
-   1: To: bug-foobar-request@example.org
+   0: To: bug-foobar-request@example.org
+   1: Subject: confirm 7e02c99a82a21a2349291a4f142ee2347bb5fd0b
    2:
 END OF MESSAGE
 ],
@@ -55,9 +55,9 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: sergiusz@example.org
 ENVELOPE TO: <bug-foobar-request@example.org>
-   0: From: <sergiusz@example.org>
+   0: To: bug-foobar-request@example.org
    1: Subject: confirm 7e02c99a82a21a2349291a4f142ee2347bb5fd0b
-   2: To: bug-foobar-request@example.org
+   2: From: <sergiusz@example.org>
    3:
 END OF MESSAGE
 ],

@@ -856,11 +856,11 @@ mh_annotate (mu_message_t msg, const char *field, const char *text, int date)
       tm = localtime (&t);
       mu_strftime (datebuf, sizeof datebuf, "%a, %d %b %Y %H:%M:%S %Z", tm);
 
-      mu_header_set_value (hdr, field, datebuf, 0);
+      mu_header_prepend (hdr, field, datebuf);
     }
 
   if (text)
-    mu_header_set_value (hdr, field, text, 0);
+    mu_header_prepend (hdr, field, text);
   mu_message_get_attribute (msg, &attr);
   mu_attribute_set_modified (attr);
 }

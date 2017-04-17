@@ -444,7 +444,8 @@ saveatt (void *item, void *data)
   char *p;
 
   rc = mu_attachment_create (&part, aptr->content_type, aptr->encoding,
-			     aptr->name, aptr->filename);
+			     env->alt ? NULL : aptr->name,
+			     env->alt ? NULL : aptr->filename);
   if (rc)
     {
       mu_error (_("can't create attachment %s: %s"),
@@ -482,8 +483,6 @@ saveatt (void *item, void *data)
       
   mu_mime_get_num_parts	(env->mime, &nparts);
   mu_message_get_header (part, &hdr);
-  if (env->alt)
-    mu_header_set_value (hdr, MU_HEADER_CONTENT_DISPOSITION, "inline", 1);
   mu_rfc2822_msg_id (nparts, &p);
   mu_header_set_value (hdr, MU_HEADER_CONTENT_ID, p, 1);
   free (p);
@@ -640,10 +639,17 @@ add_attachments (compose_env_t *env, mu_message_t *pmsg)
       if (mu_iterator_current_kv (itr, (const void **)&name,
 				  (void**)&value) == 0)
 	{
-	  if (mu_c_strcasecmp (name, MU_HEADER_MIME_VERSION) == 0 ||
-	      mu_c_strncasecmp (name, "Content-", 8) == 0)
-	    continue;
-	  mu_header_append (outhdr, name, value);
+	  if (mu_c_strcasecmp (name, MU_HEADER_RECEIVED) == 0
+	      || mu_c_strncasecmp (name, "X-", 2) == 0)
+	    mu_header_append (outhdr, name, value);
+	  else if (mu_c_strcasecmp (name, MU_HEADER_MIME_VERSION) == 0 ||
+		   mu_c_strncasecmp (name, "Content-", 8) == 0)
+	    {
+	      mu_error (_("%s: not setting header"), name);
+	      continue;
+	    }
+	  else
+	    mu_header_set_value (outhdr, name, value, 1);
 	}
     }
   mu_iterator_destroy (&itr);
@@ -826,7 +832,7 @@ parse_headers (mu_stream_t input, compose_env_t *env)
 	      
 	      if (name)
 		{
-		  mu_header_set_value (header, name, value[0] ? value : NULL, 0);
+		  mu_header_append (header, name, value[0] ? value : NULL);
 		  free (name);
 		  free (value);
 		  name = value = NULL;
@@ -856,7 +862,7 @@ parse_headers (mu_stream_t input, compose_env_t *env)
   free (buf);
   if (name)
     {
-      mu_header_set_value (header, name, value, 0);
+      mu_header_append (header, name, value);
       free (name);
       free (value);
     }     
@@ -902,19 +908,29 @@ compose_header_set (compose_env_t *env, const char *name,
   switch (mode)
     {
     case COMPOSE_REPLACE:
+      if (is_address_field (name)
+	  && mailvar_get (NULL, "inplacealiases", mailvar_type_boolean, 0) == 0)
+	{
+	  char *exp = alias_expand (value);
+	  status = mu_header_set_value (env->header, name, exp ? exp : value, 1);
+	  free (exp);
+	}
+      else
+	status = mu_header_set_value (env->header, name, value, 1);
+      break;
+
     case COMPOSE_APPEND:
       if (is_address_field (name)
 	  && mailvar_get (NULL, "inplacealiases", mailvar_type_boolean, 0) == 0)
 	{
 	  char *exp = alias_expand (value);
-	  status = mu_header_set_value (env->header, name, exp ? exp : value,
-					mode);
+	  status = mu_header_append (env->header, name, exp ? exp : value);
 	  free (exp);
 	}
       else
-	status = mu_header_set_value (env->header, name, value, mode);
+	status = mu_header_append (env->header, name, value);
       break;
-
+      
     case COMPOSE_SINGLE_LINE:
       if (mu_header_aget_value (env->header, name, &old_value) == 0
 	  && old_value[0])

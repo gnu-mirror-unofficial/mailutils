@@ -83,11 +83,11 @@ at_hdr (mu_header_t hdr, const char *content_type, const char *encoding,
       free (str);
       if (rc)
 	return rc;
-      rc = mu_header_append (hdr, MU_HEADER_CONTENT_TYPE, val);
+      rc = mu_header_set_value (hdr, MU_HEADER_CONTENT_TYPE, val, 1);
       free (val);
     }
   else
-    rc = mu_header_append (hdr, MU_HEADER_CONTENT_TYPE, content_type);
+    rc = mu_header_set_value (hdr, MU_HEADER_CONTENT_TYPE, content_type, 1);
   
   if (rc)
     return rc;
@@ -101,15 +101,16 @@ at_hdr (mu_header_t hdr, const char *content_type, const char *encoding,
       free (str);
       if (rc)
 	return rc;
-      rc = mu_header_append (hdr, MU_HEADER_CONTENT_DISPOSITION, val);
+      rc = mu_header_set_value (hdr, MU_HEADER_CONTENT_DISPOSITION, val, 1);
       free (val);
     }
   else
-    rc = mu_header_append (hdr, MU_HEADER_CONTENT_DISPOSITION, "attachment");
+    rc = mu_header_set_value (hdr, MU_HEADER_CONTENT_DISPOSITION, "attachment",
+			      1);
   if (rc)
     return rc;
-  return mu_header_append (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
-			   encoding ? encoding : "8bit");
+  return mu_header_set_value (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
+			      encoding ? encoding : "8bit", 1);
 }
 
 /* Create in *NEWMSG an empty attachment of given CONTENT_TYPE and ENCODING.

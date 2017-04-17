@@ -19,9 +19,9 @@ AT_KEYWORDS([modmesg02])
 
 AT_CHECK([modmesg -a To:gray@localhost -a Subject:test -l 0 -t "That"],
 [0],
-[Subject: test
+[From: root
 To: gray@localhost
-From: root
+Subject: test
 
 That is a test message.
 oo

@@ -623,7 +623,7 @@ _action_send (void *item, void *data)
 	    mu_header_set_value (hdr, MU_HEADER_X_MAILER,
 				 DEFAULT_X_MAILER, 0);
 	  else if (strcmp (p, "no"))
-	    mu_header_set_value (hdr, MU_HEADER_X_MAILER, p, 0);
+	    mu_header_remove (hdr, MU_HEADER_X_MAILER, 1);
 	}
     }
   

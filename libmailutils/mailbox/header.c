@@ -490,7 +490,6 @@ mu_header_destroy (mu_header_t *ph)
       *ph = NULL;
     }
 }
-
 
 int
 mu_header_set_value (mu_header_t header, const char *fn, const char *fv,
@@ -511,9 +510,10 @@ mu_header_set_value (mu_header_t header, const char *fn, const char *fv,
   if (fv == NULL && !replace)
     return EINVAL;
 
+  ent = mu_hdrent_find (header, fn, 1);
+  
   if (replace)
     {
-      ent = mu_hdrent_find (header, fn, 1);
       if (ent)
 	{
 	  if (fv == NULL)
@@ -530,12 +530,16 @@ mu_header_set_value (mu_header_t header, const char *fn, const char *fv,
       else if (fv == NULL)
 	return 0;
     }
-
+  else if (ent)
+    {
+      return MU_ERR_EXISTS;
+    }
+  
   ent = mu_hdrent_create (header, NULL,
 			  fn, strlen (fn), fv, strlen (fv));
   if (!ent)
     return ENOMEM;
-  mu_hdrent_prepend (header, ent);
+  mu_hdrent_append (header, ent);
   HEADER_SET_MODIFIED (header);
   return 0;
 }

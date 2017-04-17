@@ -465,7 +465,21 @@ _mime_set_content_type (mu_mime_t mime)
       if (mime->flags & MU_MIME_MULTIPART_MIXED)
 	content_type = "multipart/mixed; boundary=";
       else
-	content_type = "multipart/alternative; boundary=";
+	{
+	  size_t i;
+
+	  /* Make sure content disposition is not set for alternative
+	     parts */
+	  for (i = 0; i < mime->nmtp_parts; i++)
+	    {
+	      mu_header_t hdr;
+	      
+	      mu_message_get_header (mime->mtp_parts[i]->msg, &hdr);
+	      mu_header_remove (hdr, MU_HEADER_CONTENT_DISPOSITION, 1);
+	    }
+	  
+	  content_type = "multipart/alternative; boundary=";
+	}
       if (mime->boundary == NULL)
 	{
 	  char boundary[128];
@@ -1118,7 +1132,7 @@ mu_mime_get_message (mu_mime_t mime, mu_message_t *msg)
 	    {
 	      mu_message_set_header (mime->msg, mime->hdrs, mime);
 	      mu_header_set_value (mime->hdrs, MU_HEADER_MIME_VERSION, "1.0",
-				   0);
+				   1);
 	      if ((ret = _mime_set_content_type (mime)) == 0)
 		{
 		  if ((ret = mu_body_create (&body, mime->msg)) == 0)

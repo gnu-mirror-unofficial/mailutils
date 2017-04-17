@@ -31,14 +31,14 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
-   0: References: <200112232808.fERKR9N16790@dontmailme.org>
-   1: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
-   2: 	<200112232808.fERKR9N16790@dontmailme.org>
-   3: Subject: =?UTF-8?Q?Re:_Coffee?=
-   4: To: bar@dontmailme.org
-   5: Content-Transfer-Encoding: 8bit
-   6: Content-Type: text/plain;charset=UTF-8
-   7: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: bar@dontmailme.org
+   4: Subject: =?UTF-8?Q?Re:_Coffee?=
+   5: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
+   6: 	<200112232808.fERKR9N16790@dontmailme.org>
+   7: References: <200112232808.fERKR9N16790@dontmailme.org>
    8:
    9: I'm on vacation
 END OF MESSAGE
@@ -62,25 +62,25 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: roadrunner@acme.example.com
 ENVELOPE TO: <coyote@desert.example.org>
-   0: In-Reply-To: Your message of Sun May  6 22:16:47 2001
-   1: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
-   2: To: coyote@desert.example.org
-   3: Content-Transfer-Encoding: 8bit
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: coyote@desert.example.org
+   4: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
+   5: In-Reply-To: Your message of Sun May  6 22:16:47 2001
    6:
    7: I'm on vacation
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
-   0: References: <200112232808.fERKR9N16790@dontmailme.org>
-   1: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
-   2: 	<200112232808.fERKR9N16790@dontmailme.org>
-   3: Subject: =?UTF-8?Q?Re:_Coffee?=
-   4: To: bar@dontmailme.org
-   5: Content-Transfer-Encoding: 8bit
-   6: Content-Type: text/plain;charset=UTF-8
-   7: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: bar@dontmailme.org
+   4: Subject: =?UTF-8?Q?Re:_Coffee?=
+   5: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
+   6: 	<200112232808.fERKR9N16790@dontmailme.org>
+   7: References: <200112232808.fERKR9N16790@dontmailme.org>
    8:
    9: I'm on vacation
 END OF MESSAGE
@@ -104,36 +104,36 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <coyote@desert.example.org>
-   0: In-Reply-To: Your message of Sun May  6 22:16:47 2001
-   1: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
-   2: To: coyote@desert.example.org
-   3: Content-Transfer-Encoding: 8bit
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: coyote@desert.example.org
+   4: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
+   5: In-Reply-To: Your message of Sun May  6 22:16:47 2001
    6:
    7: I'm on vacation
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <b1ff@de.res.example.com>
-   0: In-Reply-To: Your message of TBD
-   1: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
-   2: To: b1ff@de.res.example.com
-   3: Content-Transfer-Encoding: 8bit
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: b1ff@de.res.example.com
+   4: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
+   5: In-Reply-To: Your message of TBD
    6:
    7: I'm on vacation
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
-   0: References: <200112232808.fERKR9N16790@dontmailme.org>
-   1: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
-   2: 	<200112232808.fERKR9N16790@dontmailme.org>
-   3: Subject: =?UTF-8?Q?Re:_Coffee?=
-   4: To: bar@dontmailme.org
-   5: Content-Transfer-Encoding: 8bit
-   6: Content-Type: text/plain;charset=UTF-8
-   7: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: bar@dontmailme.org
+   4: Subject: =?UTF-8?Q?Re:_Coffee?=
+   5: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
+   6: 	<200112232808.fERKR9N16790@dontmailme.org>
+   7: References: <200112232808.fERKR9N16790@dontmailme.org>
    8:
    9: I'm on vacation
 END OF MESSAGE
@@ -158,36 +158,36 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <coyote@desert.example.org>
-   0: In-Reply-To: Your message of Sun May  6 22:16:47 2001
-   1: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
-   2: To: coyote@desert.example.org
-   3: Content-Transfer-Encoding: 8bit
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: coyote@desert.example.org
+   4: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
+   5: In-Reply-To: Your message of Sun May  6 22:16:47 2001
    6:
    7: I'm on vacation
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <b1ff@de.res.example.com>
-   0: In-Reply-To: Your message of TBD
-   1: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
-   2: To: b1ff@de.res.example.com
-   3: Content-Transfer-Encoding: 8bit
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: b1ff@de.res.example.com
+   4: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
+   5: In-Reply-To: Your message of TBD
    6:
    7: I'm on vacation
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
-   0: References: <200112232808.fERKR9N16790@dontmailme.org>
-   1: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
-   2: 	<200112232808.fERKR9N16790@dontmailme.org>
-   3: Subject: =?UTF-8?Q?Re:_Coffee?=
-   4: To: bar@dontmailme.org
-   5: Content-Transfer-Encoding: 8bit
-   6: Content-Type: text/plain;charset=UTF-8
-   7: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: bar@dontmailme.org
+   4: Subject: =?UTF-8?Q?Re:_Coffee?=
+   5: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
+   6: 	<200112232808.fERKR9N16790@dontmailme.org>
+   7: References: <200112232808.fERKR9N16790@dontmailme.org>
    8:
    9: I'm on vacation
 END OF MESSAGE
@@ -214,36 +214,36 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <coyote@desert.example.org>
-   0: In-Reply-To: Your message of Sun May  6 22:16:47 2001
-   1: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
-   2: To: coyote@desert.example.org
-   3: Content-Transfer-Encoding: base64
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: base64
+   3: To: coyote@desert.example.org
+   4: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
+   5: In-Reply-To: Your message of Sun May  6 22:16:47 2001
    6:
    7: SSdtIG9uIHZhY2F0aW9uLg==
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <b1ff@de.res.example.com>
-   0: In-Reply-To: Your message of TBD
-   1: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
-   2: To: b1ff@de.res.example.com
-   3: Content-Transfer-Encoding: base64
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: base64
+   3: To: b1ff@de.res.example.com
+   4: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
+   5: In-Reply-To: Your message of TBD
    6:
    7: SSdtIG9uIHZhY2F0aW9uLg==
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
-   0: References: <200112232808.fERKR9N16790@dontmailme.org>
-   1: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
-   2: 	<200112232808.fERKR9N16790@dontmailme.org>
-   3: Subject: =?UTF-8?Q?Re:_Coffee?=
-   4: To: bar@dontmailme.org
-   5: Content-Transfer-Encoding: base64
-   6: Content-Type: text/plain;charset=UTF-8
-   7: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: base64
+   3: To: bar@dontmailme.org
+   4: Subject: =?UTF-8?Q?Re:_Coffee?=
+   5: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
+   6: 	<200112232808.fERKR9N16790@dontmailme.org>
+   7: References: <200112232808.fERKR9N16790@dontmailme.org>
    8:
    9: SSdtIG9uIHZhY2F0aW9uLg==
 END OF MESSAGE
@@ -275,10 +275,10 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <coyote@desert.example.org>
-   0: In-Reply-To: Your message of Sun May  6 22:16:47 2001
-   1: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
-   2: To: coyote@desert.example.org
-   3: X-Mail-Processor: sieve
+   0: X-Mail-Processor: sieve
+   1: To: coyote@desert.example.org
+   2: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
+   3: In-Reply-To: Your message of Sun May  6 22:16:47 2001
    4:
    5: I'm on vacation right now.
    6: I will attend to your message as soon as I'm back.
@@ -288,10 +288,10 @@ ENVELOPE TO: <coyote@desert.example.org>
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <b1ff@de.res.example.com>
-   0: In-Reply-To: Your message of TBD
-   1: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
-   2: To: b1ff@de.res.example.com
-   3: X-Mail-Processor: sieve
+   0: X-Mail-Processor: sieve
+   1: To: b1ff@de.res.example.com
+   2: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
+   3: In-Reply-To: Your message of TBD
    4:
    5: I'm on vacation right now.
    6: I will attend to your message as soon as I'm back.
@@ -301,12 +301,12 @@ ENVELOPE TO: <b1ff@de.res.example.com>
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
-   0: References: <200112232808.fERKR9N16790@dontmailme.org>
-   1: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
-   2: 	<200112232808.fERKR9N16790@dontmailme.org>
-   3: Subject: =?UTF-8?Q?Re:_Coffee?=
-   4: To: bar@dontmailme.org
-   5: X-Mail-Processor: sieve
+   0: X-Mail-Processor: sieve
+   1: To: bar@dontmailme.org
+   2: Subject: =?UTF-8?Q?Re:_Coffee?=
+   3: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
+   4: 	<200112232808.fERKR9N16790@dontmailme.org>
+   5: References: <200112232808.fERKR9N16790@dontmailme.org>
    6:
    7: I'm on vacation right now.
    8: I will attend to your message as soon as I'm back.
@@ -340,12 +340,12 @@ cat ./mta.diag
 ],
 [ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <coyote@desert.example.org>
-   0: In-Reply-To: Your message of Sun May  6 22:16:47 2001
-   1: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
-   2: To: coyote@desert.example.org
-   3: Content-Transfer-Encoding: 8bit
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: coyote@desert.example.org
+   4: Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
+   5: In-Reply-To: Your message of Sun May  6 22:16:47 2001
    6:
    7: I'm on vacation right now.
    8: I will attend to your message as soon as I'm back.
@@ -356,12 +356,12 @@ ENVELOPE TO: <coyote@desert.example.org>
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <b1ff@de.res.example.com>
-   0: In-Reply-To: Your message of TBD
-   1: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
-   2: To: b1ff@de.res.example.com
-   3: Content-Transfer-Encoding: 8bit
-   4: Content-Type: text/plain;charset=UTF-8
-   5: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: b1ff@de.res.example.com
+   4: Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
+   5: In-Reply-To: Your message of TBD
    6:
    7: I'm on vacation right now.
    8: I will attend to your message as soon as I'm back.
@@ -372,14 +372,14 @@ ENVELOPE TO: <b1ff@de.res.example.com>
 END OF MESSAGE
 ENVELOPE FROM: foobar@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
-   0: References: <200112232808.fERKR9N16790@dontmailme.org>
-   1: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
-   2: 	<200112232808.fERKR9N16790@dontmailme.org>
-   3: Subject: =?UTF-8?Q?Re:_Coffee?=
-   4: To: bar@dontmailme.org
-   5: Content-Transfer-Encoding: 8bit
-   6: Content-Type: text/plain;charset=UTF-8
-   7: MIME-Version: 1.0
+   0: MIME-Version: 1.0
+   1: Content-Type: text/plain;charset=UTF-8
+   2: Content-Transfer-Encoding: 8bit
+   3: To: bar@dontmailme.org
+   4: Subject: =?UTF-8?Q?Re:_Coffee?=
+   5: In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
+   6: 	<200112232808.fERKR9N16790@dontmailme.org>
+   7: References: <200112232808.fERKR9N16790@dontmailme.org>
    8:
    9: I'm on vacation right now.
   10: I will attend to your message as soon as I'm back.

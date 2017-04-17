@@ -36,11 +36,11 @@ sed 's/ $//' ./mta.diag
 [0],
 [ENVELOPE FROM: coyote@desert.example.org
 ENVELOPE TO: <gray@gnu.org>
-   0: X-Loop-Prevention: foobar@nonexistent.net
-   1: From: coyote@desert.example.org
-   2: To: roadrunner@acme.example.com
-   3: Subject: I have a present for you
-   4: X-Caffeine: C8H10N4O2
+   0: From: coyote@desert.example.org
+   1: To: roadrunner@acme.example.com
+   2: Subject: I have a present for you
+   3: X-Caffeine: C8H10N4O2
+   4: X-Loop-Prevention: foobar@nonexistent.net
    5: 
    6: Look, I'm sorry about the whole anvil thing, and I really
    7: didn't mean to try and drop it on you from the top of the
@@ -55,12 +55,12 @@ ENVELOPE TO: <gray@gnu.org>
 END OF MESSAGE
 ENVELOPE FROM: b1ff@de.res.example.com
 ENVELOPE TO: <gray@gnu.org>
-   0: X-Loop-Prevention: foobar@nonexistent.net
-   1: From: youcouldberich!@reply-by-postal-mail.invalid
-   2: To: rube@landru.example.edu
-   3: Subject: $$$ YOU, TOO, CAN BE A MILLIONAIRE! $$$
-   4: Date: TBD
-   5: X-Number: 0015
+   0: From: youcouldberich!@reply-by-postal-mail.invalid
+   1: To: rube@landru.example.edu
+   2: Subject: $$$ YOU, TOO, CAN BE A MILLIONAIRE! $$$
+   3: Date: TBD
+   4: X-Number: 0015
+   5: X-Loop-Prevention: foobar@nonexistent.net
    6: 
    7: YOU MAY HAVE ALREADY WON TEN MILLION DOLLARS, BUT I DOUBT
    8: IT!  SO JUST POST THIS TO SIX HUNDRED NEWSGROUPS!  IT WILL
@@ -72,15 +72,15 @@ ENVELOPE TO: <gray@gnu.org>
 END OF MESSAGE
 ENVELOPE FROM: bar@dontmailme.org
 ENVELOPE TO: <gray@gnu.org>
-   0: X-Loop-Prevention: foobar@nonexistent.net
-   1: Received: (from bar@dontmailme.org)
-   2: 	by dontmailme.org id fERKR9N16790
-   3: 	for foobar@nonexistent.net; Fri, 28 Dec 2001 22:18:08 +0200
-   4: Date: Fri, 28 Dec 2001 23:28:08 +0200
-   5: From: Bar <bar@dontmailme.org>
-   6: To: Foo Bar <foobar@nonexistent.net>
-   7: Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
-   8: Subject: Coffee
+   0: Received: (from bar@dontmailme.org)
+   1: 	by dontmailme.org id fERKR9N16790
+   2: 	for foobar@nonexistent.net; Fri, 28 Dec 2001 22:18:08 +0200
+   3: Date: Fri, 28 Dec 2001 23:28:08 +0200
+   4: From: Bar <bar@dontmailme.org>
+   5: To: Foo Bar <foobar@nonexistent.net>
+   6: Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
+   7: Subject: Coffee
+   8: X-Loop-Prevention: foobar@nonexistent.net
    9: 
   10: How about some coffee?
 END OF MESSAGE

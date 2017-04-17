@@ -964,7 +964,7 @@ util_header_expand (mu_header_t *phdr)
 	    }
 	}
       else
-	mu_header_set_value (hdr, name, value, 0);
+	mu_header_append (hdr, name, value);
     }
 
   if (errcnt == 0)

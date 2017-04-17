@@ -140,6 +140,9 @@ moderator_filter_message (mu_sieve_machine_t mach,
   return rc;
 }
 
+/* Copy the value of the header field FROM from the email header FROM_HDR to
+   the header field TO in the header TO_HDR, replacing the field, if it
+   exists. */
 static int
 copy_header (mu_sieve_machine_t mach,
 	     mu_header_t to_hdr, char *to, mu_header_t from_hdr, char *from)
@@ -153,7 +156,7 @@ copy_header (mu_sieve_machine_t mach,
 		      from, mu_strerror (rc));
       return rc;
     }
-  rc = mu_header_set_value (to_hdr, to, value, 0);
+  rc = mu_header_set_value (to_hdr, to, value, 1);
   return rc;
 }
 
@@ -193,7 +196,7 @@ moderator_discard_message (mu_sieve_machine_t mach, mu_message_t request,
     }
 
   if (from)
-    mu_header_set_value (repl_hdr, MU_HEADER_FROM, from, 0);
+    mu_header_set_value (repl_hdr, MU_HEADER_FROM, from, 1);
 
   mailer = mu_sieve_get_mailer (mach);
   rc = mu_mailer_open (mailer, 0);

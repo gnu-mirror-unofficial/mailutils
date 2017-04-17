@@ -513,10 +513,10 @@ vacation_subject (mu_sieve_machine_t mach,
     
   if (mu_rfc2047_encode (MU_SIEVE_CHARSET, "quoted-printable",
 			 subject, &value))
-    mu_header_set_value (newhdr, MU_HEADER_SUBJECT, subject, 0);
+    mu_header_set_value (newhdr, MU_HEADER_SUBJECT, subject, 1);
   else
     {
-      mu_header_set_value (newhdr, MU_HEADER_SUBJECT, value, 0);
+      mu_header_set_value (newhdr, MU_HEADER_SUBJECT, value, 1);
       free (value);
     }
 
@@ -714,7 +714,7 @@ vacation_reply (mu_sieve_machine_t mach, mu_message_t msg,
     }
   else
     {
-      mu_header_set_value (newhdr, MU_HEADER_TO, to, 0);
+      mu_header_set_value (newhdr, MU_HEADER_TO, to, 1);
 
       val = mu_sieve_get_tag_untyped (mach, "header");
       if (val)

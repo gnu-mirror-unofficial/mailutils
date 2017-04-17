@@ -289,10 +289,13 @@ SCM_DEFINE_PUBLIC (scm_mu_message_set_header, "mu-message-set-header", 3, 1, 0,
 
   hdr_c = scm_to_locale_string (header);
   val_c = scm_to_locale_string (value);
-  status = mu_header_set_value (hdr, hdr_c, val_c, repl);
+  if (repl)
+    status = mu_header_set_value (hdr, hdr_c, val_c, repl);
+  else
+    status = mu_header_append (hdr, hdr_c, val_c);
   free (hdr_c);
   free (val_c);
-  
+
   if (status)
     mu_scm_error (FUNC_NAME, status,
 		  "Cannot set header \"~A: ~A\" in message ~A",
@@ -602,7 +605,10 @@ SCM_DEFINE_PUBLIC (scm_mu_message_set_header_fields, "mu-message-set-header-fiel
       SCM_ASSERT (scm_is_string (cdr), cdr, SCM_ARGn, FUNC_NAME);
       hdr_c = scm_to_locale_string (car);
       val_c = scm_to_locale_string (cdr);
-      status = mu_header_set_value (hdr, hdr_c, val_c, repl);
+      if (repl)
+	status = mu_header_set_value (hdr, hdr_c, val_c, repl);
+      else
+	status = mu_header_append (hdr, hdr_c, val_c);
       free (hdr_c);
       free (val_c);
       if (status)

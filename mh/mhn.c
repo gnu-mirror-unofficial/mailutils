@@ -1944,7 +1944,7 @@ copy_header (mu_message_t msg, mu_header_t out)
 	  mu_header_sget_field_value (hdr, i, &value))
 	continue;
 
-      mu_header_set_value (out, name, value, 0);
+      mu_header_append (out, name, value);
     }
 }
 
@@ -2009,7 +2009,7 @@ finish_text_msg (struct compose_env *env, mu_message_t *msg, int ascii)
       mu_message_get_header (newmsg, &hdr);
       copy_header (*msg, hdr);
       mu_header_set_value (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
-			   "quoted-printable", 0);
+			   "quoted-printable", 1);
       
       mu_message_get_body (newmsg, &body);
       mu_body_get_streamref (body, &output);

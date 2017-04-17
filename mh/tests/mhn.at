@@ -461,18 +461,18 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Adjacent plain text contexts
-Content-Type: multipart/mixed; boundary="BOUNDARY-1"
 MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUNDARY-1"
 
 --BOUNDARY-1
-Content-ID: 1
 Content-Type: text/plain
+Content-ID: 1
 
 this is the first content
 
 --BOUNDARY-1
-Content-ID: 2
 Content-Type: text/plain
+Content-ID: 2
 
 and this is the second
 
@@ -499,26 +499,26 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Plaintext content types
-Content-Type: multipart/mixed; boundary="BOUNDARY-1"
 MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUNDARY-1"
 
 --BOUNDARY-1
-Content-Description: First part
-Content-ID: 1
 Content-Type: text/enriched
+Content-ID: 1
+Content-Description: First part
 
 this content will be tagged as text/enriched
 
 --BOUNDARY-1
-Content-ID: 2
 Content-Type: text/plain
+Content-ID: 2
 
 and this content will be tagged as text/plain
 
 --BOUNDARY-1
-Content-Description: this is a patch
-Content-ID: 3
 Content-Type: application/x-patch
+Content-ID: 3
+Content-Description: this is a patch
 
 and this content will be tagged as application/x-patch
 
@@ -540,8 +540,8 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Sharp at the beginning of a line
-Content-Type: text/plain
 MIME-Version: 1.0
+Content-Type: text/plain
 
 #when sent, this line will start with only one #
 
@@ -562,9 +562,9 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Charset
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset=utf-8
 MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
 
 Cze=C5=9B=C4=87
 
@@ -586,9 +586,9 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Forwards
-Content-Description: forwarded messages
-Content-Type: multipart/digest; boundary="BOUNDARY-1"
 MIME-Version: 1.0
+Content-Type: multipart/digest; boundary="BOUNDARY-1"
+Content-Description: forwarded messages
 
 --BOUNDARY-1
 Content-Type: message/rfc822
@@ -713,9 +713,9 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Forwards
-Content-Description: forwarded messages
-Content-Type: multipart/digest; boundary="BOUNDARY-1"
 MIME-Version: 1.0
+Content-Type: multipart/digest; boundary="BOUNDARY-1"
+Content-Description: forwarded messages
 
 --BOUNDARY-1
 Content-Type: message/rfc822
@@ -839,9 +839,9 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Forwards
-Content-Description: forwarded messages
-Content-Type: message/rfc822
 MIME-Version: 1.0
+Content-Type: message/rfc822
+Content-Description: forwarded messages
 
 Received: (from foobar@nonexistent.net)
 	by nonexistent.net id fBSKI8N04906
@@ -915,12 +915,12 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: External data
-Content-Type: message/external-body; name="mailutils-3.0.tar.gz"; directory="/gnu/mailutils"; site="ftp.gnu.org"; access-type=anon-ftp; mode="image"
 MIME-Version: 1.0
+Content-Type: message/external-body; name="mailutils-3.0.tar.gz"; directory="/gnu/mailutils"; site="ftp.gnu.org"; access-type=anon-ftp; mode="image"
 
-Content-Description: GNU Mailutils distribution
-Content-ID: 1
 Content-Type: application/octet-stream; type=tar; conversions=compress
+Content-ID: 1
+Content-Description: GNU Mailutils distribution
 
 
 ])
@@ -956,25 +956,25 @@ mimeflt input
 [0],
 [From: gray@example.net
 Subject: Multipart
-Content-Type: multipart/mixed; boundary="BOUNDARY-1"
 MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUNDARY-1"
 
 --BOUNDARY-1
-Content-ID: 1
 Content-Type: text/plain
+Content-ID: 1
 
 Initial text part.
 
 
 --BOUNDARY-1
-Content-Type: multipart/mixed; boundary="BOUNDARY-2"
 MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUNDARY-2"
 
 --BOUNDARY-2
-Content-Description: forwarded message
-Content-ID: 2
-Content-Type: message/rfc822
 MIME-Version: 1.0
+Content-Type: message/rfc822
+Content-ID: 2
+Content-Description: forwarded message
 
 Received: (from foobar@nonexistent.net)
 	by nonexistent.net id fBSKI8N04906
@@ -1025,22 +1025,22 @@ And the mome raths outgrabe.
 
 
 --BOUNDARY-2
-Content-ID: 3
 Content-Type: text/plain
+Content-ID: 3
 
 Plain text 1
 
 --BOUNDARY-2
-Content-ID: 4
 Content-Type: text/x-special
+Content-ID: 4
 
 Plain text 2
 
 --BOUNDARY-2
-Content-Transfer-Encoding: base64
-Content-Description: Tar archive
-Content-ID: 5
 Content-Type: application/octet-stream; type=tar
+Content-ID: 5
+Content-Description: Tar archive
+Content-Transfer-Encoding: base64
 
 Tm90IGEgdGFyYmFsbCwgcmVhbGx5Cg==
 --BOUNDARY-2--

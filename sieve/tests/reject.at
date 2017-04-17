@@ -55,8 +55,8 @@ sed -f filter.sed ./mta.diag
 [ENVELOPE FROM: MAILER-DAEMON@nonexistent.net
 ENVELOPE TO: <coyote@desert.example.org>
    0: To: coyote@desert.example.org
-   1: Content-Type: multipart/mixed; boundary=(boundary)
-   2: MIME-Version: 1.0
+   1: MIME-Version: 1.0
+   2: Content-Type: multipart/mixed; boundary=(boundary)
    3: 
    4: --(boundary)
    5: Content-Type: text/plain;charset=UTF-8
@@ -104,8 +104,8 @@ END OF MESSAGE
 ENVELOPE FROM: MAILER-DAEMON@nonexistent.net
 ENVELOPE TO: <b1ff@de.res.example.com>
    0: To: b1ff@de.res.example.com
-   1: Content-Type: multipart/mixed; boundary=(boundary)
-   2: MIME-Version: 1.0
+   1: MIME-Version: 1.0
+   2: Content-Type: multipart/mixed; boundary=(boundary)
    3: 
    4: --(boundary)
    5: Content-Type: text/plain;charset=UTF-8
@@ -151,8 +151,8 @@ END OF MESSAGE
 ENVELOPE FROM: MAILER-DAEMON@nonexistent.net
 ENVELOPE TO: <bar@dontmailme.org>
    0: To: bar@dontmailme.org
-   1: Content-Type: multipart/mixed; boundary=(boundary)
-   2: MIME-Version: 1.0
+   1: MIME-Version: 1.0
+   2: Content-Type: multipart/mixed; boundary=(boundary)
    3: 
    4: --(boundary)
    5: Content-Type: text/plain;charset=UTF-8
