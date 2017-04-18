@@ -183,7 +183,7 @@ send_parameter_list (const char *buffer)
   rc = mu_mime_header_parse (buffer, NULL, &value, &param);
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", buffer, rc);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_header_parse", buffer, rc);
       io_sendf ("NIL");
       return;
     }
