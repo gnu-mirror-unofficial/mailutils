@@ -36,6 +36,7 @@ int hint;
 char *file;
 char *user;
 
+int mime_option;
 int skip_empty_attachments;
 char *default_encoding;
 char *default_content_type;
@@ -274,6 +275,10 @@ static struct mu_option mail_options[] = {
     N_("attach from file descriptor FD"),
     mu_c_string, NULL, cli_attach_fd },
 
+  { "mime",    'M',  NULL, MU_OPTION_DEFAULT,
+    N_("compose MIME messages"),
+    mu_c_bool, &mime_option },
+
   MU_OPTION_END
 }, *options[] = { mail_options, NULL };
 
@@ -483,6 +488,11 @@ main (int argc, char **argv)
   /* argument parsing */
   mu_cli (argc, argv, &cli, mail_capa, NULL, &argc, &argv);
 
+  if (default_content_type || default_encoding)
+    mime_option = 1;
+  if (mime_option)
+    util_cache_command (&command_list, "set mime");
+      
   if (read_recipients)
     {
       argv += argc;

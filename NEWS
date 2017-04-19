@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-04-13
+GNU mailutils NEWS -- history of user-visible changes. 2017-04-19
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -89,6 +89,20 @@ defined.  Instead, the following constants are defined in config.h:
 * movemail: new option --progress-meter
 
 * mail: sending multipart messages
+
+** New option --mime
+
+This option instructs mail to compose output messages in MIME format.
+The options --content-type and --encoding turn this option on.  As a
+side effect, both --content-type and --encoding now affect the message
+body read from the standard input as well.
+
+** New variable 'mime'
+
+The 'mime' variable, if set instructs mail to compose output messages
+in MIME format.  In fact, the '--mime' option is equivalent to
+'-E set mime', except that it takes effect after all options are
+processed.
 
 ** New option --alternative
 

@@ -380,6 +380,7 @@ extern int util_get_crt (void);
 extern struct mailvar_variable *mailvar_find_variable (const char *var, int create);
 extern int mailvar_get (void *ptr, const char *variable,
 			enum mailvar_type type, int warn);
+int mailvar_is_true (char const *name);
 
 extern void mailvar_print (int set);
 extern void mailvar_variable_format (mu_stream_t,

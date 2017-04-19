@@ -2987,7 +2987,7 @@ Configuration Files}, for a detailed description of their format.
 * Invoking Mail::            Command Line Options.
 * Specifying Messages::      How to Specify Message Sets.
 * Composing Mail::           Composing Mail.
-* Attachments::              Attaching Files.
+* MIME::                     How to Attach Files.
 * Reading Mail::             Reading Mail.
 * Scripting::                Scripting.
 * Mail Variables::           How to Alter the Behavior of @command{mail}.
@@ -3083,6 +3083,14 @@ Print header summary to stdout and exit.
 @item -i
 @itemx --ignore
 Ignore interrupts when composing the message.
+
+@item -M
+@itemx --mime
+@itemx --no-mime
+The @option{--mime} option instructs @command{mail} to compose MIME
+messages.  It is equivalent for @option{-E 'set mime'}, except that it
+is processed after all other options.  The @option{--no-mime} disables
+the MIME compose mode, and is a shortcut for @option{-E 'set nomime'},
 
 @item -N
 @itemx --nosum
@@ -3522,8 +3530,53 @@ the old contents of your message.
 
 @c *********************************************************************
 
-@node Attachments
-@subsection Sending Attachments
+@node MIME
+@subsection Composing Multipart Messages
+
+Multipart messages (or MIME, for short) can be used to send text in
+character set other than ASCII, attach non-text files, send multiple
+parts in alternative formats, etc.
+
+Technically speaking, the boolean variable @code{mime}
+controls this feature.  If it is set (@pxref{Setting and Unsetting
+the Variables}), @command{MIME} will create MIME messages by default.
+The variable can be set in the global or user configuration file
+(@pxref{Mail Configuration Files}), using the following command:
+
+@example
+set mime
+@end example
+
+It can also be set from the command line, using the @option{--mime}
+option.
+
+GNU @command{mail} automatically turns on the MIME mode, when it is
+requested to send a non-plaintext message, or a message in character
+set other than ASCII, when the encoding is specified, or when
+attachments are given.
+
+To send a message in another character set, specify it with the
+@option{--content-type} option:
+
+@example
+mail --content-type 'text/plain; charset=utf-8'
+@end example
+
+The @option{--encoding} specifies the encoding to use:
+
+@example
+mail --content-type 'text/plain; charset=utf-8' --encoding=base64
+@end example
+
+Its argument is any encoding supported by GNU mailutils.  The two most
+often used encodings are @samp{base64} and @samp{quoted-printable}.
+
+To specify the charset from @command{mail} interactive section, enable
+the ``edit headers'' mode (@code{set editheaders}) and add the
+needed @code{Content-Type} header manually.
+
+GNU @command{mail} also gives you a possibility to attach files to the
+message being sent.
 
 The simplest way to attach a file from command line is by using the
 @option{--attach} (@option{-A}) option.  Its argument specifies the
@@ -3545,9 +3598,9 @@ $ mail --content-type=text/html --attach=in.html
 @end example
 
 The @option{--content-type} option affects all @option{--attach}
-options that follow it.  To change the content type, simply add
-another @option{--content-type} option.  For example, to send both
-the HTML file and the archive:
+options that follow it, and the message body (if any).  To change the
+content type, simply add another @option{--content-type} option.  For
+example, to send both the HTML file and the archive:
 
 @example
 $ mail --content-type=text/html --attach=in.html \
@@ -3556,8 +3609,9 @@ $ mail --content-type=text/html --attach=in.html \
 
 Similarly, the encoding to use is set up by the @option{--encoding}
 option.  As well as @option{--content-type}, this option affects all
-attachments supplied after it in the command line, until changed by
-the eventual next appearance of the same option.  Extending the above
+attachments supplied after it in the command line as well as the
+message body read from the standard input, until changed by
+the eventual next instance of the same option.  Extending the above
 example:
 
 @example
@@ -5065,6 +5119,17 @@ set metamail
 # Use external program to display MIME parts:
 set metamail="metamail -m mail -p"
 @end example
+
+@kwindex mime
+@item mime
+@*Type: String
+@*Default: Unset (false)
+@vrindex mime, mail variable
+
+If set, this variable instructs @command{mail} to compose MIME
+messages.
+
+It can be set from the command line using @option{--mime} option.
 
 @kwindex mimenoask
 @item mimenoask

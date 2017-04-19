@@ -499,98 +499,51 @@ saveatt (void *item, void *data)
 }
 
 static int
-add_body (mu_message_t inmsg, mu_iterator_t itr, mu_mime_t mime)
+add_body (mu_message_t inmsg, compose_env_t *env)
 {
-  mu_body_t body;
-  mu_message_t part;
-  mu_stream_t str, output;
-  mu_header_t outhdr;
-  char *p;
   int rc;
-  
+  mu_body_t body;
+  mu_stream_t str;
+  struct atchinfo *aptr;
+
   mu_message_get_body (inmsg, &body);
-  if (skip_empty_attachments || multipart_alternative)
-    {
-      size_t size;
-      rc = mu_body_size (body, &size);
-      if (rc)
-	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_body_size", NULL, rc);
-	  return -1;
-	}
-      if (size == 0)
-	return 0;
-    }
-    
-  /* Add original message as the first part */
-  
-  /* 1. Create the part and obtain a reference to its stream */
-  if ((rc = mu_message_create (&part, NULL)) == 0)
-    {
-      mu_body_t pbody;
-      
-      mu_message_get_body (part, &pbody);
-      mu_body_get_streamref (pbody, &output);
-    }
-  else
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_create", NULL, rc);
-      return -1;
-    }
-  
-  /* 2. Get original body stream and copy it out to the part's body */
   mu_body_get_streamref (body, &str);
-  mu_stream_copy (output, str, 0, NULL);
 
-  mu_stream_close (output);
-  mu_stream_destroy (&output);
-
-  /* 3. Copy "Content-*" headers from the original message */
-  mu_message_get_header (part, &outhdr);
-  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
-       mu_iterator_next (itr))
-    {
-      const char *name, *value;
-      
-      if (mu_iterator_current_kv (itr, (const void **)&name,
-				  (void**)&value) == 0)
-	{
-	  if (mu_c_strncasecmp (name, "Content-", 8) == 0)
-	    mu_header_set_value (outhdr, name, value, 0);
-	}
-    }
+  aptr = mu_alloc (sizeof (*aptr));
+  aptr->id = NULL;
+  aptr->encoding = default_encoding ? mu_strdup (default_encoding) : NULL;  
+  aptr->content_type = mu_strdup (default_content_type ?
+				  default_content_type : "text/plain");
+  aptr->name = NULL;
+  aptr->filename = NULL;
+  aptr->source = str;
+  aptr->skip_empty = skip_empty_attachments || multipart_alternative;
+  if (!env->attlist)
+    env->attlist = attlist_new ();
+  rc = mu_list_prepend (env->attlist, aptr);
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_list_prepend", NULL, rc);
+  return rc;
+}
   
-  /* 4. Add the content type and content ID headers. */
-  mu_header_set_value (outhdr, MU_HEADER_CONTENT_TYPE,
-		       default_content_type ? default_content_type : "text/plain",
-		       0);
-  mu_rfc2822_msg_id (0, &p);
-  mu_header_set_value (outhdr, MU_HEADER_CONTENT_ID, p, 1);
-  free (p);
-
-  /* 5. Add part to the mime object */
-  mu_mime_add_part (mime, part);
-  mu_message_unref (part);
-
-  return 0;
-}  
-
 static int
 add_attachments (compose_env_t *env, mu_message_t *pmsg)
 {
   mu_message_t inmsg, outmsg;
   mu_header_t inhdr, outhdr;
   mu_iterator_t itr;
-  mu_mime_t mime;  
   int rc;
+  
+  inmsg = *pmsg;
+
+  if (mailvar_is_true ("mime") && add_body (inmsg, env))
+    return 1;
   
   if (mu_list_is_empty (env->attlist))
     return 0;
   
-  inmsg = *pmsg;
-
   /* Create a mime object */
-  rc = mu_mime_create (&mime, NULL,
+  rc = mu_mime_create (&env->mime, NULL,
 		       env->alt ?
 		         MU_MIME_MULTIPART_ALT : MU_MIME_MULTIPART_MIXED);
   if (rc)
@@ -600,39 +553,35 @@ add_attachments (compose_env_t *env, mu_message_t *pmsg)
     }
 
   mu_message_get_header (inmsg, &inhdr);
-  mu_header_get_iterator (inhdr, &itr);
-
-  if (add_body (inmsg, itr, mime))
-    {
-      mu_mime_destroy (&mime);
-      mu_iterator_destroy (&itr);
-      return 1;
-    }
-
-  env->mime = mime;
 
   /* Add the respective attachments */
   rc = mu_list_foreach (env->attlist, saveatt, env);
   if (rc)
-    {
-      mu_mime_destroy (&mime);
-      mu_iterator_destroy (&itr);
-      return 1;
-    }
+    return 1;
 
   /* Get the resulting message */
-  rc = mu_mime_get_message (mime, &outmsg);
+  rc = mu_mime_get_message (env->mime, &outmsg);
 
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_get_message", NULL, rc);
-      mu_mime_destroy (&mime);
-      mu_iterator_destroy (&itr);
       return 1;
     }
 
   /* Copy rest of headers from the original message */
-  mu_message_get_header (outmsg, &outhdr);
+  rc = mu_message_get_header (outmsg, &outhdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header", NULL, rc);
+      return 1;
+    }
+
+  rc = mu_header_get_iterator (inhdr, &itr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_header_get_iterator", NULL, rc);
+      return 1;
+    }
   for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
        mu_iterator_next (itr))
     {
@@ -1356,7 +1305,7 @@ mail_send0 (compose_env_t *env, int save_to)
 	  
 	  mu_message_set_header (msg, env->header, NULL);
 	  env->header = NULL;
-	  
+
 	  status = add_attachments (env, &msg);
 	  if (status)
 	    break;

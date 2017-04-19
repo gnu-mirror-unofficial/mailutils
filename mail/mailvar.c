@@ -276,6 +276,10 @@ struct mailvar_symbol mailvar_tab[] =
     { { "xmailer", },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("add the `X-Mailer' header to the outgoing messages") },
+    
+    { { "mime" },
+      MAILVAR_TYPEMASK (mailvar_type_boolean),
+      N_("always compose MIME messages") },
 
     /* These will be implemented later */
     { { "onehop", }, MAILVAR_HIDDEN, NULL },
@@ -448,6 +452,12 @@ mailvar_get (void *ptr, const char *variable, enum mailvar_type type, int warn)
       }
   
   return 0;
+}
+
+int
+mailvar_is_true (char const *name)
+{
+  return mailvar_get (NULL, name, mailvar_type_boolean, 0) == 0;
 }
 
 /* Initialize mailvar_list entry: clear set indicator and free any memory
