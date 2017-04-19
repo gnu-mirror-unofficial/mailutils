@@ -263,11 +263,11 @@ extern char *mail_expand_name (const char *name);
 
 extern void send_append_header (char const *text);
 extern void send_append_header2 (char const *name, char const *value, int mode);
-extern void send_attach_file (int fd,
-			      const char *filename,
-			      const char *content_filename,
-			      const char *content_name,
-			      const char *content_type, const char *encoding);
+extern int send_attach_file (int fd,
+			     const char *filename,
+			     const char *content_filename,
+			     const char *content_name,
+			     const char *content_type, const char *encoding);
 
 extern int escape_check_args (int argc, char **argv, int minargs, int maxargs);
 

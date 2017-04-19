@@ -146,8 +146,9 @@ cli_attach (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
       arg = NULL;
       fd = 0;
     }
-  send_attach_file (fd, arg, content_filename, content_name,
-		    default_content_type, default_encoding);
+  if (send_attach_file (fd, arg, content_filename, content_name,
+			default_content_type, default_encoding))
+    exit (po->po_exit_error);
 
   free (content_name);
   content_name = NULL;
@@ -170,7 +171,7 @@ cli_attach_fd (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
   
   send_attach_file (fd, NULL, content_filename, content_name,
 		    default_content_type, default_encoding);
-
+    
   free (content_name);
   content_name = NULL;
   free (content_filename);

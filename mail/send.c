@@ -324,19 +324,19 @@ attlist_copy (mu_list_t src)
 
 static mu_list_t attachment_list;
 
-void
+int
 send_attach_file (int fd,
 		  const char *realname,
 		  const char *content_filename, const char *content_name,
 		  const char *content_type, const char *encoding)
 {
-  attlist_attach_file (&attachment_list,
-		       fd,
-		       realname,
-		       content_filename,
-		       content_name,
-		       content_type,
-		       encoding);
+  return attlist_attach_file (&attachment_list,
+			      fd,
+			      realname,
+			      content_filename,
+			      content_name,
+			      content_type,
+			      encoding);
 }
 
 static void
@@ -561,7 +561,9 @@ add_body (mu_message_t inmsg, mu_iterator_t itr, mu_mime_t mime)
     }
   
   /* 4. Add the content type and content ID headers. */
-  mu_header_set_value (outhdr, MU_HEADER_CONTENT_TYPE, "text/plain", 0);
+  mu_header_set_value (outhdr, MU_HEADER_CONTENT_TYPE,
+		       default_content_type ? default_content_type : "text/plain",
+		       0);
   mu_rfc2822_msg_id (0, &p);
   mu_header_set_value (outhdr, MU_HEADER_CONTENT_ID, p, 1);
   free (p);
