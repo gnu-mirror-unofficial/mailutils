@@ -273,7 +273,7 @@ escape_run_editor (char *ed, int argc, char **argv, compose_env_t *env)
     }
 
   mu_stream_seek (env->compstr, 0, MU_SEEK_SET, NULL);
-  if (!mailvar_get (NULL, "editheaders", mailvar_type_boolean, 0))
+  if (mailvar_is_true ("editheaders"))
     {
       dump_headers (tempstream, env);
 

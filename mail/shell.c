@@ -78,7 +78,7 @@ mail_execute (int shell, char *progname, int argc, char **argv)
   xargv = mu_calloc (xargc + 1, sizeof (xargv[0]));
   
   /* Expand arguments if required */
-  if (mailvar_get (NULL, "bang", mailvar_type_boolean, 0) == 0)
+  if (mailvar_is_true ("bang"))
     {
       int i;
       char *last = NULL;

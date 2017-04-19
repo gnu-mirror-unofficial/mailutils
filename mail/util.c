@@ -403,7 +403,7 @@ util_get_crt ()
 
   if (mailvar_get (&lines, "crt", mailvar_type_number, 0) == 0)
     return lines;
-  else if (mailvar_get (NULL, "crt", mailvar_type_boolean, 0) == 0)
+  else if (mailvar_is_true ("crt"))
     return util_getlines ();
   return 0;
 }
@@ -931,12 +931,11 @@ util_header_expand (mu_header_t *phdr)
 	      mu_address_t new_addr;
 	      char *p = ws.ws_wordv[j];
 	      
-	      /* If inplacealiases was set, the value was already expanded */
-	      if (mailvar_get (NULL, "inplacealiases",
-			       mailvar_type_boolean, 0))
-		exp = alias_expand (p);
-	      else
+	      if (mailvar_is_true ("inplacealiases"))
+	        /* If inplacealiases was set, the value was already expanded */
 		exp = p;
+	      else
+		exp = alias_expand (p);
 	      rc = mu_address_create (&new_addr, p);
 	      if (rc)
 		{
@@ -1072,7 +1071,7 @@ util_rfc2047_decode (char **value)
   rc = mu_rfc2047_decode (charset, *value, &tmp);
   if (rc)
     {
-      if (mailvar_get (NULL, "verbose", mailvar_type_boolean, 0) == 0)
+      if (mailvar_is_true ("verbose"))
 	mu_error (_("Cannot decode line `%s': %s"), *value, mu_strerror (rc));
     }
   else

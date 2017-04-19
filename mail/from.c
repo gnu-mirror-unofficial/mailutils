@@ -193,7 +193,7 @@ hdr_date (struct header_call_args *args, void *data)
   mu_message_get_header (args->msg, &hdr);
   
   date[0] = 0;
-  if (mailvar_get (NULL, "datefield", mailvar_type_boolean, 0) == 0
+  if (mailvar_is_true ("datefield")
       && mu_header_get_value (hdr, MU_HEADER_DATE,
 			      date, sizeof (date), NULL) == 0)
     {
@@ -225,7 +225,7 @@ hdr_from (struct header_call_args *args, void *data)
 {
   char *from = NULL;
   
-  if (mailvar_get (NULL, "fromfield", mailvar_type_boolean, 0) == 0)
+  if (mailvar_is_true ("fromfield"))
     {  
       mu_header_t hdr;
       
@@ -240,9 +240,7 @@ hdr_from (struct header_call_args *args, void *data)
 	  
 	      if (mu_address_sget_email (address, 1, &email) == 0)
 		{
-		  if (mailvar_get (NULL, "showto",
-				   mailvar_type_boolean, 0) == 0
-		      && mail_is_my_name (email))
+		  if (mailvar_is_true ("showto") && mail_is_my_name (email))
 		    {
 		      char *tmp;
 

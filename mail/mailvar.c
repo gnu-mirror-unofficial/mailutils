@@ -501,8 +501,7 @@ mailvar_set (const char *variable, void *value, enum mailvar_type type,
   enum mailvar_cmd cmd =
     (flags & MOPTF_UNSET) ? mailvar_cmd_unset : mailvar_cmd_set;
   
-  if (!(flags & MOPTF_QUIET)
-      && mailvar_get (NULL, "variable-strict", mailvar_type_boolean, 0) == 0)
+  if (!(flags & MOPTF_QUIET) && mailvar_is_true ("variable-strict"))
     {
       if (!sym)
 	mu_diag_output (MU_DIAG_WARNING, _("setting unknown variable %s"),
@@ -843,8 +842,7 @@ mailvar_print (int set)
   varlist = mailvar_list_copy (set);
   mu_list_count (varlist, &count);
   clos.out = open_pager (count);
-  clos.prettyprint = mailvar_get (NULL, "variable-pretty-print",
-				  mailvar_type_boolean, 0) == 0;
+  clos.prettyprint = mailvar_is_true ("variable-pretty-print");
   clos.width = util_screen_columns ();
 
   mu_list_foreach (varlist, mailvar_printer, &clos);

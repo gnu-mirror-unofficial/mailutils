@@ -55,7 +55,7 @@ mail_pipe (int argc, char **argv)
 	  mu_message_get_streamref (msg, &stream);
 	  mu_stream_copy (outstr, stream, 0, NULL);
 	  mu_stream_destroy (&stream);
-	  if (mailvar_get (NULL, "page", mailvar_type_boolean, 0) == 0)
+	  if (mailvar_is_true ("page"))
 	    mu_stream_write (outstr, "\f\n", 2, NULL);
 	}
       util_mark_read (msg);

@@ -318,8 +318,7 @@ mail_cmdline (void *closure, int cont MU_ARG_UNUSED)
 
   while (1)
     {
-      if (mailvar_get (NULL, "autoinc", mailvar_type_boolean, 0) == 0
-          && !mu_mailbox_is_updated (mbox))
+      if (mailvar_is_true ("autoinc") && !mu_mailbox_is_updated (mbox))
 	{
 	  mu_mailbox_messages_count (mbox, &total);
 	  page_invalidate (0);
@@ -334,7 +333,7 @@ mail_cmdline (void *closure, int cont MU_ARG_UNUSED)
 	  continue;
 	}
 
-      if (!rc && mailvar_get (NULL, "ignoreeof", mailvar_type_boolean, 0) == 0)
+      if (!rc && mailvar_is_true ("ignoreeof"))
 	{
 	  mu_error (_("Use \"quit\" to quit."));
 	  continue;
@@ -536,7 +535,7 @@ main (int argc, char **argv)
 
   
   /* read system-wide mail.rc and user's .mailrc */
-  if (mailvar_get (NULL, "rc", mailvar_type_boolean, 0) == 0)
+  if (mailvar_is_true ("rc"))
     util_do_command ("source %s", SITE_MAIL_RC);
   if ((p = getenv ("MAILRC")) && *p)
     util_do_command ("source %s", getenv ("MAILRC"));
@@ -581,7 +580,7 @@ main (int argc, char **argv)
 
       mu_argcv_string (argc, argv, &buf);
       rc = util_do_command ("mail %s", buf);
-      return mailvar_get (NULL, "mailx", mailvar_type_boolean, 0) ? rc : 0;
+      return mailvar_is_true ("mailx") ? 0 : rc;
     }
   /* Or acting as a normal reader */
   else 
@@ -637,8 +636,7 @@ main (int argc, char **argv)
 	}
       
       if (total == 0
-	  && (strcmp (mode, "read")
-	      || mailvar_get (NULL, "emptystart", mailvar_type_boolean, 0)))
+	  && (strcmp (mode, "read") || !mailvar_is_true ("emptystart")))
         {
 	  if (file)
 	    mu_printf (_("%s: 0 messages\n"), file);
@@ -648,7 +646,7 @@ main (int argc, char **argv)
         }
 
       /* initial commands */
-      if (mailvar_get (NULL, "header", mailvar_type_boolean, 0) == 0)
+      if (mailvar_is_true ("header"))
 	{
 	  util_do_command ("summary");
 	  util_do_command ("headers");
