@@ -104,6 +104,16 @@ in MIME format.  In fact, the '--mime' option is equivalent to
 '-E set mime', except that it takes effect after all options are
 processed.
 
+** Character sets
+
+The 'charset' variable controls both input and output operations.  On
+input it is used to set the value of the missing 'charset' parameter
+in the 'Content-Type' MIME header, if its value begins with 'text/'.
+This means, in particular, that if this variable is set to its default
+value (charset=auto), the LC_ALL environment variable is correctly
+set, and the 'mime' variable is set, then mail can safely be used to
+send messages in native character sets.
+
 ** New option --alternative
 
 When used with --attach or --attach-fd options, this option sets the

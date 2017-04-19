@@ -422,6 +422,7 @@ void util_cache_command (mu_list_t *list, const char *fmt, ...) MU_PRINTFLIKE(2,
 void util_run_cached_commands (mu_list_t *list);
 const char *util_reply_prefix (void);
 void util_rfc2047_decode (char **value);
+char *util_get_charset (void);
 
 void util_mark_read (mu_message_t msg);
 

@@ -173,6 +173,25 @@ attlist_new (void)
 }
 
 static void
+attach_set_content_type (struct atchinfo *aptr, char const *content_type)
+{
+  char *charset;
+
+  if (!content_type)
+    content_type = "text/plain";
+  if (strncmp (content_type, "text/", 5) == 0
+      && !strstr (content_type, "charset=")
+      && (charset = util_get_charset ()))
+    {
+      mu_asprintf (&aptr->content_type, "%s; charset=%s",
+		   content_type, charset);
+      free (charset);
+    }
+  else
+    aptr->content_type = mu_strdup (content_type);
+}
+
+static void
 attlist_add (mu_list_t attlist, char *id, char const *encoding,
 	     char const *content_type, char const *content_name,
 	     char const *content_filename,
@@ -184,9 +203,10 @@ attlist_add (mu_list_t attlist, char *id, char const *encoding,
   aptr = mu_alloc (sizeof (*aptr));
 
   aptr->id = id ? mu_strdup (id) : id;
-  aptr->encoding = mu_strdup (encoding);  
-  aptr->content_type = mu_strdup (content_type ?
-				  content_type : "application/octet-stream");
+  aptr->encoding = mu_strdup (encoding);
+  attach_set_content_type (aptr,
+			   content_type
+			     ? content_type : "application/octet-stream");
   aptr->name = content_name ? mu_strdup (content_name) : NULL;
   aptr->filename = content_filename ? mu_strdup (content_filename) : NULL;
   aptr->source = stream;
@@ -505,15 +525,14 @@ add_body (mu_message_t inmsg, compose_env_t *env)
   mu_body_t body;
   mu_stream_t str;
   struct atchinfo *aptr;
-
+  
   mu_message_get_body (inmsg, &body);
   mu_body_get_streamref (body, &str);
 
   aptr = mu_alloc (sizeof (*aptr));
   aptr->id = NULL;
-  aptr->encoding = default_encoding ? mu_strdup (default_encoding) : NULL;  
-  aptr->content_type = mu_strdup (default_content_type ?
-				  default_content_type : "text/plain");
+  aptr->encoding = default_encoding ? mu_strdup (default_encoding) : NULL;
+  attach_set_content_type (aptr, default_content_type);
   aptr->name = NULL;
   aptr->filename = NULL;
   aptr->source = str;

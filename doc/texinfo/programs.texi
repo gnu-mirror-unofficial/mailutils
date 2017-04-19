@@ -4797,12 +4797,25 @@ will fall back to using @acronym{SMTP} envelope.
 @*Default: @samp{auto}
 @vrindex charset, mail variable
 
-The value of this variable controls the output character set for the
-header fields encoding using RFC 2047.  If the variable is unset, no
-decoding is performed and the fields are printed as they are.  If the
-variable is set to @samp{auto}, @command{mail} tries to deduce the
-name of the character set from the value of @code{LC_ALL} environment
-variable.  Otherwise, its value is taken as the name of the charset.
+The value of this variable is the character set used for input and
+output operations.  If the value is @samp{auto}, @command{mail} will
+try to deduce the name of the character set from the value of
+@samp{LC_ALL} environment variable.  If the variable contains the
+character set part (e.g. @samp{nb_NO.utf-8}), it will be used.
+Otherwise, @command{mail} will look up in its built-in database the
+value of the character for this language/territory combination.  If
+@samp{LC_ALL} is not set, the @samp{LANG} environment variable is
+inspected.
+
+The value of @samp{charset} controls both input and output
+operations.  On input, it is used to set the value of the
+@samp{charset} parameter in the @samp{Content-Type} MIME header, if
+its value begins with @samp{text/} and @samp{charset} is not present.
+
+On output, it is used to display values of the header fields encodied
+using RFC 2047.  If the variable is unset, no decoding is performed
+and the fields are printed as they are.  Otherwise, they are recoded
+to that character set.
 
 @kwindex cmd
 @item cmd

@@ -1044,31 +1044,50 @@ util_run_cached_commands (mu_list_t *list)
   mu_list_destroy (list);
 }
 
-void
-util_rfc2047_decode (char **value)
+char *
+util_get_charset (void)
 {
-  char *charset = NULL;
-  char *tmp;
-  int rc;
-  struct mu_lc_all lc_all = { .flags = 0 };
+  char *charset;
 
-  if (!*value || mailvar_get (&charset, "charset", mailvar_type_string, 0))
-    return;
+  if (mailvar_get (&charset, "charset", mailvar_type_string, 0))
+    return NULL;
 
   if (mu_c_strcasecmp (charset, "auto") == 0)
     {
-      tmp = getenv ("LC_ALL");
+      struct mu_lc_all lc_all = { .flags = 0 };
+      char *tmp = getenv ("LC_ALL");
       if (!tmp)
 	tmp = getenv ("LANG");
-
+      
       if (tmp && mu_parse_lc_all (tmp, &lc_all, MU_LC_CSET) == 0)
-	charset = lc_all.charset;		  
+	{
+	  charset = mu_strdup (lc_all.charset);
+	  mu_lc_all_free (&lc_all);
+	}
+      else
+	charset = NULL;
     }
+  else
+    charset = mu_strdup (charset);
 
+  return charset;
+}
+
+void
+util_rfc2047_decode (char **value)
+{
+  char *charset, *tmp;
+  int rc;
+
+  if (!*value)
+    return;
+  charset = util_get_charset ();
   if (!charset)
     return;
-  
+
   rc = mu_rfc2047_decode (charset, *value, &tmp);
+  free (charset);
+  
   if (rc)
     {
       if (mailvar_is_true ("verbose"))
@@ -1079,8 +1098,6 @@ util_rfc2047_decode (char **value)
       free (*value);
       *value = tmp;
     }
-  if (lc_all.flags)
-    mu_lc_all_free (&lc_all);
 }
 
 const char *
