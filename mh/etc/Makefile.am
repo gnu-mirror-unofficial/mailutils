@@ -16,6 +16,7 @@
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
 mhlibdir   = $(pkgdatadir)/mh
+bindir     = @MH_BIN_DIR@
 
 LISPSRC    = mailutils-mh.el
 lisp_LISP  = @lisp_LISP@
