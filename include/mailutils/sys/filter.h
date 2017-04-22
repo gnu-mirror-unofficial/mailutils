@@ -36,16 +36,14 @@ struct _mu_filter_buffer
   size_t pos;
 };
 
-#define _MU_FILTER_DISABLED 0x01
-#define _MU_FILTER_EOF      0x02  
-  
 struct _mu_filter_stream
 {
   struct _mu_stream stream;
   mu_stream_t transport;
   int mode;
-  int fltflag;
-  
+  unsigned flag_disabled:1;
+  unsigned flag_eof:1;
+  size_t outbuf_size;
   struct _mu_filter_buffer inbuf, outbuf;
   mu_filter_xcode_t xcode;
   void *xdata;

@@ -27,28 +27,130 @@
 #include <mailutils/stream.h>
 #include <mailutils/sys/filter.h>
 
-#define MFB_BASE(buf) ((buf).base)
-#define MFB_CURPTR(buf) ((buf).base + (buf).pos)
-#define MFB_ENDPTR(buf) ((buf).base + (buf).level)
+static inline char *
+MFB_base_ptr (struct _mu_filter_buffer *buf)
+{
+  return buf->base;
+}
 
-#define MFB_SIZE(buf) ((buf).size)
-#define MFB_LEVEL(buf) ((buf).level)
-#define MFB_POS(buf) ((buf).pos)
-#define MFB_RDBYTES(buf) \
-  (MFB_LEVEL (buf) - MFB_POS (buf))
-#define MFB_FREESIZE(buf) \
-  (MFB_SIZE (buf) - MFB_LEVEL (buf))
+static inline char *
+MFB_cur_ptr (struct _mu_filter_buffer *buf)
+{
+  return buf->base + buf->pos;
+}
 
-#define MBF_CLEAR(buf) ((buf).pos = (buf).level = 0)
-#define MBF_FREE(buf) free ((buf).base)
-  
+static inline char *
+MFB_end_ptr (struct _mu_filter_buffer *buf)
+{
+  return buf->base + buf->level;
+}
+
+static inline size_t
+MFB_size (struct _mu_filter_buffer *buf)
+{
+  return buf->size;
+}
+
+static inline size_t
+MFB_level (struct _mu_filter_buffer *buf)
+{
+  return buf->level;
+}
+
+static inline size_t
+MFB_pos (struct _mu_filter_buffer *buf)
+{
+  return buf->pos;
+}
+
+static inline size_t
+MFB_rdbytes (struct _mu_filter_buffer *buf)
+{
+  return MFB_level (buf) - MFB_pos (buf);
+}
+
+static inline size_t
+MFB_freesize (struct _mu_filter_buffer *buf)
+{
+  return MFB_size (buf) - MFB_level (buf);
+}
+
+static inline void
+MFB_clear (struct _mu_filter_buffer *buf)
+{
+  buf->pos = buf->level = 0;
+}
+
+static inline void
+MFB_deallocate (struct _mu_filter_buffer *buf)
+{
+  free (buf->base);
+}
+
+/* Compact the buffer */
+static inline void
+MFB_compact (struct _mu_filter_buffer *buf)
+{
+  if (MFB_pos (buf))
+    {
+      memmove (MFB_base_ptr (buf), MFB_cur_ptr (buf), MFB_rdbytes (buf));
+      buf->level -= buf->pos;
+      buf->pos = 0;
+    }
+}
+
+static int
+MFB_require (struct _mu_filter_buffer *buf, size_t size)
+{
+  if (size > MFB_freesize (buf))
+    {
+      MFB_compact (buf);
+
+      if (size > MFB_freesize (buf))
+	{
+	  char *p;
+
+	  size += MFB_level (buf);
+	  p = realloc (buf->base, size);
+	  if (!p)
+	    return ENOMEM;
+	  buf->size = size;
+	  buf->base = p;
+	}
+    }
+  return 0;
+}
+
+static inline void
+MFB_advance_pos (struct _mu_filter_buffer *buf, size_t delta)
+{
+  buf->pos += delta;
+  if (buf->pos == buf->level)
+    buf->pos = buf->level = 0;
+}
+
+static inline void
+MFB_advance_level (struct _mu_filter_buffer *buf, size_t delta)
+{
+  buf->level += delta;
+}
+
 static void
 init_iobuf (struct mu_filter_io *io, struct _mu_filter_stream *fs)
 {
-  io->input = MFB_CURPTR (fs->inbuf);
-  io->isize = MFB_RDBYTES (fs->inbuf);
-  io->output = MFB_ENDPTR (fs->outbuf);
-  io->osize = MFB_FREESIZE (fs->outbuf);
+  io->input = MFB_cur_ptr (&fs->inbuf);
+  io->isize = MFB_rdbytes (&fs->inbuf);
+
+  if (fs->outbuf_size)
+    {
+      if (MFB_freesize (&fs->outbuf) < fs->outbuf_size)
+	MFB_require (&fs->outbuf, fs->outbuf_size);
+      io->osize = fs->outbuf_size;
+    }
+  else
+    io->osize = MFB_freesize (&fs->outbuf);
+  io->output = MFB_end_ptr (&fs->outbuf);
+
   io->errcode = MU_ERR_FAILURE;
   io->eof = 0;
 }
@@ -68,47 +170,6 @@ filter_stream_init (struct _mu_filter_stream *fs)
 }
 
 static int
-MFB_require (struct _mu_filter_buffer *buf, size_t size)
-{
-  if (size > MFB_FREESIZE (*buf))
-    {
-      /* Compact the buffer */
-      if (MFB_POS (*buf))
-	{
-	  memmove (MFB_BASE (*buf), MFB_CURPTR (*buf), MFB_RDBYTES (*buf));
-	  buf->level -= buf->pos;
-	  buf->pos = 0;
-	}
-      if (size > MFB_FREESIZE (*buf))
-	{
-	  char *p;
-
-	  size += MFB_LEVEL (*buf);
-	  p = realloc (buf->base, size);
-	  if (!p)
-	    return ENOMEM;
-	  buf->size = size;
-	  buf->base = p;
-	}
-    }
-  return 0;
-}
-
-static void
-MFB_advance_pos (struct _mu_filter_buffer *buf, size_t delta)
-{
-  buf->pos += delta;
-  if (buf->pos == buf->level)
-    buf->pos = buf->level = 0;
-}
-
-static void
-MFB_advance_level (struct _mu_filter_buffer *buf, size_t delta)
-{
-  buf->level += delta;
-}
-
-static int
 filter_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
 {
   struct _mu_filter_stream *fs = (struct _mu_filter_stream *)stream;
@@ -120,42 +181,42 @@ filter_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
   int stop = 0;
   int again = 0;
 
-  if (fs->fltflag & _MU_FILTER_DISABLED)
+  if (fs->flag_disabled)
     return mu_stream_read (fs->transport, buf, size, pret);
   
   do
     {
       size_t rdsize;
 
-      if (MFB_RDBYTES (fs->outbuf) == 0)
+      if (MFB_rdbytes (&fs->outbuf) == 0)
 	{
 	  enum mu_filter_result res;
 	  int rc;
 
-	  if (fs->fltflag & _MU_FILTER_EOF)
+	  if (fs->flag_eof)
 	    break;
 	  
-	  if (MFB_RDBYTES (fs->inbuf) < min_input_level && !again)
+	  if (MFB_rdbytes (&fs->inbuf) < min_input_level && !again)
 	    {
 	      rc = MFB_require (&fs->inbuf, min_input_level);
 	      if (rc)
 		return rc;
 	      rc = mu_stream_read (fs->transport,
-				   MFB_ENDPTR (fs->inbuf),
-				   MFB_FREESIZE (fs->inbuf),
+				   MFB_end_ptr (&fs->inbuf),
+				   MFB_freesize (&fs->inbuf),
 				   &rdsize);
 	      if (rc)
 		return rc;
 	      if (rdsize == 0 &&
-		  MFB_RDBYTES (fs->outbuf) == 0 &&
-		  MFB_RDBYTES (fs->inbuf) == 0)
+		  MFB_rdbytes (&fs->outbuf) == 0 &&
+		  MFB_rdbytes (&fs->inbuf) == 0)
 		break;
 	      
 	      MFB_advance_level (&fs->inbuf, rdsize);
 	    }
 
-	  if (min_output_size < MFB_RDBYTES (fs->inbuf))
-	    min_output_size = MFB_RDBYTES (fs->inbuf);
+	  if (min_output_size < MFB_rdbytes (&fs->inbuf))
+	    min_output_size = MFB_rdbytes (&fs->inbuf);
 	  rc = MFB_require (&fs->outbuf, min_output_size);
 	  if (rc)
 	    return rc;
@@ -195,8 +256,8 @@ filter_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
 	      continue;
 	    }
       
-	  if (iobuf.isize > MFB_RDBYTES (fs->inbuf)
-	      || iobuf.osize > MFB_FREESIZE (fs->outbuf))
+	  if (iobuf.isize > MFB_rdbytes (&fs->inbuf)
+	      || iobuf.osize > MFB_freesize (&fs->outbuf))
 	    return MU_ERR_BUFSPACE;
 	  
 	  /* iobuf.osize contains number of bytes written to output */
@@ -209,12 +270,18 @@ filter_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
 	    {
 	      if (iobuf.eof)
 		{
-		  fs->fltflag |= _MU_FILTER_EOF;
+		  fs->flag_eof = 1;
+		  stop = 1;
+		}
+	      else if (fs->outbuf_size)
+		{
+		  if (iobuf.osize == 0)
+		    return MU_ERR_BUFSPACE;
 		  stop = 1;
 		}
 	      else if (cmd == mu_filter_lastbuf)
 		{
-		  if (MFB_RDBYTES (fs->inbuf))
+		  if (MFB_rdbytes (&fs->inbuf))
 		    {
 		      /* If xcoder has not consumed all input, try again */
 		      if (++again > MU_FILTER_MAX_AGAIN)
@@ -227,7 +294,7 @@ filter_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
 		    }
 		  else
 		    {
-		      fs->fltflag |= _MU_FILTER_EOF;
+		      fs->flag_eof = 1;
 		      stop = 1;
 		    }
 		}
@@ -237,9 +304,9 @@ filter_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
 	}
 
       rdsize = size - total;
-      if (rdsize > MFB_RDBYTES (fs->outbuf))
-	rdsize = MFB_RDBYTES (fs->outbuf);
-      memcpy (buf + total, MFB_CURPTR (fs->outbuf), rdsize);
+      if (rdsize > MFB_rdbytes (&fs->outbuf))
+	rdsize = MFB_rdbytes (&fs->outbuf);
+      memcpy (buf + total, MFB_cur_ptr (&fs->outbuf), rdsize);
       MFB_advance_pos (&fs->outbuf, rdsize);
       total += rdsize;
 
@@ -275,7 +342,7 @@ filter_write_internal (mu_stream_t stream, enum mu_filter_command cmd,
       size_t rdsize;
       enum mu_filter_result res;
 
-      if (MFB_RDBYTES (fs->inbuf) < min_input_level)
+      if (MFB_rdbytes (&fs->inbuf) < min_input_level)
 	{
 	  rdsize = size - total;
 	  if (rdsize == 0)
@@ -283,15 +350,15 @@ filter_write_internal (mu_stream_t stream, enum mu_filter_command cmd,
 	  rc = MFB_require (&fs->inbuf, min_input_level);
 	  if (rc)
 	    break;
-	  if (rdsize > MFB_FREESIZE (fs->inbuf))
-	    rdsize = MFB_FREESIZE (fs->inbuf);
-	  memcpy (MFB_ENDPTR (fs->inbuf), buf + total, rdsize);
+	  if (rdsize > MFB_freesize (&fs->inbuf))
+	    rdsize = MFB_freesize (&fs->inbuf);
+	  memcpy (MFB_end_ptr (&fs->inbuf), buf + total, rdsize);
 	  MFB_advance_level (&fs->inbuf, rdsize);
 	  total += rdsize;
 	}
 
-      if (min_output_size < MFB_RDBYTES (fs->inbuf))
-	min_output_size = MFB_RDBYTES (fs->inbuf);
+      if (min_output_size < MFB_rdbytes (&fs->inbuf))
+	min_output_size = MFB_rdbytes (&fs->inbuf);
       rc = MFB_require (&fs->outbuf, min_output_size);
       if (rc)
 	return rc;
@@ -332,8 +399,8 @@ filter_write_internal (mu_stream_t stream, enum mu_filter_command cmd,
 	  continue;
 	}
       
-      if (iobuf.isize > MFB_RDBYTES (fs->inbuf)
-	  || iobuf.osize > MFB_FREESIZE (fs->outbuf))
+      if (iobuf.isize > MFB_rdbytes (&fs->inbuf)
+	  || iobuf.osize > MFB_freesize (&fs->outbuf))
 	return MU_ERR_BUFSPACE;
       
       /* iobuf.osize contains number of bytes written to output */
@@ -343,15 +410,15 @@ filter_write_internal (mu_stream_t stream, enum mu_filter_command cmd,
       MFB_advance_pos (&fs->inbuf, iobuf.isize);
       
       rc = mu_stream_write (fs->transport,
-			    MFB_CURPTR (fs->outbuf),
-			    MFB_RDBYTES (fs->outbuf),
+			    MFB_cur_ptr (&fs->outbuf),
+			    MFB_rdbytes (&fs->outbuf),
 			    &rdsize);
       if (rc == 0)
 	MFB_advance_pos (&fs->outbuf, rdsize);
       else
 	break;
     }
-  while (!stop && (MFB_RDBYTES (fs->outbuf) || again));
+  while (!stop && (MFB_rdbytes (&fs->outbuf) || again));
   if (pret)
     *pret = total;
   else if (total < size && rc == 0)
@@ -364,7 +431,7 @@ filter_write (mu_stream_t stream, const char *buf, size_t size, size_t *pret)
 {
   struct _mu_filter_stream *fs = (struct _mu_filter_stream *)stream;
 
-  if (fs->fltflag & _MU_FILTER_DISABLED)
+  if (fs->flag_disabled)
     return mu_stream_write (fs->transport, buf, size, pret);
 
   return filter_write_internal (stream, mu_filter_xcode, buf, size, pret);
@@ -412,17 +479,23 @@ filter_ctl (struct _mu_stream *stream, int code, int opcode, void *ptr)
 	  if (status)
 	    return status;
 	  if (ptr && *(int*)ptr)
-	    fs->fltflag |= _MU_FILTER_DISABLED;
+	    fs->flag_disabled = 1;
 	  else
-	    fs->fltflag &= ~_MU_FILTER_DISABLED;
+	    fs->flag_disabled = 0;
 	  break;
 
 	case MU_IOCTL_FILTER_GET_DISABLED:
 	  if (!ptr)
 	    return EINVAL;
-	  *(int*)ptr = fs->fltflag & _MU_FILTER_DISABLED;
+	  *(int*)ptr = fs->flag_disabled;
 	  break;
 
+	case MU_IOCTL_FILTER_SET_OUTBUF_SIZE:
+	  if (!ptr)
+	    return EINVAL;
+	  fs->outbuf_size = *(size_t*)ptr;
+	  break;
+	  
 	default:
 	  return ENOSYS;
 	}
@@ -506,8 +579,8 @@ static void
 filter_done (mu_stream_t stream)
 {
   struct _mu_filter_stream *fs = (struct _mu_filter_stream *)stream;
-  MBF_FREE (fs->inbuf);
-  MBF_FREE (fs->outbuf);
+  MFB_deallocate (&fs->inbuf);
+  MFB_deallocate (&fs->outbuf);
   if (fs->xdata)
     {
       fs->xcode (fs->xdata, mu_filter_done, NULL);
@@ -520,7 +593,7 @@ static int
 filter_wr_close (mu_stream_t stream)
 {
   struct _mu_filter_stream *fs = (struct _mu_filter_stream *)stream;
-  if (!mu_stream_eof (stream) && !(fs->fltflag & _MU_FILTER_EOF))
+  if (!mu_stream_eof (stream) && !fs->flag_eof)
     {
       size_t dummy;
       int rc = filter_write_internal (stream, mu_filter_lastbuf, NULL, 0,
@@ -528,8 +601,8 @@ filter_wr_close (mu_stream_t stream)
       if (rc)
 	return rc;
     }
-  MBF_CLEAR (fs->inbuf);
-  MBF_CLEAR (fs->outbuf);
+  MFB_clear (&fs->inbuf);
+  MFB_clear (&fs->outbuf);
   return mu_stream_close (fs->transport);
 }
 
@@ -537,8 +610,8 @@ static int
 filter_rd_close (mu_stream_t stream)
 {
   struct _mu_filter_stream *fs = (struct _mu_filter_stream *)stream;
-  MBF_CLEAR (fs->inbuf);
-  MBF_CLEAR (fs->outbuf);
+  MFB_clear (&fs->inbuf);
+  MFB_clear (&fs->outbuf);
   return mu_stream_close (fs->transport);
 }
 
@@ -633,7 +706,6 @@ mu_filter_stream_create (mu_stream_t *pflt,
   fs->xcode = xcode;
   fs->xdata = xdata;
   fs->mode = mode;
-  fs->fltflag = 0;
   
   mu_stream_set_buffer ((mu_stream_t) fs, mu_buffer_full,
 			MU_FILTER_BUF_SIZE);

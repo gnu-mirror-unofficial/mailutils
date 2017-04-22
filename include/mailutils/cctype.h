@@ -24,18 +24,19 @@
 extern "C" {
 #endif
 
-#define MU_CTYPE_ALPHA   0x001
-#define MU_CTYPE_DIGIT   0x002
-#define MU_CTYPE_BLANK   0x004
-#define MU_CTYPE_CNTRL   0x008
-#define MU_CTYPE_GRAPH   0x010
-#define MU_CTYPE_LOWER   0x020
-#define MU_CTYPE_UPPER   0x040
-#define MU_CTYPE_PRINT   0x080
-#define MU_CTYPE_PUNCT   0x100
-#define MU_CTYPE_SPACE   0x200
-#define MU_CTYPE_XLETR   0x400
-#define MU_CTYPE_ENDLN   0x800
+#define MU_CTYPE_ALPHA   0x0001
+#define MU_CTYPE_DIGIT   0x0002
+#define MU_CTYPE_BLANK   0x0004
+#define MU_CTYPE_CNTRL   0x0008
+#define MU_CTYPE_GRAPH   0x0010
+#define MU_CTYPE_LOWER   0x0020
+#define MU_CTYPE_UPPER   0x0040
+#define MU_CTYPE_PRINT   0x0080
+#define MU_CTYPE_PUNCT   0x0100
+#define MU_CTYPE_SPACE   0x0200
+#define MU_CTYPE_XLETR   0x0400
+#define MU_CTYPE_ENDLN   0x0800
+#define MU_CTYPE_TSPEC   0x1000  /* tspecials: RFC 2045, section 5.1. */
 
 #define MU_C_TAB_MAX     128
 
@@ -58,7 +59,8 @@ extern int mu_c_tab[MU_C_TAB_MAX];
 #define mu_isascii(c) (((unsigned)c) < MU_C_TAB_MAX)
 #define mu_isblank(c) mu_c_is_class (c, MU_CTYPE_BLANK)
 #define mu_isendln(c) mu_c_is_class (c, MU_CTYPE_ENDLN)
-
+#define mu_istspec(c) mu_c_is_class (c, MU_CTYPE_TSPEC)
+  
 #define mu_tolower(c)					\
   ({ int __c = (c);					\
     (__c >= 'A' && __c <= 'Z' ? __c - 'A' + 'a' : __c); \

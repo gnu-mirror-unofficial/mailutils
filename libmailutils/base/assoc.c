@@ -47,6 +47,7 @@ struct _mu_assoc_elem
 {
   char *name;
   struct _mu_assoc_elem *next, *prev;
+  int mark:1;
   char *data;
 };
 
@@ -793,4 +794,34 @@ mu_assoc_sort_r (mu_assoc_t assoc, mu_assoc_comparator_t cmp, void *data)
 
   return 0;
 }
+
+int
+mu_assoc_mark (mu_assoc_t asc, int (*cond) (char const *, void *, void *),
+	       void *data)
+{
+  struct _mu_assoc_elem *elt;
+
+  if (!asc)
+    return EINVAL;
+  for (elt = asc->head; elt; elt = elt->next)
+    elt->mark = !!cond (elt->name, elt->data, data);
+  return 0;
+}
+
+int
+mu_assoc_sweep (mu_assoc_t asc)
+{
+  unsigned i;
   
+  if (!asc)
+    return EINVAL;
+
+  for (i = hash_size[asc->hash_num]; i > 0; i--)
+    {
+      if (asc->tab[i-1] && asc->tab[i-1]->mark)
+	assoc_remove (asc, i-1);
+    }
+  
+  return 0;
+}
+

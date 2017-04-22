@@ -464,8 +464,8 @@ saveatt (void *item, void *data)
   char *p;
 
   rc = mu_attachment_create (&part, aptr->content_type, aptr->encoding,
-			     env->alt ? NULL : aptr->name,
-			     env->alt ? NULL : aptr->filename);
+			     aptr->name,
+			     aptr->filename);
   if (rc)
     {
       mu_error (_("can't create attachment %s: %s"),

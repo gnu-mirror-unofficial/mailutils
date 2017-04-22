@@ -20,6 +20,7 @@ noinst_LTLIBRARIES = libmime.la
 libmime_la_SOURCES = \
  attachment.c\
  mime.c\
- mimehdr.c
+ mimehdr.c\
+ mimehdrset.c
 
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils

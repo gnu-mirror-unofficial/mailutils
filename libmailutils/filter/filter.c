@@ -86,6 +86,8 @@ mu_filter_get_list (mu_list_t *plist)
       mu_list_append (filter_list, mu_c_escape_filter);
       mu_list_append (filter_list, mu_htmlent_filter);
       mu_list_append (filter_list, mu_xml_filter);
+      mu_list_append (filter_list, mu_percent_filter);
+      mu_list_append (filter_list, mu_dq_filter);
       /* FIXME: add the default encodings?  */
     }
   *plist = filter_list;

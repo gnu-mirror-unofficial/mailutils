@@ -195,6 +195,12 @@ enum mu_buffer_type
 #define MU_IOCTL_FILTER_GET_DISABLED 0
 #define MU_IOCTL_FILTER_SET_DISABLED 1  
 
+  /* Set transcoder output buffer size.
+     Arg: size_t*
+     Has effect only if the stream is unbuffered
+   */
+#define MU_IOCTL_FILTER_SET_OUTBUF_SIZE  2
+  
   /* TLS transport streams */
   /* Get cipher info.
      Arg: mu_property_t *

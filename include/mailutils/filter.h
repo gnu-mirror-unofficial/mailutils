@@ -126,7 +126,9 @@ extern mu_filter_record_t mu_iconv_filter;
 extern mu_filter_record_t mu_c_escape_filter;
 extern mu_filter_record_t mu_htmlent_filter;
 extern mu_filter_record_t mu_xml_filter;
-  
+extern mu_filter_record_t mu_percent_filter;
+extern mu_filter_record_t mu_dq_filter;
+
 enum mu_iconv_fallback_mode
   {
     mu_fallback_none,

@@ -61,6 +61,8 @@ main (int argc, char **argv)
   char *value;
   mu_assoc_t assoc;
   char *charset = NULL;
+  char *header_name = NULL;
+  unsigned long width = 76;
   
   mu_set_program_name (argv[0]);
   for (i = 1; i < argc; i++)
@@ -73,9 +75,13 @@ main (int argc, char **argv)
 	charset = opt + 9;
       else if (strcmp (opt, "-h") == 0 || strcmp (opt, "-help") == 0)
 	{
-	  mu_printf ("usage: %s [-charset=cs] [-debug=SPEC]", mu_program_name);
+	  mu_printf ("usage: %s [-charset=cs] [-debug=SPEC] [-header=NAME] [-width=N]", mu_program_name);
 	  return 0;
 	}
+      else if (strncmp (opt, "-header=", 8) == 0)
+	header_name = opt + 8;
+      else if (strncmp (opt, "-width=", 7) == 0)
+	width = strtoul (opt + 7, NULL, 10);
       else
 	{
 	  mu_error ("unknown option %s", opt);
@@ -97,9 +103,22 @@ main (int argc, char **argv)
       
   MU_ASSERT (mu_mime_header_parse ((char*)trans[0], charset, &value, &assoc));
 
-  mu_printf ("%s\n", value);
-  mu_assoc_sort_r (assoc, sort_names, NULL);
-  mu_assoc_foreach (assoc, print_param, NULL);
+  if (header_name)
+    {
+      mu_header_t hdr;
+      mu_stream_t hstr;
+      
+      MU_ASSERT (mu_header_create (&hdr, NULL, 0));
+      MU_ASSERT (mu_mime_header_set_w (hdr, header_name, value, assoc, width));
+      MU_ASSERT (mu_header_get_streamref (hdr, &hstr));
+      MU_ASSERT (mu_stream_copy (mu_strout, hstr, 0, NULL));
+    }
+  else
+    {
+      mu_printf ("%s\n", value);
+      mu_assoc_sort_r (assoc, sort_names, NULL);
+      mu_assoc_foreach (assoc, print_param, NULL);
+    }
   
   return 0;
 }

@@ -38,6 +38,8 @@
 #include <mailutils/header.h>
 #include <mailutils/errno.h>
 #include <mailutils/util.h>
+#include <mailutils/assoc.h>
+#include <mailutils/io.h>
 
 #include <mailutils/sys/mime.h>
 #include <mailutils/sys/message.h>
@@ -445,6 +447,13 @@ _mimepart_body_lines (mu_body_t body, size_t *plines)
 
 /*------ Mime message/header functions for CREATING multipart message -----*/
 static int
+retain_charset (char const *name, void *value MU_ARG_UNUSED,
+		void *data MU_ARG_UNUSED)
+{
+  return strcmp (name, "charset") != 0;
+}
+		 
+static int
 _mime_set_content_type (mu_mime_t mime)
 {
   const char  *content_type;
@@ -473,9 +482,36 @@ _mime_set_content_type (mu_mime_t mime)
 	  for (i = 0; i < mime->nmtp_parts; i++)
 	    {
 	      mu_header_t hdr;
+	      char *val;
+	      int rc;
 	      
 	      mu_message_get_header (mime->mtp_parts[i]->msg, &hdr);
 	      mu_header_remove (hdr, MU_HEADER_CONTENT_DISPOSITION, 1);
+
+	      rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE,
+						&val);
+	      if (rc == 0)
+		{
+		  mu_content_type_t ct;
+		  rc = mu_content_type_parse (val, NULL, &ct);
+		  if (rc == 0)
+		    {
+		      char *type;
+		      
+		      mu_assoc_mark (ct->param, retain_charset, NULL);
+		      mu_assoc_sweep (ct->param);
+
+		      rc = mu_asprintf (&type, "%s/%s", ct->type, ct->subtype);
+		      if (rc == 0)
+			{
+			  mu_mime_header_set (hdr,
+					      MU_HEADER_CONTENT_TYPE, type,
+					      ct->param);
+			  free (type);
+			}
+		      mu_content_type_destroy (&ct);
+		    }
+		}
 	    }
 	  
 	  content_type = "multipart/alternative; boundary=";

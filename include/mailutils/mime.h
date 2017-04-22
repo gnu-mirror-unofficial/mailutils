@@ -75,6 +75,13 @@ int mu_mime_header_parse (const char *text, const char *charset, char **pvalue,
 int mu_mime_header_parse_subset (const char *text, const char *charset,
 				 char **pvalue,
 				 mu_assoc_t assoc);
+
+int mu_mime_header_set_w (mu_header_t hdr, const char *name,
+			  const char *value, mu_assoc_t params,
+			  size_t line_width);
+int mu_mime_header_set (mu_header_t hdr, const char *name,
+			const char *value, mu_assoc_t params);
+
   
 #ifdef __cplusplus
 }

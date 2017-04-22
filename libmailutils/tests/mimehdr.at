@@ -119,13 +119,128 @@ filename(lang:el_GR/UTF-8)=αρχείο για την δοκιμασία
 
 MIMEHDR([combined charset, lang and cset],[mimehdr08 mimehdr-comb mimehdr-charset-rfc2231],
 [],
-[application/x-stuff
-    title*0*=us-ascii'en'This%20is%20even%20more%20
-    title*1*=%2A%2A%2Afun%2A%2A%2A%20
+[application/x-stuff;
+    title*0*=us-ascii'en'This%20is%20even%20more%20;
+    title*1*=%2A%2A%2Afun%2A%2A%2A%20;
     title*2="isn't it!"
 ],
 [application/x-stuff
 title(lang:en/us-ascii)=This is even more ***fun*** isn't it!
+])
+
+MIMEHDR([format: simple],[mimehdr09],
+[-header=X-MIME-Test-Header -width=26],
+[application/x-stuff; charset=ascii; title=foobar],
+[X-MIME-Test-Header: application/x-stuff;
+ charset=ascii;
+ title=foobar
+
+])
+
+MIMEHDR([format: split],[mimehdr10],
+[-header=X-MIME-Test-Header -width=76],
+[attachment; title="unusually long filename created by gray expressly for testing purposes and not meant for any other purpose but testing the formatting of very long MIME headers"],
+[X-MIME-Test-Header: attachment;
+ title*0="unusually long filename created by gray expressly for testing pu";
+ title*1="rposes and not meant for any other purpose but testing the forma";
+ title*2="tting of very long MIME headers"
+
+])
+
+MIMEHDR([format: split 2],[mimehdr11],
+[-header=X-MIME-Test-Header -width=26],
+[attachment; title="unusually long filename created by gray expressly for testing purposes and not meant for any other purpose but testing the formatting of very long MIME headers"],
+[X-MIME-Test-Header: attachment;
+ title*0="unusually long";
+ title*1=" filename crea";
+ title*2="ted by gray ex";
+ title*3="pressly for te";
+ title*4="sting purposes";
+ title*5=" and not meant";
+ title*6=" for any other";
+ title*7=" purpose but t";
+ title*8="esting the for";
+ title*9="matting of ver";
+ title*10="y long MIME h";
+ title*11="eaders"
+
+])
+
+# This test is split into 5 subtests to make sure encoded character
+# representation is not split between subsequent numbered parameters.
+MIMEHDR([format: language info 1],[mimehdr12 mimehdr12a],
+[-header=X-MIME-Test-Header -width=27],
+[application/x-stuff;
+    title*0*=us-ascii'en'This%20is%20even%20more%20;
+    title*1*=%2A%2A%2Afun%2A%2A%2A%20;
+    title*2="isn't it!"
+],
+[X-MIME-Test-Header: application/x-stuff;
+ title*0*=en'us-ascii'This;
+ title*1*=%20is%20even%20m;
+ title*2*=ore%20***fun***;
+ title*3*=%20isn't%20it!
+
+])
+
+MIMEHDR([format: language info 2],[mimehdr12 mimehdr12b],
+[-header=X-MIME-Test-Header -width=28],
+[application/x-stuff;
+    title*0*=us-ascii'en'This%20is%20even%20more%20;
+    title*1*=%2A%2A%2Afun%2A%2A%2A%20;
+    title*2="isn't it!"
+],
+[X-MIME-Test-Header: application/x-stuff;
+ title*0*=en'us-ascii'This;
+ title*1*=%20is%20even%20mo;
+ title*2*=re%20***fun***;
+ title*3*=%20isn't%20it!
+
+])
+
+MIMEHDR([format: language info 3],[mimehdr12 mimehdr12c],
+[-header=X-MIME-Test-Header -width=29],
+[application/x-stuff;
+    title*0*=us-ascii'en'This%20is%20even%20more%20;
+    title*1*=%2A%2A%2Afun%2A%2A%2A%20;
+    title*2="isn't it!"
+],
+[X-MIME-Test-Header: application/x-stuff;
+ title*0*=en'us-ascii'This;
+ title*1*=%20is%20even%20mor;
+ title*2*=e%20***fun***%20is;
+ title*3*=n't%20it!
+
+])
+
+MIMEHDR([format: language info 4],[mimehdr12 mimehdr12d],
+[-header=X-MIME-Test-Header -width=30],
+[application/x-stuff;
+    title*0*=us-ascii'en'This%20is%20even%20more%20;
+    title*1*=%2A%2A%2Afun%2A%2A%2A%20;
+    title*2="isn't it!"
+],
+[X-MIME-Test-Header: application/x-stuff;
+ title*0*=en'us-ascii'This;
+ title*1*=%20is%20even%20more;
+ title*2*=%20***fun***%20isn';
+ title*3*=t%20it!
+
+])
+
+MIMEHDR([format: language info 5],[mimehdr12 mimehdr12e],
+[-header=X-MIME-Test-Header -width=31],
+[application/x-stuff;
+    title*0*=us-ascii'en'This%20is%20even%20more%20;
+    title*1*=%2A%2A%2Afun%2A%2A%2A%20;
+    title*2="isn't it!"
+],
+[X-MIME-Test-Header: application/x-stuff;
+ title*0*=en'us-ascii'This%20i;
+ title*1*=s%20even%20more%20**;
+ title*2*=*fun***%20isn't%20it;
+ title*3*=!
+
 ])
 
 m4_popdef([MIMEHDR])

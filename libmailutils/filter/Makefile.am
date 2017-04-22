@@ -25,6 +25,7 @@ libfilter_la_SOURCES =\
  crlfflt.c\
  decode.c\
  dot.c\
+ dq.c\
  filter.c\
  fltchain.c\
  fromflt.c\
@@ -34,6 +35,7 @@ libfilter_la_SOURCES =\
  inline-comment.c\
  linecon.c\
  linelenflt.c\
+ percent.c\
  qpflt.c\
  xml.c
 

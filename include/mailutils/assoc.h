@@ -53,6 +53,10 @@ typedef int (*mu_assoc_comparator_t) (const char *, const void *,
 
 int mu_assoc_sort_r (mu_assoc_t assoc, mu_assoc_comparator_t cmp, void *data);
   
+int mu_assoc_mark (mu_assoc_t asc, int (*cond) (char const *, void *, void *),
+		   void *data);
+int mu_assoc_sweep (mu_assoc_t asc);
+
   
 #ifdef __cplusplus
 }
