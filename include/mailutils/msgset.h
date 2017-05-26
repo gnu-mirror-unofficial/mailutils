@@ -34,7 +34,7 @@ struct mu_msgrange
    message. */
 #define MU_MSGNO_LAST   0
 
-#define MU_MSGSET_NUM   0      /* Message set operates on sequence numbers */   
+#define MU_MSGSET_NUM   0      /* Message set operates on sequence numbers */
 #define MU_MSGSET_UID   1      /* Message set operates on UIDs */
 
 #define MU_MSGSET_MODE_MASK 0x0f
@@ -65,6 +65,9 @@ int mu_msgset_negate (mu_msgset_t msgset, mu_msgset_t *pnset);
 
 int mu_msgset_count (mu_msgset_t mset, size_t *pcount);
 int mu_msgset_is_empty (mu_msgset_t mset);
+
+int mu_msgset_first (mu_msgset_t msgset, size_t *ret);
+int mu_msgset_last (mu_msgset_t msgset, size_t *ret);
   
 typedef int (*mu_msgset_msgno_action_t) (size_t _n, void *_call_data);
 typedef int (*mu_msgset_message_action_t) (size_t _n, mu_message_t _msg,

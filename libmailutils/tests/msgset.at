@@ -171,5 +171,17 @@ MSGSET([subtract an open range with smaller left boundary],
 [3
 ])
 
+MSGSET([first],
+[msgset-first],
+[-msgset='3,10:20' -first],
+[3
+])
+
+MSGSET([last],
+[msgset-last],
+[-msgset='3,10:20' -last],
+[20
+])
+
 dnl ------------------------------------------------------------------
 m4_popdef([MSGSET])

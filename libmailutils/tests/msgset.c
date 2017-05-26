@@ -73,13 +73,37 @@ parse_msgset (const char *arg)
   return msgset;
 }
 
+static void
+print_all (mu_msgset_t msgset)
+{
+  MU_ASSERT (mu_msgset_print (mu_strout, msgset));
+  mu_printf ("\n");
+}
+
+static void
+print_first (mu_msgset_t msgset)
+{
+  size_t n;
+  MU_ASSERT (mu_msgset_first (msgset, &n));
+  printf ("%zu\n", n);
+}
+
+static void
+print_last (mu_msgset_t msgset)
+{
+  size_t n;
+  MU_ASSERT (mu_msgset_last (msgset, &n));
+  printf ("%zu\n", n);
+}
+
 int
 main (int argc, char **argv)
 {
   int i;
   char *msgset_string = NULL;
   mu_msgset_t msgset;
-  
+  void (*print) (mu_msgset_t) = print_all;
+
   mu_set_program_name (argv[0]);
   for (i = 1; i < argc; i++)
     {
@@ -88,7 +112,7 @@ main (int argc, char **argv)
       if (strcmp (arg, "-h") == 0 || strcmp (arg, "-help") == 0)
 	{
 	  mu_printf ("usage: %s [-msgset=SET] [-add=X[:Y]] [-del=X[:Y]] "
-		     "[-addset=SET] [-delset=SET] ...\n",
+		     "[-addset=SET] [-delset=SET] [-first] [-last]...\n",
 		     mu_program_name);
 	  return 0;
 	}
@@ -142,14 +166,17 @@ main (int argc, char **argv)
 	      mu_msgset_free (tset);
 	    }
 	}
+      else if (strcmp (arg, "-first") == 0)
+	print = print_first;
+      else if (strcmp (arg, "-last") == 0)
+	print = print_last;
       else
       	{
 	  mu_error ("unknown option %s", arg);
 	  return 1;
 	}
     }
-  MU_ASSERT (mu_msgset_print (mu_strout, msgset));
-  mu_printf ("\n");
+  print (msgset);
   mu_msgset_free (msgset);
   
   return 0;
