@@ -110,7 +110,7 @@ main (int argc, char **argv)
       exit (1);
     }
       
-  mh_msgset_first_current (mbox, msgset);
+  mh_mailbox_set_cur (mbox, mh_msgset_first (msgset, RET_UID));
   mu_msgset_free (msgset);
   mh_global_save_state ();
   mu_mailbox_sync (mbox);

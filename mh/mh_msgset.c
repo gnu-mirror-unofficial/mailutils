@@ -21,51 +21,47 @@
 #include <mailutils/sys/msgset.h>
 
 size_t
-mh_msgset_first (mu_msgset_t msgset)
+mh_msgset_first (mu_msgset_t msgset, int uid)
 {
-  mu_list_t list;
-  struct mu_msgrange *r;
-  int rc;
-  
-  rc = mu_msgset_get_list (msgset, &list);
+  size_t n;
+  int rc = mu_msgset_first (msgset, &n);
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_msgset_get_list", NULL, rc);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_msgset_first", NULL, rc);
       exit (1);
     }
-  rc = mu_list_head (list, (void**)&r);
-  if (rc)
+  if (uid)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_get", NULL, rc);
-      exit (1);
+      rc = mu_mailbox_translate (msgset->mbox, MU_MAILBOX_MSGNO_TO_UID, n, &n);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_translate", NULL, rc);
+	  exit (1);
+	}
     }
-  return r->msg_beg;
+  return n;
 }
 
 size_t
-mh_msgset_first_uid (mu_msgset_t msgset)
+mh_msgset_last (mu_msgset_t msgset, int uid)
 {
-  int rc;
-  size_t cur;
-
-  cur = mh_msgset_first (msgset);
-  rc = mu_mailbox_translate (msgset->mbox, MU_MAILBOX_MSGNO_TO_UID, cur, &cur);
+  size_t n;
+  int rc = mu_msgset_last (msgset, &n);
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_translate", NULL, rc);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_msgset_last", NULL, rc);
       exit (1);
     }
-  return cur;
-}
-
-/* Set the current message to that contained at position 0
-   in the given message set.
-   FIXME: mbox is superfluous
-*/
-void
-mh_msgset_first_current (mu_mailbox_t mbox, mu_msgset_t msgset)
-{
-  mh_mailbox_set_cur (mbox, mh_msgset_first_uid (msgset));
+  if (uid)
+    {
+      rc = mu_mailbox_translate (msgset->mbox, MU_MAILBOX_MSGNO_TO_UID, n, &n);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_translate", NULL, rc);
+	  exit (1);
+	}
+    }
+  return n;
 }
 
 int
@@ -617,7 +613,7 @@ msgset_parser_run (struct msgset_parser *parser)
 /* Parse a message specification from (argc;argv).  */
 void
 mh_msgset_parse (mu_msgset_t *msgset, mu_mailbox_t mbox, 
-		 int argc, char **argv, char *def)
+		 int argc, char **argv, const char *def)
 {
   struct msgset_parser parser;
   char *xargv[2];
@@ -626,7 +622,7 @@ mh_msgset_parse (mu_msgset_t *msgset, mu_mailbox_t mbox,
     {
       argc = 1;
       argv = xargv;
-      argv[0] = def ? def : "cur";
+      argv[0] = (char*) (def ? def : "cur");
       argv[1] = NULL;
     }
 
@@ -646,7 +642,7 @@ mh_msgset_parse (mu_msgset_t *msgset, mu_mailbox_t mbox,
 
 void
 mh_msgset_parse_string (mu_msgset_t *msgset, mu_mailbox_t mbox, 
-			const char *string, char *def)
+			const char *string, const char *def)
 {
   struct mu_wordsplit ws;
   

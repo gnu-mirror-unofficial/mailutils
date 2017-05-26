@@ -1026,7 +1026,7 @@ mh_draft_message (const char *name, const char *msgspec, char **pname)
       if (!mh_msgset_single_message (msgset))
 	mu_error (_("only one message at a time!"));
       else
-	uid = mh_msgset_first_uid (msgset);
+	uid = mh_msgset_first (msgset, RET_UID);
       mu_msgset_free (msgset);
     }
 

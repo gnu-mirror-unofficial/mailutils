@@ -208,7 +208,7 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
       break;  
     }
 
-  msgno = mh_msgset_first (msgset);
+  msgno = mh_msgset_first (msgset, RET_MSGNO);
   rc = mu_mailbox_get_message (mbox, msgno, &msg);
   if (rc)
     {

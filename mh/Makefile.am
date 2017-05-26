@@ -170,6 +170,8 @@ mh_alias_lex.c: $(srcdir)/mh_alias.l mh_alias.h
 install-exec-hook: 
 	@here=`pwd`; \
 	cd $(DESTDIR)$(bindir); \
-	rm -f folders; \
+	rm -f folders next prev; \
 	$(LN_S) folder folders; \
+        $(LN_S) show next; \
+        $(LN_S) show prev; \
 	cd $$here

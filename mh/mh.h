@@ -300,12 +300,13 @@ int mh_message_number (mu_message_t msg, size_t *pnum);
 mu_mailbox_t mh_open_folder (const char *folder, int flags);
 
 void mh_msgset_parse (mu_msgset_t *msgset, mu_mailbox_t mbox, 
-		      int argc, char **argv, char *def);
+		      int argc, char **argv, const char *def);
 void mh_msgset_parse_string (mu_msgset_t *msgset, mu_mailbox_t mbox, 
-			     const char *string, char *def);
-void mh_msgset_first_current (mu_mailbox_t mbox, mu_msgset_t msgset);
-size_t mh_msgset_first (mu_msgset_t msgset);
-size_t mh_msgset_first_uid (mu_msgset_t msgset);
+			     const char *string, const char *def);
+#define RET_MSGNO 0
+#define RET_UID   1
+size_t mh_msgset_first (mu_msgset_t msgset, int uid);
+size_t mh_msgset_last  (mu_msgset_t msgset, int uid);
 int mh_msgset_single_message (mu_msgset_t msgset);
 
 #define NAME_ANY    0

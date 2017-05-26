@@ -189,7 +189,8 @@ main (int argc, char **argv)
 		  mu_error (_("only one message at a time!"));
 		  return 1;
 		}
-	      draftmessage = (char*) mu_umaxtostr (0, mh_msgset_first_uid (msgset));
+	      draftmessage =
+		(char*) mu_umaxtostr (0, mh_msgset_first (msgset, RET_UID));
 	      mu_msgset_free (msgset);
 	      mu_mailbox_destroy (&mbox);
 	    }
@@ -213,7 +214,7 @@ main (int argc, char **argv)
 	  return 1;
 	}
       unlink (wh_env.file);
-      copy_message (mbox, mh_msgset_first (msgset), wh_env.file);
+      copy_message (mbox, mh_msgset_first (msgset, RET_MSGNO), wh_env.file);
       mu_mailbox_destroy (&mbox);
       mu_msgset_free (msgset);
     }

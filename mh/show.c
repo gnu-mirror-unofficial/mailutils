@@ -54,6 +54,36 @@ insarg (char *arg)
       showargv[1] = p;
     }
 }
+
+static void
+finisarg (void)
+{
+  struct mu_wordsplit ws;
+  char *p;
+  
+  mu_wordsplit (showproc, &ws, MU_WRDSF_DEFFLAGS);
+  if (ws.ws_wordc > 1)
+    {
+      size_t i;
+      
+      if (showargc + ws.ws_wordc > showargmax)
+	{
+	  showargmax = showargc + ws.ws_wordc;
+	  showargv = mu_realloc (showargv, showargmax * sizeof showargv[0]);
+	}
+
+      memmove (showargv + ws.ws_wordc, showargv + 1,
+	       sizeof (showargv[0]) * (showargc - 1));
+      for (i = 1; i < ws.ws_wordc; i++)
+	showargv[i] = ws.ws_wordv[i];
+      showargc += ws.ws_wordc - 1;
+      showproc = ws.ws_wordv[0];
+    }
+
+  p = strrchr (showproc, '/');
+  showargv[0] = (char*) (p ? p + 1 : showproc);
+  addarg (NULL);
+}
 
 static void
 set_draft (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -181,8 +211,9 @@ int
 main (int argc, char **argv)
 {
   mu_mailbox_t mbox;
-  mu_msgset_t msgset;
+  mu_msgset_t msgset = NULL;
   const char *p;
+  const char *mode = "cur";
   
   showargmax = 2;
   showargc = 1;
@@ -191,6 +222,9 @@ main (int argc, char **argv)
   mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
 	     args_doc, prog_doc, NULL);
 
+  if (strcmp (mu_program_name, "next") == 0
+      || strcmp (mu_program_name, "prev") == 0)
+    mode = mu_program_name;
   
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_RDWR);
 
@@ -203,7 +237,7 @@ main (int argc, char **argv)
 	}
     }
   else
-    mh_msgset_parse (&msgset, mbox, argc, argv, "cur");
+    mh_msgset_parse (&msgset, mbox, argc, argv, mode);
 
   /* 1. If !use_showproc set showproc to /bin/cat and go to X.
      2. If -file or -draft is given
@@ -241,7 +275,7 @@ main (int argc, char **argv)
 	      mu_mailbox_close (mbox);
 	      mu_mailbox_destroy (&mbox);
 	      mbox = mh_open_folder (dfolder, MU_STREAM_RDWR);
-	      mh_msgset_parse (&msgset, mbox, 0, NULL, "cur");
+	      mh_msgset_parse (&msgset, mbox, 0, NULL, mode);
 
 	      mu_msgset_foreach_message (msgset, resolve_mime, &ismime);
 	      if (ismime)
@@ -294,9 +328,12 @@ main (int argc, char **argv)
 	mu_msgset_foreach_msguid (msgset, printheader, (void*) path);
     }
 
-  mu_stream_flush (mu_strout);
+  if (!mu_msgset_is_empty (msgset))
+    mh_mailbox_set_cur (mbox, mh_msgset_last (msgset, RET_UID));
   mu_mailbox_close (mbox);
   mu_mailbox_destroy (&mbox);
+
+  mu_stream_flush (mu_strout);
   
   if (!showproc)
     {
@@ -304,10 +341,7 @@ main (int argc, char **argv)
       if (!showproc)
 	showproc = "/usr/bin/more";
     }
-
-  addarg (NULL);
-  p = strrchr (showproc, '/');
-  showargv[0] = (char*) (p ? p + 1 : showproc);
+  finisarg ();
   execvp (showproc, showargv);
   mu_error (_("unable to exec %s: %s"), showargv[0], mu_strerror (errno));
   return 1;

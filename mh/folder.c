@@ -914,7 +914,7 @@ main (int argc, char **argv)
       mu_mailbox_t mbox = mh_open_folder (mh_current_folder (),
 					  MU_STREAM_RDWR);
       mh_msgset_parse (&msgset, mbox, argc - index, argv + index, "cur");
-      mh_msgset_first_current (mbox, msgset);
+      mh_mailbox_set_cur (mbox, mh_msgset_first (msgset, RET_UID));
       mu_msgset_free (msgset);
       mh_global_save_state ();
       mu_mailbox_close (mbox);
