@@ -80,5 +80,18 @@ scan +mbox1 -reverse | sed 's/ *$//'
    1  12/28 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy toves
 ])
 
+MH_CHECK([Local mailbox],[scan05 local-mailbox],[
+MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+echo "Local-Mailbox: gray@example.net" >> $MH
+scan | sed 's/ *$//'
+],
+[0],
+[   1  12/28 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy toves
+   2  12/28 Bar                Re: Jabberwocky<<It seems very pretty, but it's
+   3  07/13 To:Foo Bar         Simple MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   4  07/13 To:Foo Bar         Nested MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   5  07/13 To:Foo Bar         Empty MIME Parts<<------- =_aaaaaaaaaa0 Content-
+])
+
 m4_popdef[MH_KEYWORDS])
 # End of scan.at

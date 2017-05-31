@@ -133,22 +133,36 @@ mh_err_memory (int fatal)
 static char *my_name;
 static char *my_email;
 
-void
-mh_get_my_name (char *name)
+static char *
+mh_get_my_name (void)
 {
-  if (!name)
+  if (!my_name)
     {
       struct passwd *pw = getpwuid (getuid ());
       if (!pw)
 	{
 	  mu_error (_("cannot determine my username"));
-	  return;
+	  my_name = mu_strdup ("unknown");
 	}
-      name = pw->pw_name;
+      else
+	my_name = mu_strdup (pw->pw_name);
     }
+  return my_name;
+}
 
-  my_name = mu_strdup (name);
-  my_email = mu_get_user_email (name);
+char *
+mh_my_email (void)
+{
+  char *username = mh_get_my_name ();
+  if (!my_email)
+    {  
+      const char *p = mh_global_profile_get ("Local-Mailbox", NULL);
+      if (p)
+	my_email = mu_strdup (p);
+      else
+	my_email = mu_get_user_email (username);
+    }
+  return my_email;
 }
 
 int
@@ -176,9 +190,7 @@ mh_is_my_name (const char *name)
     for (p++; *p; p++)
       *p = mu_toupper (*p);
   
-  if (!my_email)
-    mh_get_my_name (NULL);
-  if (emailcmp (my_email, pname) == 0)
+  if (emailcmp (mh_my_email (), pname) == 0)
     rc = 1;
   else
     {
@@ -220,14 +232,6 @@ mh_is_my_name (const char *name)
     }
   free (pname);
   return rc;
-}
-
-char *
-mh_my_email ()
-{
-  if (!my_email)
-    mh_get_my_name (NULL);
-  return my_email;
 }
 
 static int
