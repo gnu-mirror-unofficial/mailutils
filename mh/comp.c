@@ -130,10 +130,13 @@ copy_message (mu_mailbox_t mbox, size_t n, const char *file)
 int
 main (int argc, char **argv)
 {
-  draftfolder = mh_global_profile_get ("Draft-Folder", NULL);
-  whatnowproc = mh_global_profile_get ("whatnowproc", NULL);
-
   mh_getopt (&argc, &argv, options, 0, args_doc, prog_doc, NULL);
+
+  if (!draftfolder)
+    draftfolder = mh_global_profile_get ("Draft-Folder", NULL);
+  if (!whatnowproc)
+    whatnowproc = mh_global_profile_get ("whatnowproc", NULL);
+
   if (use_draft)
     draftmessage = "cur";
   if (!formfile)

@@ -387,5 +387,6 @@ char *mh_safe_make_file_name (const char *dir, const char *file);
 void mh_mailbox_get_cur (mu_mailbox_t mbox, size_t *pcur);
 void mh_mailbox_set_cur (mu_mailbox_t mbox, size_t cur);
 
-void mh_whatnow_env_from_environ (struct mh_whatnow_env *wh);
+void mh_whatnow_env_from_environ_early (struct mh_whatnow_env *wh);
+void mh_whatnow_env_from_environ_late (struct mh_whatnow_env *wh);
 void mh_whatnow_env_to_environ (struct mh_whatnow_env *wh);

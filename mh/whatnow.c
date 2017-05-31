@@ -52,9 +52,9 @@ static struct mu_option options[] = {
 int
 main (int argc, char **argv)
 {
-  mh_whatnow_env_from_environ (&wh_env);
-
+  mh_whatnow_env_from_environ_early (&wh_env);
   mh_getopt (&argc, &argv, options, 0, args_doc, prog_doc, NULL);
+  mh_whatnow_env_from_environ_late (&wh_env);
   
   if (argc)
     wh_env.draftfile = argv[0];

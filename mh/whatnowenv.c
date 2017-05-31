@@ -25,10 +25,8 @@ _add_to_list (size_t num, mu_message_t msg, void *data)
 }
 
 void
-mh_whatnow_env_from_environ (struct mh_whatnow_env *wh)
+mh_whatnow_env_from_environ_early (struct mh_whatnow_env *wh)
 {
-  char *folder = getenv ("mhfolder");
-
   memset (wh, 0, sizeof (*wh));
   
   wh->file = getenv ("mhdraft");
@@ -36,6 +34,14 @@ mh_whatnow_env_from_environ (struct mh_whatnow_env *wh)
   wh->draftfile = wh->file;
   wh->editor = getenv ("mheditor");
   wh->prompt = getenv ("mhprompt"); /* extension */
+}
+
+
+void
+mh_whatnow_env_from_environ_late (struct mh_whatnow_env *wh)
+{
+  char *folder = getenv ("mhfolder");
+
   if (folder)
     {
       wh->anno_field = getenv ("mhannotate");

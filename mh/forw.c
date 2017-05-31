@@ -382,10 +382,12 @@ main (int argc, char **argv)
 {
   int rc;
 
-  draftfolder = mh_global_profile_get ("Draft-Folder", NULL);
-  whatnowproc = mh_global_profile_get ("whatnowproc", NULL);
   mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
 	     args_doc, prog_doc, NULL);
+  if (!draftfolder)
+    draftfolder = mh_global_profile_get ("Draft-Folder", NULL);
+  if (!whatnowproc)
+    whatnowproc = mh_global_profile_get ("whatnowproc", NULL);
   if (!formfile)
     mh_find_file ("forwcomps", &formfile);
   

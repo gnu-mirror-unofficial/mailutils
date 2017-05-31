@@ -650,10 +650,12 @@ main (int argc, char **argv)
   int rc;
   mu_mailbox_t mbox;
   mu_msgset_t msgset;
-  const char *tempfolder = mh_global_profile_get ("Temp-Folder", ".temp");
-  
+  const char *tempfolder = NULL;
+
   mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
 	     args_doc, prog_doc, NULL);
+  if (!tempfolder)
+    tempfolder = mh_global_profile_get ("Temp-Folder", ".temp");
   if (eb_min_length == 0)
     eb_min_length = 1;
   
