@@ -380,13 +380,52 @@ display (struct mh_whatnow_env *wh, int argc, char **argv, int *status)
 
 /* Edit action */
 static int
-edit (struct mh_whatnow_env *wh, int argc, char **argv, int *status)
+edit (struct mh_whatnow_env *wh, int argc, char **argv, int *whs)
 {
-  char *name;
+  char const *ed;
+  int i, rc, status;
+  char **xargv;
   
-  mu_asprintf (&name, "%s-next", wh->editor);
-  invoke (name, wh->editor, argc, argv, wh->file, NULL);
-  free (name);
+  if (wh->reedit)
+    {
+      if (argc > 1)
+	ed = argv[1];
+      else
+	{
+	  char *name;
+	  char const *newed;
+	  mu_asprintf (&name, "%s-next", wh->editor);
+	  newed = mh_global_profile_get (name, NULL);
+	  free (name);
+	  if (newed)
+	    ed = newed;
+	}
+    }
+  else if (argc > 1)
+    ed = argv[1];
+  else
+    ed = wh->editor;
+
+  xargv = mu_calloc (argc+2, sizeof (*xargv));
+  xargv[0] = (char *)ed;
+  for (i = 1; i + 1 < argc; i++)
+    xargv[i] = argv[i+1];
+  xargv[i++] = wh->file;
+  xargv[i] = NULL;
+
+  rc = mu_spawnvp (xargv[0], xargv, &status);
+  free (xargv);
+
+  if (rc || check_exit_status (ed, status))
+    {
+      if (wh->file)
+	mu_error (_("problems with edit--%s preserved"), wh->file);
+      else
+	mu_error (_("problems with edit"));
+    }
+  
+  wh->editor = ed;
+  wh->reedit = 1;
   
   return 0;
 }

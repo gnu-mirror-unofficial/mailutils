@@ -216,6 +216,7 @@ struct mh_whatnow_env     /* whatnow shell environment */
   mu_list_t anno_list;    /* List of messages (mu_message_t) to annotate */
   mu_mailbox_t mbox;
   int nowhatnowproc;
+  int reedit:1;           /* Set if the editor was already invoked */
 };
 
 #define DISP_QUIT 0

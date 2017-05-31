@@ -57,7 +57,7 @@ main (int argc, char **argv)
   mh_whatnow_env_from_environ_late (&wh_env);
   
   if (argc)
-    wh_env.draftfile = argv[0];
+    wh_env.file = argv[0];
   else if (draftfolder)
     {
       if (mh_draft_message (draftfolder, draftmessage, &wh_env.file))
