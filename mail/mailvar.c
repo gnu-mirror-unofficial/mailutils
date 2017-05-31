@@ -44,6 +44,8 @@ static int set_replyregex (enum mailvar_cmd cmd,
 			   struct mailvar_variable *);
 static int set_screen (enum mailvar_cmd cmd,
 		       struct mailvar_variable *);
+static int set_verbose (enum mailvar_cmd cmd,
+			struct mailvar_variable *);
 static int set_debug (enum mailvar_cmd cmd,
 		      struct mailvar_variable *);
 static int set_folder (enum mailvar_cmd cmd,
@@ -272,7 +274,8 @@ struct mailvar_symbol mailvar_tab[] =
     { { "varstrict", }, MAILVAR_ALIAS },
     { { "verbose", },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
-      N_("verbosely trace the process of message delivery") },
+      N_("verbosely trace the process of message delivery"),
+      set_verbose },
     { { "xmailer", },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("add the `X-Mailer' header to the outgoing messages") },
@@ -664,6 +667,21 @@ set_screen (enum mailvar_cmd cmd, struct mailvar_variable *var)
 }
 
 #define DEFAULT_DEBUG_LEVEL  MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE7)
+
+static int
+set_verbose (enum mailvar_cmd cmd, struct mailvar_variable *var)
+{
+  switch (cmd)
+    {
+    case mailvar_cmd_set:
+      mu_debug_set_category_level (MU_DEBCAT_APP, DEFAULT_DEBUG_LEVEL);
+      break;
+
+    case mailvar_cmd_unset:
+      mu_debug_set_category_level (MU_DEBCAT_APP, 0);
+    }
+  return 0;
+}
 
 static int
 set_debug (enum mailvar_cmd cmd, struct mailvar_variable *var)

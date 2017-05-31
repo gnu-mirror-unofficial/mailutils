@@ -36,21 +36,48 @@ int mimetypes_yyerror (char *s);
 int mimetypes_open (const char *name);
 void mimetypes_close (void);
 int mimetypes_parse (const char *name);
-void mimetypes_gram_debug (int level);
-void mimetypes_lex_debug (int level);
 void mimetypes_lex_init (void);
-void reset_lex (void);
+void lex_arglist (int);
 void *mimetypes_malloc (size_t size);
 
-struct mimetypes_string mimetypes_append_string2 (struct mimetypes_string *s1,
-						  char c,
-						  struct mimetypes_string *s2);
 struct mimetypes_string *mimetypes_string_dup (struct mimetypes_string *s);
 
 const char *get_file_type (void);
 
 extern char *mimeview_file;
 extern mu_stream_t mimeview_stream;    
-extern int debug_level;
 
-#define DEBUG(l,f) if (debug_level > (l)) printf f
+struct concat_segm
+{
+  struct concat_segm *next;
+  char const *val;
+};
+
+void lex_concat (struct concat_segm *p, struct mimetypes_string *ret);
+
+struct mu_locus_range
+{
+  struct mu_locus beg;
+  struct mu_locus end;
+};
+
+#define YYLTYPE struct mu_locus_range
+#define YYLLOC_DEFAULT(Current, Rhs, N)				  \
+  do								  \
+    {								  \
+      if (N)							  \
+	{							  \
+	  (Current).beg = YYRHSLOC(Rhs, 1).beg;			  \
+	  (Current).end = YYRHSLOC(Rhs, N).end;			  \
+	}							  \
+      else							  \
+	{							  \
+	  (Current).beg = YYRHSLOC(Rhs, 0).end;			  \
+	  (Current).end = (Current).beg;			  \
+	}							  \
+    } while (0)
+#define YY_LOCATION_PRINT(File, Loc)				    \
+  fprintf(File, "%s:%u.%u-%u.%u",				    \
+	  (Loc).beg.mu_file,					    \
+	  (Loc).beg.mu_line, (Loc).beg.mu_col,			    \
+	  (Loc).end.mu_line, (Loc).end.mu_col)

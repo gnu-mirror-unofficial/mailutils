@@ -28,13 +28,11 @@
 #include <mimeview.h>
 #include <mimetypes-decl.h>  
 #include <mailutils/io.h>
-
-static int line_num;
-static char *file_name;
-static int file_name_alloc; 
  
+static struct mu_locus loc;
+static int newline;
+
 static mu_opool_t pool;
-static int prev_state;
  
 static unsigned 
 digit_to_number (char c)
@@ -43,58 +41,89 @@ digit_to_number (char c)
                      c >= 'A' && c <= 'Z' ? c-'A'+10 :
                      c-'a'+10);
 }
+
+static void
+advance_locus (void)
+{
+  if (newline)
+    {
+      loc.mu_line++;
+      loc.mu_col = 1;
+    }
+  yylloc.beg = loc;
+  loc.mu_col += yyleng;
+  yylloc.end = loc;
+  yylloc.end.mu_col--;
+  
+  newline = yytext[yyleng-1] == '\n';
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_LOCUS, &loc);
+}
+
+#define YY_USER_ACTION advance_locus ();
+
 %}
 
 %option nounput
 %option noinput
 	  
-%x ARGS HEX
+%s RULE ARGS
 X [0-9a-fA-F]
 IDENT [a-zA-Z_\.][a-zA-Z0-9_\.-]*
 WS [ \t]*
 %%
      /* Comments */
-<INITIAL>#.*\n       { line_num++; }
-<INITIAL>#.*         /* end-of-file comment */;
+^#.*\n               ;
      /* Tokens */
-\\\n                 { line_num++; }
-\n                   { line_num++; return EOL; }
+\\\n                 ;
+\n+                  { loc.mu_line += yyleng - 1; return EOL; }
 {WS}                 ;
-{IDENT}              {
+<INITIAL,RULE>^[^ \t\n/]+"/"[^ \t\n]+ {
+  mu_opool_append (pool, yytext, yyleng);
+  mu_opool_append_char (pool, 0);
+  yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
+  BEGIN (RULE);
+  return TYPE;
+}
+
+<RULE>"priority"/"(" {
+  return PRIORITY;
+}
+<RULE>{IDENT}/"(" {
   mu_opool_append (pool, yytext, yyleng);
   mu_opool_append_char (pool, 0);
   yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
   return IDENT;
 }
-<INITIAL>{IDENT}"("           {
-  mu_opool_append (pool, yytext, yyleng-1);
+<RULE>{IDENT}              {
+  mu_opool_append (pool, yytext, yyleng);
   mu_opool_append_char (pool, 0);
   yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
-  BEGIN(ARGS);
-  return IDENT_L;
+  return STRING;
 }
-<INITIAL,ARGS>\"[^\\"\n]*\"        {
+<RULE,ARGS>\"[^"\n]*\"        {
   mu_opool_append (pool, yytext+1, yyleng-2);
   mu_opool_append_char (pool, 0);
   yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
   return STRING;
 }
-<INITIAL,ARGS>"<" {
-  prev_state = YYSTATE;
-  BEGIN(HEX);
+<RULE,ARGS>"<"({X}{X})+">" {
+  int i;
+  for (i = 0; i < yyleng; i += 2)
+    {
+      mu_opool_append_char (pool, digit_to_number (yytext[i])*16
+                                  + digit_to_number (yytext[i+1]));
+    }
+  yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
+  return STRING;
 }
-<ARGS>[^ \t<\\\n),]+/[),] {
+<ARGS>[^ \t<\n),<"]+/[),<"] {
   mu_opool_append (pool, yytext, yyleng);
   mu_opool_append_char (pool, 0);
   yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
   return STRING;
 }
-<ARGS>[^ \t<\\\n),]+< {
-  mu_opool_append (pool, yytext, yyleng);
-  prev_state = YYSTATE;
-  BEGIN(HEX);
-}
-<INITIAL>[^ \t<\\\n)+,&]/[ \t\\\n)+,&] {
+<RULE>[^ \t<\\\n)+,&]/[ \t\\\n)+,&] {
   mu_opool_append (pool, yytext, yyleng);
   mu_opool_append_char (pool, 0);
   yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
@@ -106,43 +135,27 @@ WS [ \t]*
   yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
   return STRING;
 }
-<HEX>{X}{X} {
-  int c = digit_to_number (yytext[0])*16 + digit_to_number (yytext[1]);
-  mu_opool_append_char (pool, c);
-}
-<HEX>">"/[ \t\\\n,)] {
-  BEGIN(prev_state);
-  mu_opool_append_char (pool, 0);
-  yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
-  return STRING;
-}
-<HEX>">" {
-  BEGIN(prev_state);
-}
   /* Special cases: && and ||. Docs don't say anything about them, but
      I've found them in my mime.types file...         --Sergey */
 "&&"  return '+';
 "||"  return ',';
   /* Operators */
-"!"|"+"|","|"("|")"|"/"  return yytext[0];
+<RULE>"!"|"+"|","|"("|")"|"/"  return yytext[0];
 <ARGS>","        return yytext[0];
-<ARGS>")"        { BEGIN(INITIAL); return yytext[0]; }
-<INITIAL,ARGS,HEX>. {
- fprintf (stderr, "Invalid character '%c', state %d\n", yytext[0], YYSTATE);
- abort();
+<ARGS>")"        { BEGIN (RULE); return yytext[0]; }
+<*>. {
+  mu_error ("invalid character '%c', state %d", yytext[0], YYSTATE);
+  return BOGUS;
 }
 %%
-
-void
-mimetypes_lex_debug (int level)
-{
-  yy_flex_debug = level;
-}
-
 int
 mimetypes_open (const char *name)
 {
   struct stat st;
+  int mode;
+
+  yy_flex_debug = mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE4);
+
   if (stat (name, &st))
     {
       mu_error (_("cannot stat `%s': %s"), name, mu_strerror (errno));
@@ -150,28 +163,29 @@ mimetypes_open (const char *name)
     }
   
   if (S_ISDIR (st.st_mode))
-    {
-      file_name = mu_make_file_name (name, "mime.types");
-      file_name_alloc = 1;
-    }
+    loc.mu_file = mu_make_file_name (name, "mime.types");
   else
-    {
-      file_name = (char*) name;
-      file_name_alloc = 0;
-    }
-  
-  yyin = fopen (file_name, "r");
+    loc.mu_file = mu_strdup (name);
+  loc.mu_line = 1;
+  loc.mu_col = 1;
+  newline = 0;
+
+  yyin = fopen (loc.mu_file, "r");
   if (!yyin)
     {
-      mu_error (_("Cannot open `%s': %s"), file_name, mu_strerror (errno));
-      if (file_name_alloc)
-	{
-	  free (file_name);
-	  file_name_alloc = 0;
-	}
+      mu_error (_("cannot open `%s': %s"), loc.mu_file, mu_strerror (errno));
+      free (loc.mu_file);
       return -1;
     }
-  line_num = 1;
+
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
+  mode |= MU_LOGMODE_LOCUS;
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_LOCUS, &loc);
+
   mu_opool_create (&pool, MU_OPOOL_ENOMEMABRT);
   return 0;
 }
@@ -179,18 +193,25 @@ mimetypes_open (const char *name)
 void
 mimetypes_close ()
 {
+  int mode;
+
   fclose (yyin);
-  if (file_name_alloc)
-    {
-      free (file_name);
-      file_name_alloc = 0;
-    }
+  /* FIXME: Don't free (loc.mu_file), because it is referenced by
+     mu_locus structures in the parse tree */
+
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
+  mode &= ~MU_LOGMODE_LOCUS;
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_LOCUS, NULL);
 }
 
 int
 yyerror (char *s)
 {
-  mu_error ("%s:%d: %s", file_name, line_num, s);
+  mu_error (s);
   return 0;
 }
 
@@ -198,22 +219,6 @@ int
 yywrap ()
 {
   return 1;
-}
-
-struct mimetypes_string
-mimetypes_append_string2 (struct mimetypes_string *s1,
-			  char c,
-			  struct mimetypes_string *s2)
-{
-  struct mimetypes_string r;
-
-  r.len = s1->len + s2->len + 1;
-  mu_opool_append (pool, s1->ptr, s1->len);
-  mu_opool_append_char (pool, c);
-  mu_opool_append (pool, s2->ptr, s2->len);
-  mu_opool_append_char (pool, 0);
-  r.ptr = mu_opool_finish (pool, NULL);
-  return r;
 }
 
 struct mimetypes_string *     
@@ -231,9 +236,21 @@ mimetypes_malloc (size_t size)
 }
 
 void
-reset_lex ()
+lex_arglist (int enable)
 {
-  BEGIN(INITIAL);
+  if (enable)
+    BEGIN (ARGS);
+  else
+    BEGIN (RULE);
 }
 
-
+void
+lex_concat (struct concat_segm *p, struct mimetypes_string *ret)
+{
+  for (; p; p = p->next)
+    {
+      mu_opool_appendz (pool, p->val);
+    }
+  mu_opool_append_char (pool, 0);
+  ret->ptr = mu_opool_finish (pool, &ret->len);
+}

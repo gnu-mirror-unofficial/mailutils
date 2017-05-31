@@ -284,14 +284,11 @@ display_submessage (struct mime_descend_closure *closure, void *data)
       if (mailvar_is_true ("metamail"))
 	{
 	  char *no_ask = NULL;
-	  int debug = 0;
 	  
 	  mailvar_get (&no_ask, "mimenoask", mailvar_type_string, 0);
-	  if (mailvar_is_true ("verbose"))
-	    debug = 9;
-	  
 	  builtin_display = display_stream_mailcap (NULL, stream, hdr, no_ask,
-						    interactive, 0, debug);
+						    interactive, 0,
+						    MU_DEBCAT_APP);
 	}
       
       if (builtin_display)

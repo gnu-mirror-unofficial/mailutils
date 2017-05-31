@@ -31,8 +31,8 @@
 
 #include "mailcap.h"
 
-int debug_level;       /* Debugging level set by --debug option */
 static int dry_run;    /* Dry run mode */
+static int lint;       /* Syntax check mode */
 static char *metamail; /* Name of metamail program, if requested */
 static char *mimetypes_config = DEFAULT_CUPS_CONFDIR;
 static char *no_ask_types;  /* List of MIME types for which no questions
@@ -41,26 +41,6 @@ static int interactive = -1;
 char *mimeview_file;       /* Name of the file to view */
 mu_stream_t mimeview_stream;    /* The corresponding stream */
 
-static void
-set_debug_flags (const char *arg)
-{
-  for (; *arg; arg++)
-    {
-      switch (*arg)
-	{
-	case 'l':
-	  mimetypes_lex_debug (1);
-	  break;
-
-	case 'g':
-	  mimetypes_gram_debug (1);
-	  break;
-	  
-	default:
-	  debug_level = *arg - '0';
-	}
-    }
-}  
 
 static void
 cli_no_ask (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -80,7 +60,34 @@ static void
 cli_debug (struct mu_parseopt *po, struct mu_option *opt,
 	   char const *arg)
 {
-  set_debug_flags (arg);
+  mu_debug_level_t lev;
+  if (!arg)
+    lev = MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE2);
+  else
+    {
+      mu_debug_get_category_level (MU_DEBCAT_MIME, &lev);
+      for (; *arg; arg++)
+	{
+	  switch (*arg)
+	    {
+	    case 'l':
+	      lev |= MU_DEBUG_LEVEL_MASK (MU_DEBUG_TRACE4);
+	      break;
+	      
+	    case 'g':
+	      lev |= MU_DEBUG_LEVEL_MASK (MU_DEBUG_TRACE3);
+	      break;
+
+	    default:
+	      if (mu_isdigit (*arg))
+		lev |= MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE0 + *arg - '0');
+	      else
+		mu_parseopt_error (po, _("ignoring invalid debug flag: %c"),
+				   *arg);
+	  }
+	}
+    }
+  mu_debug_set_category_level (MU_DEBCAT_MIME, lev);
 }
 
 static void
@@ -103,13 +110,17 @@ static struct mu_option mimeview_options[] = {
   { "debug", 'd', N_("FLAGS"),  MU_OPTION_ARG_OPTIONAL,
     N_("enable debugging output"),
     mu_c_string, NULL, cli_debug },
-  { "mimetypes", 't', N_("FILE"), MU_OPTION_DEFAULT,
+  { "mimetypes", 'f', N_("FILE"), MU_OPTION_DEFAULT,
     N_("use this mime.types file"),
     mu_c_string, &mimetypes_config },
   
   { "dry-run",   'n', NULL, MU_OPTION_DEFAULT,
     N_("do nothing, just print what would have been done"),
     mu_c_bool, &dry_run },
+
+  { "lint",      't', NULL, MU_OPTION_DEFAULT,
+    N_("test mime.types syntax and exit"),
+    mu_c_bool, &lint },
   
   { "metamail",    0, N_("FILE"), MU_OPTION_ARG_OPTIONAL,
     N_("use metamail to display files"),
@@ -118,19 +129,7 @@ static struct mu_option mimeview_options[] = {
   MU_OPTION_END
 }, *options[] = { mimeview_options, NULL };
 
-static int
-cb_debug (void *data, mu_config_value_t *val)
-{
-  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
-    return 1;
-  set_debug_flags (val->v.string);
-  return 0;
-}
-
 struct mu_cfg_param mimeview_cfg_param[] = {
-  { "debug", mu_cfg_callback, NULL, 0, cb_debug,
-    N_("Set debug verbosity level."),
-    N_("flags: string") },
   { "mimetypes", mu_c_string, &mimetypes_config, 0, NULL,
     N_("Use this mime.types file."),
     N_("file") },
@@ -209,11 +208,12 @@ display_file (const char *type)
       argv[5] = mimeview_file;
       argv[6] = NULL;
       
-      if (debug_level)
+      if (mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE0))
 	{
 	  char *string;
 	  mu_argcv_string (6, argv, &string);
-	  printf (_("Executing %s...\n"), string);
+	  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+		    (_("executing %s...\n"), string));
 	  free (string);
 	}
       
@@ -233,7 +233,7 @@ display_file (const char *type)
 	{
 	  display_stream_mailcap (mimeview_file, mimeview_stream, hdr,
 				  no_ask_types, interactive, dry_run,
-				  debug_level);
+				  MU_DEBCAT_MIME);
 	  mu_header_destroy (&hdr);
 	}
     }
@@ -244,15 +244,18 @@ main (int argc, char **argv)
 {
   MU_APP_INIT_NLS ();
 
-  mimetypes_lex_debug (0);
-  mimetypes_gram_debug (0);
   interactive = isatty (fileno (stdin));
   
   mu_cli (argc, argv, &cli, capa, NULL, &argc, &argv);
-  if (dry_run && !debug_level)
-    debug_level = 1;
+  if (dry_run)
+    {
+      mu_debug_level_t lev;
+      mu_debug_get_category_level (MU_DEBCAT_MIME, &lev);
+      lev |= MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE2);
+      mu_debug_set_category_level (MU_DEBCAT_MIME, lev);
+    }
 
-  if (argc == 0)
+  if (argc == 0 && !lint)
     {
       mu_error (_("no files given"));
       return 1;
@@ -260,6 +263,8 @@ main (int argc, char **argv)
 
   if (mimetypes_parse (mimetypes_config))
     return 1;
+  if (lint)
+    return 0;
   
   while (argc--)
     {
@@ -268,7 +273,6 @@ main (int argc, char **argv)
       if (open_file (*argv++))
 	continue;
       type = get_file_type ();
-      DEBUG (1, ("%s: %s\n", mimeview_file, type ? type : "?"));
       if (type)
 	display_file (type);
       close_file ();

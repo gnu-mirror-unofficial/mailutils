@@ -51,16 +51,14 @@ struct mime_context
   int unlink_temp_file;
 
   mu_list_t no_ask_types;
-  int debug_level;
+  int dh;
   int flags;
 };
-
-#define DEBUG(c,l,f) if ((c)->debug_level > (l)) printf f
 
 static int
 mime_context_fill (struct mime_context *ctx, const char *file,
 		   mu_stream_t input, mu_header_t hdr, const char *no_ask,
-		   int interactive, int dry_run, int debug_level)
+		   int interactive, int dry_run, mu_debug_handle_t dh)
 {
   struct mu_wordsplit ws;
   size_t i;
@@ -91,7 +89,7 @@ mime_context_fill (struct mime_context *ctx, const char *file,
     ctx->flags |= FLAGS_INTERACTIVE;
   if (dry_run)
     ctx->flags |= FLAGS_DRY_RUN;
-  ctx->debug_level = debug_level;
+  ctx->dh = dh;
   
   mu_list_create (&ctx->values);
 
@@ -339,7 +337,7 @@ confirm_action (struct mime_context *ctx, const char *str)
   char *type;
 
   mime_context_get_content_type (ctx, &type);
-  if (dry_run_p (ctx) || !interactive_p (ctx) || mime_context_do_not_ask (ctx))
+  if (!interactive_p (ctx) || mime_context_do_not_ask (ctx))
     return 1;
   
   printf (_("Run `%s'?"), str);
@@ -540,7 +538,7 @@ run_mailcap (mu_mailcap_entry_t entry, struct mime_context *ctx)
   int outfd = -1;       
   pid_t pid;
   
-  if (ctx->debug_level > 1)
+  if (mu_debug_level_p (ctx->dh, MU_DEBUG_TRACE3))
     dump_mailcap_entry (entry);
 
   if (run_test (entry, ctx))
@@ -571,11 +569,13 @@ run_mailcap (mu_mailcap_entry_t entry, struct mime_context *ctx)
     pfd = NULL;
   else
     pfd = &fd;
-  DEBUG (ctx, 0, (_("Executing %s...\n"), view_command));
+  mu_debug (ctx->dh, MU_DEBUG_TRACE0, (_("executing %s...\n"), view_command));
 
   if (!confirm_action (ctx, view_command))
     return 1;
-    
+  if (dry_run_p (ctx))
+    return 0;
+  
   flag = 0;
   if (interactive_p (ctx)
       && mu_mailcap_entry_copiousoutput (entry, &flag) == 0 && flag)
@@ -596,7 +596,7 @@ run_mailcap (mu_mailcap_entry_t entry, struct mime_context *ctx)
 	    mu_error ("waitpid: %s", mu_strerror (errno));
 	    break;
 	  }
-      if (ctx->debug_level)
+      if (mu_debug_level_p (ctx->dh, MU_DEBUG_TRACE0))
 	print_exit_status (status);
     }
   return 0;
@@ -610,7 +610,7 @@ find_entry (const char *file, struct mime_context *ctx)
   mu_stream_t stream;
   int rc = 1;
 
-  DEBUG (ctx, 2, (_("Trying %s...\n"), file));
+  mu_debug (ctx->dh, MU_DEBUG_TRACE1, (_("trying %s...\n"), file));
   status = mu_file_stream_create (&stream, file, MU_STREAM_READ);
   if (status)
     {
@@ -643,7 +643,7 @@ find_entry (const char *file, struct mime_context *ctx)
 	  
 	  if (fnmatch (buffer, type, FNM_CASEFOLD) == 0)
 	    {
-	      DEBUG (ctx, 2, (_("Found in %s\n"), file));
+	      mu_debug (ctx->dh, MU_DEBUG_TRACE1, (_("found in %s\n"), file));
 	      if (run_mailcap (entry, ctx) == 0)
                 {
 		  rc = 0;
@@ -664,7 +664,7 @@ find_entry (const char *file, struct mime_context *ctx)
 int
 display_stream_mailcap (const char *ident, mu_stream_t stream, mu_header_t hdr,
 			const char *no_ask, int interactive, int dry_run,
-			int debug_level)
+			mu_debug_handle_t dh)
 {
   char *mailcap_path, *mailcap_path_tmp = NULL;
   struct mu_wordsplit ws;
@@ -672,7 +672,7 @@ display_stream_mailcap (const char *ident, mu_stream_t stream, mu_header_t hdr,
   int rc = 1;
   
   if (mime_context_fill (&ctx, ident, stream, hdr,
-			 no_ask, interactive, dry_run, debug_level))
+			 no_ask, interactive, dry_run, dh))
     return 1;
   mailcap_path = getenv ("MAILCAP");
   if (!mailcap_path)

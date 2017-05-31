@@ -7309,22 +7309,28 @@ Enables debugging of @file{mime.types} parser
 Enables debugging of @file{mime.types} lexical analyzer (warning:
 produces @emph{very} copious output)
 
-@item 1
+@item 0
 Prints basic information about actions to be executed and reports
 about exit status of executed commands.
 
-@item 2
+@item 1
 Additionally displays each file name along with its MIME type
 
-@item 3
+@item 2
 Additionally traces the process of looking up the matching entry
 in @code{mailcap} files.
 
-@item digits from 4 to 9
-The same as 3, currently.
+@item 3
+Additionally, enables debugging of @file{mime.types} parser (@samp{g}).
+
+@item 4
+Additionally, enables debugging of @file{mime.types} lexer (@samp{l}).
+
+@item digits from 5 to 9
+The same as 4, currently.
 @end table
 
-If @var{flags} are not given, the default @samp{9} is assumed.
+If @var{flags} are not given, the default @samp{2} is assumed.
 
 @item --metamail[=@var{file}]
 Run @command{metamail} to display files, instead of using the internal
@@ -7358,10 +7364,15 @@ a @asis{tty} device.
 Do not do anything, just print what would be done.  Implies
 @option{--debug=1}, unless the debugging level is set up explicitly.
 
-@item -t @var{file}
+@item -f @var{file}
 @itemx --mimetypes @var{file}
 Use @var{file} as @file{mime.types} file.  If @var{file} is a
 directory, use @file{@var{file}/mime.types}
+
+@item -t
+@itemx --lint
+Check syntax of the @file{mime.types} file and exit.  Command line
+arguments are ignored.
 @end table
 
 @node Mimeview Config
@@ -7374,11 +7385,6 @@ The following configuration statements affect the behavior of
 @headitem Statement @tab Reference
 @item debug @tab @xref{Debug Statement}.
 @end multitable
-
-@deffn {Mimeview Config} debug @var{number}
-Set @command{mimeview} debug level.  @xref{Mimeview Invocation,
---debug}, for a description of debug levels.
-@end deffn
 
 @deffn {Mimeview Config} mimetypes @var{file}
 Read @var{file} instead of the default @file{mime.types}. 

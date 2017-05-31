@@ -23,6 +23,7 @@
 #include <mailutils/cctype.h>
 #include <mimeview.h>
 #include <mimetypes-decl.h>
+#include <regex.h>
   
 static void
 yyprint (FILE *output, unsigned short toknum, YYSTYPE val)
@@ -30,14 +31,20 @@ yyprint (FILE *output, unsigned short toknum, YYSTYPE val)
   switch (toknum)
     {
     case IDENT:
-    case IDENT_L:
     case STRING:
       fprintf (output, "[%lu] %s", (unsigned long) val.string.len,
 	       val.string.ptr);
       break;
 
     case EOL:
+      fprintf (output, "\\n");
+      break;
+      
     default:
+      if (mu_isprint (toknum))
+	fprintf (output, "'%c'", toknum);
+      else
+	fprintf (output, "tok(%d)", toknum);
       break;
     }
 }
@@ -51,6 +58,7 @@ static mu_list_t arg_list; /* For error recovery */
 
 enum node_type
   {
+    true_node,
     functional_node,
     binary_node,
     negation_node,
@@ -62,6 +70,7 @@ union argument
   struct mimetypes_string *string;
   unsigned number;
   int c;
+  regex_t rx;
 };
 
 typedef int (*builtin_t) (union argument *args);
@@ -69,6 +78,7 @@ typedef int (*builtin_t) (union argument *args);
 struct node
 {
   enum node_type type;
+  struct mu_locus_range loc;
   union
   {
     struct
@@ -87,41 +97,56 @@ struct node
   } v;
 };
 
+static struct node *make_node (enum node_type type,
+			       struct mu_locus_range const *loc); 
 static struct node *make_binary_node (int op,
-				      struct node *left, struct node *rigth);
-static struct node *make_negation_node (struct node *p);
+				      struct node *left, struct node *rigth,
+				      struct mu_locus_range const *loc);
+static struct node *make_negation_node (struct node *p,
+					struct mu_locus_range const *loc);
 
-static struct node *make_suffix_node (struct mimetypes_string *suffix);
-static struct node *make_functional_node (char *ident, mu_list_t list);
+static struct node *make_suffix_node (struct mimetypes_string *suffix,
+				      struct mu_locus_range const *loc);
+static struct node *make_functional_node (char *ident, mu_list_t list,
+					  struct mu_locus_range const *loc);
 
 static int eval_rule (struct node *root);
 
 struct rule_tab
 {
   char *type;
+  int priority;
+  struct mu_locus_range loc;
   struct node *node;
 };
 
 static mu_list_t rule_list;
-
 %}
 
-%token <string> IDENT IDENT_L
+%locations
+
+%token <string> TYPE IDENT
 %token <string> STRING
-%token EOL BOGUS
+%token EOL BOGUS PRIORITY
 
 %left ','
 %left '+'
 
-%type <string> string arg type
+%type <string> string arg
 %type <list> arglist
-%type <node> function stmt rule
+%type <node> function stmt rule maybe_rule
+%type <result> priority maybe_priority
+%type <concat> concat;
+%type <segment> simple_string 
 
 %union {
   struct mimetypes_string string;
+  char *s;
   mu_list_t list;
   int result;
   struct node *node;
+  struct { struct concat_segm *head, *tail; } concat;
+  struct concat_segm *segment;
 }
 
 %%
@@ -130,56 +155,65 @@ input    : list
          ;
 
 list     : rule_line
-         | list eol rule_line
+         | list EOL rule_line
          ; 
 
 rule_line: /* empty */ 
-         | type rule
+         | TYPE maybe_rule maybe_priority
            {
 	     struct rule_tab *p = mimetypes_malloc (sizeof (*p));
 	     if (!rule_list)
 	       mu_list_create (&rule_list);
 	     p->type = $1.ptr;
 	     p->node = $2;
+	     p->priority = $3;
+	     p->loc.beg = @1.beg;
+	     p->loc.end = @3.end;
 	     mu_list_append (rule_list, p);
 	   }
-	 | error eol
+	 | error EOL
            {
 	     if (arg_list)
 	       mu_list_destroy (&arg_list);
 	     arg_list = NULL;
-	     reset_lex ();
+	     lex_arglist (0);
 	   }
          ; 
 
-eol      : EOL
-         | eol EOL
-         ;
-
-type     : IDENT '/' IDENT
+maybe_rule: /* empty */
            {
-	     $$ = mimetypes_append_string2 (&$1, '/', &$3);
+	     $$ = make_node (true_node, &yylloc);
 	   }
-         ;
+         | rule
+	 ;
 
 rule     : stmt
          | rule rule %prec ','
            {
-	     $$ = make_binary_node (L_OR, $1, $2);
+	     struct mu_locus_range lr;
+	     lr.beg = @1.beg;
+	     lr.end = @2.end;
+	     $$ = make_binary_node (L_OR, $1, $2, &lr);
 	   }
          | rule ',' rule
            {
-	     $$ = make_binary_node (L_OR, $1, $3);
+	     struct mu_locus_range lr;
+	     lr.beg = @1.beg;
+	     lr.end = @3.end;
+	     $$ = make_binary_node (L_OR, $1, $3, &lr);
 	   }
          | rule '+' rule
            {
-	     $$ = make_binary_node (L_AND, $1, $3);
+	     struct mu_locus_range lr;
+	     lr.beg = @1.beg;
+	     lr.end = @3.end;
+	     $$ = make_binary_node (L_AND, $1, $3, &lr);
 	   }
          ;
 
 stmt     : '!' stmt
            {
-	     $$ = make_negation_node ($2);
+	     $$ = make_negation_node ($2, &@2);
 	   }
          | '(' rule ')'
            {
@@ -187,19 +221,79 @@ stmt     : '!' stmt
 	   }
          | string
            {
-	     $$ = make_suffix_node (&$1);
+	     $$ = make_suffix_node (&$1, &@1);
 	   }
          | function
          ;
 
-string   : STRING
-         | IDENT
+string   : concat
+           {
+	     lex_concat ($1.head, &$$);
+	   }
          ;
 
-function : IDENT_L arglist ')'
+concat   : simple_string
            {
-	     reset_lex ();
-	     $$ = make_functional_node ($1.ptr, $2);
+	     $$.head = $$.tail = $1;
+	   }
+         | concat simple_string
+	   {
+	     $$.tail->next = $2;
+	     $$.tail = $2;
+	   }
+         ;
+
+simple_string : STRING
+           {
+	     $$ = mu_alloc (sizeof $$);
+	     $$->next = NULL;
+	     $$->val = $1.ptr;
+	   }
+         ;
+
+priority : PRIORITY oparen arglist cparen
+           {
+	     size_t count = 0;
+	     struct mimetypes_string *arg;
+	     
+	     mu_list_count ($3, &count);
+	     if (count != 1)
+	       {
+		 yyerror (_("priority takes single numberic argument"));
+		 YYERROR;
+	       }
+	     mu_list_head ($3, (void**) &arg);
+	     $$ = atoi (arg->ptr);
+	     mu_list_destroy (&$3);
+	   }
+         ;
+
+maybe_priority: /* empty */
+           {
+	     $$ = 100;
+	   }
+         | priority
+	 ;
+
+oparen   : '('
+           {
+	     lex_arglist (1);
+	   }
+         ;
+
+cparen   : ')'
+           {
+	     lex_arglist (0);
+	   }
+         ;
+
+function : IDENT oparen arglist cparen
+           {
+	     struct mu_locus_range lr;
+	     lr.beg = @1.beg;
+	     lr.end = @4.end;
+	     
+	     $$ = make_functional_node ($1.ptr, $3, &lr);
 	     if (!$$)
 	       YYERROR;
 	   }
@@ -229,30 +323,26 @@ mimetypes_parse (const char *name)
   int rc;
   if (mimetypes_open (name))
     return 1;
+  yydebug = mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE3);  
   rc = yyparse ();
   mimetypes_close ();
   return rc || rule_list == NULL;
 }
-  
-void
-mimetypes_gram_debug (int level)
-{
-  yydebug = level;
-}
-
 
 static struct node *
-make_node (enum node_type type)
+make_node (enum node_type type, struct mu_locus_range const *loc)
 {
   struct node *p = mimetypes_malloc (sizeof *p);
   p->type = type;
+  p->loc = *loc;
   return p;
 }
 
 static struct node *
-make_binary_node (int op, struct node *left, struct node *right)
+make_binary_node (int op, struct node *left, struct node *right,
+		  struct mu_locus_range const *loc)
 {
-  struct node *node = make_node (binary_node);
+  struct node *node = make_node (binary_node, loc);
 
   node->v.bin.op = op;
   node->v.bin.arg1 = left;
@@ -261,17 +351,18 @@ make_binary_node (int op, struct node *left, struct node *right)
 }
 
 struct node *
-make_negation_node (struct node *p)
+make_negation_node (struct node *p, struct mu_locus_range const *loc)
 {
-  struct node *node = make_node (negation_node);
+  struct node *node = make_node (negation_node, loc);
   node->v.arg = p;
   return node;
 }
 
 struct node *
-make_suffix_node (struct mimetypes_string *suffix)
+make_suffix_node (struct mimetypes_string *suffix,
+		  struct mu_locus_range const *loc)
 {
-  struct node *node = make_node (suffix_node);
+  struct node *node = make_node (suffix_node, loc);
   node->v.suffix = *suffix;
   return node;
 }
@@ -508,7 +599,7 @@ b_contains (union argument *args)
 
   buf = mu_alloc (args[1].number);
   rc = mu_stream_read (mimeview_stream, buf, args[1].number, &count);
-  if (count != args[1].number)
+  if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
     }
@@ -523,10 +614,41 @@ b_contains (union argument *args)
   return 0;
 }
 
+#define MIME_MAX_BUFFER 4096
+
+/*   regex(offset,"regex")		True if bytes match regular expression
+ */
+static int
+b_regex (union argument *args)
+{
+  size_t count;
+  int rc;
+  char buf[MIME_MAX_BUFFER];
+  
+  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
+      return 0;
+    }
+
+  rc = mu_stream_read (mimeview_stream, buf, sizeof buf - 1, &count);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
+      return 0;
+    }
+  buf[count] = 0;
+
+  return regexec (&args[1].rx, buf, 0, NULL, 0) == 0;
+} 
+  
+
 static struct builtin_tab builtin_tab[] = {
   { "match", "s", b_match },
   { "ascii", "dd", b_ascii },
   { "printable", "dd", b_printable },
+  { "regex", "dx", b_regex },
   { "string", "ds", b_string },
   { "istring", "ds", b_istring },
   { "char", "dc", b_char },
@@ -538,13 +660,15 @@ static struct builtin_tab builtin_tab[] = {
 };
   
 struct node *
-make_functional_node (char *ident, mu_list_t list)
+make_functional_node (char *ident, mu_list_t list,
+		      struct mu_locus_range const *loc)
 {
   size_t count, i;
   struct builtin_tab *p;
   struct node *node;
   union argument *args;
   mu_iterator_t itr;
+  int rc;
   
   for (p = builtin_tab; ; p++)
     {
@@ -602,6 +726,30 @@ make_functional_node (char *ident, mu_list_t list)
 	case 's':
 	  args[i].string = data;
 	  break;
+
+	case 'x':
+	  {
+	    char *s;
+	    
+	    rc = mu_c_str_unescape_trans (data->ptr,
+					  "\\\\\"\"a\ab\bf\fn\nr\rt\tv\v", &s);
+	    if (rc)
+	      {
+		mu_diag_funcall (MU_DIAG_ERROR, "mu_c_str_unescape_trans",
+				 data->ptr, rc);
+		return NULL;
+	      }
+	    rc = regcomp (&args[i].rx, s, REG_EXTENDED|REG_NOSUB);
+	    free (s);
+	    if (rc)
+	      {
+		char errbuf[512];
+		regerror (rc, &args[i].rx, errbuf, sizeof errbuf);
+		yyerror (errbuf);
+		return NULL;
+	      }
+	  }
+	  break;
 	  
 	case 'c':
 	  args[i].c = strtoul (data->ptr, &tmp, 0);
@@ -614,7 +762,7 @@ make_functional_node (char *ident, mu_list_t list)
 	}
     }
 
-  node = make_node (functional_node);
+  node = make_node (functional_node, loc);
   node->v.function.fun = p->handler;
   node->v.function.args = args;
   return node;
@@ -640,6 +788,45 @@ check_suffix (char *suf)
   return strcmp (p+1, suf) == 0;
 }
 
+void
+mime_debug (int lev, struct mu_locus_range const *loc, char const *fmt, ...)
+{
+  if (mu_debug_level_p (MU_DEBCAT_MIME, lev))
+    {
+      va_list ap;
+
+      if (loc->beg.mu_col == 0)					       
+	mu_debug_log_begin ("%s:%u", loc->beg.mu_file, loc->beg.mu_line);
+      else if (strcmp(loc->beg.mu_file, loc->end.mu_file))
+	mu_debug_log_begin ("%s:%u.%u-%s:%u.%u",
+			    loc->beg.mu_file,
+			    loc->beg.mu_line, loc->beg.mu_col,
+			    loc->end.mu_file,
+			    loc->end.mu_line, loc->end.mu_col);
+      else if (loc->beg.mu_line != loc->end.mu_line)
+	mu_debug_log_begin ("%s:%u.%u-%u.%u",
+			    loc->beg.mu_file,
+			    loc->beg.mu_line, loc->beg.mu_col,
+			    loc->end.mu_line, loc->end.mu_col);
+      else if (loc->beg.mu_col != loc->end.mu_col)
+	mu_debug_log_begin ("%s:%u.%u-%u",
+			    loc->beg.mu_file,
+			    loc->beg.mu_line, loc->beg.mu_col,
+			    loc->end.mu_col);
+      else
+	mu_debug_log_begin ("%s:%u.%u",
+			    loc->beg.mu_file,
+			    loc->beg.mu_line, loc->beg.mu_col);
+
+      mu_stream_write (mu_strerr, ": ", 2, NULL);
+
+      va_start (ap, fmt);
+      mu_stream_vprintf (mu_strerr, fmt, ap);
+      va_end (ap);
+      mu_debug_log_nl ();
+    }
+}
+
 static int
 eval_rule (struct node *root)
 {
@@ -647,6 +834,10 @@ eval_rule (struct node *root)
   
   switch (root->type)
     {
+    case true_node:
+      result = 1;
+      break;
+      
     case functional_node:
       result = root->v.function.fun (root->v.function.args);
       break;
@@ -681,28 +872,50 @@ eval_rule (struct node *root)
     default:
       abort ();
     }
+  mime_debug (MU_DEBUG_TRACE2, &root->loc, "result %s", result ? "true" : "false");
   return result;
 }
 
 static int
-evaluate (void *item, void *data)
+evaluate (void **itmv, size_t itmc, void *call_data)
 {
-  struct rule_tab *p = item;
-  char **ptype = data;
-    
+  struct rule_tab *p = itmv[0];
   if (eval_rule (p->node))
     {
-      *ptype = p->type;
-      return MU_ERR_USER0;
+      itmv[0] = p;
+      mime_debug (MU_DEBUG_TRACE1, &p->loc, "rule %s matches", p->type);
+      return MU_LIST_MAP_OK;
     }
-  return 0;
+  return MU_LIST_MAP_SKIP;
+}
+
+static int
+rule_cmp (const void *a, const void *b)
+{
+  struct rule_tab const *arule = a;
+  struct rule_tab const *brule = b;
+
+  if (arule->priority == brule->priority)
+    return mu_c_strcasecmp (arule->type, brule->type);
+  return arule->priority - brule->priority;
 }
 
 const char *
 get_file_type ()
 {
+  mu_list_t res = NULL;
   const char *type = NULL;
-  mu_list_foreach (rule_list, evaluate, &type);
+  
+  mu_list_map (rule_list, evaluate, NULL, 1, &res);
+  if (!mu_list_is_empty (res))
+    {
+      struct rule_tab *rule;
+      mu_list_sort (res, rule_cmp);
+      mu_list_head (res, (void**) &rule);
+      mime_debug (MU_DEBUG_TRACE0, &rule->loc, "selected rule %s", rule->type);
+      type = rule->type;
+    }
+  mu_list_destroy (&res);
   return type;
 }
     
