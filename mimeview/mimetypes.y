@@ -523,7 +523,7 @@ compare_bytes (union argument *args, void *sample, void *buf, size_t size)
       return 0;
     }
   
-  rc = mu_stream_read (mimeview_stream, buf, sizeof (buf), &n);
+  rc = mu_stream_read (mimeview_stream, buf, size, &n);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
