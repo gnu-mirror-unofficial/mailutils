@@ -7359,6 +7359,10 @@ By default @command{mimeview} behaves as if given
 @option{--no-interactive} option whenever its standard input is not
 a @asis{tty} device.
 
+@item -i
+@itemx --identify
+Identifies and prints the MIME type for each input file.
+
 @item -n
 @itemx --dry-run
 Do not do anything, just print what would be done.  Implies

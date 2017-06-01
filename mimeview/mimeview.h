@@ -37,23 +37,16 @@ int mimetypes_open (const char *name);
 void mimetypes_close (void);
 int mimetypes_parse (const char *name);
 void mimetypes_lex_init (void);
-void lex_arglist (int);
+
+void lex_reset (void);
 void *mimetypes_malloc (size_t size);
 
 struct mimetypes_string *mimetypes_string_dup (struct mimetypes_string *s);
 
 const char *get_file_type (void);
 
-extern char *mimeview_file;
+extern char const *mimeview_file;
 extern mu_stream_t mimeview_stream;    
-
-struct concat_segm
-{
-  struct concat_segm *next;
-  char const *val;
-};
-
-void lex_concat (struct concat_segm *p, struct mimetypes_string *ret);
 
 struct mu_locus_range
 {

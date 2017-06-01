@@ -132,12 +132,10 @@ static mu_list_t rule_list;
 %left ','
 %left '+'
 
-%type <string> string arg
+%type <string> arg
 %type <list> arglist
 %type <node> function stmt rule maybe_rule
 %type <result> priority maybe_priority
-%type <concat> concat;
-%type <segment> simple_string 
 
 %union {
   struct mimetypes_string string;
@@ -145,8 +143,6 @@ static mu_list_t rule_list;
   mu_list_t list;
   int result;
   struct node *node;
-  struct { struct concat_segm *head, *tail; } concat;
-  struct concat_segm *segment;
 }
 
 %%
@@ -176,7 +172,7 @@ rule_line: /* empty */
 	     if (arg_list)
 	       mu_list_destroy (&arg_list);
 	     arg_list = NULL;
-	     lex_arglist (0);
+	     lex_reset ();
 	   }
          ; 
 
@@ -219,39 +215,14 @@ stmt     : '!' stmt
            {
 	     $$ = $2;
 	   }
-         | string
+         | STRING
            {
 	     $$ = make_suffix_node (&$1, &@1);
 	   }
          | function
          ;
 
-string   : concat
-           {
-	     lex_concat ($1.head, &$$);
-	   }
-         ;
-
-concat   : simple_string
-           {
-	     $$.head = $$.tail = $1;
-	   }
-         | concat simple_string
-	   {
-	     $$.tail->next = $2;
-	     $$.tail = $2;
-	   }
-         ;
-
-simple_string : STRING
-           {
-	     $$ = mu_alloc (sizeof $$);
-	     $$->next = NULL;
-	     $$->val = $1.ptr;
-	   }
-         ;
-
-priority : PRIORITY oparen arglist cparen
+priority : PRIORITY '(' arglist ')'
            {
 	     size_t count = 0;
 	     struct mimetypes_string *arg;
@@ -275,19 +246,7 @@ maybe_priority: /* empty */
          | priority
 	 ;
 
-oparen   : '('
-           {
-	     lex_arglist (1);
-	   }
-         ;
-
-cparen   : ')'
-           {
-	     lex_arglist (0);
-	   }
-         ;
-
-function : IDENT oparen arglist cparen
+function : IDENT '(' arglist ')'
            {
 	     struct mu_locus_range lr;
 	     lr.beg = @1.beg;
@@ -312,7 +271,7 @@ arglist  : arg
 	   }
          ;
 
-arg      : string
+arg      : STRING
          ;
 
 %%
@@ -387,6 +346,9 @@ b_match (union argument *args)
             True if bytes are valid printable ASCII (CR, NL, TAB,
             BS, 32-126)
 */
+#define ISASCII(c) ((c) &&\
+                    (strchr ("\n\r\t\b",c) \
+                     || (32<=((unsigned) c) && ((unsigned) c)<=126)))
 static int
 b_ascii (union argument *args)
 {
@@ -402,13 +364,13 @@ b_ascii (union argument *args)
 
   for (i = 0; i < args[1].number; i++)
     {
-      char c;
+      unsigned char c;
       size_t n;
 
       rc = mu_stream_read (mimeview_stream, &c, 1, &n);
       if (rc || n == 0)
 	break;
-      if (!mu_isascii (c))
+      if (!ISASCII (c))
 	return 0;
     }
       
@@ -419,10 +381,8 @@ b_ascii (union argument *args)
             True if bytes are printable 8-bit chars (CR, NL, TAB,
             BS, 32-126, 128-254)
 */
-#define ISPRINT(c) ((c) &&\
-                    (strchr ("\n\r\t\b",c) \
-                     || (32<=(c) && (c)<=126) \
-                     || (128<=(c) && (c)<=254)))
+#define ISPRINT(c) (ISASCII (c) \
+		    || (128<=((unsigned) c) && ((unsigned) c)<=254))
 static int
 b_printable (union argument *args)
 {
@@ -438,13 +398,13 @@ b_printable (union argument *args)
 
   for (i = 0; i < args[1].number; i++)
     {
-      char c;
+      unsigned char c;
       size_t n;
 
       rc = mu_stream_read (mimeview_stream, &c, 1, &n);
       if (rc || n == 0)
 	break;
-      if (!ISPRINT ((unsigned)c))
+      if (!ISPRINT (c))
 	return 0;
     }
   return 1;
@@ -552,8 +512,8 @@ b_char (union argument *args)
 static int
 b_short (union argument *args)
 {
-  unsigned short val = args[1].number;
-  unsigned short buf;
+  uint16_t val = args[1].number;
+  uint16_t buf;
   return compare_bytes (args, &val, &buf, sizeof (buf));
 }
 
@@ -564,8 +524,8 @@ b_short (union argument *args)
 static int
 b_int (union argument *args)
 {
-  unsigned int val = args[1].number;
-  unsigned int buf;
+  uint32_t val = args[1].number;
+  uint32_t buf;
   return compare_bytes (args, &val, &buf, sizeof (buf));
 }
 
@@ -604,7 +564,7 @@ b_contains (union argument *args)
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
     }
   else if (count > str->len)
-    for (i = 0; i < count - str->len; i++)
+    for (i = 0; i <= count - str->len; i++)
       if (buf[i] == str->ptr[0] && memcmp (buf + i, str->ptr, str->len) == 0)
 	{
 	  free (buf);
@@ -896,7 +856,16 @@ rule_cmp (const void *a, const void *b)
   struct rule_tab const *brule = b;
 
   if (arule->priority == brule->priority)
-    return mu_c_strcasecmp (arule->type, brule->type);
+    {
+      if (arule->node->type == true_node
+	  && brule->node->type != true_node)
+	return 1;
+      else if (brule->node->type == true_node
+	       && arule->node->type != true_node)
+	return -1;
+      else
+	return mu_c_strcasecmp (arule->type, brule->type);
+    }
   return arule->priority - brule->priority;
 }
 

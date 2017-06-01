@@ -15,6 +15,8 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
+SUBDIRS = tests
+
 AM_CPPFLAGS = \
  @MU_APP_COMMON_INCLUDES@\
  -D_GNU_SOURCE=1\

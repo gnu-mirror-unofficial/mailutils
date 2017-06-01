@@ -33,12 +33,13 @@
 
 static int dry_run;    /* Dry run mode */
 static int lint;       /* Syntax check mode */
+static int identify;   /* Print only the file's type */
 static char *metamail; /* Name of metamail program, if requested */
 static char *mimetypes_config = DEFAULT_CUPS_CONFDIR;
 static char *no_ask_types;  /* List of MIME types for which no questions
 			       should be asked */
 static int interactive = -1; 
-char *mimeview_file;       /* Name of the file to view */
+char const *mimeview_file;      /* Name of the file to view */
 mu_stream_t mimeview_stream;    /* The corresponding stream */
 
 
@@ -121,6 +122,10 @@ static struct mu_option mimeview_options[] = {
   { "lint",      't', NULL, MU_OPTION_DEFAULT,
     N_("test mime.types syntax and exit"),
     mu_c_bool, &lint },
+
+  { "identify",  'i', NULL, MU_OPTION_DEFAULT,
+    N_("identify MIME type of each file"),
+    mu_c_bool, &identify },
   
   { "metamail",    0, N_("FILE"), MU_OPTION_ARG_OPTIONAL,
     N_("use metamail to display files"),
@@ -157,7 +162,7 @@ static char *capa[] = {
 };
 
 static int
-open_file (char *name)
+open_file (char const *name)
 {
   int rc;
   struct stat st;
@@ -190,9 +195,18 @@ close_file ()
 }
 
 void
-display_file (const char *type)
+display_file (const char *file, const char *type)
 {
   int status;
+
+  if (identify)
+    {
+      printf ("%s: %s\n", file, type ? type : "unknown");
+      return;
+    }
+
+  if (!type)
+    return;
   
   if (metamail)
     {
@@ -205,7 +219,7 @@ display_file (const char *type)
       
       argv[3] = "-c";
       argv[4] = (char*) type;
-      argv[5] = mimeview_file;
+      argv[5] = (char*) mimeview_file;
       argv[6] = NULL;
       
       if (mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE0))
@@ -269,12 +283,11 @@ main (int argc, char **argv)
   while (argc--)
     {
       const char *type;
-      
-      if (open_file (*argv++))
+      char const *file = *argv++;
+      if (open_file (file))
 	continue;
       type = get_file_type ();
-      if (type)
-	display_file (type);
+      display_file (file, type);
       close_file ();
     }
   

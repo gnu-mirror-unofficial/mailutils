@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-05-31
+GNU mailutils NEWS -- history of user-visible changes. 2017-06-01
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -144,6 +144,9 @@ Thus, 'mimevief -f my.types' reads the file 'my.types'.
 New option '--lint' (short '-t') instructs the tool to check the
 syntax of the mime.types file and exit, ignoring any surplus command
 line arguments.
+
+New option '-i' ('--identify') identifies and prints the MIME type for
+each input file, but not starts viewer.
 
 Added support for priority and regex functions.
 

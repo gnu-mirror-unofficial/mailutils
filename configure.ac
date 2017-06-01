@@ -1324,40 +1324,22 @@ test -z "$server_list" && server_list=" [NONE]"
 test -z "$client_list" && client_list=" [NONE]"
 		    
 # Initialize the (autotest) test suite.
-AC_CONFIG_TESTDIR(libmailutils/tests)
-AC_CONFIG_TESTDIR(testsuite)
-AC_CONFIG_TESTDIR(frm/tests)
-AC_CONFIG_TESTDIR(maidag/tests)
-AC_CONFIG_TESTDIR(mail/tests)
-AC_CONFIG_TESTDIR(messages/tests)
-AC_CONFIG_TESTDIR(readmsg/tests)
-AC_CONFIG_TESTDIR(sieve/tests)
-AC_CONFIG_TESTDIR(mh/tests)
-AC_CONFIG_TESTDIR(comsat/tests)
-AC_CONFIG_TESTDIR(imap4d/tests)
 
-AC_CONFIG_FILES([libmailutils/tests/Makefile
-                 libmailutils/tests/atlocal
-	         testsuite/Makefile
-                 testsuite/atlocal
-                 comsat/tests/Makefile
-                 comsat/tests/atlocal
-                 frm/tests/Makefile
-                 frm/tests/atlocal
-                 imap4d/tests/Makefile
-                 imap4d/tests/atlocal
-		 maidag/tests/Makefile
-		 maidag/tests/atlocal
-		 mail/tests/Makefile
-		 mail/tests/atlocal
-		 messages/tests/Makefile
-		 messages/tests/atlocal
-		 readmsg/tests/Makefile
-		 readmsg/tests/atlocal
-                 sieve/tests/Makefile
-                 sieve/tests/atlocal
-		 mh/tests/Makefile
-		 mh/tests/atlocal]) 
+AC_CONFIG_TESTDIR(testsuite)
+AC_CONFIG_FILES([testsuite/Makefile testsuite/atlocal])
+
+MU_CONFIG_TESTSUITE(libmailutils)
+MU_CONFIG_TESTSUITE(frm)
+MU_CONFIG_TESTSUITE(maidag)
+MU_CONFIG_TESTSUITE(mail)
+MU_CONFIG_TESTSUITE(messages)
+MU_CONFIG_TESTSUITE(readmsg)
+MU_CONFIG_TESTSUITE(sieve)
+MU_CONFIG_TESTSUITE(mh)
+MU_CONFIG_TESTSUITE(comsat)
+MU_CONFIG_TESTSUITE(imap4d)
+MU_CONFIG_TESTSUITE(mimeview)
+
 AM_MISSING_PROG([AUTOM4TE], [autom4te])
 
 dnl Make sysconfdir available to the application
