@@ -382,9 +382,8 @@ display (struct mh_whatnow_env *wh, int argc, char **argv, int *status)
 static int
 edit (struct mh_whatnow_env *wh, int argc, char **argv, int *whs)
 {
-  char const *ed;
+  char const *ed = wh->editor;
   int i, rc, status;
-  char **xargv;
   
   if (wh->reedit)
     {
@@ -403,19 +402,50 @@ edit (struct mh_whatnow_env *wh, int argc, char **argv, int *whs)
     }
   else if (argc > 1)
     ed = argv[1];
+
+  if (argc > 1)
+    {
+      char **xargv;
+
+      xargv = mu_calloc (argc+2, sizeof (*xargv));
+      xargv[0] = (char *)ed;
+      for (i = 1; i + 1 < argc; i++)
+	xargv[i] = argv[i+1];
+      xargv[i++] = wh->file;
+      xargv[i] = NULL;
+      rc = mu_spawnvp (xargv[0], xargv, &status);
+      free (xargv);
+    }
   else
-    ed = wh->editor;
-
-  xargv = mu_calloc (argc+2, sizeof (*xargv));
-  xargv[0] = (char *)ed;
-  for (i = 1; i + 1 < argc; i++)
-    xargv[i] = argv[i+1];
-  xargv[i++] = wh->file;
-  xargv[i] = NULL;
-
-  rc = mu_spawnvp (xargv[0], xargv, &status);
-  free (xargv);
-
+    {      
+      struct mu_wordsplit ws;
+      extern char **environ;
+      if (mu_wordsplit (ed, &ws,
+			MU_WRDSF_QUOTE
+			| MU_WRDSF_SQUEEZE_DELIMS
+			| MU_WRDSF_ENV))
+	{
+	  mu_error (_("cannot split line `%s': %s"), ed,
+		    mu_wordsplit_strerror (&ws));
+	  rc = MU_ERR_FAILURE;
+	}
+      else
+	{
+	  char *xargv[2];
+	  xargv[0] = wh->file;
+	  xargv[1] = NULL;
+	  if (mu_wordsplit_append (&ws, 1, xargv))
+	    {
+	      mu_error (_("cannot append arguments: %s"),
+			mu_wordsplit_strerror (&ws));
+	      rc = ENOMEM;
+	    }
+	  else
+	    rc = mu_spawnvp (ws.ws_wordv[0], ws.ws_wordv, &status);
+	  mu_wordsplit_free (&ws);
+	}
+    }
+      
   if (rc || check_exit_status (ed, status))
     {
       if (wh->file)
@@ -613,8 +643,12 @@ mh_whatnow (struct mh_whatnow_env *wh, int initial_edit)
 {
   set_default_editor (wh);
   
-  if (initial_edit)
-    mh_spawnp (wh->editor, wh->file);
+  if (initial_edit && wh->file)
+    {
+      char *argv[2] = { "edit", NULL };
+      int status;
+      edit (wh, 1, argv, &status);
+    }
 
   if (!wh->prompt)
     wh->prompt = (char*) _("What now?");
