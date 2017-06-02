@@ -241,6 +241,7 @@ void mu_wordsplit_free_words (mu_wordsplit_t *ws);
 void mu_wordsplit_free_envbuf (mu_wordsplit_t *ws);
 
 int mu_wordsplit_get_words (mu_wordsplit_t *ws, size_t *wordc, char ***wordv);
+int mu_wordsplit_append (struct mu_wordsplit *wsp, int argc, char **argv);
 
 int mu_wordsplit_c_unquote_char (int c);
 int mu_wordsplit_c_quote_char (int c);

@@ -77,7 +77,7 @@ help ()
 {
   size_t i;
   
-  printf ("usage: %s [options] [VAR=VALUE...]\n", progname);
+  printf ("usage: %s [options] [VAR=VALUE...] [-- EXTRA...]\n", progname);
   printf ("options are:\n");
   printf (" [-]trimnl\n");
   printf (" [-]plaintext\n");
@@ -314,6 +314,8 @@ main (int argc, char **argv)
   size_t fenvidx = 0;
   size_t fenvmax = sizeof (fenvbase) / sizeof (fenvbase[0]);
   int use_env = env_sys;
+  int appendc = 0;
+  char **appendv = NULL;
   
   progname = argv[0];
 
@@ -326,6 +328,12 @@ main (int argc, char **argv)
 
       if (opt[0] == '-')
 	{
+	  if (opt[1] == '-' && opt[2] == 0)
+	    {
+	      appendc = argc - i - 1;
+	      appendv = argv + i + 1;
+	      break;
+	    }
 	  negate = 1;
 	  opt++;
 	}
@@ -588,6 +596,17 @@ main (int argc, char **argv)
 	  offarg = 0;
 	}
 
+      if (appendc)
+	{
+	  rc = mu_wordsplit_append (&ws, appendc, appendv);
+	  if (rc)
+	    {
+	      if (!(wsflags & MU_WRDSF_SHOWERR))
+		mu_wordsplit_perror (&ws);
+	      continue;
+	    }
+	}
+      
       wsflags |= MU_WRDSF_REUSE | (ws.ws_flags & MU_WRDSF_ENV);
       printf ("NF: %lu", (unsigned long) ws.ws_wordc);
       if (wsflags & MU_WRDSF_DOOFFS)

@@ -674,7 +674,35 @@ mu_wordsplit_finish (struct mu_wordsplit *wsp)
   return 0;
 }
 
-
+int
+mu_wordsplit_append (struct mu_wordsplit *wsp, int argc, char **argv)
+{
+  int rc;
+  size_t i;
+  
+  rc = alloc_space (wsp, wsp->ws_wordc + argc + 1);
+  if (rc)
+    return rc;
+  for (i = 0; i < argc; i++)
+    {
+      char *newstr = strdup (argv[i]);
+      if (!newstr)
+	{
+	  while (i > 0)
+	    {
+	      free (wsp->ws_wordv[wsp->ws_offs + wsp->ws_wordc + i - 1]);
+	      wsp->ws_wordv[wsp->ws_offs + wsp->ws_wordc + i - 1] = NULL;
+	      i--;
+	    }
+	  return _wsplt_nomem (wsp);
+	}
+      wsp->ws_wordv[wsp->ws_offs + wsp->ws_wordc + i] = newstr;
+    }
+  wsp->ws_wordc += i;
+  wsp->ws_wordv[wsp->ws_offs + wsp->ws_wordc] = NULL;
+  return 0;
+}
+
 /* Variable expansion */
 static int
 node_split_prefix (struct mu_wordsplit *wsp,

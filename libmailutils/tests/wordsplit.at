@@ -623,5 +623,32 @@ EOT
 [no files match pattern dir/*.d
 ])
 AT_CLEANUP
+
+TESTWSP([append],[],[-- extra arguments follow],
+[some words and],
+[NF: 6
+0: some
+1: words
+2: and
+3: extra
+4: arguments
+5: follow
+])
+
+TESTWSP([append + dooffs + env],[],
+[dooffs 2 preface words V=2 -- extra arguments follow],
+[some words and var=$V],
+[NF: 7 (2)
+(0): preface
+(1): words
+2: some
+3: words
+4: and
+5: var=2
+6: extra
+7: arguments
+8: follow
+])
+
 
 m4_popdef([TESTWSP])
