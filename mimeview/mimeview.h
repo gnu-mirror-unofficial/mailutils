@@ -38,7 +38,7 @@ void mimetypes_close (void);
 int mimetypes_parse (const char *name);
 void mimetypes_lex_init (void);
 
-void lex_reset (void);
+void lex_next_rule (void);
 void *mimetypes_malloc (size_t size);
 
 struct mimetypes_string *mimetypes_string_dup (struct mimetypes_string *s);

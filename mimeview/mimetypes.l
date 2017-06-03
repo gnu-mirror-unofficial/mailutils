@@ -92,7 +92,7 @@ finish_string (void)
   if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE5))
     {
       size_t i;
-      mu_debug_log_begin ("string %d: ", yylval.string.len);
+      mu_debug_log_begin ("string %zu: ", yylval.string.len);
       for (i = 0; i < yylval.string.len; i++)
 	if (mu_isprint (yylval.string.ptr[i]))
 	  mu_debug_log_cont ("%c", yylval.string.ptr[i]);
@@ -109,9 +109,6 @@ finish_string (void)
 #define YY_USER_ACTION advance_locus ();
 %}
 
-%option nounput
-%option noinput
-	  
 %x RULE ARGS ASTRING
 X [0-9a-fA-F]
 IDENT [a-zA-Z_\.][a-zA-Z0-9_\.-]*
@@ -317,8 +314,54 @@ mimetypes_malloc (size_t size)
   return mu_opool_finish (pool, NULL);
 }
 
+/* Position input at the beginning of the next rule as a final part of error
+   recovery */
 void
-lex_reset (void)
+lex_next_rule (void)
 {
-  BEGIN (INITIAL);
+  int bol = 0;
+  int c;
+
+  if (newline)
+    {
+      loc.mu_col = 0;
+      loc.mu_line++;
+      newline = 0;
+      bol = 1;
+    }
+  
+  if (yy_flex_debug)
+    {
+      YY_LOCATION_PRINT (stderr, yylloc);
+      fprintf (stderr, ": started error recovery\n");
+    }
+  while ((c = input ()) != EOF)
+    {
+      loc.mu_col++;
+      if (c == '\n')
+	{
+	  loc.mu_line++;
+	  loc.mu_col = 0;
+	  bol = 1;
+	}
+      else if (bol)
+	{
+	  bol = 0;
+	  if (!(c == ' ' || c == '\t'))
+	    {
+	      unput (c);
+	      break;
+	    }
+	}
+    }
+  if (yy_flex_debug)
+    {
+      yylloc.beg = yylloc.end = loc;
+      YY_LOCATION_PRINT (stderr, yylloc);
+      fprintf (stderr, ": finished error recovery\n");
+    }
+  BEGIN (RULE);
+  unput ('\n');
+  loc.mu_col = 0;
+  loc.mu_line--;
 }

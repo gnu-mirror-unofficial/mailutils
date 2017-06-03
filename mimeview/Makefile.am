@@ -36,13 +36,13 @@ AM_LEXFLAGS=-d
 EXTRA_DIST = mimetypes.y mimetypes.l
 
 mimetypes-gram.c mimetypes-decl.h: $(srcdir)/mimetypes.y
-	$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
+	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
 	          y.tab.c mimetypes-gram.c y.tab.h mimetypes-decl.h \
                   y.output mimetypes.output \
                   -- -yy mimetypes_yy
 
 mimetypes-lex.c: $(srcdir)/mimetypes.l mimetypes-decl.h
-	$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
+	$(AM_V_GEN)$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
                   $(srcdir)/mimetypes.l lex.yy.c mimetypes-lex.c \
                   -- -yy mimetypes_yy
 

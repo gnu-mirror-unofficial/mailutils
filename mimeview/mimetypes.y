@@ -30,6 +30,7 @@ yyprint (FILE *output, unsigned short toknum, YYSTYPE val)
 {
   switch (toknum)
     {
+    case TYPE:
     case IDENT:
     case STRING:
       fprintf (output, "[%lu] %s", (unsigned long) val.string.len,
@@ -124,6 +125,7 @@ static mu_list_t rule_list;
 %}
 
 %locations
+%expect 12
 
 %token <string> TYPE IDENT
 %token <string> STRING
@@ -165,14 +167,20 @@ rule_line: /* empty */
 	     p->priority = $3;
 	     p->loc.beg = @1.beg;
 	     p->loc.end = @3.end;
+#if 0
+	     YY_LOCATION_PRINT (stderr, p->loc);
+	     fprintf (stderr, ": rule %s\n", p->type);
+#endif
 	     mu_list_append (rule_list, p);
 	   }
-	 | error EOL
+         | error 
            {
 	     if (arg_list)
 	       mu_list_destroy (&arg_list);
 	     arg_list = NULL;
-	     lex_reset ();
+	     lex_next_rule ();
+	     yyerrok;
+	     yyclearin;
 	   }
          ; 
 
