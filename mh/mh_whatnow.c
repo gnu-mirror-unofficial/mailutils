@@ -420,6 +420,7 @@ edit (struct mh_whatnow_env *wh, int argc, char **argv, int *whs)
     {      
       struct mu_wordsplit ws;
       extern char **environ;
+      ws.ws_env = (char const **)environ;
       if (mu_wordsplit (ed, &ws,
 			MU_WRDSF_QUOTE
 			| MU_WRDSF_SQUEEZE_DELIMS
