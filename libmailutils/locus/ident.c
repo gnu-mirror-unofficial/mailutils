@@ -20,10 +20,13 @@ mu_ident_ref (char const *name, char const **refname)
   int rc;
   struct mu_ident_ref *ref, **refptr;
   
-  if (!name)
-    return EINVAL;
   if (!refname)
     return MU_ERR_OUT_PTR_NULL;
+  if (!name)
+    {
+      *refname = NULL;
+      return 0;
+    }
   
   if (!nametab)
     {
@@ -46,6 +49,7 @@ mu_ident_ref (char const *name, char const **refname)
 	  mu_assoc_remove (nametab, name);
 	  return rc;
 	}
+      *refptr = ref;
       ref->count = 0;
       break;
       
@@ -68,9 +72,7 @@ mu_ident_deref (char const *name)
   struct mu_ident_ref *ref;
   int rc;
 
-  if (!name)
-    return EINVAL;
-  if (!nametab)
+  if (!name || !nametab)
     return 0;
   
   rc = mu_assoc_lookup (nametab, name, &ref);

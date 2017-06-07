@@ -19,6 +19,7 @@
 
 #include <mailutils/types.h>
 #include <mailutils/sys/stream.h>
+#include <mailutils/locus.h>
 
 struct _mu_log_stream
 {
@@ -30,7 +31,7 @@ struct _mu_log_stream
   int logmode;             /* Mode flags */
   int sevmask;             /* Mask out the output of severity level for
 			      these severities. */
-  struct mu_locus locus;   /* Location */
+  struct mu_locus_range locrange;  /* Location in the source file */
 };
 
 void _mu_log_stream_setup (struct _mu_log_stream *sp, mu_stream_t transport);

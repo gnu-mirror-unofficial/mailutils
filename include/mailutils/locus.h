@@ -2,6 +2,7 @@
 #define _MAILUTILS_LOCUS_H
 
 #include <string.h>
+#include <stdarg.h>
 
 struct mu_locus_point
 {
@@ -49,6 +50,17 @@ void mu_locus_tracker_advance (struct mu_locus_track *trk,
 			       char const *text, size_t leng);
 void mu_locus_tracker_retreat (struct mu_locus_track *trk, size_t n);
 
+void mu_stream_print_locus_range (mu_stream_t stream,
+				  struct mu_locus_range const *loc);
+
+void mu_stream_vlprintf (mu_stream_t stream,
+			 struct mu_locus_range const *loc,
+			 char const *fmt, va_list ap);
+void mu_stream_lprintf (mu_stream_t stream,
+			struct mu_locus_range const *loc,
+			char const *fmt, ...);
+void mu_lrange_debug (struct mu_locus_range const *loc,
+		      char const *fmt, ...);
 
 
 #endif

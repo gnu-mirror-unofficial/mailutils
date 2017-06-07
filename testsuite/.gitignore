@@ -1,6 +1,7 @@
 atconfig
 atlocal
 bs
+cwdrepl
 fldel
 lstuid
 package.m4

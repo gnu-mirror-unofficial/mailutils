@@ -106,7 +106,7 @@ int mu_debug_get_iterator (mu_iterator_t *piterator, int skipunset);
 	if (mu_debug_line_info)					         \
 	  {								 \
 	    mu_debug_log_begin ("\033X<%d>%s:%d: ",	                 \
-				MU_LOGMODE_LOCUS, __FILE__, __LINE__);	 \
+				MU_LOGMODE_LOCUS, __FILE__, __LINE__);   \
 	    mu_debug_log_end s;						 \
 	  }								 \
 	else								 \

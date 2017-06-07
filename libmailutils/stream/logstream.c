@@ -30,6 +30,7 @@
 #include <mailutils/nls.h>
 #include <mailutils/stream.h>
 #include <mailutils/debug.h>
+#include <mailutils/locus.h>
 #include <mailutils/sys/logstream.h>
 
 char *_mu_severity_str[] = {
@@ -69,25 +70,77 @@ mu_severity_to_string (unsigned n, const char **pstr)
   return 0;
 }
 
-static int
-_locus_set_file (struct mu_locus *loc, const char *file, size_t len)
+static void
+lr_set_line (struct mu_locus_range *loc, unsigned val, int end)
 {
-  free (loc->mu_file);
-  if (file)
-    {
-      loc->mu_file = malloc (len + 1);
-      if (!loc->mu_file)
-	return ENOMEM;
-      memcpy (loc->mu_file, file, len);
-      loc->mu_file[len] = 0;
-    }
+  if (end)
+    loc->end.mu_line = val;
   else
-    loc->mu_file = NULL;
+    loc->beg.mu_line = val;
+}
+
+static void
+lr_set_col (struct mu_locus_range *loc, unsigned val, int end)
+{
+  if (end)
+    loc->end.mu_col = val;
+  else
+    loc->beg.mu_col = val;
+}
+
+static int
+lr_set_file (struct mu_locus_range *loc, char const *fname, unsigned len,
+	     int end)
+{
+  char const *refname;
+  struct mu_locus_point *pt = end ? &loc->end : &loc->beg;
+  int rc;
+  
+  if (fname == NULL)
+    {
+      refname = NULL;
+      rc = 0;
+    }
+  else if (len == 0)
+    rc = mu_ident_ref (fname, &refname);
+  else
+    {
+      char *name;
+
+      name = malloc (len + 1);
+      if (!name)
+	return errno;
+      memcpy (name, fname, len);
+      name[len] = 0;
+      rc = mu_ident_ref (name, &refname);
+      free (name);
+    }
+  if (rc)
+    return rc;
+  mu_ident_deref (pt->mu_file);
+  pt->mu_file = refname;
   return 0;
 }
 
-#define _locus_set_line(loc, line) ((loc)->mu_line = line)
-#define _locus_set_col(loc, col) ((loc)->mu_col = col)
+/* Field modification map (binary):
+
+     FfLlCc
+
+   The bits f, l, and c (file, line, and column) are toggled cyclically.
+   The value 0 means locus beg, 1 meand locus end.
+   The bits F, L, and C are set once and indicate that the corresponding
+   bit was toggled at least once.
+ */
+#define FMM_COL  0
+#define FMM_LINE 1
+#define FMM_FILE 2
+
+#define FMM_SHIFT(n) ((n)<<1)
+#define FMM_MASK(n) (0x3 << FMM_SHIFT (n))
+#define FMM_VAL(m,n) (((m) >> FMM_SHIFT (n)) & 0x1)
+#define FMM_SET(m,n,v) ((m) = ((m) & ~FMM_MASK (n)) | (((v) << FMM_SHIFT (n))|0x2))
+#define FMM_CYCLE(m, n) \
+  FMM_SET ((m), (n), ((FMM_VAL ((m), (n)) + 1) % 2))
 
 static int
 _log_write (struct _mu_stream *str, const char *buf, size_t size,
@@ -96,8 +149,8 @@ _log_write (struct _mu_stream *str, const char *buf, size_t size,
   struct _mu_log_stream *sp = (struct _mu_log_stream *)str;
   unsigned severity = sp->severity;
   int logmode = sp->logmode;
-  struct mu_locus loc = sp->locus;
-  const char *fname = NULL;
+  struct mu_locus_range loc;
+  int fmm = 0;
   unsigned flen = 0;
   int save_locus = 0;
   int rc;
@@ -120,6 +173,10 @@ _log_write (struct _mu_stream *str, const char *buf, size_t size,
     n = __x;					\
 } while (0)
 
+  loc = sp->locrange;
+  mu_ident_ref (loc.beg.mu_file, &loc.beg.mu_file);
+  mu_ident_ref (loc.end.mu_file, &loc.end.mu_file);
+  
   /* Tell them we've consumed everything */
   *pnwrite = size;
   
@@ -167,21 +224,24 @@ _log_write (struct _mu_stream *str, const char *buf, size_t size,
 	case 'l':
 	  /* Input line (decimal) */
 	  READNUM (n);
-	  _locus_set_line (&loc, n);
+	  lr_set_line (&loc, n, FMM_VAL (fmm, FMM_LINE));
+	  FMM_CYCLE (fmm, FMM_LINE);
 	  logmode |= MU_LOGMODE_LOCUS;
 	  break;
 
 	case 'c':
 	  /* Column in input line (decimal) */
 	  READNUM (n);
-	  _locus_set_col (&loc, n);
+	  lr_set_col (&loc, n, FMM_VAL (fmm, FMM_COL));
+	  FMM_CYCLE (fmm, FMM_COL);
 	  logmode |= MU_LOGMODE_LOCUS;
 	  break;
 	  
 	case 'f':
 	  /* File name. Format: <N>S */
 	  READNUM (flen);
-	  fname = buf;
+	  lr_set_file (&loc, buf, flen, FMM_VAL (fmm, FMM_FILE));
+	  FMM_CYCLE (fmm, FMM_FILE);
 	  buf += flen;
 	  size -= flen;
 	  logmode |= MU_LOGMODE_LOCUS;
@@ -197,58 +257,41 @@ _log_write (struct _mu_stream *str, const char *buf, size_t size,
   if (severity >= _mu_severity_num)
     severity = MU_LOG_EMERG;
 
-  if (fname)
-    {
-      loc.mu_file = NULL;
-      _locus_set_file (&loc, fname, flen);
-    }
-  
   if (save_locus)
     {
-      _locus_set_file (&sp->locus, loc.mu_file, strlen (loc.mu_file));
-      _locus_set_line (&sp->locus, loc.mu_line);
-      _locus_set_col (&sp->locus, loc.mu_col);
+      sp->locrange = loc;
+      mu_ident_ref (sp->locrange.beg.mu_file, &sp->locrange.beg.mu_file);
+      mu_ident_ref (sp->locrange.end.mu_file, &sp->locrange.end.mu_file);
     }
   
   if (severity < sp->threshold)
+    rc = 0;
+  else
     {
-      if (fname)
-	free (loc.mu_file);
-      return 0;
-    }
+      mu_stream_ioctl (sp->transport, MU_IOCTL_LOGSTREAM,
+		       MU_IOCTL_LOGSTREAM_SET_SEVERITY, &severity);
   
-  mu_stream_ioctl (sp->transport, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_SEVERITY, &severity);
-  
-  if (logmode & MU_LOGMODE_LOCUS)
-    {
-      if (loc.mu_file)
+      if ((logmode & MU_LOGMODE_LOCUS) && loc.beg.mu_file)
 	{
-	  mu_stream_write (sp->transport, loc.mu_file,
-			   strlen (loc.mu_file), NULL);
-	  mu_stream_write (sp->transport, ":", 1, NULL);
-	  if (loc.mu_line)
-	    mu_stream_printf (sp->transport, "%u", loc.mu_line);
-	  mu_stream_write (sp->transport, ":", 1, NULL);
-	  if (loc.mu_col)
-	    mu_stream_printf (sp->transport, "%u:", loc.mu_col);
-	  mu_stream_write (sp->transport, " ", 1, NULL);
+	  mu_stream_print_locus_range (sp->transport, &loc);
+  	  mu_stream_write (sp->transport, ": ", 2, NULL);
 	}
+      
+      if ((logmode & MU_LOGMODE_SEVERITY) &&
+	  !(sp->sevmask & MU_DEBUG_LEVEL_MASK (severity)))
+	{
+	  char *s = gettext (_mu_severity_str[severity]);
+	  rc = mu_stream_write (sp->transport, s, strlen (s), NULL);
+	  if (rc)
+	    return rc;
+	  mu_stream_write (sp->transport, ": ", 2, NULL);
+	}
+      rc = mu_stream_write (sp->transport, buf, size, NULL);
     }
-
-  if (fname)
-    free (loc.mu_file);
   
-  if ((logmode & MU_LOGMODE_SEVERITY) &&
-      !(sp->sevmask & MU_DEBUG_LEVEL_MASK(severity)))
-    {
-      char *s = gettext (_mu_severity_str[severity]);
-      rc = mu_stream_write (sp->transport, s, strlen (s), NULL);
-      if (rc)
-	return rc;
-      mu_stream_write (sp->transport, ": ", 2, NULL);
-    }
-  return mu_stream_write (sp->transport, buf, size, NULL);
+  mu_ident_deref (loc.beg.mu_file);
+  mu_ident_deref (loc.end.mu_file);
+  return rc;
 }
 
 static int
@@ -375,72 +418,133 @@ _log_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	  sp->logmode = *(int*)arg;
 	  break;
       
+	case MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE:
+	  {
+	    struct mu_locus_range *lr = arg;
+	    if (!arg)
+	      {
+		mu_ident_deref (sp->locrange.beg.mu_file);
+		mu_ident_deref (sp->locrange.end.mu_file);
+		memset (&sp->locrange, 0, sizeof sp->locrange);
+	      }
+	    else
+	      {
+		char const *begname, *endname;
+		
+		status = mu_ident_ref (lr->beg.mu_file, &begname);
+		if (status)
+		  return status;
+		status = mu_ident_ref (lr->end.mu_file, &endname);
+		if (status)
+		  {
+		    mu_ident_deref (begname);
+		    return status;
+		  }
+		mu_ident_deref (sp->locrange.beg.mu_file);
+		sp->locrange.beg.mu_file = begname;
+		sp->locrange.beg.mu_line = lr->beg.mu_line;
+		sp->locrange.beg.mu_col = lr->beg.mu_col;
+
+		mu_ident_deref (sp->locrange.end.mu_file);
+		sp->locrange.end.mu_file = endname;
+		sp->locrange.end.mu_line = lr->end.mu_line;
+		sp->locrange.end.mu_col = lr->end.mu_col;
+	      }
+	  }
+	  break;
+
+	case MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE:
+	  if (!arg)
+	    return EINVAL;
+	  else
+	    {
+	      struct mu_locus_range *lr = arg;
+	      char const *begname, *endname;
+
+	      status = mu_ident_ref (sp->locrange.beg.mu_file, &begname);
+	      if (status)
+		return status;
+	      status = mu_ident_ref (sp->locrange.end.mu_file, &endname);
+	      if (status)
+		{
+		  mu_ident_deref (begname);
+		  return status;
+		}
+	      lr->beg.mu_file = begname;
+	      lr->beg.mu_line = sp->locrange.beg.mu_line;
+	      lr->beg.mu_col = sp->locrange.beg.mu_col;
+	      lr->end.mu_file = endname;
+	      lr->end.mu_line = sp->locrange.end.mu_line;
+	      lr->end.mu_col = sp->locrange.end.mu_col;
+	    }
+	  break;
+	  
 	case MU_IOCTL_LOGSTREAM_GET_LOCUS:
 	  if (!arg)
 	    return EINVAL;
 	  else
 	    {
 	      struct mu_locus *ploc = arg;
-	      if (sp->locus.mu_file)
+	      if (sp->locrange.beg.mu_file)
 		{
-		  ploc->mu_file = strdup (sp->locus.mu_file);
+		  ploc->mu_file = strdup (sp->locrange.beg.mu_file);
 		  if (!ploc->mu_file)
 		    return ENOMEM;
 		}
 	      else
 		ploc->mu_file = NULL;
-	      ploc->mu_line = sp->locus.mu_line;
-	      ploc->mu_col = sp->locus.mu_col;
+	      ploc->mu_line = sp->locrange.beg.mu_line;
+	      ploc->mu_col = sp->locrange.beg.mu_col;
 	    }
 	  break;
 	
 	case MU_IOCTL_LOGSTREAM_SET_LOCUS:
 	  {
 	    struct mu_locus *ploc = arg;
-	    if (!arg)
+
+	    mu_ident_deref (sp->locrange.end.mu_file);
+	    sp->locrange.end.mu_file = NULL;
+	    if (arg)
 	      {
-		free (sp->locus.mu_file);
-		sp->locus.mu_file = NULL;
-		sp->locus.mu_line = 0;
-		sp->locus.mu_col = 0;
+		status = lr_set_file (&sp->locrange, ploc->mu_file, 0, 0);
+		if (status)
+		  return status;
+		lr_set_line (&sp->locrange, ploc->mu_line, 0);
+		lr_set_col (&sp->locrange, ploc->mu_col, 0);
 	      }
 	    else
 	      {
-		if (ploc->mu_file)
-		  _locus_set_file (&sp->locus, ploc->mu_file,
-				   strlen (ploc->mu_file));
-		if (ploc->mu_line)
-		  _locus_set_line (&sp->locus, ploc->mu_line);
-		if (ploc->mu_col)
-		  _locus_set_col (&sp->locus, ploc->mu_col);
+		mu_ident_deref (sp->locrange.beg.mu_file);
+		sp->locrange.beg.mu_file = NULL;
 	      }
+	    
 	    break;
 	  }
 
 	case MU_IOCTL_LOGSTREAM_SET_LOCUS_LINE:
 	  if (!arg)
 	    return EINVAL;
-	  sp->locus.mu_line = *(unsigned*)arg;
+	  sp->locrange.beg.mu_line = *(unsigned*)arg;
 	  break;
 	  
 	case MU_IOCTL_LOGSTREAM_SET_LOCUS_COL:
 	  if (!arg)
 	    return EINVAL;
-	  sp->locus.mu_col = *(unsigned*)arg;
+	  sp->locrange.beg.mu_col = *(unsigned*)arg;
 	  break;
 	  
 	case MU_IOCTL_LOGSTREAM_ADVANCE_LOCUS_LINE:
 	  if (!arg)
-	    sp->locus.mu_line++;
+	    sp->locrange.beg.mu_line++;
 	  else
-	    sp->locus.mu_line += *(int*)arg;
+	    sp->locrange.beg.mu_line += *(int*)arg;
 	  break;
 
 	case MU_IOCTL_LOGSTREAM_ADVANCE_LOCUS_COL:
 	  if (!arg)
-	    sp->locus.mu_col++;
+	    sp->locrange.beg.mu_col++;
 	  else
-	    sp->locus.mu_col += *(int*)arg;
+	    sp->locrange.beg.mu_col += *(int*)arg;
 	  break;
 
 	case MU_IOCTL_LOGSTREAM_SUPPRESS_SEVERITY:
@@ -484,14 +588,12 @@ _log_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	      newp->threshold = sp->threshold;
 	      newp->logmode = sp->logmode;
 	      newp->sevmask = sp->sevmask;
-	      if (sp->locus.mu_file)
-                {
-		  newp->locus.mu_file = strdup (sp->locus.mu_file);
-		  if (!newp->locus.mu_file)
-		    return ENOMEM;
-		}
-	      newp->locus.mu_line = sp->locus.mu_line;
-	      newp->locus.mu_col = sp->locus.mu_col;
+	      newp->locrange = sp->locrange;
+	      mu_ident_ref (sp->locrange.beg.mu_file,
+			    &sp->locrange.beg.mu_file);
+	      mu_ident_ref (sp->locrange.end.mu_file,
+			    &sp->locrange.end.mu_file);
+	      
 	      *(mu_stream_t*) arg = str;
 	    }
 	  break;

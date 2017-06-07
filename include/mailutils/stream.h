@@ -83,7 +83,7 @@ enum mu_buffer_type
   /* Opcodes common for various families */
 #define MU_IOCTL_OP_GET 0
 #define MU_IOCTL_OP_SET 1  
-  
+
   /* Opcodes for MU_IOCTL_PROGSTREAM */  
 #define MU_IOCTL_PROG_STATUS 0
 #define MU_IOCTL_PROG_PID    1
@@ -158,6 +158,15 @@ enum mu_buffer_type
      Arg: mu_stream_t*
   */
 #define MU_IOCTL_LOGSTREAM_CLONE 14
+
+  /* Get locus range.
+     Arg: struct mu_locus_range *
+  */
+#define MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE   15
+  /* Set locus range.
+     Arg: struct mu_locus_range *
+  */
+#define MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE   16
   
   /* Opcodes for MU_IOCTL_XSCRIPTSTREAM */
   /* Swap transcript levels.
