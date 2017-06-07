@@ -28,19 +28,19 @@ Subject: test input
 
 message body
 ])
-echo "quit" | replcmd +inbox 1 | remove_curdir
+echo "quit" | replcmd +inbox 1 | cwdrepl
 echo == Mail/draft ==
 cat Mail/draft
 ],
 [0],
-[-- Editor invocation: Mail/draft
+[-- Editor invocation: ./Mail/draft
 -- Input file:
 To: <gray@example.com>
 Subject: Re: test input
 X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 -- Input file end
-What now? draft left on "Mail/draft".
+What now? draft left on "./Mail/draft".
 == Mail/draft ==
 To: <gray@example.com>
 Subject: Re: test input
@@ -58,19 +58,19 @@ Subject: test input
 
 message body
 ])
-echo "quit" | replcmd -draftfolder drafts +inbox 1 | remove_curdir
+echo "quit" | replcmd -draftfolder drafts +inbox 1 | cwdrepl
 echo == Mail/drafts/1 ==
 cat Mail/drafts/1
 ],
 [0],
-[-- Editor invocation: Mail/drafts/1
+[-- Editor invocation: ./Mail/drafts/1
 -- Input file:
 To: <gray@example.com>
 Subject: Re: test input
 X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 -- Input file end
-What now? draft left on "Mail/drafts/1".
+What now? draft left on "./Mail/drafts/1".
 == Mail/drafts/1 ==
 To: <gray@example.com>
 Subject: Re: test input

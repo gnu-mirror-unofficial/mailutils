@@ -130,21 +130,21 @@ Be off, or I'll kick you down stairs!'
 
 MH_CHECK([mhn -store -auto],[mhn03 mhn-store-auto],[
 MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mhn +inbox -store -auto 4 | remove_curdir || exit $?
+mhn +inbox -store -auto 4 | cwdrepl || exit $?
 ],
 [0],
-[storing message 4 part 1 as file msg.21
-storing message 4 part 2.1 as file msg.22
-storing message 4 part 2.2.1 as file msg.23
-storing message 4 part 2.2.2 as file msg.24
+[storing message 4 part 1 as file ./msg.21
+storing message 4 part 2.1 as file ./msg.22
+storing message 4 part 2.2.1 as file ./msg.23
+storing message 4 part 2.2.2 as file ./msg.24
 ])
 
 MH_CHECK([mhn -store -auto -part],[mhn04 mhn-store-auto-part],[
 MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
-mhn +inbox -store -auto -part 2.2.1 4 | remove_curdir || exit $?
+mhn +inbox -store -auto -part 2.2.1 4 | cwdrepl || exit $?
 ],
 [0],
-[storing message 4 part 2.2.1 as file msg.23
+[storing message 4 part 2.2.1 as file ./msg.23
 ])
 
 MH_CHECK([mhn -store -auto (pathname safety)],[mhn05 mhn-store-auto-safety],[
@@ -178,13 +178,13 @@ MUT_MBCHMOD(Mail/inbox, 700)
 mkdir out
 echo "mhn-storage: $HOME/out" >> $MH
 
-mhn +inbox -store 4 | remove_curdir || echo $?
+mhn +inbox -store 4 | cwdrepl || echo $?
 ],
 [0],
-[storing message 4 part 1 as file out/4.1.plain
-storing message 4 part 2.1 as file out/4.2.1.octet-stream
-storing message 4 part 2.2.1 as file out/4.2.2.1.octet-stream
-storing message 4 part 2.2.2 as file out/4.2.2.2.octet-stream
+[storing message 4 part 1 as file ./out/4.1.plain
+storing message 4 part 2.1 as file ./out/4.2.1.octet-stream
+storing message 4 part 2.2.1 as file ./out/4.2.2.1.octet-stream
+storing message 4 part 2.2.2 as file ./out/4.2.2.2.octet-stream
 ])
 
 MH_CHECK([mhn-store-: all escapes],[mhn07 mhn-store_escapes],[
@@ -193,7 +193,7 @@ cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
 MUT_MBCHMOD(Mail/inbox, 700)
 
 echo "mhn-store-application: %%-%m%P.%s-%p" >> $MH
-mhn +inbox -store 4 | remove_curdir || exit $?
+mhn +inbox -store 4 || exit $?
 find . -name '%*' | sort
 ],
 [0],
@@ -213,13 +213,13 @@ cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
 MUT_MBCHMOD(Mail/inbox, 700)
 
 echo "mhn-store-application: $HOME/out/%m%P.%s" >> $MH
-mhn +inbox -store 4 | remove_curdir || exit $?
+mhn +inbox -store 4 | cwdrepl || exit $?
 ],
 [0],
 [storing message 4 part 1 as file 4.1.plain
-storing message 4 part 2.1 as file out/4.2.1.octet-stream
-storing message 4 part 2.2.1 as file out/4.2.2.1.octet-stream
-storing message 4 part 2.2.2 as file out/4.2.2.2.octet-stream
+storing message 4 part 2.1 as file ./out/4.2.1.octet-stream
+storing message 4 part 2.2.1 as file ./out/4.2.2.1.octet-stream
+storing message 4 part 2.2.2 as file ./out/4.2.2.2.octet-stream
 ])
 
 MH_CHECK([mhn-store-: +folder],[mhn09 mhn-store+folder],[
@@ -229,7 +229,7 @@ cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
 MUT_MBCHMOD(Mail, 700)
 
 echo "mhn-store-application: +app" >> $MH
-mhn +inbox -store 4 | remove_curdir || exit $?
+mhn +inbox -store 4 | cwdrepl || exit $?
 ],
 [0],
 [storing message 4 part 1 as file 4.1.plain
@@ -247,7 +247,7 @@ echo "Current-Folder: inbox" > Mail/context
 cat >> $MH <<EOT
 mhn-store-application/octet-stream: +
 EOT
-mhn +inbox -store -part 2.2.1 4 | remove_curdir || exit $?
+mhn +inbox -store -part 2.2.1 4 | cwdrepl || exit $?
 ],
 [0],
 [storing message 4 part 2.2.1 to folder inbox as message 5
