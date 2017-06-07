@@ -37,6 +37,8 @@ int mu_assoc_install (mu_assoc_t assoc, const char *name, void *value);
 
 int mu_assoc_lookup_ref (mu_assoc_t assoc, const char *name, void *dataptr);
 int mu_assoc_install_ref (mu_assoc_t assoc, const char *name, void *pval);
+int mu_assoc_install_ref2 (mu_assoc_t assoc, const char *name,
+			   void *ret_val, const char **ret_name);
   
 int mu_assoc_get_iterator (mu_assoc_t assoc, mu_iterator_t *piterator);
 int mu_assoc_remove (mu_assoc_t assoc, const char *name);  

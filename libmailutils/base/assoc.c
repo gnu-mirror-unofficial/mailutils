@@ -387,7 +387,9 @@ mu_assoc_lookup_ref (mu_assoc_t assoc, const char *name, void *dataptr)
 }
 
 int
-mu_assoc_install_ref (mu_assoc_t assoc, const char *name, void *pval)
+mu_assoc_install_ref2 (mu_assoc_t assoc, const char *name,
+		       void *ret_val,
+		       const char **ret_name)
 {
   int rc;
   int inst;
@@ -425,9 +427,18 @@ mu_assoc_install_ref (mu_assoc_t assoc, const char *name, void *pval)
       assoc_elem_link (assoc, idx);
     }
   
-  *(void**)pval = &assoc->tab[idx]->data;
+  *(void**)ret_val = &assoc->tab[idx]->data;
+  if (ret_name)
+    *ret_name = assoc->tab[idx]->name;
+  
   return inst ? 0 : MU_ERR_EXISTS;
 }  
+
+int
+mu_assoc_install_ref (mu_assoc_t assoc, const char *name, void *pval)
+{
+  return mu_assoc_install_ref2 (assoc, name, pval, NULL);
+}
 
 int
 mu_assoc_remove (mu_assoc_t assoc, const char *name)

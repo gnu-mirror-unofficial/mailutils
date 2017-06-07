@@ -163,7 +163,7 @@ copy_regular_file (const char *srcpath, const char *dstpath, int flags,
       rc = mu_stream_ioctl (dst, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET, trans);
       if (rc == 0)
 	{	    
-	  if (fchmod ((int) trans[0], mode))
+	  if (fchmod ((int) (intptr_t) trans[0], mode))
 	    {
 	      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
 			(_("%s: cannot chmod: %s"),
@@ -193,7 +193,7 @@ copy_regular_file (const char *srcpath, const char *dstpath, int flags,
 
 	      if (gid != -1)
 		{
-		  if (fchown ((int) trans[0], uid, gid))
+		  if (fchown ((int) (intptr_t) trans[0], uid, gid))
 		    {
 		      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
 				(_("%s: cannot chown to %lu.%lu: %s"),

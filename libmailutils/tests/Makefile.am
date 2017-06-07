@@ -67,6 +67,7 @@ noinst_PROGRAMS = \
  strout\
  strtoc\
  tempfile\
+ tracker\
  tcli\
  url-comp\
  url-parse\
