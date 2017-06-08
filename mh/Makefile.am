@@ -146,24 +146,24 @@ inc_LDADD = \
 
 
 pick-gram.c pick-gram.h: $(srcdir)/pick.y
-	$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
+	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
 	          y.tab.c pick-gram.c y.tab.h pick-gram.h \
                   y.output pick.output \
                   -- -yy pick_yy
 
 mh_fmtgram.c: $(srcdir)/mh_fmtgram.y
-	$(YLWRAP) "$(YACC) $(AM_YFLAGS)" $< \
+	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS)" $< \
 	          y.tab.c mh_fmtgram.c y.output fmtgram.y.output \
                   -- -yy fmt_yy
 
 mh_alias_gram.c mh_alias.h: $(srcdir)/mh_alias.y
-	$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
+	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
 	          y.tab.c mh_alias_gram.c y.tab.h mh_alias.h \
                   y.output mh_alias.output \
                   -- -yy ali_yy
 
 mh_alias_lex.c: $(srcdir)/mh_alias.l mh_alias.h
-	$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
+	$(AM_V_GEN)$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
                   $(srcdir)/mh_alias.l lex.yy.c mh_alias_lex.c \
                   -- -yy ali_yy
 

@@ -42,12 +42,12 @@ AM_YFLAGS=-vt
 AM_LFLAGS=-dp
 
 parser.c parser.h: $(srcdir)/parser.y
-	$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
+	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
 	          y.tab.c parser.c y.tab.h parser.h \
                   y.output parser.y.output \
                   -- -yy mu_cfg_yy
 
 lexer.c: $(srcdir)/lexer.l parser.h
-	$(YLWRAP) "$(LEX) $(AM_LFLAGS) $(LFLAGS)" \
+	$(AM_V_GEN)$(YLWRAP) "$(LEX) $(AM_LFLAGS) $(LFLAGS)" \
                   $(srcdir)/lexer.l lex.yy.c lexer.c \
                   -- -yy mu_cfg_yy

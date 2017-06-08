@@ -61,12 +61,12 @@ MAINTAINERCLEANFILES=$(BUILT_SOURCES)
 EXTRA_DIST = sieve.y sieve.l
 
 sieve-lex.c: $(srcdir)/sieve.l sieve-gram.h
-	$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
+	$(AM_V_GEN)$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
                   $(srcdir)/sieve.l lex.yy.c sieve-lex.c \
                   -- -yy mu_sieve_yy
 
 sieve-gram.c sieve-gram.h: $(srcdir)/sieve.y
-	$(YLWRAP) "$(YACC) $(AM_YFLAGS) $(YFLAGS)" $(srcdir)/sieve.y \
+	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS) $(YFLAGS)" $(srcdir)/sieve.y \
 	          y.tab.c sieve-gram.c y.tab.h sieve-gram.h y.output y.output \
                   -- -yy mu_sieve_yy
 
