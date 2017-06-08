@@ -54,7 +54,7 @@ noinst_PROGRAMS = \
  globtest\
  imapio\
  listop\
- loctrack\
+ linetrack\
  logstr\
  mailcap\
  mimehdr\
@@ -107,7 +107,7 @@ TESTSUITE_AT = \
  inline-comment.at\
  linecon.at\
  list.at\
- loctrack.at\
+ linetrack.at\
  logstr.at\
  mailcap.at\
  mimehdr.at\

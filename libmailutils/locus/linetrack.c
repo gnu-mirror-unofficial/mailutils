@@ -4,22 +4,36 @@
 #include <mailutils/locus.h>
 #include <mailutils/error.h>
 
-struct mu_locus_track
+/* The line-tracker structure keeps track of the last N lines read from a
+   text input file.  For each line read it keeps the number of characters
+   in that line including the newline.  This information is stored in a
+   syclic stack of N elements.  Top of stack always represents the current
+   line.  For the purpose of line tracker, current line is the line that is
+   being visited, such that its final newline character has not yet been
+   seen.  Once the newline is seen, the line is pushed on stack, and a new
+   current line is assumed.
+
+   The value of N must not be less than 2.
+*/
+struct mu_linetrack
 {
-  char const *file_name;     /* Name of the source file */
-  size_t max_lines;          /* Max. number of lines history kept by tracker */
-  size_t head;               /* Bottom of stack */
-  size_t level;              /* Number of elements on stack */
-  unsigned hline;            /* Number of line corresponding to cols[head] */
-  unsigned *cols;            /* Cyclic stack */
+  char const *file_name; /* Name of the source file */
+  size_t max_lines;      /* Max. number of lines history kept by tracker (N) */
+  size_t head;           /* Index of the eldest element on stack */
+  size_t tos;            /* Index of the most recent element on stack
+			    (< max_lines) */
+  unsigned hline;        /* Number of line corresponding to cols[head] */
+  unsigned *cols;        /* Cyclic stack or character counts.
+			    Number of characters in line (hline + n) is
+			    cols[head + n] (0 <= n <= tos). */
 };
 
 int
-mu_locus_track_create (mu_locus_track_t *ret,
+mu_linetrack_create (mu_linetrack_t *ret,
 		       char const *file_name, size_t max_lines)
 {
   int rc;
-  struct mu_locus_track *trk;
+  struct mu_linetrack *trk;
   
   trk = malloc (sizeof *trk);
   if (!trk)
@@ -43,7 +57,7 @@ mu_locus_track_create (mu_locus_track_t *ret,
     max_lines = 2;
   trk->max_lines = max_lines;
   trk->head = 0;
-  trk->level = 0;
+  trk->tos = 0;
   trk->hline = 1;
   trk->cols[0] = 0;
   
@@ -52,7 +66,7 @@ mu_locus_track_create (mu_locus_track_t *ret,
 }
 
 void
-mu_locus_track_free (mu_locus_track_t trk)
+mu_linetrack_free (mu_linetrack_t trk)
 {
   if (trk)
     {
@@ -63,54 +77,48 @@ mu_locus_track_free (mu_locus_track_t trk)
 }
 
 void
-mu_locus_track_destroy (mu_locus_track_t *trk)
+mu_linetrack_destroy (mu_linetrack_t *trk)
 {
   if (trk)
     {
-      mu_locus_track_free (*trk);
+      mu_linetrack_free (*trk);
       *trk = NULL;
     }
 }   
 
-size_t
-mu_locus_track_level (mu_locus_track_t trk)
-{
-  return trk->level;
-}
-
 static inline unsigned *
-cols_tos_ptr (mu_locus_track_t trk)
+cols_tos_ptr (mu_linetrack_t trk)
 {
-  return &trk->cols[(trk->head + trk->level) % trk->max_lines];
+  return &trk->cols[(trk->head + trk->tos) % trk->max_lines];
 }
 
 static inline unsigned
-cols_peek (mu_locus_track_t trk, size_t n)
+cols_peek (mu_linetrack_t trk, size_t n)
 {
   return trk->cols[(trk->head + n) % trk->max_lines];
 }
 
 static inline unsigned *
-push (mu_locus_track_t trk)
+push (mu_linetrack_t trk)
 {
   unsigned *ptr;
-  if (trk->level == trk->max_lines)
+  if (trk->tos == trk->max_lines - 1)
     {
       trk->head++;
       trk->hline++;
     }
   else
-    trk->level++;
+    trk->tos++;
   *(ptr = cols_tos_ptr (trk)) = 0;
   return ptr;
 }
 
 static inline unsigned *
-pop (mu_locus_track_t trk)
+pop (mu_linetrack_t trk)
 {
-  if (trk->level == 0)
+  if (trk->tos == 0)
     return NULL;
-  trk->level--;
+  trk->tos--;
   return cols_tos_ptr (trk);
 }
 
@@ -119,12 +127,11 @@ pop (mu_locus_track_t trk)
 #endif
 
 int
-mu_locus_tracker_stat (struct mu_locus_track *trk,
-		       struct mu_locus_track_stat *st)
+mu_linetrack_stat (struct mu_linetrack *trk, struct mu_linetrack_stat *st)
 {
   size_t i, nch = 0;
 
-  for (i = 0; i <= trk->level; i++)
+  for (i = 0; i <= trk->tos; i++)
     {
       unsigned n = cols_peek (trk, i);
       if (SIZE_MAX - nch < n)
@@ -133,14 +140,16 @@ mu_locus_tracker_stat (struct mu_locus_track *trk,
     }
   
   st->start_line = trk->hline;
-  st->n_lines = trk->level;
+  st->n_lines = trk->tos + 1;
   st->n_chars = nch;
+
+  return 0;
 }
     
 void
-mu_locus_tracker_advance (struct mu_locus_track *trk,
-			  struct mu_locus_range *loc,
-			  char const *text, size_t leng)
+mu_linetrack_advance (struct mu_linetrack *trk,
+		      struct mu_locus_range *loc,
+		      char const *text, size_t leng)
 {
   unsigned *ptr;
 
@@ -148,7 +157,7 @@ mu_locus_tracker_advance (struct mu_locus_track *trk,
     return;
   
   loc->beg.mu_file = loc->end.mu_file = trk->file_name;
-  loc->beg.mu_line = trk->hline + trk->level;
+  loc->beg.mu_line = trk->hline + trk->tos;
   ptr = cols_tos_ptr (trk);
   loc->beg.mu_col = *ptr + 1;
   while (leng--)
@@ -160,14 +169,14 @@ mu_locus_tracker_advance (struct mu_locus_track *trk,
     }
   if (*ptr)
     {
-      loc->end.mu_line = trk->hline + trk->level;
+      loc->end.mu_line = trk->hline + trk->tos;
       loc->end.mu_col = *ptr;
     }
   else
     {
       /* Text ends with a newline.  Keep the previos line number. */
-      loc->end.mu_line = trk->hline + trk->level - 1;
-      loc->end.mu_col = cols_peek (trk, trk->level - 1) - 1;
+      loc->end.mu_line = trk->hline + trk->tos - 1;
+      loc->end.mu_col = cols_peek (trk, trk->tos - 1) - 1;
       if (loc->end.mu_col + 1 == loc->beg.mu_col)
 	{
 	  /* This happens if the previous line contained only newline. */
@@ -177,11 +186,11 @@ mu_locus_tracker_advance (struct mu_locus_track *trk,
 }
 
 int
-mu_locus_tracker_retreat (struct mu_locus_track *trk, size_t n)
+mu_linetrack_retreat (struct mu_linetrack *trk, size_t n)
 {
-  struct mu_locus_track_stat st;
+  struct mu_linetrack_stat st;
 
-  mu_locus_tracker_stat (trk, &st);
+  mu_linetrack_stat (trk, &st);
   if (n > st.n_chars)
     return ERANGE;
   else

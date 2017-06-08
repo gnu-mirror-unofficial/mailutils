@@ -6,7 +6,7 @@ main (int argc, char **argv)
 {
   unsigned long max_lines;
   char *end;
-  mu_locus_track_t trk;
+  mu_linetrack_t trk;
   int rc;
   char *buf = NULL;
   size_t size, n;
@@ -26,7 +26,7 @@ main (int argc, char **argv)
       return 1;
     }
 
-  MU_ASSERT (mu_locus_track_create (&trk, argv[1], max_lines));
+  MU_ASSERT (mu_linetrack_create (&trk, argv[1], max_lines));
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
       struct mu_locus_range lr;
@@ -43,17 +43,17 @@ main (int argc, char **argv)
 	      mu_error ("bad number");
 	      continue;
 	    }
-	  rc = mu_locus_tracker_retreat (trk, x);
+	  rc = mu_linetrack_retreat (trk, x);
 	  if (rc == ERANGE)
 	    mu_error ("retreat count too big");
 	  else if (rc)
-	    mu_diag_funcall (MU_DIAG_ERROR, "mu_locus_tracker_retreat", buf+2,
+	    mu_diag_funcall (MU_DIAG_ERROR, "mu_linetrack_retreat", buf+2,
 			     rc);
 	}
       else
 	{
 	  mu_c_str_unescape (buf, "\\\n", "\\n", &tok);
-	  mu_locus_tracker_advance (trk, &lr, tok, strlen (tok));
+	  mu_linetrack_advance (trk, &lr, tok, strlen (tok));
 	  free (tok);
 	  mu_stream_lprintf (mu_strout, &lr, "%s\n", buf);
 	}

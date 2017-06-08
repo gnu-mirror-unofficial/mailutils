@@ -17,13 +17,14 @@ struct mu_locus_range
   struct mu_locus_point end;
 };
 
-typedef struct mu_locus_track *mu_locus_track_t;
+typedef struct mu_linetrack *mu_linetrack_t;
 
-struct mu_locus_track_stat
+struct mu_linetrack_stat
 {
-  unsigned start_line;
-  size_t n_lines;
-  size_t n_chars;
+  unsigned start_line;  /* Start line number (1-based) */
+  size_t n_lines;       /* Number of lines, including the recent (incomplete)
+			   one */
+  size_t n_chars;       /* Total number of characters */
 };
   
 int mu_ident_ref (char const *name, char const **refname);
@@ -47,17 +48,15 @@ mu_locus_point_same_line (struct mu_locus_point const *a,
 void mu_lrange_debug (struct mu_locus_range const *loc,
 		      char const *fmt, ...);
 
-int mu_locus_track_create (mu_locus_track_t *ret,
+int mu_linetrack_create (mu_linetrack_t *ret,
 			   char const *file_name, size_t max_lines);
-void mu_locus_track_free (mu_locus_track_t trk);
-void mu_locus_track_destroy (mu_locus_track_t *trk);
-size_t mu_locus_track_level (mu_locus_track_t trk);
-void mu_locus_tracker_advance (struct mu_locus_track *trk,
-			       struct mu_locus_range *loc,
-			       char const *text, size_t leng);
-int mu_locus_tracker_retreat (struct mu_locus_track *trk, size_t n);
-int mu_locus_tracker_stat (struct mu_locus_track *trk,
-			   struct mu_locus_track_stat *st);
+void mu_linetrack_free (mu_linetrack_t trk);
+void mu_linetrack_destroy (mu_linetrack_t *trk);
+void mu_linetrack_advance (mu_linetrack_t trk,
+			   struct mu_locus_range *loc,
+			   char const *text, size_t leng);
+int mu_linetrack_retreat (mu_linetrack_t trk, size_t n);
+int mu_linetrack_stat (mu_linetrack_t trk, struct mu_linetrack_stat *st);
 
 
 void mu_stream_print_locus_range (mu_stream_t stream,
