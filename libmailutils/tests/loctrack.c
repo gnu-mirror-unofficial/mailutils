@@ -33,22 +33,29 @@ main (int argc, char **argv)
       char *tok;
       
       n = mu_rtrim_class (buf, MU_CTYPE_SPACE);
-      if (buf[0] == '\\')
+      if (n == 0)
+	continue;
+      if (buf[0] == '\\' && buf[1] == '-')
 	{
-	  long x = strtol (buf+1, &end, 10);
+	  long x = strtol (buf+2, &end, 10);
 	  if (*end || x == 0)
 	    {
 	      mu_error ("bad number");
 	      continue;
 	    }
-	  mu_locus_tracker_retreat (trk, x);
+	  rc = mu_locus_tracker_retreat (trk, x);
+	  if (rc == ERANGE)
+	    mu_error ("retreat count too big");
+	  else if (rc)
+	    mu_diag_funcall (MU_DIAG_ERROR, "mu_locus_tracker_retreat", buf+2,
+			     rc);
 	}
       else
 	{
 	  mu_c_str_unescape (buf, "\\\n", "\\n", &tok);
 	  mu_locus_tracker_advance (trk, &lr, tok, strlen (tok));
 	  free (tok);
-	  mu_lrange_debug (&lr, "%s", buf);
+	  mu_stream_lprintf (mu_strout, &lr, "%s\n", buf);
 	}
     }
   return 0;

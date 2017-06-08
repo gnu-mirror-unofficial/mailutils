@@ -19,6 +19,13 @@ struct mu_locus_range
 
 typedef struct mu_locus_track *mu_locus_track_t;
 
+struct mu_locus_track_stat
+{
+  unsigned start_line;
+  size_t n_lines;
+  size_t n_chars;
+};
+  
 int mu_ident_ref (char const *name, char const **refname);
 int mu_ident_deref (char const *);
 
@@ -48,7 +55,10 @@ size_t mu_locus_track_level (mu_locus_track_t trk);
 void mu_locus_tracker_advance (struct mu_locus_track *trk,
 			       struct mu_locus_range *loc,
 			       char const *text, size_t leng);
-void mu_locus_tracker_retreat (struct mu_locus_track *trk, size_t n);
+int mu_locus_tracker_retreat (struct mu_locus_track *trk, size_t n);
+int mu_locus_tracker_stat (struct mu_locus_track *trk,
+			   struct mu_locus_track_stat *st);
+
 
 void mu_stream_print_locus_range (mu_stream_t stream,
 				  struct mu_locus_range const *loc);

@@ -54,6 +54,7 @@ noinst_PROGRAMS = \
  globtest\
  imapio\
  listop\
+ loctrack\
  logstr\
  mailcap\
  mimehdr\
@@ -68,7 +69,6 @@ noinst_PROGRAMS = \
  strout\
  strtoc\
  tempfile\
- tracker\
  tcli\
  url-comp\
  url-parse\
@@ -107,6 +107,7 @@ TESTSUITE_AT = \
  inline-comment.at\
  linecon.at\
  list.at\
+ loctrack.at\
  logstr.at\
  mailcap.at\
  mimehdr.at\

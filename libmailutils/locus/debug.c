@@ -59,8 +59,7 @@ mu_stream_vlprintf (mu_stream_t stream,
 {
   mu_stream_print_locus_range (stream, loc);
   mu_stream_write (stream, ": ", 2, NULL);
-  mu_stream_vprintf (mu_strerr, fmt, ap);
-  mu_stream_write (stream, "\n", 1, NULL);
+  mu_stream_vprintf (stream, fmt, ap);
 }
 
 void
@@ -91,8 +90,9 @@ mu_lrange_debug (struct mu_locus_range const *loc,
     }
 
   va_start (ap, fmt);
-  mu_stream_lprintf (mu_strerr, loc, fmt, ap);
+  mu_stream_vlprintf (mu_strerr, loc, fmt, ap);
   va_end (ap);
+  mu_stream_write (mu_strerr, "\n", 1, NULL);
 
   if (rc == 0)
     mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,

@@ -212,3 +212,4 @@ m4_include([msgset.at])
 
 m4_include([globtest.at])
 
+m4_include([loctrack.at])

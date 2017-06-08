@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <mailutils/types.h>
 #include <mailutils/locus.h>
+#include <mailutils/error.h>
 
 struct mu_locus_track
 {
@@ -38,6 +39,8 @@ mu_locus_track_create (mu_locus_track_t *ret,
       return rc;
     }
 
+  if (max_lines < 2)
+    max_lines = 2;
   trk->max_lines = max_lines;
   trk->head = 0;
   trk->level = 0;
@@ -106,14 +109,34 @@ static inline unsigned *
 pop (mu_locus_track_t trk)
 {
   if (trk->level == 0)
-    {
-      *cols_tos_ptr (trk) = 0;
-      return NULL; //FIXME
-    }
+    return NULL;
   trk->level--;
   return cols_tos_ptr (trk);
 }
 
+#ifndef SIZE_MAX
+# define SIZE_MAX (~((size_t)0))
+#endif
+
+int
+mu_locus_tracker_stat (struct mu_locus_track *trk,
+		       struct mu_locus_track_stat *st)
+{
+  size_t i, nch = 0;
+
+  for (i = 0; i <= trk->level; i++)
+    {
+      unsigned n = cols_peek (trk, i);
+      if (SIZE_MAX - nch < n)
+	return ERANGE;
+      nch += n;
+    }
+  
+  st->start_line = trk->hline;
+  st->n_lines = trk->level;
+  st->n_chars = nch;
+}
+    
 void
 mu_locus_tracker_advance (struct mu_locus_track *trk,
 			  struct mu_locus_range *loc,
@@ -142,27 +165,44 @@ mu_locus_tracker_advance (struct mu_locus_track *trk,
     }
   else
     {
+      /* Text ends with a newline.  Keep the previos line number. */
       loc->end.mu_line = trk->hline + trk->level - 1;
       loc->end.mu_col = cols_peek (trk, trk->level - 1) - 1;
-    }
+      if (loc->end.mu_col + 1 == loc->beg.mu_col)
+	{
+	  /* This happens if the previous line contained only newline. */
+	  loc->beg.mu_col = loc->end.mu_col;
+	}	  
+   }
 }
 
-void
+int
 mu_locus_tracker_retreat (struct mu_locus_track *trk, size_t n)
 {
-  unsigned *ptr;
+  struct mu_locus_track_stat st;
 
-  ptr = cols_tos_ptr (trk);
-  while (n--)
+  mu_locus_tracker_stat (trk, &st);
+  if (n > st.n_chars)
+    return ERANGE;
+  else
     {
-      if (*ptr == 0)
+      unsigned *ptr = cols_tos_ptr (trk);
+      while (n--)
 	{
-	  ptr = pop (trk);
-	  if (!ptr)
-	    break;
+	  if (*ptr == 0)
+	    {
+	      ptr = pop (trk);
+	      if (!ptr || *ptr == 0)
+		{
+		  mu_error ("%s:%d: INTERNAL ERROR: out of pop back\n",
+			    __FILE__, __LINE__);
+		  return ERANGE;
+		}
+	    }
+	  --*ptr;
 	}
-      --*ptr;
     }
+  return 0;
 }
     
   
