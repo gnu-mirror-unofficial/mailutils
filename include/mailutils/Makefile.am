@@ -73,6 +73,7 @@ pkginclude_HEADERS = \
  kwd.h\
  ldap.h\
  list.h\
+ locus.h\
  locker.h\
  log.h\
  mailbox.h\
@@ -116,7 +117,8 @@ pkginclude_HEADERS = \
  types.h\
  url.h\
  version.h\
- wordsplit.h
+ wordsplit.h\
+ yyloc.h
 
 if MU_COND_SUPPORT_CXX
   CPP_DIR = cpp
