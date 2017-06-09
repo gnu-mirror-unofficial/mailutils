@@ -51,6 +51,7 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
 noinst_PROGRAMS = \
  bs\
+ cwdrepl\
  fldel\
  lstuid\
  mbdel\
@@ -76,11 +77,14 @@ smtpsend_LDADD = \
  @MU_AUTHLIBS@\
  ${MU_LIB_MAILUTILS}
 
+cwdrepl_LDADD = ${MU_LIB_MAILUTILS}
+
 ## ------------ ##
 ## Test suite.  ##
 ## ------------ ##
 
 TESTSUITE_AT = \
+ cwdrepl.at\
  fldel.at\
  lstuid00.at\
  lstuid01.at\

@@ -26,6 +26,7 @@ file_name=file
 opt_value=10
 x_option=1
 a_option=1
+headers_option=1
 find_value=(null)
 d_option=2
 jobs=0

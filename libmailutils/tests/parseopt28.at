@@ -1,5 +1,5 @@
 # This file is part of GNU Mailutils. -*- Autotest -*-
-# Copyright (C) 2016-2017 Free Software Foundation, Inc.
+# Copyright (C) 2017 Free Software Foundation, Inc.
 #
 # GNU Mailutils is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -14,27 +14,43 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_SETUP([long options])
-AT_KEYWORDS([parseopt parseopt_long parseopt08])
+AT_SETUP([boolean negation])
+AT_KEYWORDS([parseopt parseopt_bool parseopt28])
 AT_CHECK([
 PARSEOPT_DEFAULT
-parseopt --file=file --all command line arguments
+MU_PARSEOPT_NEGATION=no-
+export MU_PARSEOPT_NEGATION
+echo "# full option"
+parseopt --no-headers
+echo "# abbreviated option"
+parseopt --no-header
 ],
 [0],
-[rc=0
-file_name=file
+[# full option
+rc=0
+file_name=(null)
 opt_value=initial
 x_option=0
-a_option=1
-headers_option=1
+a_option=0
+headers_option=0
 find_value=(null)
 d_option=0
 jobs=0
 debug_level_value=0
 debug_info_value=(null)
 argv:
-0: command
-1: line
-2: arguments
+# abbreviated option
+rc=0
+file_name=(null)
+opt_value=initial
+x_option=0
+a_option=0
+headers_option=0
+find_value=(null)
+d_option=0
+jobs=0
+debug_level_value=0
+debug_info_value=(null)
+argv:
 ])
 AT_CLEANUP

@@ -210,13 +210,14 @@ struct mh_whatnow_env     /* whatnow shell environment */
   char *file;             /* The file being processed */
   char *msg;              /* File name of the original message (if any) */
   char *draftfile;        /* File to preserve the draft into */
-  const char *editor;
+  const char *editor;     /* Default editor */
   char *prompt;
   char *anno_field;       /* Annotate field to be used */
   mu_list_t anno_list;    /* List of messages (mu_message_t) to annotate */
   mu_mailbox_t mbox;
   int nowhatnowproc;
   int reedit:1;           /* Set if the editor was already invoked */
+  char *last_ed;          /* Last used editor */
 };
 
 #define DISP_QUIT 0

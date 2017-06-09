@@ -27,7 +27,7 @@ Subject: test input
 message body
 ])
 
-echo quit | forwcmd +inbox 1 | remove_curdir
+echo quit | forwcmd +inbox 1 | cwdrepl
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message ==
@@ -36,7 +36,7 @@ echo == Message ==
 sed '/^X-IMAPbase/d' Mail/inbox/1
 ],
 [0],
-[-- Editor invocation: Mail/draft
+[-- Editor invocation: ./Mail/draft
 -- Input file:
 To:
 cc:
@@ -53,7 +53,7 @@ message body
 ------- End of Forwarded message
 
 -- Input file end
-What now? draft left on "Mail/draft".
+What now? draft left on "./Mail/draft".
 == Mail/draft ==
 To:
 cc:
@@ -87,7 +87,7 @@ Subject: test input
 message body
 ])
 
-echo quit | forwcmd -format +inbox 1 | remove_curdir
+echo quit | forwcmd -format +inbox 1 | cwdrepl
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message ==
@@ -96,7 +96,7 @@ echo == Message ==
 sed '/^X-IMAPbase/d' Mail/inbox/1
 ],
 [0],
-[-- Editor invocation: Mail/draft
+[-- Editor invocation: ./Mail/draft
 -- Input file:
 To:
 cc:
@@ -113,7 +113,7 @@ message body
 ------- End of Forwarded message
 
 -- Input file end
-What now? draft left on "Mail/draft".
+What now? draft left on "./Mail/draft".
 == Mail/draft ==
 To:
 cc:
@@ -153,7 +153,7 @@ Subject: 2nd message
 2nd message body
 ])
 
-echo quit | forwcmd +inbox 1 2 | remove_curdir
+echo quit | forwcmd +inbox 1 2 | cwdrepl
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message 1 ==
@@ -162,7 +162,7 @@ echo == Message 2 ==
 cat Mail/inbox/2
 ],
 [0],
-[-- Editor invocation: Mail/draft
+[-- Editor invocation: ./Mail/draft
 -- Input file:
 To:
 cc:
@@ -188,7 +188,7 @@ Subject: 2nd message
 ------- End of Forwarded messages
 
 -- Input file end
-What now? draft left on "Mail/draft".
+What now? draft left on "./Mail/draft".
 == Mail/draft ==
 To:
 cc:
@@ -237,7 +237,7 @@ Subject: test input
 message body
 ])
 
-forwcmd -build +inbox 1 | remove_curdir
+forwcmd -build +inbox 1 | cwdrepl
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message ==
@@ -282,9 +282,9 @@ Subject: 2nd message
 2nd message body
 ])
 
-forwcmd -build -mime +inbox 1 2 | remove_curdir
+forwcmd -build -mime +inbox 1 2 | cwdrepl
 echo == Mail/draft ==
-remove_curdir Mail/draft
+cwdrepl < Mail/draft
 echo == Message 1 ==
 sed '/^X-IMAPbase/d' Mail/inbox/1
 echo == Message 2 ==
@@ -296,7 +296,7 @@ To:
 cc:
 Subject:
 --------
-#forw [] +Mail/inbox 1 2
+#forw [] +./Mail/inbox 1 2
 
 == Message 1 ==
 From: gray
@@ -322,14 +322,14 @@ Subject: test input
 message body
 ])
 
-echo "quit" | forwcmd -draftfolder drafts 1 | remove_curdir
+echo "quit" | forwcmd -draftfolder drafts 1 | cwdrepl
 echo == Mail/drafts/1 ==
 cat Mail/drafts/1
 echo == Message ==
 sed '/^X-IMAPbase/d' Mail/inbox/1
 ],
 [0],
-[-- Editor invocation: Mail/drafts/1
+[-- Editor invocation: ./Mail/drafts/1
 -- Input file:
 To:
 cc:
@@ -346,7 +346,7 @@ message body
 ------- End of Forwarded message
 
 -- Input file end
-What now? draft left on "Mail/drafts/1".
+What now? draft left on "./Mail/drafts/1".
 == Mail/drafts/1 ==
 To:
 cc:
@@ -379,10 +379,10 @@ Subject: test input
 message body
 ])
 
-echo "quit" | forwcmd -file infile | remove_curdir
+echo "quit" | forwcmd -file infile | cwdrepl
 ],
 [0],
-[-- Editor invocation: Mail/draft
+[-- Editor invocation: ./Mail/draft
 -- Input file:
 To:
 cc:
@@ -394,7 +394,7 @@ Subject: test input
 
 message body
 -- Input file end
-What now? draft left on "Mail/draft".
+What now? draft left on "./Mail/draft".
 ])
 
 m4_popdef([forwcmd])

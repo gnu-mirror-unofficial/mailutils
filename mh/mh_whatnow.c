@@ -323,6 +323,9 @@ _whatnow (struct mh_whatnow_env *wh, struct action_tab *tab)
   size_t size = 0;
   struct mu_wordsplit ws;
   int wsflags = MU_WRDSF_DEFFLAGS|MU_WRDSF_COMMENT;
+
+  wh->reedit = 0;
+  wh->last_ed = NULL;
   
   do
     {
@@ -360,6 +363,8 @@ _whatnow (struct mh_whatnow_env *wh, struct action_tab *tab)
   while (rc == 0);
   if (wsflags & MU_WRDSF_REUSE)
     mu_wordsplit_free (&ws);
+  free (wh->last_ed);
+  wh->last_ed = NULL;
   free (line);
   return status;
 }
@@ -382,8 +387,9 @@ display (struct mh_whatnow_env *wh, int argc, char **argv, int *status)
 static int
 edit (struct mh_whatnow_env *wh, int argc, char **argv, int *whs)
 {
-  char const *ed = wh->editor;
+  char const *ed = wh->last_ed ? wh->last_ed : wh->editor;
   int i, rc, status;
+  char *p;
   
   if (wh->reedit)
     {
@@ -455,8 +461,10 @@ edit (struct mh_whatnow_env *wh, int argc, char **argv, int *whs)
       else
 	mu_error (_("problems with edit"));
     }
-  
-  wh->editor = ed;
+
+  p = mu_strdup (ed);
+  free (wh->last_ed);
+  wh->last_ed = p;
   wh->reedit = 1;
   
   return 0;

@@ -26,6 +26,7 @@ char *find_value;
 int jobs = 0;
 int x_option;
 int a_option;
+int headers_option = 1;
 int d_option;
 int debug_level_value;
 char *debug_info_value;
@@ -46,6 +47,9 @@ struct mu_option group_a[] = {
     "no arguments to this one",
     mu_c_bool, &a_option },
   { "debug-all", 0, NULL, MU_OPTION_ALIAS },
+  { "headers", 0, NULL, MU_OPTION_DEFAULT,
+    "show headers",
+    mu_c_bool, &headers_option },
   MU_OPTION_END
 };
 
@@ -218,6 +222,7 @@ main (int argc, char *argv[])
   printf ("opt_value=%s\n", S(opt_value));
   printf ("x_option=%d\n", x_option);
   printf ("a_option=%d\n", a_option);
+  printf ("headers_option=%d\n", headers_option);
   printf ("find_value=%s\n", S(find_value));
   printf ("d_option=%d\n", d_option);
   printf ("jobs=%d\n", jobs);

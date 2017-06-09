@@ -279,7 +279,7 @@ find_long_option (struct mu_parseopt *po, char const *optstr,
   size_t i;
   size_t optlen;       /* Length of the option in optstr */
   int found = 0;       /* 1 if the match was found, 2 if option is ambiguous */
-  enum neg_match neg;  /* 1 if a boolean option is negated */
+  int negated;         /* 1 if a boolean option is negated */
   struct mu_option *ret_opt = NULL;
   struct mu_option *used_opt;
   
@@ -290,7 +290,7 @@ find_long_option (struct mu_parseopt *po, char const *optstr,
       size_t j = po->po_longidx[i];
       size_t len = strlen (po->po_optv[j]->opt_long);
       struct mu_option *opt = option_unalias (po, j);
-      neg = neg_nomatch;
+      enum neg_match neg = neg_nomatch;
       if ((optlen <= len
 	   && memcmp (po->po_optv[j]->opt_long, optstr, optlen) == 0)
 	  || (neg = negmatch (po, j, optstr, optlen)))
@@ -301,6 +301,7 @@ find_long_option (struct mu_parseopt *po, char const *optstr,
 	      used_opt = po->po_optv[j];
 	      ret_opt = opt;
 	      found++;
+	      negated = neg != neg_nomatch;
 	      if (optlen == len || neg == neg_match_exact)
 		i = po->po_longcnt - 1; /* exact match: break the loop */
 	      break;
@@ -353,12 +354,7 @@ find_long_option (struct mu_parseopt *po, char const *optstr,
 	++optlen;
       *used_value = (char *)(optstr + optlen);
       if (ret_opt->opt_type == mu_c_bool)
-	{
-	  if (neg)
-	    *value = "0";
-	  else
-	    *value = "1";
-	}
+	*value = negated ? "0" : "1";
       else
 	*value = NULL;
       return ret_opt;

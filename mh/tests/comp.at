@@ -19,7 +19,7 @@ m4_pushdef([MH_KEYWORDS],[comp])
 m4_pushdef([compcmd],[comp -editor $abs_top_srcdir/mh/tests/mhed])
 
 MH_CHECK([comp -file],[comp00 comp-file],[
-echo quit | compcmd -file ./infile | remove_curdir | sed 's/ *$//'
+echo quit | compcmd -file $HOME/infile | cwdrepl | sed 's/ *$//'
 sed 's/ *$//' infile
 ],
 [0],
@@ -39,7 +39,7 @@ Seen by mhed
 ])
 
 MH_CHECK([comp -file (del)],[comp01 comp-file_del],[
-echo 'quit -delete' | compcmd -file ./infile | remove_curdir
+echo 'quit -delete' | compcmd -file $HOME/infile | cwdrepl | sed 's/ *$//'
 ],
 [0],
 [-- Editor invocation: ./infile
@@ -53,18 +53,18 @@ What now?
 ])
 
 MH_CHECK([comp file],[comp02 comp_file],[
-echo 'quit' | compcmd file | remove_curdir | sed 's/ *$//'
+echo 'quit' | compcmd file | cwdrepl | sed 's/ *$//'
 sed 's/ *$//' Mail/file 
 ],
 [0], 
-[-- Editor invocation: Mail/file
+[-- Editor invocation: ./Mail/file
 -- Input file:
 To:
 cc:
 Subject:
 --------
 -- Input file end
-What now? draft left on "Mail/file".
+What now? draft left on "./Mail/file".
 To:
 cc:
 Subject:
@@ -80,11 +80,11 @@ Subject: test input
 message body
 ])
 
-echo 'quit' | compcmd -use file | remove_curdir | sed 's/ *$//'
+echo 'quit' | compcmd -use file | cwdrepl | sed 's/ *$//'
 sed 's/ *$//' Mail/file 
 ],
 [0], 
-[-- Editor invocation: Mail/file
+[-- Editor invocation: ./Mail/file
 -- Input file:
 From: gray
 To: root
@@ -92,7 +92,7 @@ Subject: test input
 
 message body
 -- Input file end
-What now? draft left on "Mail/file".
+What now? draft left on "./Mail/file".
 From: gray
 To: root
 Subject: test input
@@ -110,14 +110,14 @@ Subject: test input
 message body
 ])
 
-echo 'quit' | compcmd +inbox 1 | remove_curdir | sed 's/ *$//'
+echo 'quit' | compcmd +inbox 1 | cwdrepl | sed 's/ *$//'
 echo Mail/draft
 sed 's/ *$//' Mail/draft
 echo Message
 sed 's/ *$//' Mail/inbox/1
 ],
 [0], 
-[-- Editor invocation: Mail/draft
+[-- Editor invocation: ./Mail/draft
 -- Input file:
 From: gray
 To: root
@@ -125,7 +125,7 @@ Subject: test input
 
 message body
 -- Input file end
-What now? draft left on "Mail/draft".
+What now? draft left on "./Mail/draft".
 Mail/draft
 From: gray
 To: root
@@ -143,18 +143,18 @@ message body
 
 MH_CHECK([comp -draftfolder],[comp05 comp-draftfolder draftfolder],[
 mkdir Mail/drafts
-echo 'quit' | compcmd -draftfolder drafts | remove_curdir | sed 's/ *$//'
+echo 'quit' | compcmd -draftfolder drafts | cwdrepl | sed 's/ *$//'
 sed 's/ *$//' Mail/drafts/1
 ],
 [0],
-[-- Editor invocation: Mail/drafts/1
+[-- Editor invocation: ./Mail/drafts/1
 -- Input file:
 To:
 cc:
 Subject:
 --------
 -- Input file end
-What now? draft left on "Mail/drafts/1".
+What now? draft left on "./Mail/drafts/1".
 To:
 cc:
 Subject:
@@ -172,11 +172,11 @@ message body
 ])
 echo "cur: 1" > Mail/drafts/.mh_sequences
 
-echo 'quit' | compcmd -draftfolder drafts -use| remove_curdir | sed 's/ *$//'
+echo 'quit' | compcmd -draftfolder drafts -use| cwdrepl | sed 's/ *$//'
 sed 's/ *$//' Mail/drafts/1
 ],
 [0],
-[-- Editor invocation: Mail/drafts/1
+[-- Editor invocation: ./Mail/drafts/1
 -- Input file:
 From: gray
 To: root
@@ -184,7 +184,7 @@ Subject: test input
 
 message body
 -- Input file end
-What now? draft left on "Mail/drafts/1".
+What now? draft left on "./Mail/drafts/1".
 From: gray
 To: root
 Subject: test input

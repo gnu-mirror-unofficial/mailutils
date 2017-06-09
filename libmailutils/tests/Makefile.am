@@ -145,6 +145,7 @@ TESTSUITE_AT = \
  parseopt25.at\
  parseopt26.at\
  parseopt27.at\
+ parseopt28.at\
  parseopt_help00.at\
  parseopt_help01.at\
  parseopt_help02.at\
