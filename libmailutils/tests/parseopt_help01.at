@@ -23,7 +23,7 @@ parseopt --usage
 [0],
 [[Usage: parseopt [-advx?] [-f FILE] [-F VALUE] [-j N] [-o[FILE]] [--all]
             [--debug] [--debug-all] [--debug-info=S] [--debug-level=NUM]
-            [--file=FILE] [--find=VALUE] [--help] [--jobs=N]
+            [--file=FILE] [--find=VALUE] [--headers] [--help] [--jobs=N]
             [--optional[=FILE]] [--usage] [--verbose]
 ]])
 AT_CLEANUP

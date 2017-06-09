@@ -28,6 +28,7 @@ MU_PARSEOPT_PROG_ARGS="SOME MORE ARGS|ALTERNATIVE ARGS|ANOTHER ARGS" parseopt --
  Group A
   -a, --all, --debug-all     no arguments to this one
   -f, --file=FILE            set file name
+      --headers              show headers
   -o, --optional[[=FILE]]      optional argument
   -x                         short-only option
 

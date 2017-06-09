@@ -131,6 +131,7 @@ m4_include([parseopt24.at])
 m4_include([parseopt25.at])
 m4_include([parseopt26.at])
 m4_include([parseopt27.at])
+m4_include([parseopt28.at])
 
 AT_BANNER([Command line help output])
 m4_include([parseopt_help00.at])

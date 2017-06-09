@@ -27,6 +27,7 @@ ARGP_HELP_FMT=dup-args,no-dup-args-note,short-opt-col=1,opt-doc-col=32,header-co
           Group A
  -a,  --all, --debug-all        no arguments to this one
  -f FILE, --file=FILE           set file name
+      --headers                 show headers
  -o[FILE], --optional[=FILE]    optional argument
  -x                             short-only option
 

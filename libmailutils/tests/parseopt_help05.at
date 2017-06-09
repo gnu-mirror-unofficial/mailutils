@@ -26,6 +26,7 @@ MU_PARSEOPT_BUG_ADDRESS='gray@gnu.org' parseopt --help
  Group A
   -a, --all, --debug-all     no arguments to this one
   -f, --file=FILE            set file name
+      --headers              show headers
   -o, --optional[[=FILE]]      optional argument
   -x                         short-only option
 
