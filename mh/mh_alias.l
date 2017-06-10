@@ -422,7 +422,7 @@ int
 mh_alias_read (char const *name, int fail)
 {
   extern int yydebug;
-  char *p = getenv("ALI_YYDEBUG");
+  char *p = getenv ("ALI_YYDEBUG");
 
   if (p && *p > '0' && *p < '9')
     yydebug = 1;

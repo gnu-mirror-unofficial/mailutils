@@ -127,15 +127,16 @@ copy_message (mu_mailbox_t mbox, size_t n, const char *file)
   return rc;
 }
 
+static struct mh_optinit optinit[] = {
+  { "draftfolder", "Draft-Folder" },
+  { "whatnowproc", "whatnowproc" },
+  { NULL }
+};
+
 int
 main (int argc, char **argv)
 {
-  mh_getopt (&argc, &argv, options, 0, args_doc, prog_doc, NULL);
-
-  if (!draftfolder)
-    draftfolder = mh_global_profile_get ("Draft-Folder", NULL);
-  if (!whatnowproc)
-    whatnowproc = mh_global_profile_get ("whatnowproc", NULL);
+  mh_getopt_ext (&argc, &argv, options, 0, optinit, args_doc, prog_doc, NULL);
 
   if (use_draft)
     draftmessage = "cur";

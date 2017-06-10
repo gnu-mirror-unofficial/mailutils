@@ -179,10 +179,39 @@ has_folder_option (struct mu_option *opt)
   return 0;
 }
 
+static void
+opt_init (struct mu_parseopt *po,
+	  struct mu_option **optv, struct mh_optinit *optinit)
+{
+  if (!optinit)
+    return;
+  for (; optinit->opt; optinit++)
+    {
+      size_t i;
+      for (i = 0; optv[i]; i++)
+	{
+	  struct mu_option *opt;
+	  for (opt = optv[i]; !MU_OPTION_IS_END (opt); opt++)
+	    {
+	      if (strcmp (opt->opt_long, optinit->opt) == 0)
+		{
+		  char const *val = mh_global_profile_get (optinit->var, NULL);
+		  if (val)
+		    {
+		      (opt->opt_set ?
+		       opt->opt_set : mu_option_set_value) (po, opt, val);
+		    }
+		  break;
+		}
+	    }
+	}
+    }
+}
+
 void
-mh_getopt (int *pargc, char ***pargv, struct mu_option *options,
-	   int mhflags,
-	   char *argdoc, char *progdoc, char *extradoc)
+mh_getopt_ext (int *pargc, char ***pargv, struct mu_option *options,
+	       int mhflags, struct mh_optinit *optinit,
+	       char *argdoc, char *progdoc, char *extradoc)
 {
   int argc = *pargc;
   char **argv = *pargv;
@@ -256,6 +285,7 @@ mh_getopt (int *pargc, char ***pargv, struct mu_option *options,
   if (options)
     optv[i++] = options;
   optv[i] = NULL;
+  opt_init (&po, optv, optinit);
   
   if (mu_parseopt (&po, argc, argv, optv, flags))
     exit (po.po_exit_error);
@@ -282,6 +312,14 @@ mh_getopt (int *pargc, char ***pargv, struct mu_option *options,
   *pargv = argv;
   
   mh_init2 ();
+}
+
+void
+mh_getopt (int *pargc, char ***pargv, struct mu_option *options,
+	   int mhflags, char *argdoc, char *progdoc, char *extradoc)
+{
+  mh_getopt_ext (pargc, pargv, options, mhflags, NULL, argdoc, progdoc,
+		 extradoc);
 }
 
 void

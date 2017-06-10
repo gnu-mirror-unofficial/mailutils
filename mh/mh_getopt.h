@@ -20,9 +20,18 @@
 
 #define MH_GETOPT_DEFAULT_FOLDER 0x1
 
+struct mh_optinit
+{
+  char const *opt;   /* Option name */
+  char const *var;   /* mh_property name */
+};
+
+void mh_getopt_ext (int *pargc, char ***pargv, struct mu_option *options,
+		    int mhflags, struct mh_optinit *optinit,
+		    char *argdoc, char *progdoc, char *extradoc);
+
 void mh_getopt (int *pargc, char ***pargv, struct mu_option *options,
-		int flags,
-		char *argdoc, char *progdoc, char *extradoc);
+		int flags, char *argdoc, char *progdoc, char *extradoc);
 
 void mh_opt_notimpl (struct mu_parseopt *po, struct mu_option *opt,
 		     char const *arg);

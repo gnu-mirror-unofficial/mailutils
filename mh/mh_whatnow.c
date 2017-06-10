@@ -544,9 +544,10 @@ whom (struct mh_whatnow_env *wh, int argc, char **argv, int *status)
   if (!wh->file)
     mu_error (_("no draft file to display"));
   else
-    mh_whom (wh->file, (argc == 2
-			&& (strcmp (argv[1], "-check") == 0
-			    || strcmp (argv[1], "--check") == 0)));
+    mh_whom_file (wh->file,
+		  (argc == 2
+		   && (strcmp (argv[1], "-check") == 0
+		       || strcmp (argv[1], "--check") == 0)));
   return 0;
 }
 

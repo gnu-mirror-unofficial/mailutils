@@ -492,6 +492,9 @@ int
 mh_read_aliases ()
 {
   const char *p;
+
+  if (alias_list)
+    return 0;
   
   p = mh_global_profile_get ("Aliasfile", NULL);
   if (p)
