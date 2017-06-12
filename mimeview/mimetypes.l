@@ -29,9 +29,9 @@
 #include <mimetypes-decl.h>  
 #include <mailutils/io.h>
  
-static struct mu_locus loc;
-static int newline;
-
+static mu_linetrack_t trk;
+struct mu_locus_point string_beg;
+ 
 static mu_opool_t pool;
  
 static unsigned 
@@ -42,53 +42,18 @@ digit_to_number (char c)
                      c-'a'+10);
 }
 
-static struct mu_locus prev_loc;
-static struct mu_locus string_beg;
-static int prev_newline;
- 
-static void
-advance_locus (void)
-{
-  prev_loc = loc;
-  prev_newline = newline;
-  
-  if (newline)
-    {
-      loc.mu_line++;
-      loc.mu_col = 1;
-    }
-  yylloc.beg = loc;
-  loc.mu_col += yyleng;
-  yylloc.end = loc;
-  yylloc.end.mu_col--;
-
-#if 0
-  printf ("+%2d> %u:%u-%u:%u: %s\n",
-	  yyleng,
-	  yylloc.beg.mu_line, yylloc.beg.mu_col, 
-	  yylloc.end.mu_line, yylloc.end.mu_col, yytext);
-#endif
-  newline = yytext[yyleng-1] == '\n';
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS, &loc);
-}
-
-static void
-retreat_locus (void)
-{
-  loc = prev_loc;
-  newline = prev_newline;
-}
-
 static void
 finish_string (void)
 {
   mu_opool_append_char (pool, 0);
   yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
   yylval.string.len--;
-  yylloc.end = yylloc.beg;
+  
+  mu_locus_point_copy (&yylloc.end, &yylloc.beg);
   yylloc.end.mu_col--;
-  yylloc.beg = string_beg;
+  mu_locus_point_copy (&yylloc.beg, &string_beg);
+  mu_locus_point_deinit (&string_beg);
+  
   if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE5))
     {
       size_t i;
@@ -106,7 +71,15 @@ finish_string (void)
 #endif
 }  
 
-#define YY_USER_ACTION advance_locus ();
+#define YY_USER_ACTION							\
+  do									\
+    {									\
+      mu_linetrack_advance (trk, &yylloc, yytext, yyleng);		\
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,			\
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &yylloc);	\
+    }									\
+  while (0);
+
 %}
 
 %x RULE ARGS ASTRING
@@ -178,8 +151,8 @@ WS [ \t][ \t]*
   return EOL;
 }
 . {
-  string_beg = yylloc.beg;
-  retreat_locus ();
+  mu_locus_point_copy (&string_beg, &yylloc.beg);
+  mu_linetrack_retreat (trk, 1); 
   yyless (0);
   BEGIN (ASTRING);
 }
@@ -217,8 +190,8 @@ WS [ \t][ \t]*
   mu_opool_append (pool, yytext, yyleng);
 }
 
-. { 
-  retreat_locus ();
+. {
+  mu_linetrack_retreat (trk, 1);
   yyless (0);
   BEGIN (ARGS);
   finish_string ();  
@@ -232,7 +205,8 @@ mimetypes_open (const char *name)
 {
   struct stat st;
   int mode;
-
+  char *filename;
+  
   yy_flex_debug = mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE4);
 
   if (stat (name, &st))
@@ -242,28 +216,26 @@ mimetypes_open (const char *name)
     }
   
   if (S_ISDIR (st.st_mode))
-    loc.mu_file = mu_make_file_name (name, "mime.types");
+    filename = mu_make_file_name (name, "mime.types");
   else
-    loc.mu_file = mu_strdup (name);
-  loc.mu_line = 1;
-  loc.mu_col = 1;
-  newline = 0;
-
-  yyin = fopen (loc.mu_file, "r");
+    filename = mu_strdup (name);
+  
+  yyin = fopen (filename, "r");
   if (!yyin)
     {
-      mu_error (_("cannot open `%s': %s"), loc.mu_file, mu_strerror (errno));
-      free (loc.mu_file);
+      mu_error (_("cannot open `%s': %s"), filename, mu_strerror (errno));
+      free (filename);
       return -1;
     }
 
+  MU_ASSERT (mu_linetrack_create (&trk, filename, 3));
+  free (filename);
+  
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
                    MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
   mode |= MU_LOGMODE_LOCUS;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
                    MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS, &loc);
 
   mu_opool_create (&pool, MU_OPOOL_ENOMEMABRT);
   return 0;
@@ -275,16 +247,14 @@ mimetypes_close ()
   int mode;
 
   fclose (yyin);
-  /* FIXME: Don't free (loc.mu_file), because it is referenced by
-     mu_locus structures in the parse tree */
-
+  mu_linetrack_destroy (&trk);
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
                    MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
   mode &= ~MU_LOGMODE_LOCUS;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
                    MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS, NULL);
+                   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, NULL);
 }
 
 int
@@ -319,17 +289,8 @@ mimetypes_malloc (size_t size)
 void
 lex_next_rule (void)
 {
-  int bol = 0;
   int c;
 
-  if (newline)
-    {
-      loc.mu_col = 0;
-      loc.mu_line++;
-      newline = 0;
-      bol = 1;
-    }
-  
   if (yy_flex_debug)
     {
       YY_LOCATION_PRINT (stderr, yylloc);
@@ -337,31 +298,27 @@ lex_next_rule (void)
     }
   while ((c = input ()) != EOF)
     {
-      loc.mu_col++;
+      char ch = c;
+      mu_linetrack_advance (trk, &yylloc, &ch, 1);
       if (c == '\n')
 	{
-	  loc.mu_line++;
-	  loc.mu_col = 0;
-	  bol = 1;
+          continue;
 	}
-      else if (bol)
+      else if (mu_linetrack_at_bol (trk) && !(c == ' ' || c == '\t'))
 	{
-	  bol = 0;
-	  if (!(c == ' ' || c == '\t'))
-	    {
-	      unput (c);
-	      break;
-	    }
-	}
+          mu_linetrack_retreat (trk, 1); 
+	  unput (c);
+	  break;
+ 	}
     }
   if (yy_flex_debug)
     {
-      yylloc.beg = yylloc.end = loc;
-      YY_LOCATION_PRINT (stderr, yylloc);
+      struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
+      mu_linetrack_locus (trk, &lr.beg);
+      YY_LOCATION_PRINT (stderr, lr);
       fprintf (stderr, ": finished error recovery\n");
+      mu_locus_point_deinit (&lr.beg);
     }
   BEGIN (RULE);
   unput ('\n');
-  loc.mu_col = 0;
-  loc.mu_line--;
-}
+ }

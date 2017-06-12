@@ -20,7 +20,8 @@ noinst_LTLIBRARIES = liblocus.la
 liblocus_la_SOURCES = \
  ident.c\
  debug.c\
- linetrack.c
+ linetrack.c\
+ locus.c
 
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
 

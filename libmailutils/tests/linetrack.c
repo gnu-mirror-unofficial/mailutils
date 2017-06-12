@@ -29,7 +29,7 @@ main (int argc, char **argv)
   MU_ASSERT (mu_linetrack_create (&trk, argv[1], max_lines));
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
-      struct mu_locus_range lr;
+      struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
       char *tok;
       
       n = mu_rtrim_class (buf, MU_CTYPE_SPACE);
@@ -57,6 +57,7 @@ main (int argc, char **argv)
 	  free (tok);
 	  mu_stream_lprintf (mu_strout, &lr, "%s\n", buf);
 	}
+      mu_locus_range_deinit (&lr);
     }
   return 0;
 }

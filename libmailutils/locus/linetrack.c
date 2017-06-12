@@ -145,7 +145,13 @@ mu_linetrack_stat (struct mu_linetrack *trk, struct mu_linetrack_stat *st)
 
   return 0;
 }
-    
+
+int
+mu_linetrack_at_bol (struct mu_linetrack *trk)
+{
+  return *cols_tos_ptr (trk) == 0;
+}
+
 void
 mu_linetrack_advance (struct mu_linetrack *trk,
 		      struct mu_locus_range *loc,
@@ -155,8 +161,9 @@ mu_linetrack_advance (struct mu_linetrack *trk,
 
   if (text == NULL || leng == 0)
     return;
-  
-  loc->beg.mu_file = loc->end.mu_file = trk->file_name;
+
+  mu_locus_point_set_file (&loc->beg, trk->file_name);
+  mu_locus_point_set_file (&loc->end, trk->file_name);
   loc->beg.mu_line = trk->hline + trk->tos;
   ptr = cols_tos_ptr (trk);
   loc->beg.mu_col = *ptr + 1;
@@ -174,7 +181,7 @@ mu_linetrack_advance (struct mu_linetrack *trk,
     }
   else
     {
-      /* Text ends with a newline.  Keep the previos line number. */
+      /* Text ends with a newline.  Keep the previous line number. */
       loc->end.mu_line = trk->hline + trk->tos - 1;
       loc->end.mu_col = cols_peek (trk, trk->tos - 1) - 1;
       if (loc->end.mu_col + 1 == loc->beg.mu_col)
@@ -183,6 +190,13 @@ mu_linetrack_advance (struct mu_linetrack *trk,
 	  loc->beg.mu_col = loc->end.mu_col;
 	}	  
    }
+}
+
+int
+mu_linetrack_locus (struct mu_linetrack *trk, struct mu_locus_point *lp)
+{
+  lp->mu_line = trk->hline + trk->tos;
+  return mu_locus_point_init (lp, trk->file_name);
 }
 
 int

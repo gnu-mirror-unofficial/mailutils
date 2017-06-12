@@ -22,6 +22,8 @@
 # include <strings.h>
 #endif
 #include <mailutils/mailutils.h>
+#include <mailutils/locus.h>
+#include <mailutils/yyloc.h>
 #include <fnmatch.h>
 
 struct mimetypes_string
@@ -48,29 +50,3 @@ const char *get_file_type (void);
 extern char const *mimeview_file;
 extern mu_stream_t mimeview_stream;    
 
-struct mu_locus_range
-{
-  struct mu_locus beg;
-  struct mu_locus end;
-};
-
-#define YYLTYPE struct mu_locus_range
-#define YYLLOC_DEFAULT(Current, Rhs, N)				  \
-  do								  \
-    {								  \
-      if (N)							  \
-	{							  \
-	  (Current).beg = YYRHSLOC(Rhs, 1).beg;			  \
-	  (Current).end = YYRHSLOC(Rhs, N).end;			  \
-	}							  \
-      else							  \
-	{							  \
-	  (Current).beg = YYRHSLOC(Rhs, 0).end;			  \
-	  (Current).end = (Current).beg;			  \
-	}							  \
-    } while (0)
-#define YY_LOCATION_PRINT(File, Loc)				    \
-  fprintf(File, "%s:%u.%u-%u.%u",				    \
-	  (Loc).beg.mu_file,					    \
-	  (Loc).beg.mu_line, (Loc).beg.mu_col,			    \
-	  (Loc).end.mu_line, (Loc).end.mu_col)
