@@ -21,7 +21,11 @@ liblocus_la_SOURCES = \
  ident.c\
  debug.c\
  linetrack.c\
- locus.c
+ locus.c\
+ filprloc.c\
+ strprloc.c
+
+EXTRA_DIST = genprloc.c
 
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
 

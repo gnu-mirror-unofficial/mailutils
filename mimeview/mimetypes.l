@@ -43,6 +43,12 @@ digit_to_number (char c)
 }
 
 static void
+drop_string (void)
+{
+  mu_opool_clear (pool);
+}
+ 
+static void
 finish_string (void)
 {
   mu_opool_append_char (pool, 0);
@@ -100,6 +106,11 @@ WS [ \t][ \t]*
   BEGIN (RULE);
   return TYPE;
 }
+
+. {
+  mu_error (_("type/subtype is missing")); 
+  return BOGUS;
+}
 }
 
 <RULE>{
@@ -147,8 +158,7 @@ WS [ \t][ \t]*
 {WS} mu_error ("unexpected whitespace in argument list");
 \n   {
   mu_error ("unexpected newline in argument list");
-  BEGIN (RULE);
-  return EOL;
+  return BOGUS;
 }
 . {
   mu_locus_point_copy (&string_beg, &yylloc.beg);
@@ -190,6 +200,12 @@ WS [ \t][ \t]*
   mu_opool_append (pool, yytext, yyleng);
 }
 
+\n   {
+  mu_error ("unexpected newline in argument");
+  drop_string ();
+  return BOGUS;
+}
+
 . {
   mu_linetrack_retreat (trk, 1);
   yyless (0);
@@ -207,7 +223,7 @@ mimetypes_open (const char *name)
   int mode;
   char *filename;
   
-  yy_flex_debug = mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE4);
+  yy_flex_debug = mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE4);
 
   if (stat (name, &st))
     {
@@ -247,6 +263,7 @@ mimetypes_close ()
   int mode;
 
   fclose (yyin);
+  mu_locus_range_deinit (&yylloc);
   mu_linetrack_destroy (&trk);
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
                    MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
@@ -290,8 +307,10 @@ void
 lex_next_rule (void)
 {
   int c;
-
-  if (yy_flex_debug)
+  int dbg = yy_flex_debug
+               || mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE6);
+  
+  if (dbg)
     {
       YY_LOCATION_PRINT (stderr, yylloc);
       fprintf (stderr, ": started error recovery\n");
@@ -299,19 +318,14 @@ lex_next_rule (void)
   while ((c = input ()) != EOF)
     {
       char ch = c;
-      mu_linetrack_advance (trk, &yylloc, &ch, 1);
-      if (c == '\n')
+      if (!mu_isspace (c) && mu_linetrack_at_bol (trk))
 	{
-          continue;
-	}
-      else if (mu_linetrack_at_bol (trk) && !(c == ' ' || c == '\t'))
-	{
-          mu_linetrack_retreat (trk, 1); 
 	  unput (c);
 	  break;
  	}
+      mu_linetrack_advance (trk, &yylloc, &ch, 1);
     }
-  if (yy_flex_debug)
+  if (dbg)
     {
       struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
       mu_linetrack_locus (trk, &lr.beg);
@@ -321,4 +335,5 @@ lex_next_rule (void)
     }
   BEGIN (RULE);
   unput ('\n');
+  mu_linetrack_retreat (trk, 1);
  }

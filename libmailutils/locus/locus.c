@@ -39,7 +39,26 @@ mu_locus_point_copy (struct mu_locus_point *dest,
 {
   dest->mu_col = src->mu_col;
   dest->mu_line = src->mu_line;
-  return mu_locus_point_init (dest, src->mu_file);
+  return mu_locus_point_set_file (dest, src->mu_file);
+}
+
+int
+mu_locus_range_copy (struct mu_locus_range *dest,
+		     struct mu_locus_range const *src)
+{
+  int rc;
+  struct mu_locus_range tmp = MU_LOCUS_RANGE_INITIALIZER;
+  
+  rc = mu_locus_point_copy (&tmp.beg, &src->beg);
+  if (rc == 0)
+    {
+      rc = mu_locus_point_copy (&tmp.end, &src->end);
+      if (rc)
+	mu_locus_point_deinit (&tmp.beg);
+      else
+	*dest = tmp;
+    }
+  return rc;
 }
 
 void

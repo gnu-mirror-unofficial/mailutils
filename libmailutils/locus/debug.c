@@ -9,50 +9,6 @@
 #include <mailutils/stdstream.h>
 
 void
-mu_stream_print_locus_range (mu_stream_t stream,
-			     struct mu_locus_range const *loc)
-{
-  if (loc->beg.mu_col == 0)
-    {
-      if (loc->end.mu_file
-	  && (!mu_locus_point_same_file (&loc->beg, &loc->end)
-	      || loc->beg.mu_line != loc->end.mu_line))
-	mu_stream_printf (stream, "%s:%u-%u",
-			  loc->beg.mu_file,
-			  loc->beg.mu_line,
-			  loc->end.mu_line);
-      else
-	mu_stream_printf (stream, "%s:%u",
-			  loc->beg.mu_file,
-			  loc->beg.mu_line);
-    }
-  else
-    {
-      if (loc->end.mu_file
-	  && !mu_locus_point_same_file (&loc->beg, &loc->end))
-	mu_stream_printf (stream, "%s:%u.%u-%s:%u.%u",
-			  loc->beg.mu_file,
-			  loc->beg.mu_line, loc->beg.mu_col,
-			  loc->end.mu_file,
-			  loc->end.mu_line, loc->end.mu_col);
-      else if (loc->end.mu_file && loc->beg.mu_line != loc->end.mu_line)
-	mu_stream_printf (stream, "%s:%u.%u-%u.%u",
-			  loc->beg.mu_file,
-			  loc->beg.mu_line, loc->beg.mu_col,
-			  loc->end.mu_line, loc->end.mu_col);
-      else if (loc->end.mu_file && loc->beg.mu_col != loc->end.mu_col)
-	mu_stream_printf (stream, "%s:%u.%u-%u",
-			  loc->beg.mu_file,
-			  loc->beg.mu_line, loc->beg.mu_col,
-			  loc->end.mu_col);
-      else
-	mu_stream_printf (stream, "%s:%u.%u",
-			  loc->beg.mu_file,
-			  loc->beg.mu_line, loc->beg.mu_col);
-    }
-}
-
-void
 mu_stream_vlprintf (mu_stream_t stream,
 		    struct mu_locus_range const *loc,
 		    char const *fmt, va_list ap)

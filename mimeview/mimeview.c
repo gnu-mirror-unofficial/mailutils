@@ -66,7 +66,7 @@ cli_debug (struct mu_parseopt *po, struct mu_option *opt,
     lev = MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE2);
   else
     {
-      mu_debug_get_category_level (MU_DEBCAT_MIME, &lev);
+      mu_debug_get_category_level (MU_DEBCAT_APP, &lev);
       for (; *arg; arg++)
 	{
 	  switch (*arg)
@@ -88,7 +88,7 @@ cli_debug (struct mu_parseopt *po, struct mu_option *opt,
 	  }
 	}
     }
-  mu_debug_set_category_level (MU_DEBCAT_MIME, lev);
+  mu_debug_set_category_level (MU_DEBCAT_APP, lev);
 }
 
 static void
@@ -222,11 +222,11 @@ display_file (const char *file, const char *type)
       argv[5] = (char*) mimeview_file;
       argv[6] = NULL;
       
-      if (mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE0))
+      if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE0))
 	{
 	  char *string;
 	  mu_argcv_string (6, argv, &string);
-	  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+	  mu_debug (MU_DEBCAT_APP, MU_DEBUG_TRACE0,
 		    (_("executing %s...\n"), string));
 	  free (string);
 	}
@@ -247,7 +247,7 @@ display_file (const char *file, const char *type)
 	{
 	  display_stream_mailcap (mimeview_file, mimeview_stream, hdr,
 				  no_ask_types, interactive, dry_run,
-				  MU_DEBCAT_MIME);
+				  MU_DEBCAT_APP);
 	  mu_header_destroy (&hdr);
 	}
     }
@@ -264,9 +264,9 @@ main (int argc, char **argv)
   if (dry_run)
     {
       mu_debug_level_t lev;
-      mu_debug_get_category_level (MU_DEBCAT_MIME, &lev);
+      mu_debug_get_category_level (MU_DEBCAT_APP, &lev);
       lev |= MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE2);
-      mu_debug_set_category_level (MU_DEBCAT_MIME, lev);
+      mu_debug_set_category_level (MU_DEBCAT_APP, lev);
     }
 
   if (argc == 0 && !lint)

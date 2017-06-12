@@ -122,10 +122,11 @@ struct rule_tab
 };
 
 static mu_list_t rule_list;
+static size_t errors;
 %}
 
 %locations
-%expect 12
+%expect 15
 
 %token <string> TYPE IDENT
 %token <string> STRING
@@ -165,16 +166,21 @@ rule_line: /* empty */
 	     p->type = $1.ptr;
 	     p->node = $2;
 	     p->priority = $3;
-	     p->loc.beg = @1.beg;
-	     p->loc.end = @3.end;
+	     mu_locus_point_copy (&p->loc.beg, &@1.beg);
+	     mu_locus_point_copy (&p->loc.end, &@3.end);
 #if 0
 	     YY_LOCATION_PRINT (stderr, p->loc);
 	     fprintf (stderr, ": rule %s\n", p->type);
 #endif
 	     mu_list_append (rule_list, p);
 	   }
+	 | BOGUS
+	   {
+	     YYERROR;
+	   }
          | error 
            {
+	     errors++;
 	     if (arg_list)
 	       mu_list_destroy (&arg_list);
 	     arg_list = NULL;
@@ -228,6 +234,10 @@ stmt     : '!' stmt
 	     $$ = make_suffix_node (&$1, &@1);
 	   }
          | function
+	 | BOGUS
+	   {
+	     YYERROR;
+	   }
          ;
 
 priority : PRIORITY '(' arglist ')'
@@ -280,6 +290,10 @@ arglist  : arg
          ;
 
 arg      : STRING
+         | BOGUS
+           {
+	     YYERROR;
+	   }
          ;
 
 %%
@@ -290,10 +304,10 @@ mimetypes_parse (const char *name)
   int rc;
   if (mimetypes_open (name))
     return 1;
-  yydebug = mu_debug_level_p (MU_DEBCAT_MIME, MU_DEBUG_TRACE3);  
+  yydebug = mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE3);  
   rc = yyparse ();
   mimetypes_close ();
-  return rc || rule_list == NULL;
+  return rc || errors;
 }
 
 static struct node *
@@ -301,7 +315,7 @@ make_node (enum node_type type, struct mu_locus_range const *loc)
 {
   struct node *p = mimetypes_malloc (sizeof *p);
   p->type = type;
-  p->loc = *loc;
+  mu_locus_range_copy (&p->loc, loc);
   return p;
 }
 
@@ -333,7 +347,7 @@ make_suffix_node (struct mimetypes_string *suffix,
   node->v.suffix = *suffix;
   return node;
 }
-
+
 struct builtin_tab
 {
   char *name;
@@ -759,7 +773,7 @@ check_suffix (char *suf)
 void
 mime_debug (int lev, struct mu_locus_range const *loc, char const *fmt, ...)
 {
-  if (mu_debug_level_p (MU_DEBCAT_MIME, lev))
+  if (mu_debug_level_p (MU_DEBCAT_APP, lev))
     {
       va_list ap;
 

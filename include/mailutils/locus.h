@@ -41,6 +41,8 @@ void mu_locus_point_deinit (struct mu_locus_point *pt);
 int mu_locus_point_copy (struct mu_locus_point *dest,
 			 struct mu_locus_point const *src);
 
+int mu_locus_range_copy (struct mu_locus_range *dest,
+			 struct mu_locus_range const *src);
 void mu_locus_range_deinit (struct mu_locus_range *lr);
 
 static inline int
@@ -74,7 +76,8 @@ int mu_linetrack_locus (struct mu_linetrack *trk, struct mu_locus_point *lp);
 int mu_linetrack_stat (mu_linetrack_t trk, struct mu_linetrack_stat *st);
 int mu_linetrack_at_bol (struct mu_linetrack *trk);
 
-
+void mu_stream_print_locus_point (mu_stream_t stream,
+				  struct mu_locus_point const *lpt);
 void mu_stream_print_locus_range (mu_stream_t stream,
 				  struct mu_locus_range const *loc);
 

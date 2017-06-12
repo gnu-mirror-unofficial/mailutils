@@ -196,7 +196,7 @@ int
 mu_linetrack_locus (struct mu_linetrack *trk, struct mu_locus_point *lp)
 {
   lp->mu_line = trk->hline + trk->tos;
-  return mu_locus_point_init (lp, trk->file_name);
+  return mu_locus_point_set_file (lp, trk->file_name);
 }
 
 int

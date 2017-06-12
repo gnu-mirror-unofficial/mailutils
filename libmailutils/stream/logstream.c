@@ -305,6 +305,7 @@ static void
 _log_done (struct _mu_stream *str)
 {
   struct _mu_log_stream *sp = (struct _mu_log_stream *)str;
+  mu_locus_range_deinit (&sp->locrange);
   mu_stream_destroy (&sp->transport);
 }
 

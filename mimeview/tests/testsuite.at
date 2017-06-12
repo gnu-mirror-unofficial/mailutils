@@ -40,8 +40,8 @@ $2: $4
 
 m4_pushdef([build_expect],[__build_expect([],m4_shift(m4_shift($@)))])
 
-# MIMETEST(NAME,TYPES,FILE,CONTENT,RES)
-m4_pushdef([MIMETEST],[
+# MIMEIDENTIFY(NAME,TYPES,FILE,CONTENT,RES)
+m4_pushdef([MIMEIDENTIFY],[
 AT_SETUP([$1])
 AT_KEYWORDS([mimeview])
 AT_CHECK([
@@ -55,17 +55,29 @@ mimeview MIMEVIEW_OPTIONS --identify -f mime.types select_args($@)
 AT_CLEANUP
 ])
 
+m4_pushdef([MIMETEST],[
+AT_SETUP([$1])
+AT_KEYWORDS([mimeview])
+AT_CHECK([
+AT_DATA([mime.types],[$2
+])
+mimeview MIMEVIEW_OPTIONS --debug-level=app.=trace6 -t -f mime.types
+],
+m4_shift(m4_shift($@)))
+AT_CLEANUP
+])
+
 dnl ------------------------------------------------------------
 
 AT_INIT
 AT_TESTED([mimeview])
 MUT_VERSION([mimeview])
 
-MIMETEST([default],
+MIMEIDENTIFY([default],
 [application/octet-stream],
 [input], [], [application/octet-stream])
 
-MIMETEST([suffixes],
+MIMEIDENTIFY([suffixes],
 [foo/x-bar bar baz
 foo/x-qux qux quux
 ],
@@ -74,13 +86,13 @@ foo/x-qux qux quux
 [a.quux], [], [foo/x-qux],
 [a.qx], [], [unknown])
 
-MIMETEST([default ordering],
+MIMEIDENTIFY([default ordering],
 [text/foo bar
 text/bar bar
 ],
 [a.bar], [], [text/bar])
 
-MIMETEST([priority],
+MIMEIDENTIFY([priority],
 [text/bar bar
 text/foo bar priority(20)
 ],
@@ -89,7 +101,7 @@ text/foo bar priority(20)
 AT_BANNER([Functions])
 
 #   match("pattern")                    Pattern match on filename
-MIMETEST([match],
+MIMEIDENTIFY([match],
 [application/x-csource	match(*.c)
 ],
 [a.c],[],[application/x-csource],
@@ -97,7 +109,7 @@ MIMETEST([match],
 
 #   ascii(offset,length)                True if bytes are valid printable ASCII
 #                                       (CR, NL, TAB, BS, 32-126)
-MIMETEST([ascii],
+MIMEIDENTIFY([ascii],
 [application/x-bar	ascii(16,6)
 ],
 [one],[-seek 16 -string foobar -int 100],[application/x-bar],
@@ -105,7 +117,7 @@ MIMETEST([ascii],
 
 #   printable(offset,length)            True if bytes are printable 8-bit chars
 #                                       (CR, NL, TAB, BS, 32-126, 128-254)
-MIMETEST([printable],
+MIMEIDENTIFY([printable],
 [application/x-bar	printable(16,6)
 ],
 [one],[-seek 16 -string foobar -int 100],[application/x-bar],
@@ -113,14 +125,14 @@ MIMETEST([printable],
 [three],[-seek 16 -string fooba -byte 127],[unknown])
 
 #   regex(offset,"regex")               True if bytes match regular expression
-MIMETEST([regex],
+MIMEIDENTIFY([regex],
 [application/pdf    regex(0,^[[\n\r]]*%PDF)
 ],
 [one],[-byte 10 -byte 10 -byte 13 -byte 10 -string %PDF],[application/pdf],
 [two],[-byte 10 -byte 10 -byte 13 -byte 7 -string %PDF],[unknown])
 
 #   string(offset,"string")             True if bytes are identical to string
-MIMETEST([string],
+MIMEIDENTIFY([string],
 [application/x-foo  string(5,FOO)
 ],
 [one],[-seek 5 -string FOO],[application/x-foo],
@@ -128,28 +140,28 @@ MIMETEST([string],
 
 #   istring(offset,"string")            True if bytes are identical to
 #                                       case-insensitive string
-MIMETEST([istring],
+MIMEIDENTIFY([istring],
 [application/x-foo  istring(5,FOO)
 ],
 [one],[-seek 5 -string foO],[application/x-foo],
 [two],[-seek 4 -string FOO],[unknown])
 
 #   char(offset,value)                  True if byte is identical
-MIMETEST([char],
+MIMEIDENTIFY([char],
 [application/x-foo  char(5,15)
 ],
 [one],[-seek 5 -byte 15],[application/x-foo],
 [two],[-seek 5 -byte 1],[unknown])
 
 #   short(offset,value)                 True if 16-bit integer is identical
-MIMETEST([short],
+MIMEIDENTIFY([short],
 [application/x-foo  short(5,1600)
 ],
 [one],[-seek 5 -short 1600],[application/x-foo],
 [two],[-seek 5 -short 1601],[unknown])
 
 #   int(offset,value)                   True if 32-bit integer is identical
-MIMETEST([int],
+MIMEIDENTIFY([int],
 [application/x-foo  int(5,16578)
 ],
 [one],[-seek 5 -int 16578],[application/x-foo],
@@ -159,13 +171,13 @@ MIMETEST([int],
 # FIXME
 
 #   contains(offset,range,"string")     True if the range contains the string
-MIMETEST([contains],
+MIMEIDENTIFY([contains],
 [application/x-foo contains(10,1024,"TESTSTRING")
 ],
 [one],[-seek 512 -string TESTSTRING],[application/x-foo],
 [two],[-seek 512 -string TEST],[unknown])
 
-MIMETEST([argument strings],
+MIMEIDENTIFY([argument strings],
 [application/x-foo string(0,"FOO")
 application/x-bar string(0,'B A R')
 application/x-baz string(0,"B A"Z<1B0103>BAZ)
@@ -176,7 +188,7 @@ application/x-qux string(0,<1B>45" Q "<01>)
 [three],[-string "B AZ" -byte 0x1b -byte 0x01 -byte 0x03 -string BAZ],[application/x-baz],
 [four],[-byte 0x1b -string '45 Q ' -byte 0x01],[application/x-qux])
 
-MIMETEST([logical or],
+MIMEIDENTIFY([logical or],
 [text/x-bar bar baz string(0,bar) printable(3,10)
 ],
 [one.bar],[],[text/x-bar],
@@ -185,16 +197,53 @@ MIMETEST([logical or],
 [bar],[-seek 3 -string teststring],[text/x-bar],
 [baz],[-seek 3 -string test -byte 0 -string tring],[unknown])
 
-MIMETEST([logical and],
+MIMEIDENTIFY([logical and],
 [text/x-foo bar + string(0,bar<10>) + printable(4,10)
 ],
 [one.bar],[-string bar -byte 0x10 -string TESTSTRING],[text/x-foo],
 [one],[-string bar -byte 0x10 -string TESTSTRING],[unknown],
 [two.bar],[-string bar -byte 0x13 -byte 0x10 -string TEST],[unknown])
 
-MIMETEST([grouping],
+MIMEIDENTIFY([grouping],
 [text/x-foo bar (string(0,bar) + printable(4,10))
 ],
 [one.bar],[-string foo],[text/x-foo],
 [two.baz],[-string bar -byte 0x10 -string TESTSTRING],[text/x-foo],
 [three],[-string bar -byte 0x13 -byte 0x10 -string TESTSTRING],[unknown])
+
+MIMETEST([error recovery],
+[text/x-foo bar (string(0,bar) + printable(4,10))
+   string(10,baz)
+application/x-baz
+],
+[1],
+[],
+[mimeview: mime.types:2.1: type/subtype is missing
+mime.types:2.1: started error recovery
+mime.types:3: finished error recovery
+])
+
+MIMETEST([multiple error recovery],
+[text/x-foo bar (string(0,bar) + printable(4,10))
+   string(10,baz)
+application/x-baz	baz
+image/jpeg jpeg jpg jpe string(0,<FFD8FF>) &&\
+           (char(3,0xe0) char(3,0xe1) char(3,0xe2) char(3,0xe3)\
+            char(3,0xe4) char(3,0xe5) char(3,0xe6) char(3,0xe7)
+            char(3,0xe8) char(3,0xe9) char(3,0xea) char(3,0xeb)\
+            char(3,0xec) char(3,0xed) char(3,0xee) char(3,0xef))
+image/tiff                      tiff tif string(0,MM<002A>) string(0,II<2A00>)
+],
+[1],
+[],
+[mimeview: mime.types:2.1: type/subtype is missing
+mime.types:2.1: started error recovery
+mime.types:3: finished error recovery
+mimeview: mime.types:6.63: syntax error
+mime.types:6.63: started error recovery
+mime.types:9: finished error recovery
+])
+
+
+m4_popdef([MIMETEST])
+m4_popdef([MIMEIDENTIFY])
