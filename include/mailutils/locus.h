@@ -65,6 +65,7 @@ void mu_lrange_debug (struct mu_locus_range const *loc,
 
 int mu_linetrack_create (mu_linetrack_t *ret,
 			   char const *file_name, size_t max_lines);
+int mu_linetrack_rebase (mu_linetrack_t trk, struct mu_locus_point const *pt);
 void mu_linetrack_free (mu_linetrack_t trk);
 void mu_linetrack_destroy (mu_linetrack_t *trk);
 void mu_linetrack_advance (mu_linetrack_t trk,

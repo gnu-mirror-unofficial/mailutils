@@ -29,6 +29,7 @@
 #include <mailutils/errno.h>
 #include <mailutils/stdstream.h>
 #include <mailutils/stream.h>
+#include <mailutils/locus.h>
 
 void
 mu_diag_init ()
@@ -68,6 +69,37 @@ mu_diag_at_locus (int level, struct mu_locus const *loc, const char *fmt, ...)
 		      loc->mu_col);
   mu_diag_voutput (level, fmt, ap);
   va_end (ap);
+}
+
+void
+mu_diag_at_locus_range (int level, struct mu_locus_range const *loc,
+			const char *fmt, ...)
+{
+  va_list ap;
+  struct mu_locus_range old = MU_LOCUS_RANGE_INITIALIZER;
+  int restore = 0;
+  
+  if (loc)
+    {
+      if (mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			   MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE, &old) == 0)
+	{
+	  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			     MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, (void*) loc);
+	  restore = 1;
+	}
+    }
+
+  va_start (ap, fmt);
+  mu_diag_voutput (level, fmt, ap);
+  va_end (ap);
+
+  if (restore)
+    {
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &old);
+      mu_locus_range_deinit (&old);
+    }
 }
 
 void

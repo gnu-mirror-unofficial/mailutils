@@ -28,9 +28,27 @@ struct mu_linetrack
 			    cols[head + n] (0 <= n <= tos). */
 };
 
+static inline unsigned *
+cols_ptr (mu_linetrack_t trk, size_t n)
+{
+  return &trk->cols[(trk->head + n) % trk->max_lines];
+}
+ 
+static inline unsigned *
+cols_tos_ptr (mu_linetrack_t trk)
+{
+  return cols_ptr (trk, trk->tos);
+}
+
+static inline unsigned
+cols_peek (mu_linetrack_t trk, size_t n)
+{
+  return *cols_ptr (trk, n);
+}
+
 int
 mu_linetrack_create (mu_linetrack_t *ret,
-		       char const *file_name, size_t max_lines)
+		     char const *file_name, size_t max_lines)
 {
   int rc;
   struct mu_linetrack *trk;
@@ -65,6 +83,20 @@ mu_linetrack_create (mu_linetrack_t *ret,
   return 0;
 }
 
+int
+mu_linetrack_rebase (mu_linetrack_t trk, struct mu_locus_point const *pt)
+{
+  char const *file_name;
+  int rc = mu_ident_ref (pt->mu_file, &file_name);
+  if (rc)
+    return rc;
+  mu_ident_deref (trk->file_name);
+  trk->file_name = file_name;
+  trk->hline = pt->mu_line;
+  *cols_ptr (trk, 0) = pt->mu_col;
+  return 0;
+}
+  
 void
 mu_linetrack_free (mu_linetrack_t trk)
 {
@@ -85,18 +117,6 @@ mu_linetrack_destroy (mu_linetrack_t *trk)
       *trk = NULL;
     }
 }   
-
-static inline unsigned *
-cols_tos_ptr (mu_linetrack_t trk)
-{
-  return &trk->cols[(trk->head + trk->tos) % trk->max_lines];
-}
-
-static inline unsigned
-cols_peek (mu_linetrack_t trk, size_t n)
-{
-  return trk->cols[(trk->head + n) % trk->max_lines];
-}
 
 static inline unsigned *
 push (mu_linetrack_t trk)
