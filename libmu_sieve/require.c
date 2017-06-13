@@ -56,7 +56,7 @@ mu_sieve_require (mu_sieve_machine_t mach, mu_sieve_slice_t list)
 
       if (rc)
 	{
-	  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, _("can't require %s"),
+	  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, _("can't require %s"),
 			    name);
 	  mu_i_sv_error (mach);
 	}

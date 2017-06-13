@@ -34,26 +34,46 @@
 void
 _mu_i_sv_instr_source (mu_sieve_machine_t mach)
 {
-  mach->locus.mu_file = mu_i_sv_id_str (mach, SIEVE_RT_ARG (mach, 0, pc));
-  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS,
-		   &mach->locus);
+  char const *file = mu_i_sv_id_str (mach, SIEVE_RT_ARG (mach, 0, pc));
+  int what = SIEVE_RT_ARG (mach, 1, inum);  
+  mu_locus_point_set_file (what ? &mach->locus.beg : &mach->locus.end, file);
   if (INSTR_DEBUG (mach))
-    mu_i_sv_debug (mach, mach->pc - 1, "SOURCE %s", mach->locus.mu_file);
-  SIEVE_RT_ADJUST (mach, 1);
+    mu_i_sv_debug (mach, mach->pc - 2, "SOURCE %s %d", file, what);
+  SIEVE_RT_ADJUST (mach, 2);
+  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);
 }
 		 
 void
 _mu_i_sv_instr_line (mu_sieve_machine_t mach)
 {
-  mach->locus.mu_line = SIEVE_RT_ARG (mach, 0, line);
-  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS,
-		   &mach->locus);
+  unsigned line = SIEVE_RT_ARG (mach, 0, line);
+  int what = SIEVE_RT_ARG (mach, 1, inum);  
+  if (what == 0)
+    mach->locus.beg.mu_line = line;
+  else
+    mach->locus.end.mu_line = line;
   if (INSTR_DEBUG (mach))
-    mu_i_sv_debug (mach, mach->pc - 1, "LINE %u",
-		   mach->locus.mu_line);
-  SIEVE_RT_ADJUST (mach, 1);
+    mu_i_sv_debug (mach, mach->pc - 1, "LINE %u %d", line, what);
+  SIEVE_RT_ADJUST (mach, 2);
+  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);  
+}
+
+void
+_mu_i_sv_instr_col (mu_sieve_machine_t mach)
+{
+  unsigned col = SIEVE_RT_ARG (mach, 0, line);
+  int what = SIEVE_RT_ARG (mach, 1, inum);  
+  if (what == 0)
+    mach->locus.beg.mu_col = col;
+  else
+    mach->locus.end.mu_col = col;
+  if (INSTR_DEBUG (mach))
+    mu_i_sv_debug (mach, mach->pc - 2, "COLUMN %u %d", col, what);
+  SIEVE_RT_ADJUST (mach, 2);
+  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);  
 }
 		 
 static int
@@ -173,14 +193,9 @@ mu_sieve_get_data (mu_sieve_machine_t mach)
 }
 
 int
-mu_sieve_get_locus (mu_sieve_machine_t mach, struct mu_locus *loc)
+mu_sieve_get_locus (mu_sieve_machine_t mach, struct mu_locus_range *loc)
 {
-  if (mach->locus.mu_file)
-    {
-      *loc = mach->locus;
-      return 0;
-    }
-  return 1;
+  return mu_locus_range_copy (loc, &mach->locus);
 }
 
 mu_mailbox_t

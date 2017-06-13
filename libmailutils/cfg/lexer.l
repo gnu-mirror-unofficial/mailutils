@@ -38,7 +38,10 @@
 #include <mailutils/cfg.h>
 #include <mailutils/list.h>
 #include <mailutils/util.h>
-  
+#include <mailutils/locus.h>
+#include <mailutils/stream.h>
+#include <mailutils/stdstream.h>  
+#include "cfg.h"
 #include "parser.h"
 
 void _mu_line_begin (void);
@@ -66,7 +69,16 @@ static int (*char_to_strip)(char);     /* Strip matching characters of each
 static int isemptystr(int off);
 
 static mu_opool_t pool;
-
+static mu_linetrack_t trk;
+static struct mu_locus_point string_beg;
+#define YY_USER_ACTION							\
+  do									\
+    {									\
+      mu_linetrack_advance (trk, &yylloc, yytext, yyleng);		\
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,			\
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &yylloc);	\
+    }									\
+  while (0); 
 %}
 
 %option nounput
@@ -83,7 +95,7 @@ P [1-9][0-9]*
 "/*"         BEGIN(COMMENT);
 <COMMENT>[^*\n]*        /* eat anything that's not a '*' */
 <COMMENT>"*"+[^*/\n]*   /* eat up '*'s not followed by '/'s */
-<COMMENT>\n             ++mu_cfg_locus.mu_line;
+<COMMENT>\n             ;
 <COMMENT>"*"+"/"        BEGIN (INITIAL);
          /* End-of-line comments */
 #debug=.*\n {
@@ -91,9 +103,9 @@ P [1-9][0-9]*
           mu_cfg_set_debug ();
           mu_cfg_set_lex_debug ();
       }
-#.*\n     { mu_cfg_locus.mu_line++; }
+#.*\n   ;
 #.*     /* end-of-file comment */;
-"//".*\n  { mu_cfg_locus.mu_line++; }
+"//".*\n  ;
 "//".*    /* end-of-file comment */;
         /* Identifiers */
 <INITIAL>{ID}         {
@@ -113,6 +125,7 @@ P [1-9][0-9]*
                         return MU_TOK_QSTRING; }
 \"[^\\"\n]*\\. |
 \"[^\\"\n]*\\\n        { BEGIN (STR);
+                         mu_locus_point_copy (&string_beg, &yylloc.beg);
                         _mu_line_begin ();
 		        _mu_line_add_unescape_last (yytext + 1, yyleng - 1); }
 <STR>[^\\"\n]*\\. |
@@ -121,6 +134,10 @@ P [1-9][0-9]*
                         if (yyleng > 1) 
                           _mu_line_add (yytext, yyleng - 1); 
                         yylval.string = _mu_line_finish ();
+
+			mu_locus_point_copy (&yylloc.beg, &string_beg);
+			mu_locus_point_deinit (&string_beg);
+			
 		        return MU_TOK_QSTRING; }
          /* Multiline strings */
 "<<"(-" "?)?\\?{ID}[ \t]*#.*\n |
@@ -130,8 +147,8 @@ P [1-9][0-9]*
 "<<"(-" "?)?\"{ID}\"[ \t]*"//".*\n |
 "<<"(-" "?)?\"{ID}\"[ \t]*\n {
                         BEGIN (ML);
+			mu_locus_point_copy (&string_beg, &yylloc.beg);
 			multiline_begin (yytext+2);
-			mu_cfg_locus.mu_line++;
 		  }
 <ML>.*\n { char *p = multiline_strip_tabs (yytext);
 	   
@@ -142,21 +159,21 @@ P [1-9][0-9]*
 	       multiline_delimiter = NULL;
 	       BEGIN (INITIAL);
 	       yylval.string = multiline_finish ();
+
+	       mu_locus_point_copy (&yylloc.beg, &string_beg);
+	       mu_locus_point_deinit (&string_beg);
+	       /* FIXME: Adjust yylloc.end without retreating trk */
 	       return MU_TOK_MSTRING;
 	     }
-           mu_cfg_locus.mu_line++;
 	   multiline_add (p); } 
 {WS}     ;
          /* Other tokens */
-\n       { mu_cfg_locus.mu_line++; } 
+\n       ; 
 [,;{}()] return yytext[0];
 .        { if (mu_isprint (yytext[0]))
-              mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
-                                _("stray character %c"), yytext[0]);
+              mu_error (_("stray character %c"), yytext[0]);
            else 
-              mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
-                                _("stray character \\%03o"),
-				  (unsigned char) yytext[0]);
+              mu_error (_("stray character \\%03o"), (unsigned char) yytext[0]);
            mu_cfg_error_count++;  
          }
 %%
@@ -175,8 +192,7 @@ unescape_to_line (int c)
       char t = mu_wordsplit_c_unquote_char (c);
       if (t == c && t != '\\' && t != '\"')
         {
-          mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus, 
-	                    _("unknown escape sequence '\\%c'"), c);
+          mu_error (_("unknown escape sequence '\\%c'"), c);
           mu_cfg_error_count++;
 	}
       mu_opool_append_char (pool, t);
@@ -365,29 +381,24 @@ mu_cfg_parse_file (mu_cfg_tree_t **return_tree, const char *file, int flags)
 
   mu_cfg_set_lex_debug ();
 
-  /* Initialize locus: */
-  /* 1. Save file name in the lexer object pool and point `file' member
-     to this copy. Free full_name: it is not used after that. */
-  _mu_line_begin ();
-  _mu_line_add (full_name, strlen (full_name));
-  mu_cfg_locus.mu_file = _mu_line_finish ();
-  free (full_name); 
-  /* 2. Initialize line number */
-  mu_cfg_locus.mu_line = 1;
-  
+  /* Initialize tracker */
+  mu_linetrack_create (&trk, full_name, 2);
+  memset (&string_beg, 0, sizeof string_beg);
   /* Parse configuration */
   yyrestart (fp);
   rc = mu_cfg_parse (return_tree);
   fclose (fp);
   if (flags & MU_CF_VERBOSE)
-    mu_diag_output (MU_DIAG_INFO, _("finished parsing file `%s'"),
-		    mu_cfg_locus.mu_file);
-
+    mu_diag_output (MU_DIAG_INFO, _("finished parsing file `%s'"), full_name);
+  free (full_name); 
+  mu_linetrack_destroy (&trk);
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, NULL);
   return rc == 0 ? 0 : MU_ERR_FAILURE;
 }
 
 mu_opool_t 
-mu_cfg_lexer_pool ()
+mu_cfg_lexer_pool (void)
 {
   mu_opool_t p = pool;
   pool = NULL;

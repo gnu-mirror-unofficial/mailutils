@@ -23,6 +23,7 @@
 #include <stdarg.h>
 #include <mailutils/mailutils.h>
 #include <mailutils/cli.h>
+#include <mailutils/locus.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -287,7 +288,7 @@ int mu_sieve_set_dry_run (mu_sieve_machine_t mach, int val);
 void mu_sieve_get_argc (mu_sieve_machine_t mach, size_t *args, size_t *tags);
 
 mu_mailer_t mu_sieve_get_mailer (mu_sieve_machine_t mach);
-int mu_sieve_get_locus (mu_sieve_machine_t mach, struct mu_locus *);
+int mu_sieve_get_locus (mu_sieve_machine_t mach, struct mu_locus_range *);
 char *mu_sieve_get_daemon_email (mu_sieve_machine_t mach);
 const char *mu_sieve_get_identifier (mu_sieve_machine_t mach);
 
@@ -324,7 +325,7 @@ const char *mu_sieve_type_str (mu_sieve_data_type type);
 int mu_sieve_compile (mu_sieve_machine_t mach, const char *name);
 int mu_sieve_compile_buffer (mu_sieve_machine_t mach,
 			     const char *buf, int bufsize,
-			     const char *fname, int line);
+			     struct mu_locus_point const *pt);
 int mu_sieve_mailbox (mu_sieve_machine_t mach, mu_mailbox_t mbox);
 int mu_sieve_message (mu_sieve_machine_t mach, mu_message_t message);
 int mu_sieve_disass (mu_sieve_machine_t mach);

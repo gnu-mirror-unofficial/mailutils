@@ -260,15 +260,17 @@ input_getline (struct iobuf *inp)
       inp->length = mu_rtrim_class (inp->buffer, MU_CTYPE_ENDLN);
       if (inp->buffer[0] == '#' && !is_dbm_directive (inp))
 	{
-	  struct mu_locus loc;
+	  struct mu_locus_range loc;
 	  mu_stream_ioctl (mu_strerr,
-			   MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_GET_LOCUS,
+			   MU_IOCTL_LOGSTREAM,
+			   MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE,
 			   &loc);
-	  loc.mu_line = strtoul (inp->buffer + 1, NULL, 10);
+	  loc.beg.mu_line = strtoul (inp->buffer + 1, NULL, 10);
 	  mu_stream_ioctl (mu_strerr,
-			   MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_LOCUS,
+			   MU_IOCTL_LOGSTREAM,
+			   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE,
 			   &loc);
-	  free (loc.mu_file);
+	  mu_locus_range_deinit (&loc);
 	  continue;
 	}
       break;
@@ -1322,7 +1324,8 @@ add_records (int mode, int replace)
   const char *flt_argv[] = { "inline-comment", "#", "-S", "-i", "#", NULL };
   int rc;
   int save_log_mode = 0, log_mode;
-  struct mu_locus save_locus = { NULL, }, locus;
+  struct mu_locus_range save_locus = MU_LOCUS_RANGE_INITIALIZER,
+                        locus = MU_LOCUS_RANGE_INITIALIZER;
   struct mu_dbm_datum key, contents;
   struct iobuf input;
   struct mu_wordsplit ws;
@@ -1364,18 +1367,21 @@ add_records (int mode, int replace)
 
   /* Configure error stream to output input file location before each error
      message */
-  locus.mu_file = input_file ? input_file : "<stdin>";
-  locus.mu_line = 0;
-  locus.mu_col = 0;
+  locus.beg.mu_file = input_file ? input_file : "<stdin>";
+  locus.beg.mu_line = 0;
+  locus.beg.mu_col = 0;
+  memset (&locus.end, 0, sizeof locus.end);
   
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_GET_MODE,
 		   &save_log_mode);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_GET_LOCUS,
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE,
 		   &save_locus);
   log_mode = save_log_mode | MU_LOGMODE_LOCUS;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_MODE,
 		   &log_mode);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_LOCUS,
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE,
 		   &locus);
 
   /* Initialize I/O data */
@@ -1443,7 +1449,8 @@ add_records (int mode, int replace)
   
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_MODE,
 		   &save_log_mode);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_LOCUS,
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE,
 		   &save_locus);
   
   if (known_meta_data)

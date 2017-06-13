@@ -152,10 +152,10 @@ format_node (const mu_cfg_node_t *node, void *data)
 {
   struct tree_print *tp = data;
 
-  if ((tp->flags & MU_CF_FMT_LOCUS) && node->locus.mu_file)
+  if ((tp->flags & MU_CF_FMT_LOCUS) && node->locus.beg.mu_file)
     mu_stream_printf (tp->stream, "# %lu \"%s\"\n",
-		      (unsigned long) node->locus.mu_line, 
-		      node->locus.mu_file);
+		      (unsigned long) node->locus.beg.mu_line, 
+		      node->locus.beg.mu_file);
   format_level (tp->stream, tp->level);
   switch (node->type)
     {

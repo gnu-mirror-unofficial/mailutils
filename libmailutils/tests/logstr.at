@@ -34,46 +34,43 @@ emerg: and this one as well
 one
 two
 emerg: three
-05. set/get locus point
-input:1: filename and line number
-input:1.3: filename, line and column numbers
-06. locus: file, line
+05. locus: file, line
 input:1: file, line
-07. locus: file, line, col
+06. locus: file, line, col
 input:1.1-10: file, line, col
-08. locus: file, line-range
+07. locus: file, line-range
 input:1-2: file, line-range
-09. locus: file, line-range, col
+08. locus: file, line-range, col
 input:1.1-2.10: file, line-range, col
-10. locus: file-range, line-range, col-range
+09. locus: file-range, line-range, col-range
 input:1.1-next:2.10: file-range, line-range, col-range
-11. set locus line
+10. set locus line
 input:1.1-next:2.10: initial
 input:8.1-next:2.10: locus line changed
-12. advance locus line
+11. advance locus line
 input:1.1-next:5.10: initial
 input:3.1-next:5.10: locus line advanced
-13. set locus column
+12. set locus column
 input:1.1-next:2.10: initial
 input:1.8-next:2.10: locus column changed
-14. advance locus column
+13. advance locus column
 input:1.1-next:5.10: initial
 input:1.5-next:5.10: locus line advanced
-15. fmt: severity
+14. fmt: severity
 info: severity
-16. fmt: locus (file, line)
+15. fmt: locus (file, line)
 a:10: one
-17. fmt: locus (file, line, column)
+16. fmt: locus (file, line, column)
 a:10.5: one
-18. fmt: locus (range)
+17. fmt: locus (range)
 a:10.5-b:14.8: one
-19. fmt: locus; restore defaults
+18. fmt: locus; restore defaults
 a:10.5-b:14.8: one
 default
-20. fmt: locus; restore defaults, display locus
+19. fmt: locus; restore defaults, display locus
 a:10.5-b:14.8: one
 input:1.1-next:5.10: default
-21. fmt: set locus
+20. fmt: set locus
 a:10.5-b:14.8: one
 a:10.5-b:14.8: default
 ])

@@ -205,12 +205,6 @@ mu_sieve_error (mu_sieve_machine_t mach, const char *fmt, ...)
   
   va_start (ap, fmt);
   mu_stream_printf (mach->errstream, "\033s<%d>", MU_LOG_ERROR);
-  if (mach->locus.mu_file)
-    mu_stream_printf (mach->errstream, "\033O<%d>\033f<%u>%s\033l<%u>",
-		      MU_LOGMODE_LOCUS,
-		      (unsigned) strlen (mach->locus.mu_file),
-		      mach->locus.mu_file,
-		      mach->locus.mu_line);
   if (mach->identifier)
     mu_stream_printf (mach->errstream, "%s: ", mach->identifier);
   mu_stream_vprintf (mach->errstream, fmt, ap);
@@ -253,11 +247,11 @@ mu_i_sv_debug (mu_sieve_machine_t mach, size_t pc, const char *fmt, ...)
       unsigned severity = MU_LOG_DEBUG;
       mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
 		       MU_IOCTL_LOGSTREAM_SET_SEVERITY, &severity);
-      if (mach->locus.mu_file)
+      if (mach->locus.beg.mu_file)
 	{
 	  int mode = mach->dbg_mode | MU_LOGMODE_LOCUS;
 	  mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
-			   MU_IOCTL_LOGSTREAM_SET_LOCUS, &mach->locus);
+			   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);
 	  mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
 			   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
 	}
@@ -281,11 +275,11 @@ mu_i_sv_debug_command (mu_sieve_machine_t mach,
       unsigned severity = MU_LOG_DEBUG;
       mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
 		       MU_IOCTL_LOGSTREAM_SET_SEVERITY, &severity);
-      if (mach->locus.mu_file)
+      if (mach->locus.beg.mu_file)
 	{
 	  int mode = mach->dbg_mode | MU_LOGMODE_LOCUS;
 	  mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
-			   MU_IOCTL_LOGSTREAM_SET_LOCUS, &mach->locus);
+			   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);
 	  mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
 			   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
 	}
@@ -309,12 +303,6 @@ mu_i_sv_trace (mu_sieve_machine_t mach, const char *what)
     return;
   
   mu_stream_printf (mach->errstream, "\033s<%d>", MU_LOG_DEBUG);
-  if (mach->locus.mu_file)
-    mu_stream_printf (mach->errstream, "\033O<%d>\033f<%u>%s\033l<%u>",
-		      MU_LOGMODE_LOCUS,
-		      (unsigned) strlen (mach->locus.mu_file),
-		      mach->locus.mu_file,
-		      mach->locus.mu_line);
   mu_stream_printf (mach->errstream, "%zu: %s %s", mach->msgno, what,
 		    mach->identifier);
   for (i = 0; i < mach->argcount; i++)
@@ -333,8 +321,6 @@ mu_sieve_log_action (mu_sieve_machine_t mach, const char *action,
   if (!mach->logger)
     return;
   
-  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, &mach->locus);
   va_start (ap, fmt);
   mach->logger (mach, action, fmt, ap);
   va_end (ap);
@@ -479,13 +465,15 @@ mu_sieve_stream_save (mu_sieve_machine_t mach)
   if (mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
 		       MU_IOCTL_LOGSTREAM_GET_MODE, &mach->err_mode) == 0
       && mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
-			  MU_IOCTL_LOGSTREAM_GET_LOCUS, &mach->err_locus) == 0)
+			  MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE,
+			  &mach->err_locus) == 0)
       mach->state_flags |= MU_SV_SAVED_ERR_STATE;
 
   if (mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
 		       MU_IOCTL_LOGSTREAM_GET_MODE, &mach->dbg_mode) == 0
       && mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
-			  MU_IOCTL_LOGSTREAM_GET_LOCUS, &mach->dbg_locus) == 0)
+			  MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE,
+			  &mach->dbg_locus) == 0)
     mach->state_flags |= MU_SV_SAVED_DBG_STATE;
   
   mach->state_flags |= MU_SV_SAVED_STATE;
@@ -502,7 +490,7 @@ mu_sieve_stream_restore (mu_sieve_machine_t mach)
       mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
 		       MU_IOCTL_LOGSTREAM_SET_MODE, &mach->err_mode);
       mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
-		       MU_IOCTL_LOGSTREAM_SET_LOCUS, &mach->err_locus);
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->err_locus);
     }
   
   if (mach->dbgstream != mach->errstream
@@ -511,7 +499,7 @@ mu_sieve_stream_restore (mu_sieve_machine_t mach)
       mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
 		       MU_IOCTL_LOGSTREAM_SET_MODE, &mach->dbg_mode);
       mu_stream_ioctl (mach->dbgstream, MU_IOCTL_LOGSTREAM,
-		       MU_IOCTL_LOGSTREAM_SET_LOCUS, &mach->dbg_locus);
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->dbg_locus);
     }
   
   mach->state_flags = 0;

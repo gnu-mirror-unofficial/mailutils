@@ -23,6 +23,7 @@
 #include <mailutils/debug.h>
 #include <mailutils/opool.h>
 #include <mailutils/util.h>
+#include <mailutils/locus.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -64,7 +65,7 @@ enum mu_cfg_node_type
 
 struct mu_cfg_node
 {
-  struct mu_locus locus;
+  struct mu_locus_range locus;
   enum mu_cfg_node_type type;
   char *tag;
   mu_config_value_t *label;
@@ -118,8 +119,6 @@ int mu_cfg_parse (mu_cfg_tree_t **ptree);
 int mu_cfg_tree_union (mu_cfg_tree_t **pa, mu_cfg_tree_t **pb);
 int mu_cfg_tree_postprocess (mu_cfg_tree_t *tree,
 			     struct mu_cfg_parse_hints *hints);
-
-extern struct mu_locus mu_cfg_locus;
 
 mu_opool_t mu_cfg_lexer_pool (void);
 
@@ -285,7 +284,7 @@ int mu_cfg_parse_file (mu_cfg_tree_t **return_tree, const char *file,
 int mu_cfg_tree_create (struct mu_cfg_tree **ptree);
 mu_cfg_node_t *mu_cfg_tree_create_node (struct mu_cfg_tree *tree,
 					enum mu_cfg_node_type type,
-					const struct mu_locus *loc,
+					const struct mu_locus_range *loc,
 					const char *tag,
 					const char *label,
 					mu_list_t nodelist);

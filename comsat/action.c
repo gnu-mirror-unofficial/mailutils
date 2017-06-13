@@ -298,7 +298,7 @@ struct biffrc_environ
   mu_stream_t logstr;
   mu_message_t msg;
   mu_stream_t input;
-  struct mu_locus locus;
+  struct mu_locus_range locus;
   int use_default;
   char *errbuf;
   size_t errsize;
@@ -523,16 +523,16 @@ eval_biffrc (struct biffrc_environ *env)
   ws.ws_comment = "#";
   wsflags = MU_WRDSF_DEFFLAGS | MU_WRDSF_COMMENT;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, &env->locus);
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &env->locus);
   mu_stream_ioctl (env->logstr, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, &env->locus);
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &env->locus);
   while (mu_stream_getline (env->input, &stmt, &size, &n) == 0 && n > 0)
     {
       if (strncmp (stmt, "#line ", 6) == 0)
 	{
 	  char *p;
 	  
-	  env->locus.mu_line = strtoul (stmt + 6, &p, 10);
+	  env->locus.beg.mu_line = strtoul (stmt + 6, &p, 10);
 	  if (*p != '\n')
 	    {
 	      report_error (env, _("malformed #line directive: %s"));
@@ -541,10 +541,10 @@ eval_biffrc (struct biffrc_environ *env)
 	    {
 	      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
 			       MU_IOCTL_LOGSTREAM_SET_LOCUS_LINE,
-			       &env->locus.mu_line);
+			       &env->locus.beg.mu_line);
 	      mu_stream_ioctl (env->logstr, MU_IOCTL_LOGSTREAM,
 			       MU_IOCTL_LOGSTREAM_SET_LOCUS_LINE,
-			       &env->locus.mu_line);
+			       &env->locus.beg.mu_line);
 	    }
 	  continue;
 	}
@@ -600,9 +600,9 @@ eval_biffrc (struct biffrc_environ *env)
   free (stmt);
   mu_wordsplit_free (&ws);
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, NULL);
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, NULL);
   mu_stream_ioctl (env->logstr, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, NULL);
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, NULL);
 }
 
 void
@@ -645,13 +645,14 @@ run_user_action (const char *device, mu_message_t msg)
       if (!rcname)
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_make_file_name", NULL, ENOMEM);
-	  env.locus.mu_file = BIFF_RC;
+	  env.locus.beg.mu_file = BIFF_RC;
 	}
       else
-	env.locus.mu_file = rcname;
+	env.locus.beg.mu_file = rcname;
       
-      env.locus.mu_line = 1;
-      env.locus.mu_col = 0;
+      env.locus.beg.mu_line = 1;
+      env.locus.beg.mu_col = 0;
+      memset (&env.locus.end, 0, sizeof env.locus.end);
       env.use_default = 0;
       eval_biffrc (&env);
       mu_stream_destroy (&env.input);
@@ -679,9 +680,9 @@ run_user_action (const char *device, mu_message_t msg)
 	}
       else
 	{
-	  env.locus.mu_file = "<default>";
-	  env.locus.mu_line = 1;
-	  env.locus.mu_col = 0;
+	  env.locus.beg.mu_file = "<default>";
+	  env.locus.beg.mu_line = 1;
+	  env.locus.beg.mu_col = 0;
 	  eval_biffrc (&env);
 	  mu_stream_destroy (&env.input);
 	}

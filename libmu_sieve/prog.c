@@ -35,32 +35,48 @@ mu_i_sv_code (struct mu_sieve_machine *mach, sieve_op_t op)
   mach->prog[mach->pc++] = op;
 }
 
-static int
-file_eq (char const *a, char const *b)
-{
-  if (a)
-    return b ? (strcmp (a, b) == 0) : 1;
-  return b ? 0 : 1;
-}
-      
-/* FIXME: 1. Only beg is stored
-          2. mu_col is not used
- */
 int
 mu_i_sv_locus (struct mu_sieve_machine *mach, struct mu_locus_range *lr)
 {
-  if (!file_eq (mach->locus.mu_file, lr->beg.mu_file))
+  if (!mu_locus_point_same_file (&mach->locus.beg, &lr->beg))
     {
       mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_source);
       mu_i_sv_code (mach, (sieve_op_t) mu_i_sv_id_num (mach, lr->beg.mu_file));
+      mu_i_sv_code (mach, (sieve_op_t) (int) 0);
     }
-  if (mach->locus.mu_line != lr->beg.mu_line)
+  if (mach->locus.beg.mu_line != lr->beg.mu_line)
     {
       mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_line);
       mu_i_sv_code (mach, (sieve_op_t) lr->beg.mu_line);
+      mu_i_sv_code (mach, (sieve_op_t) (int) 0);
+    }
+  if (mach->locus.beg.mu_col != lr->beg.mu_col)
+    {
+      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_col);
+      mu_i_sv_code (mach, (sieve_op_t) lr->beg.mu_col);
+      mu_i_sv_code (mach, (sieve_op_t) (int) 0);
     }
 
-  mach->locus = lr->beg;
+  if (!mu_locus_point_same_file (&mach->locus.end, &lr->end))
+    {
+      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_source);
+      mu_i_sv_code (mach, (sieve_op_t) mu_i_sv_id_num (mach, lr->end.mu_file));
+      mu_i_sv_code (mach, (sieve_op_t) (int) 1);
+    }
+  if (mach->locus.end.mu_line != lr->end.mu_line)
+    {
+      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_line);
+      mu_i_sv_code (mach, (sieve_op_t) lr->end.mu_line);
+      mu_i_sv_code (mach, (sieve_op_t) (int) 1);
+    }
+  if (mach->locus.end.mu_col != lr->end.mu_col)
+    {
+      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_col);
+      mu_i_sv_code (mach, (sieve_op_t) lr->end.mu_col);
+      mu_i_sv_code (mach, (sieve_op_t) (int) 1);
+    }
+
+  mu_locus_range_copy (&mach->locus, lr);
   return 0;
 }
 
@@ -155,7 +171,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 	      
 	  if (!tag)
 	    {
-	      mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				_("invalid tag name `%s' for `%s'"),
 				val->v.string, reg->name);
 	      mu_i_sv_error (mach);
@@ -175,7 +191,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 	    {
 	      if (i + 1 == node->v.command.argcount)
 		{
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("required argument for tag %s is missing"),
 				    tag->name);
 		  mu_i_sv_error (mach);
@@ -192,11 +208,11 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 	      
 	      if (val->type != tag->argtype)
 		{
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("type mismatch in argument to "
 				      "tag `%s'"),
 				    tag->name);
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("expected %s but passed %s"),
 				    mu_sieve_type_str (tag->argtype),
 				    mu_sieve_type_str (val->type));
@@ -210,7 +226,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 	    {
 	      if (!chk_list && (rc = mu_list_create (&chk_list)))
 		{
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("cannot create check list: %s"),
 				    mu_strerror (rc));
 		  mu_i_sv_error (mach);
@@ -222,7 +238,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 		  rc = mu_list_append (chk_list, cf);
 		  if (rc)
 		    {
-		      mu_diag_at_locus (MU_LOG_ERROR, &mach->locus,
+		      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus,
 					"mu_list_append: %s",
 					mu_strerror (rc));
 		      mu_i_sv_error (mach);
@@ -243,7 +259,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 		}
 	      else
 		{
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("too many arguments in call to `%s'"),
 				    reg->name);
 		  mu_i_sv_error (mach);
@@ -258,11 +274,11 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 		/* compatible types */;
 	      else
 		{
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("type mismatch in argument %lu to `%s'"),
 				    (unsigned long) (exp_arg - reg->v.command.req_args + 1),
 				    reg->name);
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("expected %s but passed %s"),
 				    mu_sieve_type_str (*exp_arg),
 				    mu_sieve_type_str (val->type));
@@ -277,7 +293,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 
   if (!err && !opt_args && *exp_arg != SVT_VOID)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 			_("too few arguments in call to `%s'"),
 			reg->name);
       mu_i_sv_error (mach);

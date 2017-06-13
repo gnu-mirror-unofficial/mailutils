@@ -149,13 +149,6 @@ typedef unsigned int mu_debug_level_t;
 
 #define MU_DEFAULT_RECORD _MU_DEFAULT_RECORD_
 
-struct mu_locus
-{
-  char *mu_file;
-  unsigned mu_line;
-  unsigned mu_col;
-};
-  
 #ifdef __cplusplus
 }
 #endif

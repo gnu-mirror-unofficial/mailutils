@@ -103,7 +103,7 @@ moderator_filter_message (mu_sieve_machine_t mach,
     }
   else if (mu_sieve_get_tag (mach, "program", SVT_STRING, &arg))
     {
-      struct mu_locus locus;
+      struct mu_locus_range locrange;
       
       rc = mu_sieve_machine_clone (mach, &newmach);
       if (rc)
@@ -112,10 +112,10 @@ moderator_filter_message (mu_sieve_machine_t mach,
 			  mu_strerror (rc));
 	  return 1;
 	}
-      mu_sieve_get_locus (mach, &locus);
+      mu_sieve_get_locus (mach, &locrange);
       rc = mu_sieve_compile_buffer (newmach,
 				    arg, strlen (arg),
-				    locus.mu_file, locus.mu_line);
+				    &locrange.beg);
       if (rc)
 	mu_sieve_error (mach, _("cannot compile subprogram"));
     }

@@ -480,48 +480,6 @@ _log_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	    }
 	  break;
 	  
-	case MU_IOCTL_LOGSTREAM_GET_LOCUS:
-	  if (!arg)
-	    return EINVAL;
-	  else
-	    {
-	      struct mu_locus *ploc = arg;
-	      if (sp->locrange.beg.mu_file)
-		{
-		  ploc->mu_file = strdup (sp->locrange.beg.mu_file);
-		  if (!ploc->mu_file)
-		    return ENOMEM;
-		}
-	      else
-		ploc->mu_file = NULL;
-	      ploc->mu_line = sp->locrange.beg.mu_line;
-	      ploc->mu_col = sp->locrange.beg.mu_col;
-	    }
-	  break;
-	
-	case MU_IOCTL_LOGSTREAM_SET_LOCUS:
-	  {
-	    struct mu_locus *ploc = arg;
-
-	    mu_ident_deref (sp->locrange.end.mu_file);
-	    sp->locrange.end.mu_file = NULL;
-	    if (arg)
-	      {
-		status = lr_set_file (&sp->locrange, ploc->mu_file, 0, 0);
-		if (status)
-		  return status;
-		lr_set_line (&sp->locrange, ploc->mu_line, 0);
-		lr_set_col (&sp->locrange, ploc->mu_col, 0);
-	      }
-	    else
-	      {
-		mu_ident_deref (sp->locrange.beg.mu_file);
-		sp->locrange.beg.mu_file = NULL;
-	      }
-	    
-	    break;
-	  }
-
 	case MU_IOCTL_LOGSTREAM_SET_LOCUS_LINE:
 	  if (!arg)
 	    return EINVAL;

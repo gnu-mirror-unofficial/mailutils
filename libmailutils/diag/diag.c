@@ -57,25 +57,9 @@ mu_diag_output (int level, const char *fmt, ...)
 }
 
 void
-mu_diag_at_locus (int level, struct mu_locus const *loc, const char *fmt, ...)
+mu_vdiag_at_locus_range (int level, struct mu_locus_range const *loc,
+			 const char *fmt, va_list ap)
 {
-  va_list ap;
-
-  va_start (ap, fmt);
-  if (loc && loc->mu_file)
-    mu_stream_printf (mu_strerr, "\033f<%d>%s\033l<%u>\033c<%u>",
-		      (unsigned) strlen (loc->mu_file), loc->mu_file,
-		      loc->mu_line,
-		      loc->mu_col);
-  mu_diag_voutput (level, fmt, ap);
-  va_end (ap);
-}
-
-void
-mu_diag_at_locus_range (int level, struct mu_locus_range const *loc,
-			const char *fmt, ...)
-{
-  va_list ap;
   struct mu_locus_range old = MU_LOCUS_RANGE_INITIALIZER;
   int restore = 0;
   
@@ -90,9 +74,7 @@ mu_diag_at_locus_range (int level, struct mu_locus_range const *loc,
 	}
     }
 
-  va_start (ap, fmt);
   mu_diag_voutput (level, fmt, ap);
-  va_end (ap);
 
   if (restore)
     {
@@ -100,6 +82,28 @@ mu_diag_at_locus_range (int level, struct mu_locus_range const *loc,
 		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &old);
       mu_locus_range_deinit (&old);
     }
+}
+
+void
+mu_diag_at_locus_range (int level, struct mu_locus_range const *loc,
+			const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  mu_vdiag_at_locus_range (level, loc, fmt, ap);
+  va_end (ap);
+}
+
+void
+mu_diag_at_locus_point (int level, struct mu_locus_point const *loc,
+			const char *fmt, ...)
+{
+  va_list ap;
+  struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
+  lr.beg = *loc;
+  va_start (ap, fmt);
+  mu_vdiag_at_locus_range (level, &lr, fmt, ap);
+  va_end (ap);
 }
 
 void

@@ -106,11 +106,9 @@ enum mu_buffer_type
     */
 #define MU_IOCTL_LOGSTREAM_GET_SEVERITY 0
 #define MU_IOCTL_LOGSTREAM_SET_SEVERITY 1
-  /* Get or set locus.
-     Arg: struct mu_locus *
-  */
-#define MU_IOCTL_LOGSTREAM_GET_LOCUS    2
-#define MU_IOCTL_LOGSTREAM_SET_LOCUS    3
+  
+  /* Codes 2 and 3 are reserved */
+  
   /* Get or set log mode.
      Arg: int *
   */

@@ -174,7 +174,7 @@ mu_sieve_match_part_checker (mu_sieve_machine_t mach)
 	{
 	  if (match)
 	    {
-	      mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				_("match type specified twice in call to `%s'"),
 				mach->identifier);
 	      mu_i_sv_error (mach);
@@ -209,7 +209,7 @@ mu_sieve_match_part_checker (mu_sieve_machine_t mach)
 	  
 	  if (compname && strcmp (compname, "i;ascii-numeric"))
 	    {
-	      mu_diag_at_locus (MU_LOG_ERROR, &mach->locus,
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus,
 				/* TRANSLATORS: Do not translate ':count'.
 				   It is the name of a Sieve tag */
 				_("comparator %s is incompatible with "
@@ -235,7 +235,7 @@ mu_sieve_match_part_checker (mu_sieve_machine_t mach)
 		break;
 	      /* fall through */
 	    default:
-	      mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				_(":count requires second argument to be a list of one element"));
 	      mu_i_sv_error (mach);
 	      return 1;
@@ -246,7 +246,7 @@ mu_sieve_match_part_checker (mu_sieve_machine_t mach)
 	      char *p = mu_str_skip_class (argstr->orig, MU_CTYPE_DIGIT);
 	      if (*p)
 		{
-		  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("second argument cannot be converted to number"));
 		  mu_i_sv_error (mach);
 		  return 1;
@@ -258,7 +258,7 @@ mu_sieve_match_part_checker (mu_sieve_machine_t mach)
 
       if (mu_sieve_str_to_relcmp (str, NULL, NULL))
 	{
-	  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+	  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 			    _("invalid relational match `%s' in call to `%s'"),
 			    str, mach->identifier);
 	  mu_i_sv_error (mach);
@@ -278,7 +278,7 @@ mu_sieve_match_part_checker (mu_sieve_machine_t mach)
       compfun = mu_sieve_comparator_lookup (mach, compname, matchtype);
       if (!compfun)
 	{
-	  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus, 
+	  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 			    _("comparator `%s' is incompatible with match type `%s' in call to `%s'"),
 			    compname, match ? match->tag : "is",
 			    mach->identifier);

@@ -218,7 +218,7 @@ mu_i_sv_2nrealloc (mu_sieve_machine_t mach, void **pptr, size_t *pnmemb,
 	 worth the trouble.  */
       if ((size_t) -1 / 3 * 2 / size <= nmemb)
 	{
-	  mu_diag_at_locus (MU_LOG_ERROR, &mach->locus,
+	  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus,
 			    _("requested too much memory %zu * %zu"),
 			    nmemb, size);
 	  mu_sieve_abort (mach);
@@ -232,19 +232,19 @@ mu_i_sv_2nrealloc (mu_sieve_machine_t mach, void **pptr, size_t *pnmemb,
   *pnmemb = nmemb;
 }
 
-char *
-mu_i_sv_id_canon (mu_sieve_machine_t mach, char const *name)
+size_t
+mu_i_sv_id_num (mu_sieve_machine_t mach, char const *name)
 {
   size_t i;
   char *p;
   
   if (!name)
-    return NULL;
+    abort ();
   
   for (i = 0; i < mach->idcount; i++)
     {
       if (strcmp (mach->idspace[i], name) == 0)
-	return mach->idspace[i];
+	return i;
     }
 
   if (mach->idcount == mach->idmax)
@@ -256,24 +256,11 @@ mu_i_sv_id_canon (mu_sieve_machine_t mach, char const *name)
     }
 
   p = mu_sieve_strdup (mach, name);
-  mach->idspace[mach->idcount++] = p;
+  mach->idspace[mach->idcount] = p;
 
-  return p;
+  return mach->idcount++;
 }
  
-size_t
-mu_i_sv_id_num (mu_sieve_machine_t mach, char const *name)
-{
-  size_t i;
-
-  for (i = 0; i < mach->idcount; i++)
-    {
-      if (mach->idspace[i] == name || strcmp (mach->idspace[i], name) == 0)
-	return i;
-    }
-  abort ();
-}
-
 char *
 mu_i_sv_id_str (mu_sieve_machine_t mach, size_t n)
 {

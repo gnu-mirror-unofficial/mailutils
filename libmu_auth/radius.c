@@ -84,7 +84,8 @@ enum parse_state
     state_lhs,
     state_op,
     state_rhs,
-    state_delim
+    state_delim,
+    state_err
   };
 
 static int
@@ -96,7 +97,7 @@ cb_request (void *data, mu_config_value_t *val)
   enum parse_state state;
   grad_locus_t loc;
   char *name;
-  struct mu_locus locus;
+  struct mu_locus_range locus;
   
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
@@ -111,11 +112,11 @@ cb_request (void *data, mu_config_value_t *val)
     }
 
   if (mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
-		       MU_IOCTL_LOGSTREAM_GET_LOCUS,
+		       MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE,
 		       &locus) == 0)
     {
-      loc.file = locus.mu_file;
-      loc.line = locus.mu_line;
+      loc.file = (char*) locus.beg.mu_file;
+      loc.line = locus.beg.mu_line;
     }
   else
     {
@@ -123,7 +124,7 @@ cb_request (void *data, mu_config_value_t *val)
       loc.line = 0;
     }
 
-  for (i = 0, state = state_lhs; i < ws.ws_wordc; i++)
+  for (i = 0, state = state_lhs; state != state_err && i < ws.ws_wordc; i++)
     {
       grad_avp_t *pair;
 
@@ -146,23 +147,36 @@ cb_request (void *data, mu_config_value_t *val)
 	  if (!pair)
 	    {
 	      mu_error (_("cannot create radius A/V pair `%s'"), name);
-	      return 1;
+	      state = state_err;
 	    }
-	  grad_avl_merge (plist, &pair);
-	  state = state_delim;
+	  else
+	    {
+	      grad_avl_merge (plist, &pair);
+	      state = state_delim;
+	    }
 	  break;
 
 	case state_delim:
 	  if (strcmp (ws.ws_wordv[i], ","))
 	    {
 	      mu_error (_("expected `,' but found `%s'"), ws.ws_wordv[i]);
-	      return 1;
+	      state = state_err;
 	    }
-	  state = state_lhs;
+	  else
+	    state = state_lhs;
+	  break;
+
+	default:
+	  abort ();
 	}
     }
-  mu_wordsplit_free (&ws);
   
+  mu_wordsplit_free (&ws);
+  mu_locus_range_deinit (&locus);
+
+  if (state == state_err)
+    return 1;
+
   if (state != state_delim && state != state_delim)
     {
       mu_error (_("malformed radius A/V list"));

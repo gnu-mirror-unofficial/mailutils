@@ -54,10 +54,8 @@ static void sieve_searchpath (void);
 static char *str_unescape (char *text, size_t len);
 static int isemptystr (char *text);
 
+static mu_linetrack_t trk;
 static ino_t sieve_source_inode;
-struct mu_locus mu_sieve_locus;
-static int newline;
-
 static mu_stream_t input_stream;
  
 static int
@@ -71,8 +69,10 @@ fillbuf (char *buf, size_t max_size)
   rc = mu_stream_read (input_stream, buf, max_size, &max_size);
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read",
-		       mu_sieve_locus.mu_file, rc);
+      struct mu_locus_point pt;
+      mu_linetrack_locus (trk, &pt);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", pt.mu_file, rc);
+      mu_locus_point_deinit (&pt);
       return 0;
     }
   return max_size;
@@ -90,40 +90,33 @@ fillbuf (char *buf, size_t max_size)
         yy_switch_to_buffer (s); \
 } while (0)
 
+#define YY_USER_ACTION							\
+  do									\
+    {									\
+      mu_linetrack_advance (trk, &yylloc, yytext, yyleng);		\
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,			\
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &yylloc);	\
+    }									\
+  while (0);
+
+ 
 static void
 init_locus (char const *name, ino_t ino)
 {
-  mu_sieve_locus.mu_file = mu_i_sv_id_canon (mu_sieve_machine, name);
-  mu_sieve_locus.mu_line = 1;
-  mu_sieve_locus.mu_col = 0;
-  newline = 0;
-  sieve_source_inode = ino;
-}
- 
-static void
-advance_locus (void)
-{
-  if (newline)
+  if (name)
     {
-      mu_sieve_locus.mu_line++;
-      mu_sieve_locus.mu_col = 0;
-      yylloc.beg = yylloc.end = mu_sieve_locus;                        
+      MU_ASSERT (mu_linetrack_create (&trk, name, 2));
     }
   else
-    {
-      mu_sieve_locus.mu_col += yyleng;
-      yylloc.beg = yylloc.end = mu_sieve_locus;                        
-      yylloc.beg.mu_col -= yyleng;                             
-    }
-  newline = yytext[yyleng-1] == '\n';
+    mu_linetrack_destroy (&trk);
+  sieve_source_inode = ino;
 }
- 
-#define YY_USER_ACTION advance_locus ();
    
 struct buffer_ctx
 {
   struct buffer_ctx *prev;
-  struct mu_locus locus;
+  mu_linetrack_t trk;
+  struct mu_locus_range incl_range;
   ino_t i_node;
   mu_stream_t input;
   LEX_BUFFER_STATE state;
@@ -156,13 +149,12 @@ push_source (const char *name)
         
   if (stat (name, &st))
     {
-      mu_diag_at_locus (MU_LOG_ERROR, &mu_sieve_locus,
-			_("cannot stat `%s': %s"), name, strerror (errno));
+      mu_error (_("cannot stat `%s': %s"), name, strerror (errno));
       mu_i_sv_error (mu_sieve_machine);
       return 1;
     }
 
-  if (mu_sieve_locus.mu_file && st.st_ino == sieve_source_inode)
+  if (yylloc.beg.mu_file && st.st_ino == sieve_source_inode)
     {
       yyerror (_("recursive inclusion"));
       return 1;
@@ -172,16 +164,14 @@ push_source (const char *name)
       yyerror (_("recursive inclusion"));
       if (ctx->prev)
 	{
-	  mu_diag_at_locus (MU_LOG_ERROR, &ctx->prev->locus,
-			    _("`%s' already included here"),
-			    name);
+	  mu_diag_at_locus_range (MU_LOG_ERROR, &ctx->incl_range,
+				  _("`%s' already included here"),
+				  name);
 	  mu_i_sv_error (mu_sieve_machine);
 	}
       else
 	{
-	  mu_diag_at_locus (MU_LOG_ERROR, &mu_sieve_locus,
-			    _("`%s' already included at top level"),
-			    name);
+	  mu_error (_("`%s' already included at top level"), name);
 	  mu_i_sv_error (mu_sieve_machine);
 	}	  
       return 1;
@@ -190,19 +180,16 @@ push_source (const char *name)
   rc = mu_file_stream_create (&stream, name, MU_STREAM_READ);
   if (rc)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, &mu_sieve_locus,
-			_("cannot open file `%s': %s"),
-			name, mu_strerror (rc));
+      mu_error (_("cannot open file `%s': %s"), name, mu_strerror (rc));
       mu_i_sv_error (mu_sieve_machine);
       return 1;
     }
 
   /* Push current context */
-  if (mu_sieve_locus.mu_file)
+  if (trk)
     {
-      advance_locus ();
-      ctx = mu_sieve_malloc (mu_sieve_machine, sizeof (*ctx));
-      ctx->locus = mu_sieve_locus;
+      ctx->trk = trk;
+      mu_locus_range_copy (&ctx->incl_range, &yylloc);
       ctx->i_node = sieve_source_inode;
       ctx->input = input_stream;
       ctx->prev = context_stack;
@@ -233,7 +220,9 @@ pop_source ()
     }
   /* Restore previous context */
   input_stream = context_stack->input;
-  mu_sieve_locus = context_stack->locus;
+  mu_linetrack_destroy (&trk);
+  trk = context_stack->trk;
+  mu_locus_range_deinit (&context_stack->incl_range);
   sieve_source_inode = context_stack->i_node;
   RESTORE_BUFFER_STATE (context_stack->state);
   ctx = context_stack->prev;
@@ -449,12 +438,10 @@ mu_i_sv_lex_begin (const char *name)
 
 int
 mu_i_sv_lex_begin_string (const char *buf, int bufsize,
-			  const char *fname, int line)
+			  struct mu_locus_point const *pt)
 {
   int rc;
   
-  if (!fname)
-    return 1;
   yyrestart (NULL);
 
   rc = mu_static_memory_stream_create (&input_stream, buf, bufsize);
@@ -465,7 +452,8 @@ mu_i_sv_lex_begin_string (const char *buf, int bufsize,
       return 1;
     }
 
-  init_locus (fname, 0);
+  init_locus (pt->mu_file, 0);
+  mu_linetrack_rebase (trk, pt);
 
   return 0;
 }
@@ -643,9 +631,7 @@ line_finish (void)
 	}
       else if (rc != MU_ERR_CANCELED)
 	{
-	  mu_diag_at_locus (MU_LOG_ERROR, &mu_sieve_locus,
-			    _("error expandind string: %s"),
-			    mu_strerror (rc));
+	  mu_error (_("error expandind string: %s"), mu_strerror (rc));
 	}
     }
   yylval.string = str;

@@ -40,10 +40,10 @@
 #include <mailutils/stream.h>
 #include <mailutils/stdstream.h>
 #include <mailutils/cidr.h>
+#include "cfg.h"
 
 int mu_cfg_parser_verbose;
 static mu_list_t /* of mu_cfg_node_t */ parse_node_list; 
-struct mu_locus mu_cfg_locus;
 size_t mu_cfg_error_count;
 
 static int _mu_cfg_errcnt;
@@ -57,7 +57,7 @@ char *_mu_line_finish (void);
 static int
 yyerror (char *s)
 {
-  mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus, "%s", s);
+  mu_error ("%s", s);
   mu_cfg_error_count++;
   return 0;
 }
@@ -85,7 +85,7 @@ _node_set_parent (void *item, void *data)
 }
 
 static mu_cfg_node_t *
-mu_cfg_alloc_node (enum mu_cfg_node_type type, struct mu_locus *loc,
+mu_cfg_alloc_node (enum mu_cfg_node_type type, struct mu_locus_range *loc,
 		   const char *tag, mu_config_value_t *label,
 		   mu_list_t nodelist)
 {
@@ -94,7 +94,7 @@ mu_cfg_alloc_node (enum mu_cfg_node_type type, struct mu_locus *loc,
   size_t size = sizeof *np + strlen (tag) + 1;
   np = mu_alloc (size);
   np->type = type;
-  np->locus = *loc;
+  mu_locus_range_copy (&np->locus, loc);
   p = (char*) (np + 1);
   np->tag = p;
   strcpy (p, tag);
@@ -121,17 +121,15 @@ debug_print_node (mu_cfg_node_t *node)
       if (node->type == mu_cfg_node_undefined)
 	{
 	  /* Stay on the safe side */
-	  mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
-			    _("unknown statement type!"));
+	  mu_error (_("unknown statement type!"));
 	  mu_cfg_error_count++;
 	}
       else
 	{
 	  /* FIXME: How to print label? */
-	  mu_diag_at_locus (MU_LOG_DEBUG, &node->locus,
-			    "statement: %s, id: %s",
-			    node_type_str (node->type),
-			    node->tag ? node->tag : "(null)");
+	  mu_error ("statement: %s, id: %s",
+		    node_type_str (node->type),
+		    node->tag ? node->tag : "(null)");
 	}
     }
 }
@@ -170,6 +168,9 @@ mu_cfg_create_node_list (mu_list_t *plist)
 
 %}
 
+%locations
+%expect 1
+
 %union {
   mu_cfg_node_t node;
   mu_cfg_node_t *pnode;
@@ -177,7 +178,6 @@ mu_cfg_create_node_list (mu_list_t *plist)
   char *string;
   mu_config_value_t value, *pvalue;
   mu_list_t list;
-  struct { const char *name; struct mu_locus locus; } ident;
 }
 
 %token <string> MU_TOK_IDENT MU_TOK_STRING MU_TOK_QSTRING MU_TOK_MSTRING
@@ -186,7 +186,7 @@ mu_cfg_create_node_list (mu_list_t *plist)
 %type <value> value
 %type <pvalue> tag vallist
 %type <list> values list vlist
-%type <ident> ident
+%type <string> ident
 %type <nodelist> stmtlist
 %type <pnode> stmt simple block
 
@@ -217,32 +217,32 @@ stmt    : simple
 
 simple  : ident vallist ';'
 	  {
-	    $$ = mu_cfg_alloc_node (mu_cfg_node_param, &$1.locus,
-				    $1.name, $2,
-				    NULL);
+	    struct mu_locus_range lr;
+	    lr.beg = @1.beg;
+	    lr.end = @3.end;
+	    $$ = mu_cfg_alloc_node (mu_cfg_node_param, &lr, $1, $2, NULL);
 	  }
 	;
 
 block   : ident tag '{' '}' opt_sc
 	  {
-	    $$ = mu_cfg_alloc_node (mu_cfg_node_statement, &$1.locus,
-				    $1.name, $2,
-				    NULL);
+	    struct mu_locus_range lr;
+	    lr.beg = @1.beg;
+	    lr.end = @5.end;
+	    $$ = mu_cfg_alloc_node (mu_cfg_node_statement, &lr, $1, $2, NULL);
 	  }
 	| ident tag '{' stmtlist '}' opt_sc
 	  {
-	    $$ = mu_cfg_alloc_node (mu_cfg_node_statement, &$1.locus,
-				    $1.name, $2, $4);
+	    struct mu_locus_range lr;
+	    lr.beg = @1.beg;
+	    lr.end = @6.end;
+	    $$ = mu_cfg_alloc_node (mu_cfg_node_statement, &lr, $1, $2, $4);
 	    mu_list_foreach ($4, _node_set_parent, $$);
 	  }
 	;
 
 ident   : MU_TOK_IDENT
-	  {
-	    $$.name = $1;
-	    $$.locus = mu_cfg_locus;
-	  }
-	;
+        ;
 
 tag     : /* empty */
 	  {
@@ -270,8 +270,7 @@ vallist : vlist
 		val.v.arg.v = mu_alloc (n * sizeof (val.v.arg.v[0]));
 		if (!val.v.arg.v)
 		  {
-		    mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
-				      _("not enough memory"));
+		    mu_error (_("not enough memory"));
 		    abort();
 		  }
 
@@ -292,9 +291,7 @@ vlist   : value
 	    int rc = mu_list_create (&$$);
 	    if (rc)
 	      {
-		mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
-				  _("cannot create list: %s"),
-				  mu_strerror (rc));
+		mu_error (_("cannot create list: %s"), mu_strerror (rc));
 		abort ();
 	      }
 	    mu_list_append ($$, config_value_dup (&$1)); /* FIXME */
@@ -401,14 +398,15 @@ mu_cfg_parse (mu_cfg_tree_t **ptree)
   mu_cfg_tree_t *tree;
   mu_opool_t pool;
   int save_mode = 0, mode;
-  struct mu_locus save_locus = { NULL, };
+  struct mu_locus_range save_locus = MU_LOCUS_RANGE_INITIALIZER;
 
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_GET_MODE, 
                    &save_mode);
   mode = save_mode | MU_LOGMODE_LOCUS;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_MODE,
                    &mode);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_GET_LOCUS,
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE,
                    &save_locus);
   
   mu_cfg_set_debug ();
@@ -432,9 +430,10 @@ mu_cfg_parse (mu_cfg_tree_t **ptree)
 
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_MODE,
                    &save_mode);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, MU_IOCTL_LOGSTREAM_SET_LOCUS,
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE,
                    &save_locus);
-  free (save_locus.mu_file);
+  mu_locus_range_deinit (&save_locus); /* FIXME: refcount? */
 
   return rc;
 }
@@ -480,7 +479,7 @@ mu_cfg_tree_union (mu_cfg_tree_t **pa, mu_cfg_tree_t **pb)
 
 static mu_cfg_tree_t *
 do_include (const char *name, struct mu_cfg_parse_hints *hints,
-	    struct mu_locus *loc)
+	    struct mu_locus_range const *loc)
 {
   struct stat sb;
   char *tmpname = NULL;
@@ -520,15 +519,15 @@ do_include (const char *name, struct mu_cfg_parse_hints *hints,
     }
   else if (errno == ENOENT)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, loc,
-			_("include file or directory does not exist"));
+      mu_diag_at_locus_range (MU_LOG_ERROR, loc,
+			      _("include file or directory does not exist"));
       mu_cfg_error_count++;
     }		   
   else
     {
-      mu_diag_at_locus (MU_LOG_ERROR, loc,
-			_("cannot stat include file or directory: %s"),
-			mu_strerror (errno));
+      mu_diag_at_locus_range (MU_LOG_ERROR, loc,
+			      _("cannot stat include file or directory: %s"),
+			      mu_strerror (errno));
       mu_cfg_error_count++;
     }		   
   
@@ -576,7 +575,7 @@ mu_cfg_tree_postprocess (mu_cfg_tree_t *tree, struct mu_cfg_parse_hints *hints)
 		}
 	      else
 		{
-		  mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &node->locus,
 				    _("argument to `program' is not a string"));
 		  mu_cfg_error_count++;
 		  mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
@@ -602,7 +601,7 @@ mu_cfg_tree_postprocess (mu_cfg_tree_t *tree, struct mu_cfg_parse_hints *hints)
 	    }
 	  else
 	    {
-	      mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &node->locus,
 				_("argument to `include' is not a string"));
 	      mu_cfg_error_count++;
 	    }
@@ -760,8 +759,7 @@ push_section (struct scan_tree_data *dat, struct mu_cfg_section *sec)
   struct mu_cfg_section_list *p = mu_alloc (sizeof *p);
   if (!p)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, &mu_cfg_locus,
-			_("not enough memory"));
+      mu_error (_("not enough memory"));
       mu_cfg_error_count++;
       return 1;
     }
@@ -782,7 +780,7 @@ pop_section (struct scan_tree_data *dat)
 }
 
 static int
-valcvt (const struct mu_locus *locus,
+valcvt (const struct mu_locus_range *locus,
 	void *tgt, mu_c_type_t type, mu_config_value_t *val)
 {
   int rc;
@@ -790,7 +788,7 @@ valcvt (const struct mu_locus *locus,
   
   if (val->type != MU_CFG_STRING)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, locus, _("expected string value"));
+      mu_diag_at_locus_range (MU_LOG_ERROR, locus, _("expected string value"));
       mu_cfg_error_count++;
       return 1;
     }
@@ -798,8 +796,8 @@ valcvt (const struct mu_locus *locus,
   rc = mu_str_to_c (val->v.string, type, tgt, &errmsg);
   if (rc)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, locus, "%s",
-			errmsg ? errmsg : mu_strerror (rc));
+      mu_diag_at_locus_range (MU_LOG_ERROR, locus, "%s",
+			      errmsg ? errmsg : mu_strerror (rc));
       free (errmsg);
     }
   return rc;
@@ -810,7 +808,7 @@ struct set_closure
   mu_list_t list;
   int type;
   struct scan_tree_data *sdata;
-  const struct mu_locus *locus;
+  const struct mu_locus_range *locus;
 };
 
 static size_t config_type_size[] = {
@@ -840,7 +838,7 @@ _set_fun (void *item, void *data)
   if ((size_t) clos->type >= MU_ARRAY_SIZE(config_type_size)
       || (size = config_type_size[clos->type]) == 0)
     {
-      mu_diag_at_locus (MU_LOG_EMERG, clos->locus,
+      mu_diag_at_locus_range (MU_LOG_EMERG, clos->locus,
 			_("INTERNAL ERROR at %s:%d: unhandled data type %d"),
 			__FILE__, __LINE__, clos->type);
       mu_cfg_error_count++;
@@ -850,7 +848,8 @@ _set_fun (void *item, void *data)
   tgt = mu_alloc (size);
   if (!tgt)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, clos->locus, _("not enough memory"));
+      mu_diag_at_locus_range (MU_LOG_ERROR, clos->locus,
+			      _("not enough memory"));
       mu_cfg_error_count++;
       return 1;
     }
@@ -870,9 +869,9 @@ parse_param (struct scan_tree_data *sdata, const mu_cfg_node_t *node)
   
   if (!param)
     {
-      mu_diag_at_locus (MU_LOG_ERROR, &node->locus,
-			_("unknown keyword `%s'"),
-			node->tag);
+      mu_diag_at_locus_range (MU_LOG_ERROR, &node->locus,
+			      _("unknown keyword `%s'"),
+			      node->tag);
       mu_cfg_error_count++;
       return 1;
     }
@@ -887,7 +886,7 @@ parse_param (struct scan_tree_data *sdata, const mu_cfg_node_t *node)
     tgt = NULL;
   else
     {
-      mu_diag_at_locus (MU_LOG_EMERG, &node->locus,
+      mu_diag_at_locus_range (MU_LOG_EMERG, &node->locus,
 			_("INTERNAL ERROR: cannot determine target offset for "
 			  "%s"), param->ident);
       abort ();
@@ -915,7 +914,7 @@ parse_param (struct scan_tree_data *sdata, const mu_cfg_node_t *node)
 	  break;
 	  
 	case MU_CFG_ARRAY:
-	  mu_diag_at_locus (MU_LOG_ERROR, &node->locus,
+	  mu_diag_at_locus_range (MU_LOG_ERROR, &node->locus,
 			    _("expected list, but found array"));
 	  mu_cfg_error_count++;
 	  return 1;
@@ -929,13 +928,13 @@ parse_param (struct scan_tree_data *sdata, const mu_cfg_node_t *node)
     {
       if (!param->callback)
 	{
-	  mu_diag_at_locus (MU_LOG_EMERG, &node->locus,
+	  mu_diag_at_locus_range (MU_LOG_EMERG, &node->locus,
 			    _("INTERNAL ERROR: %s: callback not defined"),
 			    node->tag);
 	  abort ();
 	}
       mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
-		       MU_IOCTL_LOGSTREAM_SET_LOCUS,
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE,
 		       (void*) &node->locus);
       if (param->callback (tgt, node->label))
 	return 1;
@@ -964,9 +963,9 @@ _scan_tree_helper (const mu_cfg_node_t *node, void *data)
 	{
 	  if (mu_cfg_parser_verbose)
 	    {
-	      mu_diag_at_locus (MU_LOG_WARNING, &node->locus,
-				_("unknown section `%s'"),
-				node->tag);
+	      mu_diag_at_locus_range (MU_LOG_WARNING, &node->locus,
+				      _("unknown section `%s'"),
+				      node->tag);
 	    }
 	  return MU_CFG_ITER_SKIP;
 	}
@@ -983,7 +982,7 @@ _scan_tree_helper (const mu_cfg_node_t *node, void *data)
       if (sec->parser)
 	{
 	  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
-			   MU_IOCTL_LOGSTREAM_SET_LOCUS,
+			   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE,
 			   (void*) &node->locus);
 	  if (sec->parser (mu_cfg_section_start, node,
 			   sec->label, &sec->target,
@@ -1041,7 +1040,7 @@ mu_cfg_scan_tree (mu_cfg_tree_t *tree, struct mu_cfg_section *sections,
   struct scan_tree_data dat;
   struct mu_cfg_iter_closure clos;
   int save_mode = 0, mode;
-  struct mu_locus save_locus = { NULL, };
+  struct mu_locus_range save_locus = MU_LOCUS_RANGE_INITIALIZER;
   int rc;
   
   dat.tree = tree;
@@ -1056,7 +1055,7 @@ mu_cfg_scan_tree (mu_cfg_tree_t *tree, struct mu_cfg_section *sections,
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
-		   MU_IOCTL_LOGSTREAM_GET_LOCUS, &save_locus);
+		   MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE, &save_locus);
 
   if (push_section (&dat, sections))
     return 1;
@@ -1070,8 +1069,7 @@ mu_cfg_scan_tree (mu_cfg_tree_t *tree, struct mu_cfg_section *sections,
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &save_mode);
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM, 
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, &save_locus);
-  free (save_locus.mu_file);
+		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &save_locus);
   
   return dat.error;
 }
@@ -1124,7 +1122,7 @@ mu_cfg_tree_create (struct mu_cfg_tree **ptree)
 mu_cfg_node_t *
 mu_cfg_tree_create_node (struct mu_cfg_tree *tree,
 			 enum mu_cfg_node_type type,
-			 const struct mu_locus *loc,
+			 const struct mu_locus_range *loc,
 			 const char *tag, const char *label,
 			 mu_list_t nodelist)
 {
@@ -1136,7 +1134,7 @@ mu_cfg_tree_create_node (struct mu_cfg_tree *tree,
   np = mu_alloc (size);
   np->type = type;
   if (loc)
-    np->locus = *loc;
+    mu_locus_range_copy (&np->locus, loc);
   else
     memset (&np->locus, 0, sizeof np->locus);
   p = (char*) (np + 1);
@@ -1478,11 +1476,7 @@ mu_cfg_create_subtree (const char *path, mu_cfg_node_t **pnode)
   char **argv;
   enum mu_cfg_node_type type;
   mu_cfg_node_t *node = NULL;
-  struct mu_locus locus;
-  
-  locus.mu_file = "<int>";
-  locus.mu_line = 0;
-  locus.mu_col = 0;
+  struct mu_locus_range locus = MU_LOCUS_RANGE_INITIALIZER;
   
   rc = split_cfg_path (path, &argc, &argv);
   if (rc)

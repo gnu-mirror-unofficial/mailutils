@@ -26,7 +26,7 @@ static char logger_args_doc[] = N_("[TEXT]");
 static char *input_file = NULL;
 static int logger_type = MU_STRERR_STDERR;
 static int log_severity = MU_LOG_ERROR;
-static struct mu_locus locus;
+static struct mu_locus_range locus;
 static int syslog_facility = LOG_USER;
 static int syslog_priority = LOG_ERR;
 static char *syslog_tag = NULL;
@@ -83,32 +83,67 @@ set_severity (struct mu_parseopt *po, struct mu_option *opt,
 }
 
 static void
+parse_locus_point (char **ptr, struct mu_locus_point *pt,
+		   struct mu_parseopt *po)
+{
+  char *str = *ptr;
+  char *s;
+
+  s = strchr (str, ':');
+  if (s)
+    {
+      char *end;
+      *s++ = 0;
+      if (*str)
+	mu_locus_point_init (pt, str);
+      pt->mu_line = strtoul (s, &end, 10);
+      if (end == s)
+	{
+	  mu_parseopt_error (po, _("bad line number: %s"), s);
+	  exit (po->po_exit_error);
+	}
+      s = end;
+      if (*s == '.' || *s == ':')
+	{
+	  s++;
+	  pt->mu_col = strtoul (s, &end, 10);
+	  if (end == s)
+	    {
+	      mu_parseopt_error (po, _("bad column number: %s"), s);
+	      exit (po->po_exit_error);
+	    }
+	  s = end;
+	}
+    }
+  else
+    {
+      mu_parseopt_error (po, _("missing line number after %s"), s);
+      exit (po->po_exit_error);
+    }
+  *ptr = s;
+}
+
+static void
 set_locus (struct mu_parseopt *po, struct mu_option *opt,
 	   char const *arg)
 {
   char *s;
+  char *tmp;
   
-  locus.mu_file = mu_strdup (arg);
-  s = strchr (arg, ':');
-  if (s)
+  tmp = mu_strdup (arg);
+  s = tmp;
+  parse_locus_point (&s, &locus.beg, po);
+  if (*s == '-')
     {
-      *s++ = 0;
-      locus.mu_line = strtoul (s, &s, 10);
-      if (*s == ':')
-	{
-	  locus.mu_col = strtoul (s + 1, &s, 10);
-	  if (*s)
-	    {
-	      mu_parseopt_error (po, _("bad column number: %s"), arg);
-	      exit (po->po_exit_error);
-	    }
-	}
-      else if (*s)
-	{
-	  mu_parseopt_error (po, _("bad line number: %s"), arg);
-	  exit (po->po_exit_error);
-	}
+      mu_locus_point_init (&locus.end, locus.beg.mu_file);
+      locus.end.mu_line = locus.beg.mu_line;
+      locus.end.mu_col = locus.end.mu_col;
+      s++;
+      parse_locus_point (&s, &locus.end, po);
     }
+  
+  if (*s)
+    mu_parseopt_error (po, _("locus format error near %s"), s);
 }
 
 static struct mu_option logger_options[] = {
@@ -127,7 +162,7 @@ static struct mu_option logger_options[] = {
   { "severity", 's', N_("SEV"), MU_OPTION_DEFAULT,
     N_("log at Mailutils severity level SEV"),
     mu_c_string, NULL, set_severity },
-  { "locus", 'l', N_("FILE:LINE[:COL]"), MU_OPTION_DEFAULT,
+  { "locus", 'l', N_("FILE:LINE[.COL][-FILE:LINE[.COL]]"), MU_OPTION_DEFAULT,
     N_("set locus for logging"),
     mu_c_string, NULL, set_locus },
   { "tag", 't', N_("TAG"), MU_OPTION_DEFAULT,
@@ -166,9 +201,9 @@ main (int argc, char **argv)
   mode = MU_LOGMODE_SEVERITY | MU_LOGMODE_LOCUS;
   mu_stream_ioctl (logger, MU_IOCTL_LOGSTREAM,
                    MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
-  if (locus.mu_file)
+  if (locus.beg.mu_file)
     mu_stream_ioctl (logger, MU_IOCTL_LOGSTREAM,
-                     MU_IOCTL_LOGSTREAM_SET_LOCUS, &locus);
+                     MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &locus);
   mu_stream_ioctl (logger, MU_IOCTL_LOGSTREAM,
                    MU_IOCTL_LOGSTREAM_SET_SEVERITY, &log_severity);
   

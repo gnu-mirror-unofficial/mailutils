@@ -495,8 +495,13 @@ main (int argc, char *argv[])
     mu_sieve_set_logger (mach, _sieve_action_log);
 
   if (expression_option)
-    rc = mu_sieve_compile_buffer (mach, script, strlen (script),
-				  "stdin", 1);
+    {
+      struct mu_locus_point pt;
+      pt.mu_file = "stdin";
+      pt.mu_line = 1;
+      pt.mu_col = 0;
+      rc = mu_sieve_compile_buffer (mach, script, strlen (script), &pt);
+    }
   else
     rc = mu_sieve_compile (mach, script);
   if (rc)

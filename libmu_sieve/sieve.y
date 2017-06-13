@@ -36,44 +36,6 @@ static struct mu_sieve_node *node_alloc (enum mu_sieve_node_type,
 static void node_list_add (struct mu_sieve_node_list *list,
 			   struct mu_sieve_node *node);
 
- 
-#define YYLLOC_DEFAULT(Current, Rhs, N)                         \
-  do								\
-    {								\
-      if (N)							\
-	{							\
-	  (Current).beg = YYRHSLOC(Rhs, 1).beg;			\
-	  (Current).end = YYRHSLOC(Rhs, N).end;			\
-	}							\
-      else							\
-	{							\
-	  (Current).beg = YYRHSLOC(Rhs, 0).end;			\
-	  (Current).end = (Current).beg;			\
-	}							\
-    } while (0)
-
-#define LOCUS_EQ(a,b) \
-  ((((a)->mu_file == (b)->mu_file)                                      \
-          || ((a)->mu_file && (b)->mu_file				\
-	      && strcmp((a)->mu_file, (b)->mu_file) == 0))		\
-   && (a)->mu_line == (b)->mu_line)
-	 
-#define YY_LOCATION_PRINT(File, Loc)				    \
-  do								    \
-    {								    \
-      if (LOCUS_EQ(&(Loc).beg, &(Loc).end))			    \
-	fprintf(File, "%s:%u.%u-%u.%u",				    \
-		(Loc).beg.mu_file,				    \
-		(Loc).beg.mu_line, (Loc).beg.mu_col,		    \
-		(Loc).end.mu_line, (Loc).end.mu_col);		    \
-      else							    \
-	fprintf(File, "%s:%u.%u-%s:%u.%u",			    \
-		(Loc).beg.mu_file,				    \
-		(Loc).beg.mu_line, (Loc).beg.mu_col,		    \
-		(Loc).end.mu_file,				    \
-		(Loc).end.mu_line, (Loc).end.mu_col);		    \
-    }								    \
-  while (0)
 %}
 
 %error-verbose
@@ -87,6 +49,7 @@ static void node_list_add (struct mu_sieve_node_list *list,
   struct
   {
     char *ident;
+    struct mu_locus_range idloc;
     size_t first;
     size_t count;
   } command;
@@ -242,21 +205,21 @@ test         : command
                {
 		 mu_sieve_registry_t *reg;
 
-		 mu_sieve_machine->locus = @1.beg;
+		 mu_locus_range_copy (&mu_sieve_machine->locus, &@1);
 		 reg = mu_sieve_registry_lookup (mu_sieve_machine, $1.ident,
 						 mu_sieve_record_test);
 		 if (!reg)
 		   {
-		     mu_diag_at_locus (MU_LOG_ERROR, &@1.beg,
-				       _("unknown test: %s"),
-				       $1.ident);
+		     mu_diag_at_locus_range (MU_LOG_ERROR, &$1.idloc,
+					     _("unknown test: %s"),
+					     $1.ident);
 		     mu_i_sv_error (mu_sieve_machine);
 		   }
 		 else if (!reg->required)
 		   {
-		     mu_diag_at_locus (MU_LOG_ERROR, &@1.beg,
-				       _("test `%s' has not been required"),
-				       $1.ident);
+		     mu_diag_at_locus_range (MU_LOG_ERROR, &$1.idloc,
+					     _("test `%s' has not been required"),
+					     $1.ident);
 		     mu_i_sv_error (mu_sieve_machine);
 		   }
 		 
@@ -281,6 +244,7 @@ test         : command
 command      : IDENT maybe_arglist
                {
 		 $$.ident = $1;
+		 $$.idloc = @1;
 		 $$.first = $2.first;
 		 $$.count = $2.count;
 	       }
@@ -290,22 +254,22 @@ action       : command
                {
 		 mu_sieve_registry_t *reg;
 
-		 mu_sieve_machine->locus = @1.beg;
+		 mu_locus_range_copy (&mu_sieve_machine->locus, &@1);
 		 reg = mu_sieve_registry_lookup (mu_sieve_machine, $1.ident,
 						 mu_sieve_record_action);
 		 
 		 if (!reg)
 		   {
-		     mu_diag_at_locus (MU_LOG_ERROR, &@1.beg,
-				       _("unknown action: %s"),
-				       $1.ident);
+		     mu_diag_at_locus_range (MU_LOG_ERROR, &$1.idloc,
+					     _("unknown action: %s"),
+					     $1.ident);
 		     mu_i_sv_error (mu_sieve_machine);
 		   }
 		 else if (!reg->required)
 		   {
-		     mu_diag_at_locus (MU_LOG_ERROR, &@1.beg,
-				       _("action `%s' has not been required"),
-				       $1.ident);
+		     mu_diag_at_locus_range (MU_LOG_ERROR, &$1.idloc,
+					     _("action `%s' has not been required"),
+					     $1.ident);
 		     mu_i_sv_error (mu_sieve_machine);
 		   }
 		 
@@ -393,10 +357,7 @@ slist        : STRING
 int
 yyerror (const char *s)
 {
-  extern struct mu_locus mu_sieve_locus;
-
-  mu_sieve_machine->locus = mu_sieve_locus;
-  mu_diag_at_locus (MU_LOG_ERROR, &mu_sieve_locus, "%s", s);
+  mu_error ("%s", s);
   mu_i_sv_error (mu_sieve_machine);
   return 0;
 }
@@ -423,7 +384,7 @@ node_alloc (enum mu_sieve_node_type type, struct mu_locus_range *lr)
     {
       node->prev = node->next = NULL;
       node->type = type;
-      node->locus = *lr;
+      mu_locus_range_copy (&node->locus, lr);
     }
   return node;
 }
@@ -1104,15 +1065,9 @@ copy_stream_state (mu_sieve_machine_t child, mu_sieve_machine_t parent)
 {
   child->state_flags = parent->state_flags;
   child->err_mode    = parent->err_mode;
-  child->err_locus   = parent->err_locus;
-  if (child->err_locus.mu_file)
-    child->err_locus.mu_file =
-      mu_sieve_strdup (child, child->err_locus.mu_file);
+  mu_locus_range_copy (&child->err_locus, &parent->err_locus);
   child->dbg_mode    = parent->dbg_mode;
-  child->dbg_locus   = parent->dbg_locus;  
-  if (child->dbg_locus.mu_file)
-    child->dbg_locus.mu_file =
-      mu_sieve_strdup (child, child->dbg_locus.mu_file);
+  mu_locus_range_copy (&child->dbg_locus, &parent->dbg_locus);
   child->errstream = parent->errstream;
   mu_stream_ref (child->errstream);
   child->dbgstream = parent->dbgstream;
@@ -1266,9 +1221,9 @@ mu_sieve_machine_dup (mu_sieve_machine_t const in, mu_sieve_machine_t *out)
       
       mach->state_flags = in->state_flags;
       mach->err_mode    = in->err_mode;
-      mach->err_locus   = in->err_locus;
+      mu_locus_range_copy (&mach->err_locus, &in->err_locus);
       mach->dbg_mode    = in->dbg_mode;
-      mach->dbg_locus   = in->dbg_locus;  
+      mu_locus_range_copy (&mach->dbg_locus, &in->dbg_locus);  
       
       copy_stream_state (mach, in);
   
@@ -1456,8 +1411,7 @@ mu_sieve_machine_destroy (mu_sieve_machine_t *pmach)
 }
 
 int
-with_machine (mu_sieve_machine_t mach, char const *name,
-	      int (*thunk) (void *), void *data)
+with_machine (mu_sieve_machine_t mach, int (*thunk) (void *), void *data)
 {
   int rc = 0;
   mu_stream_t save_errstr;
@@ -1523,11 +1477,21 @@ static int
 sieve_parse (void)
 {
   int rc;
+  int old_mode, mode;
 
   sieve_tree = NULL;
   yydebug = mu_debug_level_p (mu_sieve_debug_handle, MU_DEBUG_TRACE3);
 
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_GET_MODE, &old_mode);
+  mode = old_mode | MU_LOGMODE_LOCUS;
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+
   rc = yyparse ();
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_MODE, &old_mode);
+  
   mu_i_sv_lex_finish ();
   if (rc)
     mu_i_sv_error (mu_sieve_machine);
@@ -1547,9 +1511,8 @@ sieve_parse (void)
       mu_i_sv_code (mu_sieve_machine, (sieve_op_t) (sieve_instr_t) 0);
 
       /* Clear location, so that mu_i_sv_locus will do its job. */
-      mu_sieve_machine->locus.mu_file = NULL;
-      mu_sieve_machine->locus.mu_line = 0;
-      mu_sieve_machine->locus.mu_col = 0;
+      /* FIXME: is it still needed? */
+      mu_locus_range_deinit (&mu_sieve_machine->locus);
       
       tree_code (mu_sieve_machine, sieve_tree);
       mu_i_sv_code (mu_sieve_machine, (sieve_op_t) (sieve_instr_t) 0);
@@ -1581,22 +1544,21 @@ sieve_compile_file (void *name)
 int
 mu_sieve_compile (mu_sieve_machine_t mach, const char *name)
 {
-  return with_machine (mach, name, sieve_compile_file, (void *) name);
+  return with_machine (mach, sieve_compile_file, (void *) name);
 }
 
 struct strbuf
 {
   const char *ptr;
   size_t size;
-  const char *file;
-  int line;
+  struct mu_locus_point const *pt;
 };
 
 static int
 sieve_compile_strbuf (void *name)
 {
   struct strbuf *buf = name;
-  if (mu_i_sv_lex_begin_string (buf->ptr, buf->size, buf->file, buf->line) == 0)
+  if (mu_i_sv_lex_begin_string (buf->ptr, buf->size, buf->pt) == 0)
     return sieve_parse ();
   return MU_ERR_FAILURE;
 } 
@@ -1604,14 +1566,13 @@ sieve_compile_strbuf (void *name)
 int
 mu_sieve_compile_buffer (mu_sieve_machine_t mach,
 			 const char *str, int strsize,
-			 const char *fname, int line)
+			 struct mu_locus_point const *loc)
 {
   struct strbuf buf;
   buf.ptr = str;
   buf.size = strsize;
-  buf.file = fname;
-  buf.line = line;
-  return with_machine (mach, fname, sieve_compile_strbuf, &buf);
+  buf.pt = loc;
+  return with_machine (mach, sieve_compile_strbuf, &buf);
 }
 
 

@@ -24,6 +24,7 @@
 #include <mailutils/types.h>
 #include <mailutils/log.h>
 #include <mailutils/debug.h>
+#include <mailutils/locus.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,8 +52,10 @@ void mu_diag_cont_printf (const char *fmt, ...) MU_PRINTFLIKE(1,2);
   
 void mu_diag_voutput (int, const char *, va_list);
 void mu_diag_output (int, const char *, ...) MU_PRINTFLIKE(2,3);
-void mu_diag_at_locus (int level, struct mu_locus const *loc,
-		       const char *fmt, ...);
+void mu_diag_at_locus_point (int level, struct mu_locus_point const *loc,
+			     const char *fmt, ...);
+void mu_diag_at_locus_range (int level, struct mu_locus_range const *loc,
+			     const char *fmt, ...);
 
 int mu_diag_level_to_syslog (int level);
 const char *mu_diag_level_to_string (int level);

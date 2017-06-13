@@ -248,7 +248,7 @@ _file_wicket_get_ticket (mu_wicket_t wicket, void *data,
 }
   
 int
-mu_wicket_stream_match_url (mu_stream_t stream, struct mu_locus *loc,
+mu_wicket_stream_match_url (mu_stream_t stream, struct mu_locus_point *loc,
 			    mu_url_t url, int parse_flags,
 			    mu_url_t *pticket_url)
 {
@@ -329,7 +329,7 @@ mu_wicket_file_match_url (const char *name, mu_url_t url,
 {
   mu_stream_t stream;
   int rc;
-  struct mu_locus loc;
+  struct mu_locus_point loc;
   
   rc = mu_file_stream_create (&stream, name, MU_STREAM_READ);
   if (rc)

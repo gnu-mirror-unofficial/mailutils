@@ -18,6 +18,8 @@
 
 #include <mailutils/sieve.h>
 #include <mailutils/assoc.h>
+#include <mailutils/locus.h>
+#include <mailutils/yyloc.h>
 #include <setjmp.h>
 #include <string.h>
 #include <regex.h>
@@ -38,13 +40,6 @@ typedef union
   unsigned unum;
 } sieve_op_t;
 
-struct mu_locus_range
-{
-  struct mu_locus beg;
-  struct mu_locus end;
-};
-  
-#define YYLTYPE struct mu_locus_range
 
 #define MU_SV_SAVED_ERR_STATE 0x01
 #define MU_SV_SAVED_DBG_STATE 0x02
@@ -62,7 +57,7 @@ enum mu_sieve_state
 struct mu_sieve_machine
 {
   /* Static data */
-  struct mu_locus locus;     /* Approximate location in the code */
+  struct mu_locus_range locus; /* Approximate location in the code */
 
   mu_list_t memory_pool;     /* Pool of allocated memory objects */
   mu_list_t destr_list;      /* List of destructor functions */
@@ -118,9 +113,9 @@ struct mu_sieve_machine
   /* Stream state info */
   int state_flags;
   int err_mode;
-  struct mu_locus err_locus;
+  struct mu_locus_range err_locus;
   int dbg_mode;
-  struct mu_locus dbg_locus;
+  struct mu_locus_range dbg_locus;
   
   /* User supplied data */
   mu_stream_t errstream;
@@ -182,7 +177,7 @@ int mu_sieve_yylex (void);
 
 int mu_i_sv_lex_begin (const char *name);
 int mu_i_sv_lex_begin_string (const char *buf, int bufsize,
-			      const char *fname, int line);
+			      struct mu_locus_point const *pt);
 void mu_i_sv_lex_finish (void);
 
 extern mu_sieve_machine_t mu_sieve_machine;
@@ -204,6 +199,7 @@ void _mu_i_sv_instr_brz (mu_sieve_machine_t mach);
 void _mu_i_sv_instr_brnz (mu_sieve_machine_t mach);
 void _mu_i_sv_instr_source (mu_sieve_machine_t mach);
 void _mu_i_sv_instr_line (mu_sieve_machine_t mach);
+void _mu_i_sv_instr_col (mu_sieve_machine_t mach);
 
 int mu_i_sv_load_add_dir (mu_sieve_machine_t mach, const char *name);
 
@@ -244,7 +240,6 @@ void mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 
 size_t  mu_i_sv_string_create (mu_sieve_machine_t mach, char *str);
 
-char *mu_i_sv_id_canon (mu_sieve_machine_t mach, char const *name);
 size_t mu_i_sv_id_num (mu_sieve_machine_t mach, char const *name);
 char *mu_i_sv_id_str (mu_sieve_machine_t mach, size_t n);
 void mu_i_sv_free_idspace (mu_sieve_machine_t mach);

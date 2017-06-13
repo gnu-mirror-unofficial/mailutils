@@ -30,7 +30,7 @@ match_string (const char *str)
 {
   int rc;
   mu_url_t u, url;
-  struct mu_locus loc;
+  struct mu_locus_point loc;
   
   if ((rc = mu_url_create (&u, str)) != 0)
     {

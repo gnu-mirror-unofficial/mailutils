@@ -49,7 +49,7 @@ mail_source (int argc, char **argv)
 {
   mu_stream_t input;
   int save_term;
-  struct mu_locus locus;
+  struct mu_locus_range locus = MU_LOCUS_RANGE_INITIALIZER;
   int rc;
   
   if (argc != 2)
@@ -69,15 +69,15 @@ mail_source (int argc, char **argv)
 
   save_term = interactive;
   interactive = 0;
-  locus.mu_file = argv[1];
-  locus.mu_line = 0; 
-  locus.mu_col = 0;
+  locus.beg.mu_file = argv[1];
+  locus.beg.mu_line = 0; 
+  locus.beg.mu_col = 0;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS, &locus);
+                   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &locus);
   mail_mainloop (source_readline, input, 0);
   interactive = save_term;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS, NULL);
+                   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, NULL);
   mu_stream_unref (input);
   return 0;
 }

@@ -52,7 +52,7 @@ wicket_match (mu_stream_t stream, const char *str)
 {
   int rc, ret;
   mu_url_t u, url;
-  struct mu_locus loc;
+  struct mu_locus_point loc;
   int flags = MU_URL_PARSE_ALL;
 
   if (wicket_verbose > 2)

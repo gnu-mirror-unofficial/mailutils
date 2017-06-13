@@ -129,51 +129,6 @@ check_suppress_name (mu_stream_t str)
   mu_stream_printf (str, "and this one as well\n");
 }
 
-/* Check setting locus point
-   Expected output:
-     input:1: filename and line number
-     input:1.3: filename, line and column numbers   
- */
-static void
-set_locus_point (mu_stream_t str)
-{
-  int mode = MU_LOGMODE_LOCUS;
-  struct mu_locus pt, pt2;
-
-  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
-  
-  pt.mu_file = "input";
-  pt.mu_line = 1;
-  pt.mu_col = 0;
-
-  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, &pt);
-
-  mu_stream_printf (str, "filename and line number\n");
-
-  pt.mu_file = "input";
-  pt.mu_line = 1;
-  pt.mu_col = 3;
-
-  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS, &pt);
-  
-  mu_stream_printf (str, "filename, line and column numbers\n");
-
-  MU_ASSERT (mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
-			      MU_IOCTL_LOGSTREAM_GET_LOCUS, &pt2));
-
-  if (strcmp (pt.mu_file, pt2.mu_file))
-    mu_error ("%s:%d: mu_file differs\n", __FILE__, __LINE__);
-  if (pt.mu_line != pt2.mu_line)
-    mu_error ("%s:%d: mu_line differs\n", __FILE__, __LINE__);
-  if (pt.mu_col != pt2.mu_col)
-    mu_error ("%s:%d: mu_col differs\n", __FILE__, __LINE__);
-  /* FIXME: remove this after switching to mu_locus_point */
-  free (pt2.mu_file);
-}
-
 static void
 comp_range (mu_stream_t str, struct mu_locus_range *lr1,
 	    char const *file, int line)
@@ -682,7 +637,6 @@ struct testcase testcases[] = {
   { "suppress severity", check_suppress },
   { "suppress severity name", check_suppress_name },
   { "severity mask", check_severity_mask },
-  { "set/get locus point", set_locus_point },
   { "locus: file, line", lr_file_line },
   { "locus: file, line, col", lr_file_line_col },
   { "locus: file, line-range", lr_file_line2 },
