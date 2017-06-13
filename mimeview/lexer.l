@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <mimeview.h>
-#include <mimetypes-decl.h>  
+#include <grammar.h>  
 #include <mailutils/io.h>
  
 static mu_linetrack_t trk;

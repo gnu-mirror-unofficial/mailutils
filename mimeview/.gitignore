@@ -3,11 +3,8 @@
 .libs
 Makefile
 Makefile.in
-lex.yy.c
-mimetypes-decl.h
-mimetypes-gram.c
-mimetypes-lex.c
-mimetypes.output
+grammar.c
+grammar.h
+grammar.output
+lexer.c
 mimeview
-y.output
-y.tab.c

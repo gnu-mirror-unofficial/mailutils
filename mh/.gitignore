@@ -14,8 +14,7 @@ forw
 inc
 install-mh
 mark
-mh_alias.h
-mh_alias_gram.c
+mh_alias_gram.[ch]
 mh_alias_lex.c
 mh_fmtgram.c
 mhl

@@ -25,28 +25,15 @@ AM_CPPFLAGS = \
 bin_PROGRAMS = mimeview
 mimeview_SOURCES = \
  mimeview.c \
- mimetypes-gram.c \
- mimetypes-lex.c \
- mimetypes-decl.h \
- mimeview.h 
+ grammar.y \
+ lexer.l \
+ mimeview.h\
+ grammar.h
 
-YLWRAP = $(SHELL) $(mu_aux_dir)/gylwrap
-AM_YFLAGS=-vt
+YLWRAP = @MU_YLWRAP@
+AM_YFLAGS=-vtd
 AM_LEXFLAGS=-d
-EXTRA_DIST = mimetypes.y mimetypes.l
-
-mimetypes-gram.c mimetypes-decl.h: $(srcdir)/mimetypes.y
-	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS) -d" $< \
-	          y.tab.c mimetypes-gram.c y.tab.h mimetypes-decl.h \
-                  y.output mimetypes.output \
-                  -- -yy mimetypes_yy
-
-mimetypes-lex.c: $(srcdir)/mimetypes.l mimetypes-decl.h
-	$(AM_V_GEN)$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
-                  $(srcdir)/mimetypes.l lex.yy.c mimetypes-lex.c \
-                  -- -yy mimetypes_yy
-
-BUILT_SOURCES = mimetypes-gram.c mimetypes-lex.c mimetypes-decl.h
+EXTRA_DIST = gylwrap.conf
 
 mimeview_LDADD = \
  ${MU_APP_LIBRARIES}\

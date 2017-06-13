@@ -23,7 +23,7 @@
 
 %{
 #include <mh.h>
-#include <mh_alias.h>
+#include <mh_alias_gram.h>
 #include <sys/stat.h>
 #include <mailutils/cctype.h>
 #include <mailutils/io.h>

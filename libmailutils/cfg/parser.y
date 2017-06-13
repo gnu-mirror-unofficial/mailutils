@@ -40,7 +40,7 @@
 #include <mailutils/stream.h>
 #include <mailutils/stdstream.h>
 #include <mailutils/cidr.h>
-#include "cfg.h"
+#include <mailutils/yyloc.h>
 
 int mu_cfg_parser_verbose;
 static mu_list_t /* of mu_cfg_node_t */ parse_node_list; 

@@ -43,8 +43,8 @@ libmu_sieve/prog.c
 libmu_sieve/relational.c
 libmu_sieve/require.c
 libmu_sieve/runtime.c
-libmu_sieve/sieve.l
-libmu_sieve/sieve.y
+libmu_sieve/sieve-lex.l
+libmu_sieve/sieve-gram.y
 libmu_sieve/tests.c
 libmu_sieve/util.c
 libmu_sieve/variables.c
@@ -174,8 +174,8 @@ mh/send.c
 mh/whatnow.c
 mh/whom.c
 
-mimeview/mimetypes.l
-mimeview/mimetypes.y
+mimeview/lexer.l
+mimeview/grammar.y
 mimeview/mimeview.c
 
 movemail/movemail.c

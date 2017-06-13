@@ -22,7 +22,7 @@
   
 #include <mailutils/cctype.h>
 #include <mimeview.h>
-#include <mimetypes-decl.h>
+#include <grammar.h>
 #include <regex.h>
   
 static void

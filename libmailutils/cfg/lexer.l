@@ -41,7 +41,7 @@
 #include <mailutils/locus.h>
 #include <mailutils/stream.h>
 #include <mailutils/stdstream.h>  
-#include "cfg.h"
+#include <mailutils/yyloc.h>
 #include "parser.h"
 
 void _mu_line_begin (void);

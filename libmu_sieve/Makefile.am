@@ -15,7 +15,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-YLWRAP = $(SHELL) $(mu_aux_dir)/gylwrap
+YLWRAP = @MU_YLWRAP@
 AM_YFLAGS = -dtv
 #AM_LEXFLAGS=-dvp
 AM_CPPFLAGS =\
@@ -39,9 +39,8 @@ libmu_sieve_la_SOURCES = \
  relational.c\
  require.c\
  runtime.c\
- sieve-gram.c\
- sieve-gram.h\
- sieve-lex.c\
+ sieve-gram.y\
+ sieve-lex.l\
  strexp.c\
  string.c\
  tests.c\
@@ -50,24 +49,14 @@ libmu_sieve_la_SOURCES = \
 libmu_sieve_la_LIBADD = ${MU_LIB_MAILUTILS} @LTDL_LIB@
 libmu_sieve_la_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 
-noinst_HEADERS = sieve-priv.h
+noinst_HEADERS = sieve-priv.h sieve-gram.h
 
 BUILT_SOURCES = \
   sieve-gram.c sieve-gram.h \
   sieve-lex.c
 
+EXTRA_DIST=gylwrap.conf
+
 MAINTAINERCLEANFILES=$(BUILT_SOURCES)
-
-EXTRA_DIST = sieve.y sieve.l
-
-sieve-lex.c: $(srcdir)/sieve.l sieve-gram.h
-	$(AM_V_GEN)$(YLWRAP) "$(LEX) $(AM_LEXFLAGS) $(LEXFLAGS)" \
-                  $(srcdir)/sieve.l lex.yy.c sieve-lex.c \
-                  -- -yy mu_sieve_yy
-
-sieve-gram.c sieve-gram.h: $(srcdir)/sieve.y
-	$(AM_V_GEN)$(YLWRAP) "$(YACC) $(AM_YFLAGS) $(YFLAGS)" $(srcdir)/sieve.y \
-	          y.tab.c sieve-gram.c y.tab.h sieve-gram.h y.output y.output \
-                  -- -yy mu_sieve_yy
 
 

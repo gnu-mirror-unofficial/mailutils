@@ -54,7 +54,7 @@ libbase_la_SOURCES = \
  observer.c\
  onexit.c\
  opool.c\
- parsedate.c\
+ parsedate.y\
  permstr.c\
  registrar.c\
  refcount.c\
@@ -82,17 +82,10 @@ AM_CPPFLAGS = \
  -DLOCALEDIR=\"$(localedir)\"
 
 
-YLWRAP = $(SHELL) $(mu_aux_dir)/gylwrap
-AM_YFLAGS=-vt
-AM_LFLAGS=-dp
+YLWRAP = @MU_YLWRAP@
+EXTRA_DIST = gylwrap.conf
+AM_YFLAGS=
+AM_LFLAGS=
 
-EXTRA_DIST = parsedate.y
-
-BUILT_SOURCES = parsedate.c
-
-parsedate.c: $(srcdir)/parsedate.y
-	$(YLWRAP) "$(YACC) $(AM_YFLAGS)" $< \
-	          y.tab.c parsedate.c y.output parsedate.y.output \
-                  -- -yy pd_yy
 
 
