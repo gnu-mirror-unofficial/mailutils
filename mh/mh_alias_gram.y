@@ -20,6 +20,8 @@
 #include <pwd.h>
 #include <grp.h>
 #include <sys/types.h>
+#include <mailutils/locus.h>
+#include <mailutils/yyloc.h>
   
 struct mh_alias
 {
@@ -31,7 +33,7 @@ struct mh_alias
 static mu_list_t alias_list;
 
 static mu_list_t
-list_create_or_die ()
+list_create_or_die (void)
 {
   int status;
   mu_list_t list;
@@ -39,7 +41,7 @@ list_create_or_die ()
   status = mu_list_create (&list);
   if (status)
     {
-      ali_parse_error (_("can't create list: %s"), mu_strerror (status));
+      mu_error (_("can't create list: %s"), mu_strerror (status));
       exit (1);
     }
   return list;
@@ -86,6 +88,17 @@ ali_list_to_string (mu_list_t *plist)
   return string;
 }
 
+static void
+ali_append (struct mh_alias *ali)
+{
+  if (ali)
+    {
+      if (!alias_list)
+	alias_list = list_create_or_die ();
+      mu_list_append (alias_list, ali);
+    }
+}	      
+ 
 static mu_list_t unix_group_to_list (char *name);
 static mu_list_t unix_gid_to_list (char *name);
 static mu_list_t unix_passwd_to_list (void);
@@ -101,37 +114,34 @@ int yylex (void);
   struct mh_alias *alias;
 }
 
+%token EOL
 %token <string> STRING
 %type <list>  address_list address_group string_list
 %type <string> address
 %type <alias> alias
 
+%locations
+
 %%
 
-input        : /* empty */
-             | alias_list
-             | alias_list nl
-             | nl alias_list
-             | nl alias_list nl
+input        : alias_list
              ;
 
 alias_list   : alias
                {
-		 if (!alias_list)
-		   alias_list = list_create_or_die ();
-		 mu_list_append (alias_list, $1);
+		 ali_append ($1);
 	       }
-             | alias_list nl alias
+             | alias_list EOL alias
                {
-		 mu_list_append (alias_list, $3);
+		 ali_append ($3);
 	       }
              ;
 
-nl           : '\n'
-             | nl '\n'
-             ;
-
-alias        : STRING ':' { ali_verbatim (1); } address_group
+alias        : /* empty */
+               {
+		 $$ = NULL;
+	       }
+             | STRING ':' { ali_verbatim (1); } address_group
                {
 		 ali_verbatim (0);
 		 $$ = mu_alloc (sizeof (*$$));
@@ -489,7 +499,7 @@ unix_passwd_to_list ()
 }
 
 int
-mh_read_aliases ()
+mh_read_aliases (void)
 {
   const char *p;
   

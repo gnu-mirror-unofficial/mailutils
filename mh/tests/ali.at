@@ -70,8 +70,8 @@ exit $code
 [0],
 [gray, polak, admin
 ],
-[ali: mh_aliases2:2: recursive inclusion
-ali: mh_aliases2:2: `mh_aliases' already included at top level
+[ali: mh_aliases2:2.1-11: recursive inclusion
+ali: mh_aliases2:2.1-11: `mh_aliases' already included at top level
 ])
 
 MH_CHECK([ali: group name],[ali04 ali-group-name],[

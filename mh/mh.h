@@ -381,7 +381,6 @@ const char *mh_seq_read (mu_mailbox_t mbox, const char *name, int flags);
 void mh_comp_draft (const char *formfile, const char *draftfile);
 int check_draft_disposition (struct mh_whatnow_env *wh, int use_draft);
 
-void ali_parse_error (const char *fmt, ...) MU_PRINTFLIKE(1,2); 
 void ali_verbatim (int enable);
 
 char *mh_safe_make_file_name (const char *dir, const char *file);

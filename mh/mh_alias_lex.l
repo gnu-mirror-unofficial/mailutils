@@ -23,58 +23,23 @@
 
 %{
 #include <mh.h>
+#include <mailutils/locus.h>
+#include <mailutils/yyloc.h>
 #include <mh_alias_gram.h>
 #include <sys/stat.h>
 #include <mailutils/cctype.h>
 #include <mailutils/io.h>
-  
-char *ali_filename;  
-size_t ali_line_num;  
-ino_t ali_source_inode;
 
-void
-va_ali_parse_error_loc (const char *name, size_t line,
-			      const char *fmt, va_list ap)
-{
-  char *buf = NULL;
-  size_t size = 0;
-
-  mu_vasnprintf (&buf, &size, fmt, ap);
-  if (name)
-    mu_error ("%s:%lu: %s", name, (unsigned long) line,  buf);
-  else
-    mu_error ("%s", buf);
-  free (buf);
-}
-
-void
-ali_parse_error_loc (const char *name, size_t line, const char *fmt, ...)
-{
-  va_list ap;
-
-  va_start (ap, fmt);
-  va_ali_parse_error_loc (name, line, fmt, ap);
-  va_end (ap);
-}
-
-void
-ali_parse_error (const char *fmt, ...)
-{
-  va_list ap;
-
-  va_start (ap, fmt);
-  va_ali_parse_error_loc (ali_filename, ali_line_num, fmt, ap);
-  va_end (ap);
-}
+static mu_linetrack_t trk;
+static ino_t ali_source_inode;
 
 int
 yyerror (char *s)
 {
-  ali_parse_error ("%s", s);
+  mu_error ("%s", s);
   return 0;
 }
  
-#ifdef FLEX_SCANNER
 #define xinput() (yyin ? getc(yyin) : EOF)
 #undef YY_INPUT
 #define YY_INPUT(buf,result,max_size)  do { \
@@ -97,127 +62,20 @@ yyerror (char *s)
         yy_switch_to_buffer(s); \
 } while (0)
 
-#else
-/* AT&T Lex */
-                                               
-static void lex_set_buffer (FILE *fp);
-static void lex_delete_buffer (LEX_BUFFER_STATE buf);
-static int xinput (void); 
-static int xunput (void);
-        
-#undef unput
-#define unput(c) xunput(c)
-#undef input
-#define input() xinput()
-
-#define LEX_BUF_SIZE 16384
-#define LEX_PUTBACK_SIZE 32
-                                               
-typedef struct {
-  FILE *yyin;
-  char *buffer;
-  size_t bufsize;
-  size_t level;
-  char *ptr;
-  char *putback;
-  size_t pb_size;
-  size_t pb_level;
-} LEX_BUFFER_STATE;
-LEX_BUFFER_STATE current_buffer;
+#define YY_USER_ACTION							\
+  do									\
+    {									\
+      mu_linetrack_advance (trk, &yylloc, yytext, yyleng);		\
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,			\
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &yylloc);	\
+    }									\
+  while (0);
  
-#define SET_BUFFER_STATE(s) do { \
-        (s) = current_buffer;    \
-        lex_set_buffer(yyin);    \
-} while (0)
-#define RESTORE_BUFFER_STATE(s) do { \
-        lex_delete_buffer(current_buffer); \
-        current_buffer = (s); \
-        yyin = current_buffer.yyin;  \
-} while (0)
-                                    
-void
-lex_set_buffer (FILE *fp)
-{
-  char *buf;
-  size_t size;
-        
-  for (size = LEX_BUF_SIZE; size > 1; size /= 2)
-    if (buf = malloc (size))
-      break;
-  
-  if (!buf)
-    {
-      ali_parse_error (_("not enough memory"));
-      abort ();
-    }
-
-  current_buffer.yyin = yyin;
-  current_buffer.buffer = buf;
-  current_buffer.bufsize = size;
-  current_buffer.level = 0;
-  current_buffer.ptr = current_buffer.buffer;
-  current_buffer.pb_size = current_buffer.pb_level = 0;
-  current_buffer.putback = NULL;
-}
-                
-void
-lex_delete_buffer (LEX_BUFFER_STATE buf)
-{
-  free (buf.buffer);
-  if (buf.putback)
-    free (buf.putback);
-}
-
-int
-xinput ()
-{
-  if (!yyin)
-    return EOF;
-  
-  if (current_buffer.pb_level) 
-    return current_buffer.putback[--current_buffer.pb_level];
-
-  if (current_buffer.level <= 0)
-    {
-      int n;
-
-      if (feof (yyin))
-	return 0;
-      n = fread (current_buffer.buffer, 1,
-		 current_buffer.bufsize, yyin);
-      if (n <= 0)
-	return 0;
-      current_buffer.level = n;
-      current_buffer.ptr = current_buffer.buffer;
-    }
-  current_buffer.level--;
-  return *current_buffer.ptr++;
-}
-
-int
-xunput (int c)
-{
-  if (current_buffer.pb_level == current_buffer.pb_size)
-    {
-      char *putback;
-      current_buffer.pb_size += LEX_PUTBACK_SIZE;
-      putback = mu_alloc (current_buffer.pb_size);
-      memcpy (putback, current_buffer.putback,
-	      current_buffer.pb_level);
-      free (current_buffer.putback);
-      current_buffer.putback = putback;
-    }
-  current_buffer.putback[current_buffer.pb_level++] = c;
-  return c;
-}
-                
-#endif                                         
-
 struct buffer_ctx {
   struct buffer_ctx *prev;
-  char *filename;
-  int line;
+  mu_linetrack_t trk;
   ino_t i_node;
+  struct mu_locus_range incl_range;
   FILE *yyin;
   int exec_p;
   LEX_BUFFER_STATE state;
@@ -250,27 +108,26 @@ push_source (const char *name, int fail)
   if (stat (filename, &st))
     {
       if (fail)
-	ali_parse_error (_("can't stat `%s': %s"), filename, strerror (errno));
+	mu_error (_("can't stat `%s': %s"), filename, strerror (errno));
       free (filename);
       return 1;
     }
     
-  if (ali_filename && st.st_ino == ali_source_inode)
+  if (yylloc.beg.mu_file && st.st_ino == ali_source_inode)
     {
-      ali_parse_error (_("recursive inclusion"));
+      mu_error (_("recursive inclusion"));
       free (filename);
       return 1;
     }
   if ((ctx = ctx_lookup (st.st_ino)))
     {
-      ali_parse_error (_("recursive inclusion"));
+      mu_error (_("recursive inclusion"));
       if (ctx->prev)
-	ali_parse_error_loc (ctx->prev->filename, ctx->prev->line,
-                             _("`%s' already included here"),
-                             filename);
+	mu_diag_at_locus_range (MU_LOG_ERROR, &ctx->incl_range,
+				_("`%s' already included here"),
+				filename);
       else
-	ali_parse_error (_("`%s' already included at top level"),
-			 filename);
+	mu_error (_("`%s' already included at top level"), filename);
       free (filename);
       return 1;
     }
@@ -278,7 +135,7 @@ push_source (const char *name, int fail)
   fp = fopen (filename, "r");
   if (!fp)
     {
-      ali_parse_error (_("can't open `%s': %s"), filename, strerror (errno));
+      mu_error (_("can't open `%s': %s"), filename, strerror (errno));
       free (filename);
       return 1;
     }
@@ -295,8 +152,8 @@ push_source (const char *name, int fail)
 	  fp = popen (filename, "r");
 	  if (!fp)
 	    {
-	      ali_parse_error (_("can't execute `%s': %s"),
-			       filename, strerror (errno));
+	      mu_error (_("can't execute `%s': %s"),
+			filename, strerror (errno));
 	      free (filename);
 	      return 1;
 	    }
@@ -306,12 +163,12 @@ push_source (const char *name, int fail)
     }
   
   /* Push current context */
-  if (ali_filename)
+  if (yylloc.beg.mu_file)
     {
       ctx = mu_alloc (sizeof (*ctx));
-      ctx->filename = ali_filename;
+      ctx->trk = trk;
+      mu_locus_range_copy (&ctx->incl_range, &yylloc);
       ctx->exec_p = exec_p;
-      ctx->line = ali_line_num;
       ctx->i_node = ali_source_inode;
       ctx->yyin = yyin;
       ctx->prev = context_stack;
@@ -330,34 +187,30 @@ push_source (const char *name, int fail)
       lex_set_buffer (yyin);
 #endif
     }
-  ali_filename = filename;
-  ali_line_num = 1;
+  MU_ASSERT (mu_linetrack_create (&trk, filename, 2));
+  free (filename);
   ali_source_inode = st.st_ino;
   exec_p = ex;
   return 0;
 }
 
 static int
-pop_source ()
+pop_source (void)
 {
   struct buffer_ctx *ctx;
 
   if (yyin)
     (exec_p ? pclose : fclose) (yyin);
-#ifndef FLEX_SCANNER
-  lex_delete_buffer (current_buffer);
-#endif
-  if (ali_filename)
-    free (ali_filename);
-  ali_filename = NULL;
+  mu_linetrack_destroy (&trk);
   if (!context_stack)
     {
+      mu_locus_range_deinit (&yylloc);
       yyin = NULL;
       return 1;
     }
+  mu_locus_range_deinit (&context_stack->incl_range);
   /* Restore previous context */
-  ali_filename = context_stack->filename;
-  ali_line_num = context_stack->line + 1; /* < line did not increment it */
+  trk = context_stack->trk;
   ali_source_inode = context_stack->i_node;
   exec_p = context_stack->exec_p;
   RESTORE_BUFFER_STATE (context_stack->state);
@@ -378,15 +231,15 @@ WORD [^ \t\n,:;<+=\*]+
 SPEC [,:;+=\*]
 %s VERBATIM
 %%
-\\\n           { ali_line_num++; }
-\n             { ali_line_num++; return '\n';}
-^[ \t]*\;.*\n  ali_line_num++; 
+\\\n           ;
+\n+            return EOL;
+^[ \t]*\;.*\n  ; 
 ^[ \t]*{WORD}\*  { char *p;
                    for (p = yytext; p < yytext + yyleng; p++)
 		     if (!mu_isspace (*p))
 		       break;
 		   yylval.string = mu_strdup (p);
-		   return STRING;}
+		   return STRING; }
 {WS}           ;
 {WORD}         { yylval.string = mu_strdup (yytext); return STRING;}
 ^{WS}?"<"{WS}?{WORD} {
@@ -403,26 +256,24 @@ SPEC [,:;+=\*]
  		    memcpy(yylval.string, yytext, yyleng);
 		    yylval.string[yyleng] = 0;
 		    return STRING;}
-.              { char *p;
-                 mu_asprintf (&p,
-			      _("Stray character %03o in alias file"), 
-                              yytext[0]);
-                 yyerror (p);
-		 free (p); }
+.              { mu_error (_("Stray character %03o in alias file"), 
+			   yytext[0]); }
 %%
 		 
 int
-yywrap ()
+yywrap (void)
 {
-  return pop_source();
+  return pop_source ();
 }
 
 /* Parses the named alias file */
 int
 mh_alias_read (char const *name, int fail)
 {
+  int rc;
+  int old_mode, mode;
   extern int yydebug;
-  char *p = getenv("ALI_YYDEBUG");
+  char *p = getenv ("ALI_YYDEBUG");
 
   if (p && *p > '0' && *p < '9')
     yydebug = 1;
@@ -431,7 +282,15 @@ mh_alias_read (char const *name, int fail)
     return 1;
   if (yydebug)
     fprintf (stderr, "Starting parse of %s\n", name);
-  return yyparse ();
+
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_GET_MODE, &old_mode);
+  mode = old_mode | MU_LOGMODE_LOCUS;
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+  rc = yyparse ();
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_MODE, &old_mode);
 }
 
 void
