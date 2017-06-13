@@ -28,6 +28,7 @@
 
 size_t 
 mu_sieve_value_create (mu_sieve_machine_t mach, mu_sieve_data_type type,
+		       struct mu_locus_range const *locus,
 		       void *data)
 {
   size_t idx;
@@ -43,6 +44,18 @@ mu_sieve_value_create (mu_sieve_machine_t mach, mu_sieve_data_type type,
   memset (val, 0, sizeof *val);
   
   val->type = type;
+
+  /* Copy locus. */
+  val->locus.beg.mu_file =
+    mu_i_sv_id_str (mach, mu_i_sv_id_num (mach, locus->beg.mu_file));
+  val->locus.beg.mu_line = locus->beg.mu_line;
+  val->locus.beg.mu_col = locus->beg.mu_col;
+  val->locus.end.mu_file =
+    mu_i_sv_id_str (mach, mu_i_sv_id_num (mach, locus->end.mu_file));
+  val->locus.end.mu_line = locus->end.mu_line;
+  val->locus.end.mu_col = locus->end.mu_col;
+  
+  mu_locus_range_copy (&val->locus, locus);
   switch (type)
     {
     case SVT_NUMBER:

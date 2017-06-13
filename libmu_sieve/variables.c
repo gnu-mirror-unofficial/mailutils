@@ -226,9 +226,12 @@ set_tag_checker (mu_sieve_machine_t mach)
 	    *mu_sieve_get_tag_n (mach, j + 1) = *t;
 	  else if (prec == tmp_prec)
 	    {
-	      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus,
-				_("%s and %s can't be used together"),
-				tmp.tag, t->tag);
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &t->locus,
+				      _("%s and %s can't be used together"),
+				      tmp.tag, t->tag);
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &tmp.locus,
+				      _("%s encountered here"),
+				      tmp.tag);
 	      mu_i_sv_error (mach);
 	      return 1;
 	    }	      

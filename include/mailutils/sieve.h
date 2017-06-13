@@ -88,6 +88,7 @@ typedef struct
 {
   mu_sieve_data_type type;
   char *tag;
+  struct mu_locus_range locus;
   union mu_sieve_value_storage v;
 } mu_sieve_value_t;
 
@@ -163,7 +164,9 @@ void mu_sieve_reclaim_default (void *p);
 void mu_sieve_reclaim_value (void *p);
   
 size_t mu_sieve_value_create (mu_sieve_machine_t mach,
-			      mu_sieve_data_type type, void *data);
+			      mu_sieve_data_type type,
+			      struct mu_locus_range const *locus,
+			      void *data);
 
 /* Symbol space functions */
 mu_sieve_registry_t *mu_sieve_registry_add (mu_sieve_machine_t mach,

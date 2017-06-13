@@ -305,23 +305,27 @@ arglist      : arg
 arg          : stringlist
                {		 
 		 $$ = mu_sieve_value_create (mu_sieve_machine,
-					     SVT_STRING_LIST, &$1);
+					     SVT_STRING_LIST, &@1, &$1);
 	       }
              | STRING
                {
-		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_STRING, $1);
+		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_STRING,
+					     &@1, $1);
                } 
              | MULTILINE
                {
-		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_STRING, $1);
+		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_STRING,
+					     &@1, $1);
 	       }
              | NUMBER
                {
-		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_NUMBER, &$1);
+		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_NUMBER,
+					     &@1, &$1);
 	       }
              | TAG
                {
-		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_TAG, $1);
+		 $$ = mu_sieve_value_create (mu_sieve_machine, SVT_TAG,
+					     &@1, $1);
 	       }
              ;
 

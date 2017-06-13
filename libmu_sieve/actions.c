@@ -528,7 +528,7 @@ perms_tag_checker (mu_sieve_machine_t mach)
 	{
 	  if (mu_parse_stream_perm_string (&flag, t->v.string, &p))
 	    {
-	      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus,
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &t->locus,
 				      _("invalid permissions (near %s)"), p);
 	      mu_i_sv_error (mach);
 	      err = 1;

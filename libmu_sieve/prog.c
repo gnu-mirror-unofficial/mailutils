@@ -171,7 +171,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 	      
 	  if (!tag)
 	    {
-	      mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
+	      mu_diag_at_locus_range (MU_LOG_ERROR, &val->locus, 
 				_("invalid tag name `%s' for `%s'"),
 				val->v.string, reg->name);
 	      mu_i_sv_error (mach);
@@ -191,6 +191,7 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 	    {
 	      if (i + 1 == node->v.command.argcount)
 		{
+		  /* FIXME: more exact locus */
 		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
 				    _("required argument for tag %s is missing"),
 				    tag->name);
@@ -208,11 +209,11 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 	      
 	      if (val->type != tag->argtype)
 		{
-		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &val->locus, 
 				    _("type mismatch in argument to "
 				      "tag `%s'"),
 				    tag->name);
-		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &val->locus, 
 				    _("expected %s but passed %s"),
 				    mu_sieve_type_str (tag->argtype),
 				    mu_sieve_type_str (val->type));
@@ -274,11 +275,11 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
 		/* compatible types */;
 	      else
 		{
-		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &val->locus, 
 				    _("type mismatch in argument %lu to `%s'"),
 				    (unsigned long) (exp_arg - reg->v.command.req_args + 1),
 				    reg->name);
-		  mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
+		  mu_diag_at_locus_range (MU_LOG_ERROR, &val->locus, 
 				    _("expected %s but passed %s"),
 				    mu_sieve_type_str (*exp_arg),
 				    mu_sieve_type_str (val->type));
@@ -294,8 +295,8 @@ mu_i_sv_lint_command (struct mu_sieve_machine *mach,
   if (!err && !opt_args && *exp_arg != SVT_VOID)
     {
       mu_diag_at_locus_range (MU_LOG_ERROR, &mach->locus, 
-			_("too few arguments in call to `%s'"),
-			reg->name);
+			      _("too few arguments in call to `%s'"),
+			      reg->name);
       mu_i_sv_error (mach);
       err = 1;
     }
