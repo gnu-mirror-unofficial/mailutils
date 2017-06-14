@@ -1568,9 +1568,9 @@ sieve_compile_strbuf (void *name)
 } 
 
 int
-mu_sieve_compile_buffer (mu_sieve_machine_t mach,
-			 const char *str, int strsize,
-			 struct mu_locus_point const *loc)
+mu_sieve_compile_text (mu_sieve_machine_t mach,
+		       const char *str, size_t strsize,
+		       struct mu_locus_point const *loc)
 {
   struct strbuf buf;
   buf.ptr = str;
@@ -1579,6 +1579,19 @@ mu_sieve_compile_buffer (mu_sieve_machine_t mach,
   return with_machine (mach, sieve_compile_strbuf, &buf);
 }
 
+int
+mu_sieve_compile_buffer (mu_sieve_machine_t mach,
+			 const char *buf, int bufsize,
+			 const char *fname, int line)
+{
+  int rc;
+  struct mu_locus_point loc;
+  mu_locus_point_init (&loc, fname);
+  loc.mu_line = line;
+  rc = mu_sieve_compile_text (mach, buf, bufsize, &loc);
+  mu_locus_point_deinit (&loc);
+  return rc;
+}
 
 
 

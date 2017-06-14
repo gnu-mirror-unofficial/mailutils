@@ -326,9 +326,13 @@ const char *mu_sieve_type_str (mu_sieve_data_type type);
 /* Principal entry points */
 
 int mu_sieve_compile (mu_sieve_machine_t mach, const char *name);
+int mu_sieve_compile_text (mu_sieve_machine_t mach,
+			   const char *buf, size_t bufsize,
+			   struct mu_locus_point const *pt);
 int mu_sieve_compile_buffer (mu_sieve_machine_t mach,
 			     const char *buf, int bufsize,
-			     struct mu_locus_point const *pt);
+			     const char *fname, int line)
+  MU_DEPRECATED;
 int mu_sieve_mailbox (mu_sieve_machine_t mach, mu_mailbox_t mbox);
 int mu_sieve_message (mu_sieve_machine_t mach, mu_message_t message);
 int mu_sieve_disass (mu_sieve_machine_t mach);

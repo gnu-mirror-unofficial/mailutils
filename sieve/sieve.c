@@ -500,7 +500,7 @@ main (int argc, char *argv[])
       pt.mu_file = "stdin";
       pt.mu_line = 1;
       pt.mu_col = 0;
-      rc = mu_sieve_compile_buffer (mach, script, strlen (script), &pt);
+      rc = mu_sieve_compile_text (mach, script, strlen (script), &pt);
     }
   else
     rc = mu_sieve_compile (mach, script);

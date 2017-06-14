@@ -113,9 +113,9 @@ moderator_filter_message (mu_sieve_machine_t mach,
 	  return 1;
 	}
       mu_sieve_get_locus (mach, &locrange);
-      rc = mu_sieve_compile_buffer (newmach,
-				    arg, strlen (arg),
-				    &locrange.beg);
+      rc = mu_sieve_compile_text (newmach,
+				  arg, strlen (arg),
+				  &locrange.beg);
       if (rc)
 	mu_sieve_error (mach, _("cannot compile subprogram"));
     }

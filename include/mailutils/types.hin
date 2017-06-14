@@ -149,6 +149,16 @@ typedef unsigned int mu_debug_level_t;
 
 #define MU_DEFAULT_RECORD _MU_DEFAULT_RECORD_
 
+/* The use of this structure and associated ioctl is deprecated.  This
+   definition is provided for transition period */
+struct mu_locus_DEPRECATED
+{
+  char *mu_file;
+  unsigned mu_line;
+  unsigned mu_col;
+};
+#define mu_locus mu_locus_DEPRECATED  
+
 #ifdef __cplusplus
 }
 #endif
