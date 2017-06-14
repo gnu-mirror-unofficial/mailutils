@@ -72,7 +72,7 @@ AC_SUBST(MU_LIB_COMMON_INCLUDES,'-I${top_builddir} -I${top_srcdir}/include  -I${
 AC_SUBST(MU_APP_COMMON_INCLUDES,'-I${srcdir} -I${top_srcdir}/include -I${top_srcdir}/lib -I${top_srcdir}/lib/gnu -I${top_builddir}/lib/gnu -I${top_builddir} -I${top_builddir}/include')
 
 # Use our replacement for the ylwrap tool
-AC_SUBST([MU_YLWRAP],'$(mu_aux_dir)/gylwrap --compatibility --')
+AC_SUBST([MU_YLWRAP],'$(mu_aux_dir)/gylwrap --')
 
 dnl Check for programs
 AC_PROG_CC
@@ -83,8 +83,8 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
-AC_PROG_YACC
-AM_PROG_LEX
+MU_PROG_BISON
+MU_PROG_LEX
 AM_PROG_LIBTOOL
 
 ## Predefine several variables used to display configuration status

@@ -35,22 +35,9 @@ gylwrap - wrapper for yacc, lex and similar programs
 =head1 SYNOPSIS
 
 B<gylwrap>
-[B<-c?>]
-[B<--compatibility>]    
-[B<--yyrepl=>I<PREFIX>]
-[B<--yysym=>I<STRING>]
-[B<--stdout>]
-[B<--help>]
-[B<--version>]    
-I<COMMAND>
-I<INPUT>
-I<OUTPUT> I<DESIRED>...
-
-B<ylwrap>
 [B<-?>]    
 [B<--yyrepl=>I<PREFIX>]
 [B<--yysym=>I<STRING>]
-[B<--stdout>]
 [B<--help>]
 [B<--version>]    
 I<INPUT>
@@ -66,9 +53,9 @@ symbols to avoid clashes when multiple parsers and/or lexers are
 linked in a single executable.
 
 To achieve this, B<gylwrap> creates a temporary directory, changes
-to it, and runs I<COMMAND> (which may contain arguments and options)
-with I<INPUT> as its last argument.  Upon successful exit, it processes
-the I<OUTPUT> I<DESIRED> pairs.  Each I<OUTPUT> file is then renamed
+to it, and runs I<PROGRAM>, with I<ARGS> and I<INPUT> as its arguments.
+Upon successful exit from I<PROGRAM>, B<gylwrap> processes the
+I<OUTPUT>-I<DESIRED> pairs.  Each I<OUTPUT> file is then renamed
 to the file I<DESIRED>, taking care to fix up any eventual B<#line>
 directives.
 
@@ -78,18 +65,11 @@ For a list of symbols that are subject for replacement, inspect the
 B<@sym> variable at the start of the script.  Additional names can be
 added to this list using the B<--yysym> option.
 
-If given the B<--compatibility> option or if invoked as B<ylwrap>,
-the tool runs in compatibility mode, mimicking the behavior of the
-standard B<ylwrap> utility from GNU Automake.  Command line arguments
-consist of two lists, separated by B<-->.  The left-hand side list
-supplies the I<OUTPUT>,I<DESIRED> pairs, and the right-hand side one
-supplies the command and its arguments.
-
-In both modes, prior to running the command, the program looks for file
-B<gylwrap.conf> in the same directory as the I<INPUT> file.  If found,
-the file is sourced.  Empty lines and comments (introduced by the hash
-sign) are ignored.  Rest of lines are either option assignements, or
-section headings.
+Prior to running the I<PROGRAM>, B<gylwrap> program checks whether the
+file named B<gylwrap.conf> exists in directory of the I<INPUT> file.
+If found, it is parsed as follows.  Empty lines and comments (introduced
+by the hash sign) are ignored.  Rest of lines are either option
+assignements, or section headings.
 
 Option assignements have the form B<I<OPTION> = I<VALUE>>, and generally,
 have the same meaning as the corresponding command line option without
@@ -100,10 +80,6 @@ the leading two dashes:
 =item B<yyrepl => I<PREFIX>
 
 Replace the B<yy> prefix with I<PREFIX> in the identifiers.
-
-=item B<stdout = 1>
-
-Enable the B<--stdout> option.
 
 =item B<yysym => I<NAME>
 
@@ -125,14 +101,6 @@ command line argument.
 =head1 OPTIONS
 
 =over 4
-
-=item B<-c>, B<--compatibility>
-
-Run in compatibility mode.
-    
-=item B<--stdout>
-
-Redirect I<COMMAND>'s standard output to the first I<OUTPUT>.
 
 =item B<--yyrepl=>I<PREFIX>
 
@@ -233,9 +201,6 @@ my $yyrx;
 # String to replace the "yy" prefix with.
 my $yyrepl;
 
-# If set, redirect the stdout from the command to the first output file.
-my $stdout;
-
 # Input directory with special characters escaped, for "#line" directive
 # fixup.
 my $input_rx;
@@ -244,14 +209,12 @@ my $input_rx;
 # input file name.  Default entry is ''.
 my %config;
 
-# Name of the first output file.  This is used in compatibility mode to
-# avoid bailing out if one of the output files (except the principal one)
-# does not exist.
+# Name of the first output file.  This is used to avoid bailing out if
+# one of the output files (except the principal one) does not exist.
 my $parser;
 
 # Name this program was invoked as.
 my $progname = basename($0);
-my $compat = $progname eq 'ylwrap'; # True if running in compatibility mode
 
 # List of files created during the run, for cleanup purposes.
 my @created;
@@ -261,9 +224,7 @@ sub filter {
     my $target = basename($to);
     my $ifd;
     unless (open($ifd, '<', $from)) {
-	if ($compat) {
-	    return if $from ne $parser;
-	}
+	return if $from ne $parser;
 	die "can't open input file $from: $!";
     }
     open(my $ofd, '>', $to)
@@ -296,8 +257,8 @@ sub readconf {
 	} elsif (/^\[(.+)\]/) {
 	    $key = $1;
 	} elsif (m/(.+?)\s*=\s*(.+)$/) {
-	    if ($1 eq 'yysym') {
-		push @{$config{$key}{$1}}, $2;
+	    if ($1 eq 'yysym' || $1 eq 'flags') {
+		push @{$config{$key}{$1}}, (split /\s+/, $2);
 	    } else {
 		$config{$key}{$1} = $2;
 	    }
@@ -308,28 +269,20 @@ sub readconf {
     close($fd);
 }
 
-my ($command, $input, @output);
+my $input;
+my @output;
 
 GetOptions("yyrepl=s" => \$yyrepl,
 	   "yysym=s@" => \@yysym,
-	   "stdout" => \$stdout,
-	   "compatibility|c" => \$compat,
 	   "help|?" => sub {
 	       pod2usage(-exitstatus => 0, -verbose => 2);
 	   }	   
     ) or exit(1);
 
-if ($compat) {
-    $input = shift @ARGV;
-    while (my $arg = shift @ARGV) {
-	last if ($arg eq '--');
-	push @output, $arg;
-    }
-    $command = join(' ', @ARGV); 
-} else {
-    pod2usage(-exitstatus => 1, -verbose => 0, -output => \*STDERR)
-	unless @ARGV >= 2;
-    ($command, $input, @output) = @ARGV;
+$input = shift @ARGV;
+while (my $arg = shift @ARGV) {
+    last if ($arg eq '--');
+    push @output, $arg;
 }
 
 pod2usage(-exitstatus => 1, -verbose => 0, -output => \*STDERR)
@@ -345,9 +298,6 @@ my $confile = "$input_dir/gylwrap.conf";
 readconf($confile) if -r $confile;    
 
 my $input_base = basename($input);
-unless ($stdout) {
-    $stdout = $config{$input_base}{stdout} || $config{''}{stdout};
-}
 unless ($yyrepl) {
     $yyrepl = $config{$input_base}{yyrepl} || $config{''}{yyrepl};
 }
@@ -361,19 +311,12 @@ if ($yyrepl) {
     }
 }
 
-my $prog = $command;
-$prog =~ s/\s.*$//;
-
 if (my $flags = $config{$input_base}{flags} || $config{''}{flags}) {
-    $command .= ' ' . $flags;
+    push @ARGV, @$flags;
 }
+push @ARGV, $input;
 
 $parser = $output[0];
-
-$command .= ' '.$input;
-if ($stdout) {
-    $command .= '>'.$parser;
-}    
 
 # Create working directory
 my $wd = tempdir("ylXXXXXX", DIR => '.', CLEANUP => 1)
@@ -387,12 +330,12 @@ END {
     chdir "..";
 }
 
-system($command);
+system(@ARGV);
 if ($? == -1) {
-    print STDERR "$prog: $!\n";
+    print STDERR "$ARGV[0]: $!\n";
     exit(127);
 } elsif ($? & 127) {
-    print STDERR "$prog died with signal ".($? & 127)."\n";
+    print STDERR "$ARGV[0] died with signal ".($? & 127)."\n";
     exit(127);
 } else {
     my $code = $? >> 8;
