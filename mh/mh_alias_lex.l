@@ -291,6 +291,7 @@ mh_alias_read (char const *name, int fail)
   rc = yyparse ();
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &old_mode);
+  return rc;
 }
 
 void

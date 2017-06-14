@@ -202,7 +202,26 @@ my @yysym = qw(
      yytable  
      yycheck  
      yyname   
-     yyrule   
+     yyrule
+
+     yy_create_buffer
+     yy_delete_buffer
+     yy_flex_debug
+     yy_init_buffer
+     yy_flush_buffer
+     yy_load_buffer_state
+     yy_switch_to_buffer
+     yyin
+     yyleng
+     yylex
+     yylineno
+     yyout
+     yyrestart
+     yytext
+     yywrap
+     yyalloc
+     yyrealloc
+     yyfree
 );
 
 our $VERSION = '1.00';
