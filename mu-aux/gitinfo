@@ -522,3 +522,6 @@ if (ref($format) eq 'CODE') {
     print eval_format($format);
 }
 
+# Local Variables:
+# mode: perl
+# End:

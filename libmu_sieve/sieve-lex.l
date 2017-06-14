@@ -188,6 +188,7 @@ push_source (const char *name)
   /* Push current context */
   if (trk)
     {
+      ctx = mu_sieve_malloc (mu_sieve_machine, sizeof (*ctx));
       ctx->trk = trk;
       mu_locus_range_copy (&ctx->incl_range, &yylloc);
       ctx->i_node = sieve_source_inode;
