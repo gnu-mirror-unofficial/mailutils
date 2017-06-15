@@ -258,11 +258,7 @@ _log_write (struct _mu_stream *str, const char *buf, size_t size,
     severity = MU_LOG_EMERG;
 
   if (save_locus)
-    {
-      sp->locrange = loc;
-      mu_ident_ref (sp->locrange.beg.mu_file, &sp->locrange.beg.mu_file);
-      mu_ident_ref (sp->locrange.end.mu_file, &sp->locrange.end.mu_file);
-    }
+    mu_locus_range_copy (&sp->locrange, &loc);
   
   if (severity < sp->threshold)
     rc = 0;
@@ -649,6 +645,8 @@ mu_log_stream_create (mu_stream_t *pstr, mu_stream_t transport)
   return 0;
 }
 
+static char wiki_url[] = "http://mailutils.org/wiki/Source_location_API#Deprecated_interface";
+
 int
 mu_ioctl_logstream_get_locus_deprecated (void)
 {
@@ -656,6 +654,7 @@ mu_ioctl_logstream_get_locus_deprecated (void)
   if (!warned)
     {
       mu_error (_("the program uses MU_IOCTL_LOGSTREAM_GET_LOCUS, which is deprecated"));
+      mu_error (_("please see %s, for detailed guidelines"), wiki_url);
       warned = 1;
     }
   return MU_IOCTL_LOGSTREAM_GET_LOCUS_DEPRECATED;
@@ -668,6 +667,7 @@ mu_ioctl_logstream_set_locus_deprecated (void)
   if (!warned)
     {
       mu_error (_("program uses MU_IOCTL_LOGSTREAM_SET_LOCUS, which is deprecated"));
+      mu_error (_("please see %s, for detailed guidelines"), wiki_url);
       warned = 1;
     }
   return MU_IOCTL_LOGSTREAM_SET_LOCUS_DEPRECATED;

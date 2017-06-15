@@ -23,6 +23,9 @@
 #include <mailutils/errno.h>
 #include <mailutils/diag.h>
 #include <mailutils/list.h>
+#include <mailutils/io.h>
+#include <mailutils/stream.h>
+#include <mailutils/iterator.h>
 
 struct mu_ident_ref
 {
@@ -111,5 +114,39 @@ mu_ident_deref (char const *name)
   return 0;
 }
   
-    
+void
+mu_ident_stat (mu_stream_t str)
+{
+  size_t count, i;
+  mu_iterator_t itr;
+  
+  mu_stream_printf (str, "BEGIN IDENT STAT\n");
+
+  mu_assoc_count (nametab, &count);
+  mu_stream_printf (str, "N=%zu\n", count);
+
+  if (count > 0)
+    {
+      int rc = mu_assoc_get_iterator (nametab, &itr);
+      if (rc)
+	mu_stream_printf (str, "mu_assoc_get_iterator: %s\n",
+			  mu_strerror (rc));
+      else
+	{
+	  i = 0;
+	  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
+	       mu_iterator_next (itr), i)
+	    {
+	      const char *key;
+	      struct mu_ident_ref *ref;
+	      
+	      mu_iterator_current_kv (itr,
+				      (const void **)&key, (void **)&ref);  
+	      mu_stream_printf (str, "%04zu: %s: %zu\n", i, key, ref->count);
+	    }
+	}
+      mu_iterator_destroy (&itr);
+    }
+  mu_stream_printf (str, "END IDENT STAT\n");
+}
 

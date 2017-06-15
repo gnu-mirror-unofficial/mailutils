@@ -629,6 +629,7 @@ struct testcase
 {
   char const *id;
   void (*handler) (mu_stream_t);
+  int enabled;
 };
 
 struct testcase testcases[] = {
@@ -689,17 +690,37 @@ main (int argc, char **argv)
   mu_stream_t log;
   struct testcase *tp;
   int i;
+  int ena = 0;
   
   mu_set_program_name (argv[0]);
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
+
+  if (argc > 1)
+    {
+      ena = 1;
+      for (i = 1; i < argc; i++)
+	{
+	  char *p;
+	  int n = strtol (argv[i], &p, 10);
+	  if (! (*p == 0 && n >= 0) )
+	    {
+	      mu_error ("erroneous argument %s\n", argv[i]);
+	      return 1;
+	    }
+	  testcases[n].enabled = ena;
+	}
+    }
 
   log = create_log ();
 
   for (i = 0, tp = testcases; tp->id; tp++, i++)
     {
-      mu_stream_printf (log, "%02d. %s\n", i, tp->id);
-      tp->handler (log);
-      log_reset (log);
+      if (tp->enabled == ena)
+	{
+	  mu_stream_printf (log, "%02d. %s\n", i, tp->id);
+	  tp->handler (log);
+	  log_reset (log);
+	}
     }
   
   return 0;

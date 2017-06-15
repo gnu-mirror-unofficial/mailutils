@@ -1,3 +1,20 @@
+/* GNU Mailutils -- a suite of utilities for electronic mail
+   Copyright (C) 2017 Free Software Foundation, Inc.
+
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 3 of the License, or (at your option) any later version.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General
+   Public License along with this library.  If not, see
+   <http://www.gnu.org/licenses/>. */
+
 #ifndef _MAILUTILS_LOCUS_H
 #define _MAILUTILS_LOCUS_H
 
@@ -34,6 +51,7 @@ struct mu_linetrack_stat
   
 int mu_ident_ref (char const *name, char const **refname);
 int mu_ident_deref (char const *);
+void mu_ident_stat (mu_stream_t str);
 
 int mu_locus_point_set_file (struct mu_locus_point *pt, const char *filename);
 int mu_locus_point_init (struct mu_locus_point *pt, const char *filename);
@@ -59,9 +77,6 @@ mu_locus_point_same_line (struct mu_locus_point const *a,
 {
   return mu_locus_point_same_file (a, b) && a->mu_line == b->mu_line;
 }
-
-void mu_lrange_debug (struct mu_locus_range const *loc,
-		      char const *fmt, ...);
 
 int mu_linetrack_create (mu_linetrack_t *ret,
 			   char const *file_name, size_t max_lines);

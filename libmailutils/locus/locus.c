@@ -20,6 +20,7 @@
 #include <mailutils/types.h>
 #include <mailutils/locus.h>
 #include <mailutils/error.h>
+#include <mailutils/errno.h>
 
 int
 mu_locus_point_set_file (struct mu_locus_point *pt, const char *filename)
@@ -38,9 +39,13 @@ mu_locus_point_set_file (struct mu_locus_point *pt, const char *filename)
 int
 mu_locus_point_init (struct mu_locus_point *pt, const char *filename)
 {
-  pt->mu_line = 0;
-  pt->mu_col = 0;
-  return mu_locus_point_set_file (pt, filename);
+  int rc = mu_locus_point_set_file (pt, filename);
+  if (rc == 0)
+    {
+      pt->mu_line = 0;
+      pt->mu_col = 0;
+    }
+  return rc;
 }
 
 void
@@ -54,9 +59,13 @@ int
 mu_locus_point_copy (struct mu_locus_point *dest,
 		     struct mu_locus_point const *src)
 {
-  dest->mu_col = src->mu_col;
-  dest->mu_line = src->mu_line;
-  return mu_locus_point_set_file (dest, src->mu_file);
+  int rc = mu_locus_point_set_file (dest, src->mu_file);
+  if (rc == 0)
+    {
+      dest->mu_col = src->mu_col;
+      dest->mu_line = src->mu_line;
+    }
+  return rc;
 }
 
 int
@@ -65,7 +74,10 @@ mu_locus_range_copy (struct mu_locus_range *dest,
 {
   int rc;
   struct mu_locus_range tmp = MU_LOCUS_RANGE_INITIALIZER;
-  
+
+  if (!dest)
+    return MU_ERR_OUT_PTR_NULL;
+    
   rc = mu_locus_point_copy (&tmp.beg, &src->beg);
   if (rc == 0)
     {
@@ -73,7 +85,10 @@ mu_locus_range_copy (struct mu_locus_range *dest,
       if (rc)
 	mu_locus_point_deinit (&tmp.beg);
       else
-	*dest = tmp;
+	{
+	  mu_locus_range_deinit (dest);
+	  *dest = tmp;
+	}
     }
   return rc;
 }

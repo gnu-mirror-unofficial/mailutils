@@ -155,7 +155,11 @@ typedef unsigned int mu_debug_level_t;
    <mailutils/locus.h>. 
 
    This definition is provided for backward compatibility.  Authors are
-   urged to switch to the new API as soon as their time permits. */
+   urged to switch to the new API as soon as their time permits.
+
+   Please see http://mailutils.org/wiki/Source_location_API#Deprecated_interface
+   for detailed guidelines.
+*/
 struct mu_locus_DEPRECATED
 {
   char *mu_file;

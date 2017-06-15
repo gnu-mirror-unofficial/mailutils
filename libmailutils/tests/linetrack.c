@@ -59,6 +59,7 @@ main (int argc, char **argv)
 	}
       mu_locus_range_deinit (&lr);
     }
+  mu_linetrack_destroy (&trk);
   return 0;
 }
 
