@@ -261,7 +261,46 @@ read_header (mu_stream_t stream)
 }
 
 int
-mh_whom (const char *filename, int check)
+mh_whom_header (mu_header_t hdr)
+{
+  size_t count = 0;
+  int rc;
+  const char *val;
+
+  mh_read_aliases ();
+
+  if (mu_header_sget_value (hdr, MU_HEADER_TO, &val) == 0)
+    scan_addrs (val, 0);
+  if (mu_header_sget_value (hdr, MU_HEADER_CC, &val) == 0)
+    scan_addrs (val, 0);
+  if (mu_header_sget_value (hdr, MU_HEADER_BCC, &val) == 0)
+    scan_addrs (val, 1);
+
+  if (local_rcp)
+    {
+      printf ("  %s\n", _("-- Local Recipients --"));
+      mu_list_foreach (local_rcp, _print_local_recipient, &count);
+    }
+
+  if (network_rcp)
+    {
+      printf ("  %s\n", _("-- Network Recipients --"));
+      mu_list_foreach (network_rcp, _print_recipient, &count);
+    }
+
+  if (count == 0)
+    {
+      mu_error(_("no recipients"));
+      rc = -1;
+    }
+
+  destroy_addrs (&network_rcp);
+  destroy_addrs (&local_rcp);
+  return rc;
+}
+
+int
+mh_whom_file (const char *filename, int check)
 {
   int rc = 0;
 
@@ -272,11 +311,9 @@ mh_whom (const char *filename, int check)
     }
   else
     {
-      size_t count = 0;
       mu_header_t hdr;
       mu_stream_t str;
       int rc;
-      const char *val;
 
       rc = mu_file_stream_create (&str, filename, MU_STREAM_READ);
       if (rc)
@@ -288,35 +325,26 @@ mh_whom (const char *filename, int check)
       hdr = read_header (str);
       mu_stream_unref (str);
 
-      mh_read_aliases ();
-
-      if (mu_header_sget_value (hdr, MU_HEADER_TO, &val) == 0)
-	scan_addrs (val, 0);
-      if (mu_header_sget_value (hdr, MU_HEADER_CC, &val) == 0)
-	scan_addrs (val, 0);
-      if (mu_header_sget_value (hdr, MU_HEADER_BCC, &val) == 0)
-	scan_addrs (val, 1);
-
-      if (local_rcp)
-	{
-	  printf ("  %s\n", _("-- Local Recipients --"));
-	  mu_list_foreach (local_rcp, _print_local_recipient, &count);
-	}
-
-      if (network_rcp)
-	{
-	  printf ("  %s\n", _("-- Network Recipients --"));
-	  mu_list_foreach (network_rcp, _print_recipient, &count);
-	}
-
-      if (count == 0)
-	{
-	  mu_error(_("no recipients"));
-	  rc = -1;
-	}
+      rc = mh_whom_header (hdr);
       mu_header_destroy (&hdr);
     }
-  destroy_addrs (&network_rcp);
-  destroy_addrs (&local_rcp);
   return rc;
 }
+
+int
+mh_whom_message (mu_message_t msg, int check)
+{
+  mu_header_t hdr;
+  int rc;
+
+  rc = mu_message_get_header (msg, &hdr);
+  if (rc)
+    mu_error (_("can't get headers: %s"), mu_strerror (rc));
+  else
+    {
+      rc = mh_whom_header (hdr);
+      mu_header_destroy (&hdr);
+    }
+  return rc;
+}
+

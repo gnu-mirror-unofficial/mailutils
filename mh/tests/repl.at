@@ -79,6 +79,70 @@ X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 Seen by mhed
 ])
 
+MH_CHECK([Draft-Folder],[repl02 repl-draftfolder draftfolder],[
+mkdir Mail/inbox
+mkdir Mail/drafts
+echo "Draft-Folder: +drafts" >> $MH
+
+AT_DATA([Mail/inbox/1],[From: gray@example.com
+To: root@example.com
+Subject: test input
+
+message body
+])
+echo "quit" | replcmd +inbox 1 | cwdrepl
+echo == Mail/drafts/1 ==
+cat Mail/drafts/1
+],
+[0],
+[-- Editor invocation: ./Mail/drafts/1
+-- Input file:
+To: <gray@example.com>
+Subject: Re: test input
+X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+--------
+-- Input file end
+What now? draft left on "./Mail/drafts/1".
+== Mail/drafts/1 ==
+To: <gray@example.com>
+Subject: Re: test input
+X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+--------
+Seen by mhed
+])
+
+MH_CHECK([-nodraftfolder],[repl03 repl-nodraftfolder nodraftfolder draftfolder],[
+mkdir Mail/inbox
+mkdir Mail/drafts
+echo "Draft-Folder: +drafts" >> $MH
+
+AT_DATA([Mail/inbox/1],[From: gray@example.com
+To: root@example.com
+Subject: test input
+
+message body
+])
+echo "quit" | replcmd -nodraftfolder +inbox 1 | cwdrepl
+echo == Mail/draft ==
+cat Mail/draft
+],
+[0],
+[-- Editor invocation: ./Mail/draft
+-- Input file:
+To: <gray@example.com>
+Subject: Re: test input
+X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+--------
+-- Input file end
+What now? draft left on "./Mail/draft".
+== Mail/draft ==
+To: <gray@example.com>
+Subject: Re: test input
+X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+--------
+Seen by mhed
+])
+
 m4_popdef([replcmd])
 m4_popdef([MH_KEYWORDS])
 # End of repl.at

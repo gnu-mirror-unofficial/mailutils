@@ -193,6 +193,49 @@ message body
 Seen by mhed
 ])
 
+MH_CHECK([use Draft-Folder],[comp07 draftfolder],
+[mkdir Mail/drafts
+echo "Draft-Folder: +drafts" >> $MH
+echo 'quit' | compcmd | cwdrepl
+sed 's/ *$//' Mail/drafts/1
+],
+[0],
+[-- Editor invocation: ./Mail/drafts/1
+-- Input file:
+To:
+cc:
+Subject:
+--------
+-- Input file end
+What now? draft left on "./Mail/drafts/1".
+To:
+cc:
+Subject:
+--------
+Seen by mhed
+])
+
+MH_CHECK([-nodraftfolder],[comp08 nodraftfolder draftfolder],
+[mkdir Mail/drafts
+echo "Draft-Folder: +drafts" >> $MH
+echo 'quit' | compcmd -nodraftfolder | cwdrepl
+sed 's/ *$//' Mail/draft
+],
+[0],
+[-- Editor invocation: ./Mail/draft
+-- Input file:
+To:
+cc:
+Subject:
+--------
+-- Input file end
+What now? draft left on "./Mail/draft".
+To:
+cc:
+Subject:
+--------
+Seen by mhed
+])
 
 m4_popdef([compcmd])
 m4_popdef([MH_KEYWORDS])

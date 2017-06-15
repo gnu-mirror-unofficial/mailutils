@@ -342,7 +342,11 @@ int mh_usedraft (const char *filename);
 int mh_file_copy (const char *from, const char *to);
 char *mh_draft_name (void);
 char *mh_create_message_id (int);
-int mh_whom (const char *filename, int check);
+
+int mh_whom_header (mu_header_t hdr);
+int mh_whom_file (const char *filename, int check);
+int mh_whom_message (mu_message_t msg, int check);
+
 void mh_set_reply_regex (const char *str);
 int mh_decode_2047 (char *text, char **decoded_text);
 const char *mh_charset (const char *);

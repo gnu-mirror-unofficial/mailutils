@@ -397,6 +397,129 @@ message body
 What now? draft left on "./Mail/draft".
 ])
 
+MH_CHECK([Draft-Folder],[forw07 forw-draftfolder draftfolder],[
+mkdir Mail/inbox
+mkdir Mail/drafts
+echo "Draft-Folder: +drafts" >> $MH
+
+AT_DATA([Mail/inbox/1],[From: gray
+To: root
+Subject: test input
+
+message body
+])
+
+echo "quit" | forwcmd 1 | cwdrepl
+echo == Mail/drafts/1 ==
+cat Mail/drafts/1
+echo == Message ==
+sed '/^X-IMAPbase/d' Mail/inbox/1
+],
+[0],
+[-- Editor invocation: ./Mail/drafts/1
+-- Input file:
+To:
+cc:
+Subject:
+--------
+
+------- Forwarded message
+From: gray
+To: root
+Subject: test input
+
+message body
+
+------- End of Forwarded message
+
+-- Input file end
+What now? draft left on "./Mail/drafts/1".
+== Mail/drafts/1 ==
+To:
+cc:
+Subject:
+--------
+
+------- Forwarded message
+From: gray
+To: root
+Subject: test input
+
+message body
+
+------- End of Forwarded message
+
+Seen by mhed
+== Message ==
+From: gray
+To: root
+Subject: test input
+
+message body
+])
+
+MH_CHECK([-nodraftfolder],[forw08 forw-nodraftfolder nodraftfolder draftfolder],[
+mkdir Mail/inbox
+mkdir Mail/drafts
+echo "Draft-Folder: +drafts" >> $MH
+
+AT_DATA([Mail/inbox/1],[From: gray
+To: root
+Subject: test input
+
+message body
+])
+
+echo "quit" | forwcmd -nodraftfolder 1 | cwdrepl
+echo == Mail/draft ==
+cat Mail/draft
+echo == Message ==
+sed '/^X-IMAPbase/d' Mail/inbox/1
+],
+[0],
+[-- Editor invocation: ./Mail/draft
+-- Input file:
+To:
+cc:
+Subject:
+--------
+
+------- Forwarded message
+From: gray
+To: root
+Subject: test input
+
+message body
+
+------- End of Forwarded message
+
+-- Input file end
+What now? draft left on "./Mail/draft".
+== Mail/draft ==
+To:
+cc:
+Subject:
+--------
+
+------- Forwarded message
+From: gray
+To: root
+Subject: test input
+
+message body
+
+------- End of Forwarded message
+
+Seen by mhed
+== Message ==
+From: gray
+To: root
+Subject: test input
+
+message body
+])
+
+
 m4_popdef([forwcmd])
 m4_popdef([MH_KEYWORDS])
 

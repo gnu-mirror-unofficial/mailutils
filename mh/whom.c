@@ -21,7 +21,7 @@ static char prog_doc[] = N_("Report to whom a message would go");
 static char args_doc[] = "[FILE]";
 
 static int check_recipients;
-static int use_draft;            /* Use the prepared draft */
+static char *message;
 static const char *draft_folder; /* Use this draft folder */
 
 static void
@@ -45,7 +45,7 @@ static struct mu_option options[] = {
     mu_c_string, NULL, add_alias },
   { "draft",        0,    NULL, MU_OPTION_DEFAULT,
     N_("use prepared draft"),
-    mu_c_bool, &use_draft },
+    mu_c_string, &message, NULL, "draft" },
   { "draftfolder",   0,      N_("FOLDER"), MU_OPTION_DEFAULT,
     N_("specify the folder for message drafts"),
     mu_c_string, &draft_folder },
@@ -60,22 +60,57 @@ static struct mu_option options[] = {
     mu_c_bool, &check_recipients },
   MU_OPTION_END
 };
+
+static struct mh_optinit optinit[] = {
+  { "draftfolder", "Draft-Folder" },
+  { NULL }
+};
 
 int
 main (int argc, char **argv)
 {
-  char *name = "draft";
-
-  mh_getopt (&argc, &argv, options, 0, args_doc, prog_doc, NULL);
-
-  if (!use_draft && argc > 0)
-    name = argv[0];
-
-  if (!draft_folder)
-    draft_folder = mh_global_profile_get ("Draft-Folder",
-					  mu_folder_directory ());
-
+  int rc;
   
-  return mh_whom (mh_expand_name (draft_folder, name, NAME_ANY), 
-                  check_recipients) ? 1 : 0;
+  mh_getopt_ext (&argc, &argv, options, 0, optinit, args_doc, prog_doc, NULL);
+
+  if (draft_folder)
+    {
+      mu_mailbox_t mbox = mh_open_folder (draft_folder, MU_STREAM_READ);
+      mu_msgset_t msgset;
+      size_t msgno;
+      mu_message_t msg;
+      
+      mh_msgset_parse (&msgset, mbox, argc, argv, "cur");
+      if (!mh_msgset_single_message (msgset))
+	{
+	  mu_error (_("only one message at a time!"));
+	  return 1;
+	}
+      msgno = mh_msgset_first (msgset, RET_MSGNO);
+      rc = mu_mailbox_get_message (mbox, msgno, &msg);
+      if (rc)
+	{
+	  mu_error (_("can't read message: %s"), mu_strerror (rc));
+	  exit (1);
+	}
+      rc = mh_whom_message (msg, check_recipients);
+    }
+  else
+    {
+      if (argc > 0)
+	{
+	  if (message || argc > 1)
+	    {
+	      mu_error (_("only one file at a time!"));
+	      exit (1);
+	    }
+	  message = argv[0];
+	}
+      else
+	message = "draft";
+      rc = mh_whom_file (mh_expand_name (draft_folder, message, NAME_ANY), 
+			 check_recipients);
+    }
+
+  return rc ? 1 : 0;
 }

@@ -289,19 +289,19 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
   }
 }
 
+static struct mh_optinit optinit[] = {
+  { "draftfolder", "Draft-Folder" },
+  { "whatnowproc", "whatnowproc" },
+  { NULL }
+};
+
 int
 main (int argc, char **argv)
 {
   int rc;
 
-  mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
-	     args_doc, prog_doc, NULL);
-
-  if (!draftfolder)
-    draftfolder = mh_global_profile_get ("Draft-Folder", NULL);
-  if (!whatnowproc)
-    whatnowproc = mh_global_profile_get ("whatnowproc", NULL);
-
+  mh_getopt_ext (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER, optinit,
+		 args_doc, prog_doc, NULL);
   
   if (!format_str)
     format_str = default_format_str;
