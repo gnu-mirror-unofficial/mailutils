@@ -26,7 +26,7 @@ static char logger_args_doc[] = N_("[TEXT]");
 static char *input_file = NULL;
 static int logger_type = MU_STRERR_STDERR;
 static int log_severity = MU_LOG_ERROR;
-static struct mu_locus_range locus;
+static struct mu_locus_range locus = MU_LOCUS_RANGE_INITIALIZER;
 static int syslog_facility = LOG_USER;
 static int syslog_priority = LOG_ERR;
 static char *syslog_tag = NULL;
@@ -95,7 +95,7 @@ parse_locus_point (char **ptr, struct mu_locus_point *pt,
       char *end;
       *s++ = 0;
       if (*str)
-	mu_locus_point_init (pt, str);
+	mu_locus_point_set_file (pt, str);
       pt->mu_line = strtoul (s, &end, 10);
       if (end == s)
 	{
@@ -135,7 +135,7 @@ set_locus (struct mu_parseopt *po, struct mu_option *opt,
   parse_locus_point (&s, &locus.beg, po);
   if (*s == '-')
     {
-      mu_locus_point_init (&locus.end, locus.beg.mu_file);
+      mu_locus_point_set_file (&locus.end, locus.beg.mu_file);
       locus.end.mu_line = locus.beg.mu_line;
       locus.end.mu_col = locus.end.mu_col;
       s++;

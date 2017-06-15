@@ -498,7 +498,7 @@ fmt_locus1 (mu_stream_t str)
 {
   char *file = "a";
   mu_stream_printf (str, "\033f<%d>%s\033l<%d>one\n",
-		    strlen (file), file, 10);
+		    (int) strlen (file), file, 10);
 }
 
 /* Check ESC-f, ESC-l, and ESC-c format specifiers.
@@ -510,7 +510,7 @@ fmt_locus2 (mu_stream_t str)
 {
   char *file = "a";
   mu_stream_printf (str, "\033f<%d>%s\033l<%d>\033c<%d>one\n",
-		    strlen (file), file, 10, 5);
+		    (int) strlen (file), file, 10, 5);
 }
 
 /* Check setting range with ESC-f, ESC-l, and ESC-c format specifiers.
@@ -523,8 +523,8 @@ fmt_locus3 (mu_stream_t str)
   char *file[] = { "a", "b" };
   mu_stream_printf (str, "\033f<%d>%s\033l<%d>\033c<%d>"
 		    "\033f<%d>%s\033l<%d>\033c<%d>one\n",
-		    strlen (file[0]), file[0], 10, 5,
-		    strlen (file[1]), file[1], 14, 8);
+		    (int) strlen (file[0]), file[0], 10, 5,
+		    (int) strlen (file[1]), file[1], 14, 8);
 }
 
 /* Check that ESC-f, ESC-l, and ESC-c format specifiers don't clobber
@@ -552,8 +552,8 @@ fmt_locus4 (mu_stream_t str)
 
   mu_stream_printf (str, "\033f<%d>%s\033l<%d>\033c<%d>"
 		    "\033f<%d>%s\033l<%d>\033c<%d>one\n",
-		    strlen (file[0]), file[0], 10, 5,
-		    strlen (file[1]), file[1], 14, 8);
+		    (int) strlen (file[0]), file[0], 10, 5,
+		    (int) strlen (file[1]), file[1], 14, 8);
   mu_stream_printf (str, "default\n");
 }
 
@@ -586,8 +586,8 @@ fmt_locus5 (mu_stream_t str)
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
   mu_stream_printf (str, "\033f<%d>%s\033l<%d>\033c<%d>"
 		    "\033f<%d>%s\033l<%d>\033c<%d>one\n",
-		    strlen (file[0]), file[0], 10, 5,
-		    strlen (file[1]), file[1], 14, 8);
+		    (int) strlen (file[0]), file[0], 10, 5,
+		    (int) strlen (file[1]), file[1], 14, 8);
   mu_stream_printf (str, "default\n");
 }
 
@@ -619,8 +619,8 @@ fmt_locus6 (mu_stream_t str)
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
   mu_stream_printf (str, "\033S\033f<%d>%s\033l<%d>\033c<%d>"
 		    "\033f<%d>%s\033l<%d>\033c<%d>one\n",
-		    strlen (file[0]), file[0], 10, 5,
-		    strlen (file[1]), file[1], 14, 8);
+		    (int) strlen (file[0]), file[0], 10, 5,
+		    (int) strlen (file[1]), file[1], 14, 8);
   mu_stream_printf (str, "default\n");
 }
 

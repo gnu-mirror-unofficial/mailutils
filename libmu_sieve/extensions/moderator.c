@@ -103,7 +103,7 @@ moderator_filter_message (mu_sieve_machine_t mach,
     }
   else if (mu_sieve_get_tag (mach, "program", SVT_STRING, &arg))
     {
-      struct mu_locus_range locrange;
+      struct mu_locus_range locrange = MU_LOCUS_RANGE_INITIALIZER;
       
       rc = mu_sieve_machine_clone (mach, &newmach);
       if (rc)

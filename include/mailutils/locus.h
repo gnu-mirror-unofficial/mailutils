@@ -54,11 +54,12 @@ int mu_ident_deref (char const *);
 void mu_ident_stat (mu_stream_t str);
 
 int mu_locus_point_set_file (struct mu_locus_point *pt, const char *filename);
-int mu_locus_point_init (struct mu_locus_point *pt, const char *filename);
+void mu_locus_point_init (struct mu_locus_point *pt);
 void mu_locus_point_deinit (struct mu_locus_point *pt);
 int mu_locus_point_copy (struct mu_locus_point *dest,
 			 struct mu_locus_point const *src);
 
+void mu_locus_range_init (struct mu_locus_range *dest);
 int mu_locus_range_copy (struct mu_locus_range *dest,
 			 struct mu_locus_range const *src);
 void mu_locus_range_deinit (struct mu_locus_range *lr);

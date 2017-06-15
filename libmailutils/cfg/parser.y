@@ -94,6 +94,7 @@ mu_cfg_alloc_node (enum mu_cfg_node_type type, struct mu_locus_range *loc,
   size_t size = sizeof *np + strlen (tag) + 1;
   np = mu_alloc (size);
   np->type = type;
+  mu_locus_range_init (&np->locus);
   mu_locus_range_copy (&np->locus, loc);
   p = (char*) (np + 1);
   np->tag = p;

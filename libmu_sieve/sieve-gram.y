@@ -388,6 +388,7 @@ node_alloc (enum mu_sieve_node_type type, struct mu_locus_range *lr)
     {
       node->prev = node->next = NULL;
       node->type = type;
+      mu_locus_range_init (&node->locus);
       mu_locus_range_copy (&node->locus, lr);
     }
   return node;
@@ -1585,8 +1586,8 @@ mu_sieve_compile_buffer (mu_sieve_machine_t mach,
 			 const char *fname, int line)
 {
   int rc;
-  struct mu_locus_point loc;
-  mu_locus_point_init (&loc, fname);
+  struct mu_locus_point loc = MU_LOCUS_POINT_INITIALIZER;
+  mu_locus_point_set_file (&loc, fname);
   loc.mu_line = line;
   rc = mu_sieve_compile_text (mach, buf, bufsize, &loc);
   mu_locus_point_deinit (&loc);

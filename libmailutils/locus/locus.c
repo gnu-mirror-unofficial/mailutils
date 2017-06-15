@@ -36,16 +36,10 @@ mu_locus_point_set_file (struct mu_locus_point *pt, const char *filename)
   return 0;
 }
 
-int
-mu_locus_point_init (struct mu_locus_point *pt, const char *filename)
+void
+mu_locus_point_init (struct mu_locus_point *pt)
 {
-  int rc = mu_locus_point_set_file (pt, filename);
-  if (rc == 0)
-    {
-      pt->mu_line = 0;
-      pt->mu_col = 0;
-    }
-  return rc;
+  memset (pt, 0, sizeof *pt);
 }
 
 void
@@ -66,6 +60,12 @@ mu_locus_point_copy (struct mu_locus_point *dest,
       dest->mu_line = src->mu_line;
     }
   return rc;
+}
+
+void
+mu_locus_range_init (struct mu_locus_range *dest)
+{
+  memset (dest, 0, sizeof *dest);
 }
 
 int
