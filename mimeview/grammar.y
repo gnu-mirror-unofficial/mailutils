@@ -315,6 +315,7 @@ make_node (enum node_type type, struct mu_locus_range const *loc)
 {
   struct node *p = mimetypes_malloc (sizeof *p);
   p->type = type;
+  mu_locus_range_init (&p->loc);
   mu_locus_range_copy (&p->loc, loc);
   return p;
 }

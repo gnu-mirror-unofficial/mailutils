@@ -43,10 +43,9 @@ typedef struct mu_linetrack *mu_linetrack_t;
 
 struct mu_linetrack_stat
 {
-  unsigned start_line;  /* Start line number (1-based) */
-  size_t n_lines;       /* Number of lines, including the recent (incomplete)
-			   one */
-  size_t n_chars;       /* Total number of characters */
+  size_t n_files; /* Number of source files */
+  size_t n_lines; /* Number of lines, including the recent (incomplete) one */
+  size_t n_chars; /* Total number of characters */
 };
   
 int mu_ident_ref (char const *name, char const **refname);
@@ -81,6 +80,7 @@ mu_locus_point_same_line (struct mu_locus_point const *a,
 
 int mu_linetrack_create (mu_linetrack_t *ret,
 			   char const *file_name, size_t max_lines);
+int mu_linetrack_origin (mu_linetrack_t trk, struct mu_locus_point const *pt);
 int mu_linetrack_rebase (mu_linetrack_t trk, struct mu_locus_point const *pt);
 void mu_linetrack_free (mu_linetrack_t trk);
 void mu_linetrack_destroy (mu_linetrack_t *trk);
