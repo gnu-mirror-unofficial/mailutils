@@ -46,6 +46,19 @@ com_origin (mu_linetrack_t trk, size_t argc, char **argv)
 }
 
 static void
+com_line (mu_linetrack_t trk, size_t argc, char **argv)
+{
+  int rc;
+  struct mu_locus_point pt = MU_LOCUS_POINT_INITIALIZER;
+
+  if (getnum (argv[1], &pt.mu_line))
+    return;
+  rc = mu_linetrack_origin (trk, &pt);
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_linetrack_origin", NULL, rc);
+}
+
+static void
 com_rebase (mu_linetrack_t trk, size_t argc, char **argv)
 {
   int rc;
@@ -110,6 +123,7 @@ struct command
 static struct command comtab[] = {
   { "retreat",   2, com_retreat },
   { "origin",    4, com_origin },
+  { "line",      2, com_line },
   { "point",     1, com_point },
   { "rebase",    4, com_rebase },
   { "bol",       1, com_bol_p },

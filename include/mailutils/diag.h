@@ -52,6 +52,8 @@ void mu_diag_cont_printf (const char *fmt, ...) MU_PRINTFLIKE(1,2);
   
 void mu_diag_voutput (int, const char *, va_list);
 void mu_diag_output (int, const char *, ...) MU_PRINTFLIKE(2,3);
+void mu_vdiag_at_locus_range (int level, struct mu_locus_range const *loc,
+			      const char *fmt, va_list ap);
 void mu_diag_at_locus_point (int level, struct mu_locus_point const *loc,
 			     const char *fmt, ...);
 void mu_diag_at_locus_range (int level, struct mu_locus_range const *loc,

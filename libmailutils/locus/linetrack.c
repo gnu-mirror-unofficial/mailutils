@@ -163,13 +163,20 @@ mu_linetrack_origin (mu_linetrack_t trk, struct mu_locus_point const *pt)
 {
   int rc;
   struct source *sp;
+  char const *file_name;
   
-  if (!trk || !pt || !pt->mu_file || pt->mu_line == 0)
+  if (!trk || !pt || pt->mu_line == 0)
+    return EINVAL;
+  if (pt->mu_file)
+    file_name = pt->mu_file;
+  else if (trk->s_head)
+    file_name = trk->s_head->file_name;
+  else
     return EINVAL;
   sp = malloc (sizeof *sp);
   if (!sp)
     return errno;
-  rc = mu_ident_ref (pt->mu_file, &sp->file_name);
+  rc = mu_ident_ref (file_name, &sp->file_name);
   if (rc)
     {
       free (sp);

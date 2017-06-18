@@ -18,7 +18,7 @@ AT_BANNER([Line tracker])
 
 m4_pushdef([TRACKTEST],[
 AT_SETUP([$1])
-AT_KEYWORDS([tracker $2])
+AT_KEYWORDS([tracker linetrack $2])
 AT_CHECK([linetrack liber $3 <<EOT
 $4[]EOT
 ],
@@ -275,5 +275,20 @@ two
 archivum:5.4-6: two
 ])
 
+TRACKTEST([#line directive],[],[9],
+[agnosco
+veteris\n
+vestigia
+#line 20
+flamme\n
+#retreat 8
+Naso
+],
+[liber:1.1-7: agnosco
+liber:1.8-14: veteris\n
+liber:2.1-8: vestigia
+liber:20.1-6: flamme\n
+liber:2.8-11: Naso
+])
 
 m4_popdef([TRACKTEST])
