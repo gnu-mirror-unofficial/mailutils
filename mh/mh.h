@@ -382,6 +382,8 @@ int mh_seq_delete (mu_mailbox_t mbox, const char *name, mu_msgset_t mset,
 		   int flags);
 const char *mh_seq_read (mu_mailbox_t mbox, const char *name, int flags);
 
+void mh_sequences_elim (mu_msgset_t msgset);
+
 void mh_comp_draft (const char *formfile, const char *draftfile);
 int check_draft_disposition (struct mh_whatnow_env *wh, int use_draft);
 

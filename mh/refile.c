@@ -220,7 +220,9 @@ main (int argc, char **argv)
       mh_msgset_parse (&msgset, mbox, argc, argv, "cur");
 
       status = mu_msgset_foreach_message (msgset, refile_iterator, NULL);
- 
+
+      mh_sequences_elim (msgset);
+
       mu_mailbox_expunge (mbox);
       mu_mailbox_close (mbox);
       mu_mailbox_destroy (&mbox);
