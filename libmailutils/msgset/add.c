@@ -41,11 +41,15 @@ mu_msgset_add_range (mu_msgset_t mset, size_t beg, size_t end, int mode)
     return ENOMEM;
   range->msg_beg = beg;
   range->msg_end = end;
-  rc = _mu_msgset_translate_range (mset, mode, range);
-  if (rc)
+  if (mode != _MU_MSGSET_MODE (mset->flags))
     {
-      free (range);
-      return rc;
+      rc = _mu_msgset_translate_range (mset, _MU_MSGSET_MODE (mset->flags),
+				       range);
+      if (rc)
+	{
+	  free (range);
+	  return rc;
+	}
     }
   rc = mu_list_append (mset->list, range);
   if (rc)

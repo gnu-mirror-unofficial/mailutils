@@ -25,5 +25,5 @@
 int
 mu_imapio_send_msgset (mu_imapio_t io, mu_msgset_t msgset)
 {
-  return mu_msgset_print (io->_imap_stream, msgset);
+  return mu_msgset_imap_print (io->_imap_stream, msgset);
 }

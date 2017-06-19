@@ -30,6 +30,25 @@ struct mu_msgrange
   size_t msg_end;
 };
 
+struct mu_msgset_format
+{
+  char *range;   /* range separator (e.g., ":" for IMAP, "-" for MH) */
+  char *delim;   /* delimiter       (e.g., "," for IMAP, " " for MH) */
+  char *last;    /* last message marker (e.g., "*" for IMAP, "last" for MH) */
+  char *empty;   /* empty list representation ( "NIL", for IMAP, NULL for MH */
+};
+
+enum
+  {
+    MU_MSGSET_FMT_IMAP,
+    MU_MSGSET_FMT_MH
+  };
+
+extern struct mu_msgset_format const mu_msgset_formats[];
+typedef struct mu_msgset_format const *mu_msgset_format_t;
+#define mu_msgset_fmt_imap (&mu_msgset_formats[MU_MSGSET_FMT_IMAP])
+#define mu_msgset_fmt_mh   (&mu_msgset_formats[MU_MSGSET_FMT_MH])
+  
 /* Message numbers start with 1.  MU_MSGNO_LAST denotes the last
    message. */
 #define MU_MSGNO_LAST   0
@@ -37,9 +56,15 @@ struct mu_msgrange
 #define MU_MSGSET_NUM   0      /* Message set operates on sequence numbers */
 #define MU_MSGSET_UID   1      /* Message set operates on UIDs */
 
+#define MU_MSGSET_IGNORE_TRANSERR 0x10
+  
 #define MU_MSGSET_MODE_MASK 0x0f
   
 int mu_msgset_create (mu_msgset_t *pmsgset, mu_mailbox_t mbox, int mode);
+
+int mu_msgset_copy (mu_msgset_t src, mu_msgset_t dst);
+int mu_msgset_translate (mu_msgset_t *dst, mu_msgset_t src, int flags);
+  
 int mu_msgset_get_list (mu_msgset_t msgset, mu_list_t *plist);
 int mu_msgset_get_iterator (mu_msgset_t msgset, mu_iterator_t *pitr);
 
@@ -54,9 +79,21 @@ int mu_msgset_clear (mu_msgset_t set);
 void mu_msgset_free (mu_msgset_t set);
 void mu_msgset_destroy (mu_msgset_t *set);
   
-int mu_msgset_parse_imap (mu_msgset_t set, int mode, const char *s, char **end);
+int mu_msgset_parse_imap (mu_msgset_t set, int mode, const char *s,
+			  char **end);
 
-int mu_msgset_print (mu_stream_t str, mu_msgset_t msgset);
+int mu_stream_msgset_format (mu_stream_t str,
+			     struct mu_msgset_format const *fmt,
+			     mu_msgset_t mset);
+int mu_msgset_print (mu_stream_t str, mu_msgset_t msgset)
+  MU_DEPRECATED;
+
+static inline int
+mu_msgset_imap_print (mu_stream_t str, mu_msgset_t mset)
+{
+  return mu_stream_msgset_format (str, mu_msgset_fmt_imap, mset);
+}
+  
   
 int mu_msgset_locate (mu_msgset_t msgset, size_t n,
 		      struct mu_msgrange const **prange);

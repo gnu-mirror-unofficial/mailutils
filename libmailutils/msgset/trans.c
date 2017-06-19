@@ -27,14 +27,14 @@ int
 _mu_msgset_translate_pair (mu_msgset_t mset, int mode,
 			   size_t *pbeg, size_t *pend)
 {
-  if (mode != _MU_MSGSET_MODE (mset->flags) && mset->mbox)
+  if (mset->mbox)
     {
       int cmd, rc;
       size_t n = 1;
       size_t beg = *pbeg;
       size_t end = *pend;
       
-      switch (_MU_MSGSET_MODE (mset->flags))
+      switch (mode)
 	{
 	case MU_MSGSET_NUM:
 	  cmd = MU_MAILBOX_UID_TO_MSGNO;
@@ -96,4 +96,75 @@ _mu_msgset_translate_range (mu_msgset_t mset, int mode, struct mu_msgrange *r)
 {
   return _mu_msgset_translate_pair (mset, mode, &r->msg_beg, &r->msg_end);
 }
+
+struct trans_closure
+{
+  mu_msgset_t mset;
+  int flags;
+};
 
+static int
+trans_range (void *item, void *data)
+{
+  struct mu_msgrange const *range = item;
+  struct trans_closure *clos = data;
+  struct mu_msgrange *copy;
+  int rc;
+  
+  copy = malloc (sizeof *copy);
+  if (!copy)
+    return errno;
+  *copy = *range;
+  rc = _mu_msgset_translate_range (clos->mset, _MU_MSGSET_MODE (clos->flags),
+				   copy);
+  switch (rc)
+    {
+    case 0:
+      rc = mu_list_append (clos->mset->list, copy);
+      break;
+      
+    case MU_ERR_NOENT:
+      if (clos->flags & MU_MSGSET_IGNORE_TRANSERR)
+	rc = 0;
+      /* fallthrough */
+
+    default:
+      free (copy);
+    }
+
+  return rc;
+}
+
+int
+mu_msgset_translate (mu_msgset_t *dst, mu_msgset_t src, int flags)
+{
+  int rc;
+  mu_msgset_t tmp;
+
+  rc = mu_msgset_create (&tmp, src->mbox, src->flags);
+  if (rc)
+    return rc;
+
+  tmp->format = src->format;
+
+  if (_MU_MSGSET_MODE (flags) == src->flags)
+    {
+      rc = mu_msgset_copy (src, tmp);
+    }
+  else
+    {
+      struct trans_closure tc;
+      tc.mset = tmp;
+      tc.flags = flags;
+      rc = mu_list_foreach (src->list, trans_range, &tc);
+    }
+    
+  if (rc)
+    mu_msgset_destroy (&tmp);
+  else
+    *dst = tmp;
+
+  return rc;
+}
+
+  

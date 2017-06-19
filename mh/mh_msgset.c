@@ -119,6 +119,7 @@ msgset_parser_init (struct msgset_parser *parser, mu_mailbox_t mbox,
       mu_diag_funcall (MU_DIAG_ERROR, "mu_msgset_create", NULL, rc);
       exit (1);
     }
+  
   parser->argc = argc;
   parser->argv = argv;
   parser->curp = "";

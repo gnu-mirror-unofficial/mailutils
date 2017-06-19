@@ -22,6 +22,7 @@ libmsgset_la_SOURCES = \
  addset.c\
  aggr.c\
  clear.c\
+ copy.c\
  create.c\
  count.c\
  getitr.c\

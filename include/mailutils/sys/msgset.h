@@ -27,6 +27,7 @@ struct _mu_msgset
   mu_list_t list;           /* List of mu_msgrange structures */
   mu_mailbox_t mbox;        /* Associated mailbox */
   int flags;                /* Message set flags */
+  size_t format;            /* Format index */
 };
 
 int _mu_msgset_translate_pair (mu_msgset_t mset, int mode,

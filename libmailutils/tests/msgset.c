@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <mailutils/mailutils.h>
 
+mu_msgset_format_t format = mu_msgset_fmt_imap;
+
 static void
 parse_msgrange (char *arg, struct mu_msgrange *range)
 {
@@ -76,7 +78,7 @@ parse_msgset (const char *arg)
 static void
 print_all (mu_msgset_t msgset)
 {
-  MU_ASSERT (mu_msgset_print (mu_strout, msgset));
+  MU_ASSERT (mu_stream_msgset_format (mu_strout, format, msgset));
   mu_printf ("\n");
 }
 
@@ -111,13 +113,15 @@ main (int argc, char **argv)
 
       if (strcmp (arg, "-h") == 0 || strcmp (arg, "-help") == 0)
 	{
-	  mu_printf ("usage: %s [-msgset=SET] [-add=X[:Y]] [-del=X[:Y]] "
-		     "[-addset=SET] [-delset=SET] [-first] [-last]...\n",
+	  mu_printf ("usage: %s [-mh] [-msgset=SET] [-add=X[:Y]] [-del=X[:Y]] "
+		     "[-addset=SET] [-delset=SET] [-first] [-last] ...\n",
 		     mu_program_name);
 	  return 0;
 	}
       else if (strncmp (arg, "-msgset=", 8) == 0)
 	msgset_string = arg + 8;
+      else if (strcmp (arg, "-mh") == 0)
+	format = mu_msgset_fmt_mh;
       else
 	break;
     }

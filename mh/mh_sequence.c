@@ -47,6 +47,8 @@ mh_seq_read (mu_mailbox_t mbox, const char *name, int flags)
 static void
 write_sequence (mu_mailbox_t mbox, const char *name, char *value, int private)
 {
+  if (value && value[0] == 0)
+    value = NULL;
   if (private)
     {
       char *p = private_sequence_name (name);
@@ -63,96 +65,35 @@ delete_sequence (mu_mailbox_t mbox, const char *name, int private)
   write_sequence (mbox, name, NULL, private);
 }
 
-struct format_closure
-{
-  mu_stream_t stream;
-  mu_mailbox_t mailbox;
-  int delim;
-};
-
-static int
-format_sequence (void *item, void *data)
-{
-  struct mu_msgrange *r = item;
-  struct format_closure *clos = data;
-  int rc;
-  size_t beg, end;
-
-  if (clos->mailbox)
-    {
-      rc = mu_mailbox_translate (clos->mailbox,
-				 MU_MAILBOX_MSGNO_TO_UID,
-				 r->msg_beg, &beg);
-      if (rc)
-	return rc;
-    }
-  else
-    beg = r->msg_beg;
-  if (clos->delim)
-    mu_stream_write (clos->stream, " ", 1, NULL);
-  if (r->msg_beg == r->msg_end)
-    rc = mu_stream_printf (clos->stream, "%lu", (unsigned long) beg);
-  else
-    {
-      if (clos->mailbox)
-	{
-	  rc = mu_mailbox_translate (clos->mailbox,
-				     MU_MAILBOX_MSGNO_TO_UID,
-				     r->msg_end, &end);
-	  if (rc)
-	    return rc;
-	}
-      else
-	end = r->msg_end;
-      if (beg + 1 == end)
-	rc = mu_stream_printf (clos->stream, "%lu %lu",
-			       (unsigned long) beg,
-			       (unsigned long) end);
-      else
-	rc = mu_stream_printf (clos->stream, "%lu-%lu",
-			       (unsigned long) beg,
-			       (unsigned long) end);
-    }
-  clos->delim = 1;
-  return rc;
-}
-
 static void
 save_sequence (mu_mailbox_t mbox, const char *name, mu_msgset_t mset,
 	       int flags)
 {
-  mu_list_t list;
-  
-  mu_msgset_get_list (mset, &list);
-  if (mu_list_is_empty (list))
-    write_sequence (mset->mbox, name, NULL, flags & SEQ_PRIVATE);
-  else
+  int rc;
+  mu_stream_t mstr;
+  mu_msgset_t outset;
+  mu_transport_t trans[2];
+      
+  rc = mu_msgset_translate (&outset, mset,
+			    MU_MSGSET_UID|MU_MSGSET_IGNORE_TRANSERR);
+  if (rc)
     {
-      struct format_closure clos;
-      int rc;
-      mu_transport_t trans[2];
-      
-      rc = mu_memory_stream_create (&clos.stream, MU_STREAM_RDWR);
-      if (rc)
-	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_memory_stream_create", NULL, rc);
-	  exit (1);
-	}
-      
-      clos.mailbox = mset->mbox;
-      clos.delim = 0;
-      rc = mu_list_foreach (list, format_sequence, &clos);
-      if (rc)
-	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_list_foreach", NULL, rc);
-	  exit (1);
-	}
-      mu_stream_write (clos.stream, "", 1, NULL);
-      mu_stream_ioctl (clos.stream, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET,
-		       trans);
-      write_sequence (mbox, name, (char*)trans[0], flags & SEQ_PRIVATE);
-      mu_stream_unref (clos.stream);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_msgset_translate", NULL, rc);
+      exit (1);
     }
+
+  rc = mu_memory_stream_create (&mstr, MU_STREAM_RDWR);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_memory_stream_create", NULL, rc);
+      exit (1);
+    }
+  mu_stream_msgset_format (mstr, mu_msgset_fmt_mh, outset);
+  mu_stream_write (mstr, "", 1, NULL);
+  mu_stream_ioctl (mstr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET, trans);
+  write_sequence (mbox, name, (char*)trans[0], flags & SEQ_PRIVATE);
+  mu_stream_unref (mstr);
+  mu_msgset_free (outset);
 }
 
 void

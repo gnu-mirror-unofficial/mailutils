@@ -129,11 +129,15 @@ mu_msgset_sub_range (mu_msgset_t mset, size_t beg, size_t end, int mode)
       beg = t;
     }
 
-  rc = _mu_msgset_translate_pair (mset, mode, &beg, &end);
-  if (rc == MU_ERR_NOENT)
-    return 0;
-  else if (rc)
-    return rc;
+  if (mode != _MU_MSGSET_MODE (mset->flags))
+    {
+      rc = _mu_msgset_translate_pair (mset, _MU_MSGSET_MODE (mset->flags),
+				      &beg, &end);
+      if (rc == MU_ERR_NOENT)
+	return 0;
+      else if (rc)
+	return rc;
+    }
   
   rc = mu_msgset_aggregate (mset);
   if (rc)

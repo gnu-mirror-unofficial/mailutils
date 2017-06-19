@@ -79,13 +79,16 @@ main (int argc, char **argv)
 {
   int i;
   char *msgset_string = NULL;
-  mu_msgset_t msgset;
+  mu_msgset_t msgset, outset;
   int create_mode = MU_MSGSET_NUM;
   int parse_mode = MU_MSGSET_NUM;
+  int output_mode = MU_MSGSET_NUM;
+  int output_flags = 0;
+  mu_msgset_format_t format = mu_msgset_fmt_imap;  
   mu_mailbox_t mbox = NULL;
   
   mu_set_program_name (argv[0]);
-  mu_registrar_record (mu_mbox_record);
+  mu_register_local_mbox_formats ();
   for (i = 1; i < argc; i++)
     {
       char *arg = argv[i];
@@ -114,6 +117,14 @@ main (int argc, char **argv)
 	  MU_ASSERT (mu_mailbox_create (&mbox, arg + 9));
 	  MU_ASSERT (mu_mailbox_open (mbox, MU_STREAM_READ));
 	}
+      else if (strcmp (arg, "-mh") == 0)
+	format = mu_msgset_fmt_mh;
+      else if (strcmp (arg, "-printuid") == 0)
+	output_mode = MU_MSGSET_UID;
+      else if (strcmp (arg, "-printnum") == 0)
+	output_mode = MU_MSGSET_NUM;
+      else if (strcmp (arg, "-ignore-error") == 0)
+	output_flags = MU_MSGSET_IGNORE_TRANSERR;
       else
 	break;
     }
@@ -230,8 +241,11 @@ main (int argc, char **argv)
 	  return 1;
 	}
     }
-  MU_ASSERT (mu_msgset_print (mu_strout, msgset));
+
+  MU_ASSERT (mu_msgset_translate (&outset, msgset, output_mode|output_flags));
+  MU_ASSERT (mu_stream_msgset_format (mu_strout, format, outset));
   mu_printf ("\n");
+  mu_msgset_free (outset);
   mu_msgset_free (msgset);
   
   return 0;

@@ -1100,7 +1100,7 @@ com_search (int argc, char **argv)
       return 0;
     }
   mu_printf ("%lu matches:", (unsigned long) count);
-  mu_msgset_print (mu_strout, mset);
+  mu_msgset_imap_print (mu_strout, mset);
   mu_printf ("\n");
   mu_msgset_free (mset);
   
