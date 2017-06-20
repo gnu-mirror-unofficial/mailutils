@@ -180,6 +180,7 @@ testlist     : cond
 		 $3->prev = $1.tail;
 		 $1.tail->next = $3;
 		 $1.tail = $3;
+		 $$ = $1;
 	       }
              ;
 
