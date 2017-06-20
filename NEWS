@@ -1,11 +1,11 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-06-16
+GNU mailutils NEWS -- history of user-visible changes. 2017-06-20
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 
-Version 3.2.92 (Git)
+Version 3.2.93 (Git)
 
 * TLS configuration
 

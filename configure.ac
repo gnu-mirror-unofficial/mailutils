@@ -16,7 +16,7 @@ dnl You should have received a copy of the GNU General Public License along
 dnl with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.63)
-AC_INIT([GNU Mailutils], [3.2.92], [bug-mailutils@gnu.org], [mailutils],
+AC_INIT([GNU Mailutils], [3.2.93], [bug-mailutils@gnu.org], [mailutils],
         [http://mailutils.org])
 AC_CONFIG_SRCDIR([libmailutils/mailbox/mailbox.c])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -32,8 +32,8 @@ AB_INIT
 
 dnl Library versioning
 AC_SUBST(VI_CURRENT,  5)
-AC_SUBST(VI_REVISION, 3)
-AC_SUBST(VI_AGE,      0)
+AC_SUBST(VI_REVISION, 4)
+AC_SUBST(VI_AGE,      1)
 
 dnl Library paths
 AC_SUBST(MU_LIB_AUTH,'${top_builddir}/libmu_auth/libmu_auth.la')
