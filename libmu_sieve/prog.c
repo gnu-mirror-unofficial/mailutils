@@ -27,6 +27,22 @@
 void
 mu_i_sv_code (struct mu_sieve_machine *mach, sieve_op_t op)
 {
+  if (mach->changeloc)
+    {
+      mach->changeloc = 0;
+      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_locus);
+      mu_i_sv_code (mach,
+		    (sieve_op_t) mu_i_sv_id_num (mach,
+						 mach->locus.beg.mu_file));
+      mu_i_sv_code (mach, (sieve_op_t) mach->locus.beg.mu_line);
+      mu_i_sv_code (mach, (sieve_op_t) mach->locus.beg.mu_col);
+      mu_i_sv_code (mach,
+		    (sieve_op_t) mu_i_sv_id_num (mach,
+						 mach->locus.end.mu_file));
+      mu_i_sv_code (mach, (sieve_op_t) mach->locus.end.mu_line);
+      mu_i_sv_code (mach, (sieve_op_t) mach->locus.end.mu_col);
+    }
+  
   if (mach->pc >= mach->progsize)
     {
       mu_i_sv_2nrealloc (mach, (void**) &mach->prog, &mach->progsize,
@@ -38,45 +54,11 @@ mu_i_sv_code (struct mu_sieve_machine *mach, sieve_op_t op)
 int
 mu_i_sv_locus (struct mu_sieve_machine *mach, struct mu_locus_range *lr)
 {
-  if (!mu_locus_point_same_file (&mach->locus.beg, &lr->beg))
+  if (!mu_locus_point_eq (&mach->locus.beg, &lr->beg))
     {
-      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_source);
-      mu_i_sv_code (mach, (sieve_op_t) mu_i_sv_id_num (mach, lr->beg.mu_file));
-      mu_i_sv_code (mach, (sieve_op_t) (int) 0);
+      mach->changeloc = 1;
+      mu_locus_range_copy (&mach->locus, lr);
     }
-  if (mach->locus.beg.mu_line != lr->beg.mu_line)
-    {
-      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_line);
-      mu_i_sv_code (mach, (sieve_op_t) lr->beg.mu_line);
-      mu_i_sv_code (mach, (sieve_op_t) (int) 0);
-    }
-  if (mach->locus.beg.mu_col != lr->beg.mu_col)
-    {
-      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_col);
-      mu_i_sv_code (mach, (sieve_op_t) lr->beg.mu_col);
-      mu_i_sv_code (mach, (sieve_op_t) (int) 0);
-    }
-
-  if (!mu_locus_point_same_file (&mach->locus.end, &lr->end))
-    {
-      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_source);
-      mu_i_sv_code (mach, (sieve_op_t) mu_i_sv_id_num (mach, lr->end.mu_file));
-      mu_i_sv_code (mach, (sieve_op_t) (int) 1);
-    }
-  if (mach->locus.end.mu_line != lr->end.mu_line)
-    {
-      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_line);
-      mu_i_sv_code (mach, (sieve_op_t) lr->end.mu_line);
-      mu_i_sv_code (mach, (sieve_op_t) (int) 1);
-    }
-  if (mach->locus.end.mu_col != lr->end.mu_col)
-    {
-      mu_i_sv_code (mach, (sieve_op_t) _mu_i_sv_instr_col);
-      mu_i_sv_code (mach, (sieve_op_t) lr->end.mu_col);
-      mu_i_sv_code (mach, (sieve_op_t) (int) 1);
-    }
-
-  mu_locus_range_copy (&mach->locus, lr);
   return 0;
 }
 

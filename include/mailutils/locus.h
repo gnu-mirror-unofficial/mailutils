@@ -78,6 +78,13 @@ mu_locus_point_same_line (struct mu_locus_point const *a,
   return mu_locus_point_same_file (a, b) && a->mu_line == b->mu_line;
 }
 
+static inline int
+mu_locus_point_eq (struct mu_locus_point const *a,
+		   struct mu_locus_point const *b)
+{
+  return mu_locus_point_same_line (a, b) && a->mu_col == b->mu_col;
+}
+
 int mu_linetrack_create (mu_linetrack_t *ret,
 			   char const *file_name, size_t max_lines);
 int mu_linetrack_origin (mu_linetrack_t trk, struct mu_locus_point const *pt);

@@ -58,7 +58,10 @@ struct mu_sieve_machine
 {
   /* Static data */
   struct mu_locus_range locus; /* Approximate location in the code */
-
+  int changeloc:1;             /* If set during code generation phase, the
+				  _mu_i_sv_instr_locus will be emitted before
+				  next instruction */
+  
   mu_list_t memory_pool;     /* Pool of allocated memory objects */
   mu_list_t destr_list;      /* List of destructor functions */
 
@@ -197,9 +200,7 @@ void _mu_i_sv_instr_not (mu_sieve_machine_t mach);
 void _mu_i_sv_instr_branch (mu_sieve_machine_t mach);
 void _mu_i_sv_instr_brz (mu_sieve_machine_t mach);
 void _mu_i_sv_instr_brnz (mu_sieve_machine_t mach);
-void _mu_i_sv_instr_source (mu_sieve_machine_t mach);
-void _mu_i_sv_instr_line (mu_sieve_machine_t mach);
-void _mu_i_sv_instr_col (mu_sieve_machine_t mach);
+void _mu_i_sv_instr_locus (mu_sieve_machine_t mach);
 
 int mu_i_sv_load_add_dir (mu_sieve_machine_t mach, const char *name);
 

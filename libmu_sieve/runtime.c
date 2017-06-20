@@ -32,48 +32,22 @@
   (INSTR_DISASS(m) || mu_debug_level_p (mu_sieve_debug_handle, MU_DEBUG_TRACE9)) 
 
 void
-_mu_i_sv_instr_source (mu_sieve_machine_t mach)
+_mu_i_sv_instr_locus (mu_sieve_machine_t mach)
 {
-  char const *file = mu_i_sv_id_str (mach, SIEVE_RT_ARG (mach, 0, pc));
-  int what = SIEVE_RT_ARG (mach, 1, inum);  
-  mu_locus_point_set_file (what ? &mach->locus.beg : &mach->locus.end, file);
-  if (INSTR_DEBUG (mach))
-    mu_i_sv_debug (mach, mach->pc - 2, "SOURCE %s %d", file, what);
-  SIEVE_RT_ADJUST (mach, 2);
+  mu_locus_point_set_file (&mach->locus.beg,
+			   mu_i_sv_id_str (mach, SIEVE_RT_ARG (mach, 0, pc)));
+  mach->locus.beg.mu_line = SIEVE_RT_ARG (mach, 1, unum);
+  mach->locus.beg.mu_col = SIEVE_RT_ARG (mach, 2, unum);
+
+  mu_locus_point_set_file (&mach->locus.end,
+			   mu_i_sv_id_str (mach, SIEVE_RT_ARG (mach, 3, pc)));
+  mach->locus.end.mu_line = SIEVE_RT_ARG (mach, 4, unum);
+  mach->locus.end.mu_col = SIEVE_RT_ARG (mach, 5, unum);
   mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
 		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);
-}
-		 
-void
-_mu_i_sv_instr_line (mu_sieve_machine_t mach)
-{
-  unsigned line = SIEVE_RT_ARG (mach, 0, line);
-  int what = SIEVE_RT_ARG (mach, 1, inum);  
-  if (what == 0)
-    mach->locus.beg.mu_line = line;
-  else
-    mach->locus.end.mu_line = line;
   if (INSTR_DEBUG (mach))
-    mu_i_sv_debug (mach, mach->pc - 1, "LINE %u %d", line, what);
-  SIEVE_RT_ADJUST (mach, 2);
-  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);  
-}
-
-void
-_mu_i_sv_instr_col (mu_sieve_machine_t mach)
-{
-  unsigned col = SIEVE_RT_ARG (mach, 0, line);
-  int what = SIEVE_RT_ARG (mach, 1, inum);  
-  if (what == 0)
-    mach->locus.beg.mu_col = col;
-  else
-    mach->locus.end.mu_col = col;
-  if (INSTR_DEBUG (mach))
-    mu_i_sv_debug (mach, mach->pc - 2, "COLUMN %u %d", col, what);
-  SIEVE_RT_ADJUST (mach, 2);
-  mu_stream_ioctl (mach->errstream, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &mach->locus);  
+    mu_i_sv_debug (mach, mach->pc - 1, "LOCUS");
+  SIEVE_RT_ADJUST (mach, 6);
 }
 		 
 static int
