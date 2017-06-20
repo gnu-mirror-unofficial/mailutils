@@ -100,7 +100,6 @@ status_readline=probe
 
 dnl Internationalization macros.
 AM_GNU_GETTEXT([external], [need-ngettext])
-AM_GNU_GETTEXT_VERSION(0.18)
 AM_ICONV
 AC_CHECK_HEADERS(iconv.h)
 AC_CHECK_TYPE(iconv_t,:,
