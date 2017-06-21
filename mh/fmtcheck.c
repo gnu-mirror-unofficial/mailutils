@@ -20,11 +20,15 @@
 #include <mh.h>
 
 static char prog_doc[] = N_("Check MH format string");
+static char args_doc[] = N_("[FILE]");
 
-char *format_str;
+static char *format_str;
 static mh_format_t format;
-int dump_option;
-int debug_option;
+static int dump_option;
+static int debug_option;
+static char *input_file;
+static size_t width;
+static size_t msgno;
 
 static struct mu_option options[] = {
   { "form",    0, N_("FILE"),   MU_OPTION_DEFAULT,
@@ -40,31 +44,63 @@ static struct mu_option options[] = {
   { "debug",   0, NULL,     MU_OPTION_DEFAULT,
     N_("enable parser debugging output"),
     mu_c_bool,   &debug_option },
+  { "width",   0, N_("NUMBER"), MU_OPTION_DEFAULT,
+    N_("set output width"),
+    mu_c_size, &width },
+  { "msgno",   0, N_("NUMBER"), MU_OPTION_DEFAULT,
+    N_("set message number"),
+    mu_c_size, &msgno },
 
   MU_OPTION_END
 };
 
-static int
-action_dump (void)
+static void
+run (void)
 {
-  if (!format_str)
-    {
-      mu_error (_("Format string not specified"));
-      return 1;
-    }
-  mh_format_dump (&format);
-  return 0;
+  mu_message_t msg = mh_file_to_message (NULL, input_file);
+  char *output;
+
+  mh_format (&format, msg, msgno, width, &output);
+
+  mu_printf ("%s\n", output);
 }
 
 int
 main (int argc, char **argv)
 {
-  mh_getopt (&argc, &argv, options, 0, NULL, prog_doc, NULL);
+  mh_getopt (&argc, &argv, options, 0, args_doc, prog_doc, NULL);
+  switch (argc)
+    {
+    case 0:
+      dump_option = 1;
+      break;
+      
+    case 1:
+      input_file = argv[0];
+      break;
+
+    default:
+      mu_error (_("too many arguments"));
+      return 1;
+    }
+  
   mh_format_debug (debug_option);
-  if (format_str && mh_format_parse (format_str, &format))
+  if (!format_str)
+    {
+      mu_error (_("Format string not specified"));
+      return 1;
+    }
+  if (mh_format_parse (format_str, &format))
     {
       mu_error (_("Bad format string"));
       exit (1);
     }
-  return action_dump ();
+
+  if (dump_option)
+    mh_format_dump (&format);
+
+  if (input_file)
+    run ();
+  
+  return 0;
 }

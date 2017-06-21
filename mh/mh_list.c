@@ -843,7 +843,7 @@ mhl_format_run (mu_list_t fmt,
   env.bvar[B_NEWLINE] = 1;
   mu_list_create (&env.printed_fields);
   mu_list_set_comparator (env.printed_fields, _comp_name);
-  env.ivar[I_WIDTH] = width;
+  env.ivar[I_WIDTH] = width ? width : mh_width ();
   env.ivar[I_LENGTH] = length;
   env.bvar[B_CLEARSCREEN] = flags & MHL_CLEARSCREEN;
   env.bvar[B_BELL] = flags & MHL_BELL;

@@ -27,7 +27,7 @@ static char args_doc[] = N_("[MESSAGE]");
 
 static char *format_str = NULL;
 static mh_format_t format;
-static int width = 80;
+static int width;
 
 struct mh_whatnow_env wh_env = { 0 };
 static int initial_edit = 1;

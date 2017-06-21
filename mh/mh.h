@@ -242,6 +242,8 @@ void mh_install (char *name, int automode);
 mu_property_t mh_read_property_file (char *name, int ro);
 void mh_property_merge (mu_property_t dst, mu_property_t src);
 
+int mh_width (void);
+
 #define mh_global_profile_get(name, defval) \
   mu_mhprop_get_value (mu_mh_profile, name, defval)
 #define mh_global_profile_set(name, value) \

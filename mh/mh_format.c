@@ -487,7 +487,9 @@ mh_format (mh_format_t *fmt, mu_message_t msg, size_t msgno,
 
   mach.message = msg;
   mach.msgno = msgno;
-  
+
+  if (width == 0)
+    width = mh_width ();
   mach.width = width - 1; /* Count the newline */
   mach.pc = 1;
   mu_opool_create (&mach.pool, MU_OPOOL_ENOMEMABRT);

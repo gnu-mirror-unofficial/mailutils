@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fnmatch.h>
+#include <sys/ioctl.h>
 
 char mh_list_format[] = 
   "%4(msg)"
@@ -1058,4 +1059,13 @@ mh_safe_make_file_name (const char *dir, const char *file)
   return name;
 }
 
+int
+mh_width (void)
+{
+  struct winsize ws;
+  ws.ws_col = ws.ws_row = 0;
+  if ((ioctl(1, TIOCGWINSZ, (char *) &ws) < 0) || ws.ws_col == 0)
+    return 80;  /* FIXME: Should we exit()/abort() if col <= 0 ?  */
+  return ws.ws_col;
+}
 			  

@@ -28,7 +28,7 @@ static char extra_doc[] = N_("Debug flags are:\n\
   l - sieve action logs");
 
 static char *format_str = mh_list_format;
-static int width = 80;
+static int width;
 static mu_list_t input_file_list;
 static char *audit_file; 
 static FILE *audit_fp;

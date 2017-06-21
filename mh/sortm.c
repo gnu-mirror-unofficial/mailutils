@@ -27,6 +27,7 @@ static char args_doc[] = N_("[MSGLIST]");
 
 static int limit;
 static int verbose;
+static int width;
 static mu_mailbox_t mbox;
 static const char *mbox_path;
 
@@ -133,6 +134,9 @@ set_algo_quicksort (struct mu_parseopt *po, struct mu_option *opt,
 }
 
 static struct mu_option options[] = {
+  { "width",   0, N_("NUMBER"), MU_OPTION_DEFAULT,
+    N_("set output width (for -list)"),
+    mu_c_int, &width },
   MU_OPTION_GROUP (N_("Setting sort keys:")),
   { "datefield",     0, N_("STRING"), MU_OPTION_DEFAULT,
     N_("sort on the date field (default `Date:')"),
@@ -440,7 +444,7 @@ list_message (size_t num)
   mu_message_t msg = NULL;
   char *buffer;
   mu_mailbox_get_message (mbox, num, &msg);
-  mh_format (&format, msg, num, 76, &buffer);
+  mh_format (&format, msg, num, width, &buffer);
   printf ("%s\n", buffer);
   free (buffer);
 }

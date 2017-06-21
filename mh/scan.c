@@ -32,7 +32,7 @@ static char args_doc[] = N_("[MSGLIST]");
 static int clear;
 static char *format_str = mh_list_format;
 
-static int width = 80;
+static int width;
 static int reverse;
 static int header;
 
