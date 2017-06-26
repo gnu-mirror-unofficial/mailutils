@@ -15,34 +15,146 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-typedef struct       /* A string object type */
+#define MH_FMT_DEFAULT 0
+#define MH_FMT_RALIGN  0x1000
+#define MH_FMT_ZEROPAD 0x2000
+#define MH_FMT_COMPWS  0x4000
+#define MH_WIDTH_MASK  0x0fff
+
+enum mh_opcode
 {
-  int size;          /* Allocated size or 0 for static storage */
-  char *ptr;         /* Actual data */
-}
-strobj_t;
+  /* Stop. Format: mhop_stop */
+  mhop_stop,
+  /* Unconditional branch
+     Format: mhop_branch offset */
+  mhop_branch,
+  /* Branch if num reg is zero.
+     Format: mhop_brz_num dest-off */
+  mhop_brzn,
+  /* Branch if str reg is zero.
+     Format: mhop_brz_str dest-off */
+  mhop_brzs,
 
-#define strobj_ptr(p) ((p)->ptr ? (p)->ptr : "")
-#define strobj_len(p) (strobj_is_null(p) ? 0 : strlen((p)->ptr))
-#define strobj_is_null(p) ((p)->ptr == NULL)
-#define strobj_is_static(p) ((p)->size == 0)
+  /* Set numeric register
+     Format: mhop_setn val */
+  mhop_setn,
+  
+  /* Set string register
+     Format: mhop_sets reg length string */
+  mhop_sets,
 
+  /* Move value bewtween two numeric registers
+     Format: mhop_movn dest src */
+  mhop_movn,
+
+  /* Move value bewtween two string registers
+     Format: mhop_movs dest src */
+  mhop_movs,
+  
+  /* Load component value into a string register 
+     Format: mhop_load reg string */
+  mhop_ldcomp,
+
+  /* Load first width bytes of message body contents into a string register.
+     Format: mhop_body reg */
+  mhop_ldbody,
+  
+  /* Call a function.
+     Format: mhop_call function-pointer */
+  mhop_call,
+
+  /* Convert string register to number reg
+     Format: mhop_atoi reg
+   */
+  mhop_atoi,
+  
+  /* Convert numeric register to string
+     Format: mhop_itoa reg */
+  mhop_itoa,
+
+  /* Print num reg */
+  mhop_printn,
+
+  /* Print str reg */
+  mhop_prints,
+
+  /* Set format specification.
+     Format: mhop_fmtspec number */
+  mhop_fmtspec,
+};    
+
+enum regid { R_REG, R_ARG };
+
+enum mh_type
+{
+  mhtype_none,
+  mhtype_num,
+  mhtype_str
+};
+
+typedef enum mh_opcode mh_opcode_t;
+
+struct mh_machine;
+typedef void (*mh_builtin_fp) (struct mh_machine *);
+
+typedef union {
+  mh_opcode_t opcode;
+  mh_builtin_fp builtin;
+  long num;
+  void *ptr;
+  char str[1]; /* Any number of characters follows */
+} mh_instr_t;
+
+#define MHI_OPCODE(m) (m).opcode
+#define MHI_BUILTIN(m) (m).builtin
+#define MHI_NUM(m) (m).num
+#define MHI_PTR(m) (m).ptr
+#define MHI_STR(m) (m).str
+
+struct mh_format
+{
+  size_t progmax;          /* Size of allocated program*/
+  size_t progcnt;          /* Actual number of elements used */
+  mh_instr_t *prog;        /* Program itself */
+  struct node *tree;
+  mu_opool_t pool;
+};
+
+#define MHA_REQUIRED       0
+#define MHA_OPTARG         1
+#define MHA_OPT_CLEAR      2
+#define MHA_VOID           3
+
+typedef struct mh_builtin mh_builtin_t;
+
+struct mh_builtin
+{
+  char *name;
+  mh_builtin_fp fun;
+  enum mh_type type;
+  enum mh_type argtype;
+  int optarg;
+};
+
+struct mh_string
+{
+  size_t size;
+  char *ptr;
+};
+  
 struct mh_machine
 {
-  strobj_t reg_str;         /* String register */
-  int reg_num;              /* Numeric register */
-
-  strobj_t arg_str;         /* String argument */
-  long arg_num;             /* Numeric argument */
+  long num[2];              /* numeric registers */
+  struct mh_string str[2];  /* string registers */
   
   size_t pc;                /* Program counter */
-  size_t progsize;          /* Size of allocated program*/
+  size_t progcnt;           /* Size of allocated program*/
   mh_instr_t *prog;         /* Program itself */
   int stop;                 /* Stop execution immediately */
 
-  mu_opool_t pool;          /* Output buffer */
-  size_t width;             /* Output buffer width */
-  size_t ind;               /* Output buffer index */
+  size_t width;             /* Output line width */
+  size_t ind;               /* Output line index */
+  mu_stream_t output;       /* Output stream */
 
   mu_list_t addrlist;       /* The list of email addresses output this far */
   int fmtflags;             /* Current formatting flags */
@@ -51,9 +163,5 @@ struct mh_machine
   size_t msgno;             /* Its number */
 };
 
-void strobj_free (strobj_t *obj);
-void strobj_create (strobj_t *lvalue, const char *str);
-void strobj_set (strobj_t *lvalue, char *str);
-void strobj_assign (strobj_t *lvalue, strobj_t *rvalue);
-void strobj_copy (strobj_t *lvalue, strobj_t *rvalue);
-void strobj_realloc (strobj_t *obj, size_t length);
+mh_builtin_t *mh_lookup_builtin (char *name, size_t len);
+void mh_print_fmtspec (int fmtspec);

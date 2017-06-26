@@ -25,6 +25,7 @@ static char args_doc[] = N_("[FILE]");
 static char *format_str;
 static mh_format_t format;
 static int dump_option;
+static int disass_option;
 static int debug_option;
 static char *input_file;
 static size_t width;
@@ -41,6 +42,9 @@ static struct mu_option options[] = {
   { "dump",    0, NULL,     MU_OPTION_HIDDEN,
     N_("dump the listing of compiled format code"),
     mu_c_bool,   &dump_option },
+  { "disassemble",    0, NULL,     MU_OPTION_HIDDEN,
+    N_("dump disassembled format code"),
+    mu_c_bool,   &disass_option },
   { "debug",   0, NULL,     MU_OPTION_DEFAULT,
     N_("enable parser debugging output"),
     mu_c_bool,   &debug_option },
@@ -58,11 +62,8 @@ static void
 run (void)
 {
   mu_message_t msg = mh_file_to_message (NULL, input_file);
-  char *output;
-
-  mh_format (&format, msg, msgno, width, &output);
-
-  mu_printf ("%s\n", output);
+  mh_format (format, msg, msgno, width, mu_strout);
+  mu_printf ("\n");
 }
 
 int
@@ -90,14 +91,16 @@ main (int argc, char **argv)
       mu_error (_("Format string not specified"));
       return 1;
     }
-  if (mh_format_parse (format_str, &format))
+  if (mh_format_parse (&format, format_str, MH_FMT_PARSE_TREE))
     {
       mu_error (_("Bad format string"));
       exit (1);
     }
 
   if (dump_option)
-    mh_format_dump (&format);
+    mh_format_dump_code (format);
+  if (disass_option)
+    mh_format_dump_disass (format);
 
   if (input_file)
     run ();
