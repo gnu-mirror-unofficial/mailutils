@@ -46,7 +46,7 @@ enum mhl_datatype
 typedef union mhl_value {
   char *str;
   int num;
-  mh_format_t *fmt;
+  mh_format_t fmt;
 } mhl_value_t;
 
 typedef struct mhl_variable
@@ -151,7 +151,6 @@ parse_variable (locus_t *loc, mu_list_t formlist, char *str)
 {
   size_t i;
   struct mu_wordsplit ws;
-  mh_format_t fmt;
   int wsflags;
   
   if (strncmp (str, "ignores=", 8) == 0 && str[8] != '"')
@@ -219,15 +218,14 @@ parse_variable (locus_t *loc, mu_list_t formlist, char *str)
 	  break;
 
 	case dt_format:
-	  if (mh_format_parse (value, &fmt))
+	  if (mh_format_parse (&stmt->v.variable.value.fmt, value,
+			       MH_FMT_PARSE_DEFAULT))
 	    {
 	      mu_error (_("%s:%d: bad format string"),
 			loc->filename,
 			loc->line);
 	      exit (1);
 	    }
-	  stmt->v.variable.value.fmt = mu_alloc (sizeof (mh_format_t));
-	  *stmt->v.variable.value.fmt = fmt;
 	  break;
 
 	case dt_flag:
@@ -456,7 +454,7 @@ struct eval_env
   int ivar[I_MAX];
   int bvar[B_MAX];
   char *svar[S_MAX];
-  mh_format_t *fvar[F_MAX];
+  mh_format_t fvar[F_MAX];
   char *prefix;
 };
 
