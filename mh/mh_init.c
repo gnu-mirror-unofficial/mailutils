@@ -913,7 +913,7 @@ mh_charset (const char *dfl)
 }
 
 int
-mh_decode_2047 (char const *text, char **decoded_text)
+mh_decode_2047 (char *text, char **decoded_text)
 {
   const char *charset = mh_charset (NULL);
   if (!charset)

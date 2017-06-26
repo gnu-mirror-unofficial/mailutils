@@ -28,97 +28,92 @@
 #include "mbchar.h"
 #include "mbswidth.h"
 
-
-/* String functions */
-
-#define MH_STRING_INITIALIZER { 0, NULL }
-
-static inline void
-mh_string_init (struct mh_string *s)
-{
-  s->size = 0;
-  s->ptr = NULL;
-}
-
-static void
-mh_string_free (struct mh_string *s)
-{
-  free (s->ptr);
-  s->size = 0;
-  s->ptr = NULL;
-}
-
-static void
-mh_string_realloc (struct mh_string *s, size_t length)
-{
-  if (length > s->size)
-    {
-      s->ptr = mu_realloc (s->ptr, length);
-      s->ptr[length-1] = 0;
-      s->size = length;
-    }
-}
-
-static inline int
-mh_string_is_null (struct mh_string *s)
-{
-  return s->ptr == NULL || s->ptr[0] == 0;
-}
-
-static inline size_t
-mh_string_length (struct mh_string *s)
-{
-  return mh_string_is_null (s) ? 0 : strlen (s->ptr);
-}
-
-static inline char const *
-mh_string_value (struct mh_string *s)
-{
-  return mh_string_is_null (s) ? "" : s->ptr;
-}
-
-static inline void
-mh_string_clear (struct mh_string *s)
-{
-  if (s->ptr)
-    s->ptr[0] = 0;
-}
-
-static void
-mh_string_load (struct mh_string *s, char const *str)
-{
-  if (!str)
-    mh_string_clear (s);
-  else
-    {
-      mh_string_realloc (s, strlen (str));
-      strcpy (s->ptr, str);
-    }
-}
-
-static void
-mh_string_move (struct mh_machine *mach, enum regid dst, enum regid src)
-{
-  mh_string_load (&mach->str[dst], mach->str[src].ptr);
-  mh_string_clear (&mach->str[src]);
-}
-
-
 static char *_get_builtin_name (mh_builtin_fp ptr);
 
-static inline size_t
-output_width (struct mh_machine *mach)
+#define DFLWIDTH(mach) ((mach)->width - (mach)->ind)
+
+/* Functions for handling string objects. */
+
+void
+strobj_free (strobj_t *obj)
 {
-  if (mach->width < mach->ind)
-    return 0;
-  return mach->width - mach->ind;
+  if (obj->size)
+    free (obj->ptr);
+  obj->size = 0;
+  obj->ptr = NULL;
+}
+
+void
+strobj_create (strobj_t *lvalue, const char *str)
+{
+  if (!str)
+    {
+      lvalue->size = 0;
+      lvalue->ptr = NULL;
+    }
+  else
+    {
+      lvalue->size = strlen (str) + 1;
+      lvalue->ptr = mu_alloc (lvalue->size);
+      memcpy (lvalue->ptr, str, lvalue->size);
+    }
+}
+
+void
+strobj_set (strobj_t *lvalue, char *str)
+{
+  lvalue->size = 0;
+  lvalue->ptr = str;
+}
+
+void
+strobj_assign (strobj_t *lvalue, strobj_t *rvalue)
+{
+  strobj_free (lvalue);
+  *lvalue = *rvalue;
+  rvalue->size = 0;
+  rvalue->ptr = NULL;
+}
+
+void
+strobj_copy (strobj_t *lvalue, strobj_t *rvalue)
+{
+  if (strobj_is_null (rvalue))
+    strobj_free (lvalue);
+  else if (lvalue->size >= strobj_len (rvalue) + 1)
+    memcpy (lvalue->ptr, strobj_ptr (rvalue), strobj_len (rvalue) + 1);
+  else
+    {
+      if (lvalue->size)
+	strobj_free (lvalue);
+      strobj_create (lvalue, strobj_ptr (rvalue));
+    }
+}
+
+void
+strobj_realloc (strobj_t *obj, size_t length)
+{
+  if (strobj_is_static (obj))
+    {
+      char *value = strobj_ptr (obj);
+      obj->ptr = mu_alloc (length);
+      strncpy (obj->ptr, value, length-1);
+      obj->ptr[length-1] = 0;
+      obj->size = length;
+    }
+  else
+    {
+      obj->ptr = mu_realloc (obj->ptr, length);
+      obj->ptr[length-1] = 0;
+      obj->size = length;
+    }
 }
 
 /* Return the length (number of octets) of a substring of
    string STR of length LEN, such that it contains NCOL
    multibyte characters. */
 int
-mbsubstrlen (char const *str, size_t len, size_t ncol)
+mbsubstrlen (char *str, size_t len, size_t ncol)
 {
   int ret = 0;
   mbi_iterator_t iter;
@@ -136,7 +131,7 @@ mbsubstrlen (char const *str, size_t len, size_t ncol)
 /* Return the number of multibyte characters in the first LEN bytes
    of character string STRING.  */
 size_t
-mbsnlen (char const *str, size_t len)
+mbsnlen (char *str, size_t len)
 {
   int ret = 0;
   mbi_iterator_t iter;
@@ -148,10 +143,10 @@ mbsnlen (char const *str, size_t len)
 
 /* Compress whitespace in a string (multi-byte) */
 static void
-str_compress_ws (char *str)
+compress_ws (char *str, size_t *psize)
 {
   unsigned char *p, *q;
-  size_t size = strlen (str);
+  size_t size = *psize;
   mbi_iterator_t iter;
   int space = 0;
   
@@ -178,26 +173,29 @@ str_compress_ws (char *str)
 	}
     }
   *p = 0;
+  *psize = p - (unsigned char*) str;
 }
 
-static inline void
-compress_ws (struct mh_machine *mach, char *str)
-{
-  if (mach->fmtflags & MH_FMT_COMPWS)
-    str_compress_ws (str);
-}
+#define COMPRESS_WS(mach, str, size)		\
+  do						\
+    {						\
+      if ((mach)->fmtflags & MH_FMT_COMPWS)	\
+	compress_ws (str, size);		\
+    }						\
+  while (0)
 
 static void
-put_string (struct mh_machine *mach, char const *str, int len)
+put_string (struct mh_machine *mach, char *str, int len)
 {
   if (len == 0)
     return;
-  mu_stream_write (mach->output, str, len, NULL);
-  mach->ind += mbsnwidth (str, len, 0);
+  mu_opool_append (mach->pool, str, len);
+  len = mbsnwidth (str, len, 0);
+  mach->ind += len;
 }
 
 static void
-print_hdr_segment (struct mh_machine *mach, char const *str, size_t len)
+print_hdr_segment (struct mh_machine *mach, char *str, size_t len)
 {
   if (!len)
     len = strlen (str);
@@ -209,7 +207,7 @@ print_hdr_segment (struct mh_machine *mach, char const *str, size_t len)
       while (1)
 	{
 	  mbi_iterator_t iter;
-	  size_t rest = output_width (mach);
+	  size_t rest = DFLWIDTH (mach);
 	  size_t width = mbsnlen (str, len);
 	  size_t off, size;
 	  
@@ -247,10 +245,11 @@ print_hdr_segment (struct mh_machine *mach, char const *str, size_t len)
     }
 }
 
+/* Print len bytes from str into mach->outbuf */
 static void
-print_hdr_string (struct mh_machine *mach, char const *str)
+print_hdr_string (struct mh_machine *mach, char *str)
 {
-  char const *p;
+  char *p;
   
   if (!str)
     str = "";
@@ -270,7 +269,7 @@ print_hdr_string (struct mh_machine *mach, char const *str)
 
 static void
 print_simple_segment (struct mh_machine *mach, size_t width,
-		      char const *str, size_t len)
+		      char *str, size_t len)
 {
   size_t rest;
 
@@ -283,7 +282,7 @@ print_simple_segment (struct mh_machine *mach, size_t width,
   if (!width)
     width = mach->width;
 
-  rest = output_width (mach);
+  rest = DFLWIDTH (mach);
   if (rest == 0)
     {
       if (len == 1 && str[0] == '\n')
@@ -295,7 +294,7 @@ print_simple_segment (struct mh_machine *mach, size_t width,
 }
 
 static void
-print_string (struct mh_machine *mach, size_t width, char const *str)
+print_string (struct mh_machine *mach, size_t width, char *str)
 {
   char *p;
   
@@ -319,7 +318,7 @@ print_string (struct mh_machine *mach, size_t width, char const *str)
 }
   
 static void
-print_fmt_segment (struct mh_machine *mach, size_t fmtwidth, char const *str,
+print_fmt_segment (struct mh_machine *mach, size_t fmtwidth, char *str,
 		   size_t len)
 {
   size_t width = mbsnlen (str, len);
@@ -330,7 +329,7 @@ print_fmt_segment (struct mh_machine *mach, size_t fmtwidth, char const *str,
       width = fmtwidth;
     }
   else
-    len = mbsubstrlen (str, len, output_width (mach));
+    len = mbsubstrlen (str, len, DFLWIDTH (mach));
   
   put_string (mach, str, len);
 
@@ -339,12 +338,12 @@ print_fmt_segment (struct mh_machine *mach, size_t fmtwidth, char const *str,
       fmtwidth -= width;
       mach->ind += fmtwidth;
       while (fmtwidth--)
-	mu_stream_write (mach->output, " ", 1, NULL);
+	mu_opool_append_char (mach->pool, ' ');
     }
 }
 
 static void
-print_fmt_string (struct mh_machine *mach, size_t fmtwidth, char const *str)
+print_fmt_string (struct mh_machine *mach, size_t fmtwidth, char *str)
 {
   char *p = strchr (str, '\n');
   while (p)
@@ -377,7 +376,7 @@ format_num (struct mh_machine *mach, long num)
   char buf[64];
   char *ptr;
   int fmtwidth = mach->fmtflags & MH_WIDTH_MASK;
-  char padchar = mach->fmtflags & MH_FMT_ZEROPAD ? '0' : ' ';
+  int padchar = mach->fmtflags & MH_FMT_ZEROPAD ? '0' : ' ';
 	    
   n = snprintf (buf, sizeof buf, "%ld", num);
 
@@ -394,7 +393,7 @@ format_num (struct mh_machine *mach, long num)
 	  ptr = buf;
 	  for (i = n; i < fmtwidth && mach->ind < mach->width;
 	       i++, mach->ind++)
-	    mu_stream_write (mach->output, &padchar, 1, NULL);
+	    mu_opool_append_char (mach->pool, padchar);
 	}
     }
   else
@@ -405,7 +404,7 @@ format_num (struct mh_machine *mach, long num)
 }
 
 static void
-format_str (struct mh_machine *mach, char const *str)
+format_str (struct mh_machine *mach, char *str)
 {
   if (!str)
     str = "";
@@ -413,7 +412,7 @@ format_str (struct mh_machine *mach, char const *str)
     {
       int len = strlen (str);
       int fmtwidth = mach->fmtflags & MH_WIDTH_MASK;
-      char padchar = ' ';
+      int padchar = ' ';
 				
       if (mach->fmtflags & MH_FMT_RALIGN)
 	{
@@ -422,7 +421,7 @@ format_str (struct mh_machine *mach, char const *str)
 	  n = fmtwidth - len;
 	  for (i = 0; i < n && mach->ind < mach->width;
 	       i++, mach->ind++, fmtwidth--)
-	    mu_stream_write (mach->output, &padchar, 1, NULL);
+	    mu_opool_append_char (mach->pool, padchar);
 	}
 	      
       print_fmt_string (mach, fmtwidth, str);
@@ -473,28 +472,28 @@ addrlist_destroy (mu_list_t *list)
 }
 
 /* Execute pre-compiled format on message msg with number msgno.
- */
+   buffer and bufsize specify output storage */
 int
-mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
-	   size_t width, mu_stream_t output)
+mh_format (mh_format_t *fmt, mu_message_t msg, size_t msgno,
+	   size_t width, char **pret)
 {
   struct mh_machine mach;
+  char buf[64];
   const char *charset = mh_global_profile_get ("Charset", NULL);
   
   memset (&mach, 0, sizeof (mach));
-  mach.progcnt = fmt->progcnt;
+  mach.progsize = fmt->progsize;
   mach.prog = fmt->prog;
 
   mach.message = msg;
   mach.msgno = msgno;
-  mach.output = output;
-  
+
   if (width == 0)
     width = mh_width ();
   mach.width = width - 1; /* Count the newline */
   mach.pc = 1;
-
-  MU_ASSERT (mu_list_create (&mach.addrlist));
+  mu_opool_create (&mach.pool, MU_OPOOL_ENOMEMABRT);
+  mu_list_create (&mach.addrlist);
   
   reset_fmt_defaults (&mach);
 
@@ -525,12 +524,14 @@ mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
     }
 #endif
   
-  while (!mach.stop)
+  while (!mach.stop && mach.ind < mach.width)
     {
       mh_opcode_t opcode;
-      
       switch (opcode = MHI_OPCODE (mach.prog[mach.pc++]))
 	{
+	case mhop_nop:
+	  break;
+	  
 	case mhop_stop:
 	  mach.stop = 1;
 	  break;
@@ -539,138 +540,128 @@ mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
 	  mach.pc += MHI_NUM (mach.prog[mach.pc]);
 	  break;
 
-	case mhop_brzn:
-	  if (!mach.num[R_REG])
+	case mhop_num_asgn:
+	  mach.reg_num = mach.arg_num;
+	  break;
+	  
+	case mhop_str_asgn:
+	  strobj_assign (&mach.reg_str, &mach.arg_str);
+	  break;
+	  
+	case mhop_num_arg:
+	  mach.arg_num = MHI_NUM (mach.prog[mach.pc++]);
+	  break;
+	  
+	case mhop_str_arg:
+	  {
+	    size_t skip = MHI_NUM (mach.prog[mach.pc++]);
+	    strobj_set (&mach.arg_str, MHI_STR (mach.prog[mach.pc]));
+	    mach.pc += skip;
+	  }
+	  break;
+
+	case mhop_num_branch:
+	  if (!mach.arg_num)
 	    mach.pc += MHI_NUM (mach.prog[mach.pc]);
 	  else
 	    mach.pc++;
 	  break;
 
-	case mhop_brzs:
-	  if (mh_string_is_null (&mach.str[R_REG]))
+	case mhop_str_branch:
+	  if (!*strobj_ptr (&mach.arg_str))
 	    mach.pc += MHI_NUM (mach.prog[mach.pc]);
 	  else
 	    mach.pc++;
-	  break;
-	  
-	case mhop_setn:
-	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    mach.num[reg] = MHI_NUM (mach.prog[mach.pc++]);
-	  }
-	  break;
-
-	case mhop_sets:
-	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    size_t skip = MHI_NUM (mach.prog[mach.pc++]);
-	    char const *str = MHI_STR (mach.prog[mach.pc]);
-
-	    mach.pc += skip;
-	    
-	    mh_string_load (&mach.str[reg], str);
-	  }
-	  break;
-
-	case mhop_movn:
-	  {
-	    long dst = MHI_NUM (mach.prog[mach.pc++]);
-	    long src = MHI_NUM (mach.prog[mach.pc++]);
-	    mach.num[dst] = mach.num[src];
-	  }
-	  break;
-
-	case mhop_movs:
-	  {
-	    long dst = MHI_NUM (mach.prog[mach.pc++]);
-	    long src = MHI_NUM (mach.prog[mach.pc++]);
-	    mh_string_move (&mach, dst, src);
-	    /* FIXME: perhaps copy, not move? */
-	  }
-	  break;
-	  
-	case mhop_ldcomp:
-	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    size_t skip = MHI_NUM (mach.prog[mach.pc++]);
-	    char const *comp = MHI_STR (mach.prog[mach.pc]);
-	    mu_header_t hdr = NULL;
-	    char *value = NULL;
-
-	    mach.pc += skip;
-
-	    mu_message_get_header (mach.message, &hdr);
-	    mu_header_aget_value_unfold (hdr, comp, &value);
-	    mh_string_clear (&mach.str[reg]);
-	    if (value)
-	      {
-      		compress_ws (&mach, value);
-		mh_string_load (&mach.str[reg], value);
-		free (value);
-	      }
-	  }
-	  break;
-
-	case mhop_ldbody:
-	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    mu_body_t body = NULL;
-	    mu_stream_t stream = NULL;
-	    size_t size = 0;
-	    size_t rest = output_width (&mach);
-
-	    mh_string_clear (&mach.str[reg]);
-
-	    mu_message_get_body (mach.message, &body);
-	    mu_body_size (body, &size);
-	    if (size == 0)
-	      break;
-	    mu_body_get_streamref (body, &stream);
-	    if (stream)
-	      {
-		if (size > rest)
-		  size = rest;
-
-		mh_string_realloc (&mach.str[reg], size + 1);
-		mu_stream_read (stream, mach.str[reg].ptr, size, NULL);
-		mach.str[reg].ptr[size] = 0;
-		compress_ws (&mach, mach.str[reg].ptr);
-
-		mu_stream_destroy (&stream);
-	      }
-	  }
 	  break;
 
 	case mhop_call:
 	  MHI_BUILTIN (mach.prog[mach.pc++]) (&mach);
 	  break;
 
-	  /* Convert string register to number */
-	case mhop_atoi:
+	case mhop_header:
 	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    if (mh_string_is_null (&mach.str[reg]))
-	      mach.num[reg] = 0;
+	    mu_header_t hdr = NULL;
+	    char *value = NULL;
+	    mu_message_get_header (mach.message, &hdr);
+	    mu_header_aget_value_unfold (hdr, strobj_ptr (&mach.arg_str), &value);
+	    strobj_free (&mach.arg_str);
+	    if (value)
+	      {
+		size_t len = strlen (value);
+		mach.arg_str.size = len + 1;
+      		COMPRESS_WS (&mach, value, &len);
+		mach.arg_str.ptr = value;
+		mach.arg_num = 1;
+	      }
 	    else
-	      mach.num[reg] = strtoul (mach.str[reg].ptr, NULL, 0);
+	      mach.arg_num = 0;
 	  }
+	  break;
+
+	case mhop_body:
+	  {
+	    mu_body_t body = NULL;
+	    mu_stream_t stream = NULL;
+	    size_t size = 0, str_off, nread;
+	    size_t rest = DFLWIDTH (&mach);
+
+	    strobj_free (&mach.arg_str);
+	    mu_message_get_body (mach.message, &body);
+	    mu_body_size (body, &size);
+	    if (size == 0)
+	      break;
+	    mu_body_get_streamref (body, &stream);
+	    if (!stream)
+	      break;
+	    if (size > rest)
+	      size = rest;
+
+	    mach.arg_str.ptr = mu_alloc (size+1);
+	    mach.arg_str.size = size;
+	    
+	    str_off = 0;
+	    while (!mu_stream_read (stream, mach.arg_str.ptr + str_off,
+				    mach.arg_str.size - str_off, &nread)
+		   && nread != 0
+		   && str_off < size)
+	      {
+                COMPRESS_WS (&mach, mach.arg_str.ptr + str_off, &nread);
+		if (nread)
+		  str_off += nread;
+	      }
+	    mu_stream_destroy (&stream);
+	    mach.arg_str.ptr[str_off] = 0;
+	  }
+	  break;
+	  
+	  /* assign reg_num to arg_num */
+	case mhop_num_to_arg:
+	  mach.arg_num = mach.reg_num;
+	  break;
+	  
+	  /* assign reg_str to arg_str */
+	case mhop_str_to_arg:
+	  strobj_copy (&mach.arg_str, &mach.reg_str);
+	  break;
+
+	  /* Convert arg_str to arg_num */
+	case mhop_str_to_num:
+	  mach.arg_num = strtoul (strobj_ptr (&mach.arg_str), NULL, 0);
 	  break;
   
-	  /* Convert numeric register to string */
-	case mhop_itoa:
-	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    mu_asnprintf (&mach.str[reg].ptr, &mach.str[reg].size,
-			  "%lu", mach.num[reg]);
-	  }
+	  /* Convert arg_num to arg_str */
+	case mhop_num_to_str:
+	  snprintf (buf, sizeof buf, "%lu", mach.arg_num);
+	  strobj_free (&mach.arg_str);
+	  strobj_create (&mach.arg_str, buf);
 	  break;
 
-	case mhop_printn:
-	  format_num (&mach, mach.num[R_REG]);
+	case mhop_num_print:
+	  format_num (&mach, mach.reg_num);
 	  break;
-
-	case mhop_prints:
-	  format_str (&mach, mach.str[R_REG].ptr);
+	  
+	case mhop_str_print:
+	  format_str (&mach, strobj_ptr (&mach.reg_str));
 	  break;
 
 	case mhop_fmtspec:
@@ -682,14 +673,19 @@ mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
 	  abort ();
 	}
     }
-  mh_string_free (&mach.str[R_REG]);
-  mh_string_free (&mach.str[R_ARG]);
+  strobj_free (&mach.reg_str);
+  strobj_free (&mach.arg_str);
   addrlist_destroy (&mach.addrlist);
+  
+  if (pret)
+    {
+      mu_opool_append_char (mach.pool, 0);
+      *pret = mu_strdup (mu_opool_finish (mach.pool, NULL));
+    }
+  mu_opool_destroy (&mach.pool);
   return mach.ind;
 }
 
-//FIXME
-#if 0
 int
 mh_format_str (mh_format_t *fmt, char *str, size_t width, char **pret)
 {
@@ -705,7 +701,197 @@ mh_format_str (mh_format_t *fmt, char *str, size_t width, char **pret)
   mu_message_destroy (&msg, NULL);
   return rc;
 }
-#endif
+  
+
+void
+mh_format_dump (mh_format_t *fmt)
+{
+  mh_instr_t *prog = fmt->prog;
+  size_t pc = 1;
+  int stop = 0;
+  
+  while (!stop)
+    {
+      mh_opcode_t opcode;
+      int num;
+      
+      printf ("% 4.4ld: ", (long) pc);
+      switch (opcode = MHI_OPCODE (prog[pc++]))
+	{
+	case mhop_nop:
+	  printf ("nop");
+	  break;
+	  
+	case mhop_stop:
+	  printf ("stop");
+	  stop = 1;
+	  break;
+
+	case mhop_branch:
+	  num = MHI_NUM (prog[pc++]);
+	  printf ("branch %d, %lu",
+		  num, (unsigned long) pc + num - 1);
+	  break;
+
+	case mhop_num_asgn:
+	  printf ("num_asgn");
+	  break;
+	  
+	case mhop_str_asgn:
+	  printf ("str_asgn");
+	  break;
+	  
+	case mhop_num_arg:
+	  num = MHI_NUM (prog[pc++]);
+	  printf ("num_arg %d", num);
+	  break;
+	  
+	case mhop_str_arg:
+	  {
+	    size_t skip = MHI_NUM (prog[pc++]);
+	    char *s = MHI_STR (prog[pc]);
+	    printf ("str_arg \"");
+	    for (; *s; s++)
+	      {
+		switch (*s)
+		  {
+		  case '\a':
+		    printf ("\\a");
+		    break;
+		    
+		  case '\b':
+		    printf ("\\b");
+		    break;
+		    
+		  case '\f':
+		    printf ("\\f");
+		    break;
+		    
+		  case '\n':
+		    printf ("\\n");
+		    break;
+		    
+		  case '\r':
+		    printf ("\\r");
+		    break;
+		    
+		  case '\t':
+		    printf ("\\t");
+		    break;
+
+		  case '"':
+		    printf ("\\\"");
+		    break;
+		    
+		  default:
+		    if (isprint (*s))
+		      putchar (*s);
+		    else
+		      printf ("\\%03o", *s);
+		    break;
+		  }
+	      }
+	    printf ("\"");
+	    pc += skip;
+	  }
+	  break;
+
+	case mhop_num_branch:
+	  num = MHI_NUM (prog[pc++]);
+	  printf ("num_branch %d, %lu",
+		  num, (unsigned long) (pc + num - 1));
+	  break;
+
+	case mhop_str_branch:
+	  num = MHI_NUM (prog[pc++]);
+	  printf ("str_branch %d, %lu",
+		  num, (unsigned long) (pc + num - 1));
+	  break;
+
+	case mhop_call:
+	  {
+	    char *name = _get_builtin_name (MHI_BUILTIN (prog[pc++]));
+	    printf ("call %s", name ? name : "UNKNOWN");
+	  }
+	  break;
+
+	case mhop_header:
+	  printf ("header");
+	  break;
+
+	case mhop_body:
+	  printf ("body");
+	  break;
+	  
+	case mhop_num_to_arg:
+	  printf ("num_to_arg");
+	  break;
+	  
+	  /* assign reg_str to arg_str */
+	case mhop_str_to_arg:
+	  printf ("str_to_arg");
+	  break;
+
+	  /* Convert arg_str to arg_num */
+	case mhop_str_to_num:
+	  printf ("str_to_num");
+	  break;
+  
+	  /* Convert arg_num to arg_str */
+	case mhop_num_to_str:
+	  printf ("num_to_str");
+	  break;
+
+	case mhop_num_print:
+	  printf ("print");
+	  break;
+	  
+	case mhop_str_print:
+	  printf ("str_print");
+	  break;
+
+	case mhop_fmtspec:
+	  {
+	    int space = 0;
+	    
+	    num = MHI_NUM (prog[pc++]);
+	    printf ("fmtspec: %#x, ", num);
+	    if (num & MH_FMT_RALIGN)
+	      {
+		printf ("MH_FMT_RALIGN");
+		space++;
+	      }
+	    if (num & MH_FMT_ZEROPAD)
+	      {
+		if (space)
+		  printf ("|");
+		printf ("MH_FMT_ZEROPAD");
+		space++;
+	      }
+	    if (space)
+	      printf ("; ");
+	    printf ("%d", num & MH_WIDTH_MASK);
+	  }
+	  break;
+
+	default:
+	  mu_error ("Unknown opcode: %x", opcode);
+	  abort ();
+	}
+      printf ("\n");
+    }
+}
+
+/* Free any memory associated with a format structure. The structure
+   itself is assumed to be in static storage. */
+void
+mh_format_free (mh_format_t *fmt)
+{
+  if (fmt->prog)
+    free (fmt->prog);
+  fmt->progsize = 0;
+  fmt->prog = NULL;
+}
 
 /* Built-in functions */
 
@@ -721,7 +907,7 @@ builtin_msg (struct mh_machine *mach)
 {
   size_t msgno = mach->msgno;
   mh_message_number (mach->message, &msgno);
-  mach->num[R_REG] = msgno;
+  mach->arg_num = msgno;
 }
 
 static void
@@ -740,7 +926,7 @@ builtin_cur (struct mh_machine *mach)
     }
   mh_message_number (mach->message, &msgno);
   mh_mailbox_get_cur (mbox, &cur); /* FIXME: Cache this */
-  mach->num[R_REG] = msgno == cur;
+  mach->arg_num = msgno == cur;
 }
 
 static void
@@ -748,27 +934,25 @@ builtin_size (struct mh_machine *mach)
 {
   size_t size;
   if (mu_message_size (mach->message, &size) == 0)
-    mach->num[R_REG] = size;
-  else
-    mach->num[R_REG] = 0;
+    mach->arg_num = size;
 }
 
 static void
 builtin_strlen (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mh_string_length (&mach->str[R_ARG]);
+  mach->arg_num = strlen (strobj_ptr (&mach->arg_str));
 }
 
 static void
 builtin_width (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mach->width;
+  mach->arg_num = mach->width;
 }
 
 static void
 builtin_charleft (struct mh_machine *mach)
 {
-  mach->num[R_REG] = output_width (mach);
+  mach->arg_num = DFLWIDTH (mach);
 }
 
 static void
@@ -777,175 +961,186 @@ builtin_timenow (struct mh_machine *mach)
   time_t t;
   
   time (&t);
-  mach->num[R_REG] = t;
+  mach->arg_num = t;
 }
 
 static void
 builtin_me (struct mh_machine *mach)
 {
-  char *s;
-  mu_asprintf (&s, "<%s>", mh_my_email ());
-  mh_string_load (&mach->str[R_REG], s);
-  free (s);
+  char *s = mh_my_email ();
+  strobj_realloc (&mach->arg_str, strlen (s) + 3);
+  sprintf (strobj_ptr (&mach->arg_str), "<%s>", s);
 }
 
 static void
 builtin_eq (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mach->num[R_REG] == mach->num[R_ARG];
+  mach->arg_num = mach->reg_num == mach->arg_num;
 }
 
 static void
 builtin_ne (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mach->num[R_REG] != mach->num[R_ARG];
+  mach->arg_num = mach->reg_num != mach->arg_num;
 }
 
 static void
 builtin_gt (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mach->num[R_REG] > mach->num[R_ARG];
+  mach->arg_num = mach->reg_num > mach->arg_num;
 }
 
 static void
 builtin_match (struct mh_machine *mach)
 {
-  mach->num[R_REG] = strstr (mh_string_value (&mach->str[R_REG]),
-			     mh_string_value (&mach->str[R_ARG])) != NULL;
+  mach->arg_num = strstr (strobj_ptr (&mach->reg_str),
+			  strobj_ptr (&mach->arg_str)) != NULL;
 }
 
 static void
 builtin_amatch (struct mh_machine *mach)
 {
-  char const *arg = mh_string_value (&mach->str[R_ARG]);
-  size_t len = strlen (arg);
-  mach->num[R_REG] = strncmp (mh_string_value (&mach->str[R_REG]), arg, len);
+  int len = strobj_len (&mach->arg_str);
+  mach->arg_num = strncmp (strobj_ptr (&mach->reg_str),
+			   strobj_ptr (&mach->arg_str), len);
 }
 
 static void
 builtin_plus (struct mh_machine *mach)
 {
-  mach->num[R_REG] += mach->num[R_ARG];
+  mach->arg_num += mach->reg_num;
 }
 
 static void
 builtin_minus (struct mh_machine *mach)
 {
-  mach->num[R_REG] -= mach->num[R_ARG];
+  mach->arg_num -= mach->reg_num;
 }
 
 static void
 builtin_divide (struct mh_machine *mach)
 {
-  if (mach->num[R_ARG] == 0)
+  if (!mach->arg_num)
     {
       /* TRANSLATORS: Do not translate the word 'format'! */
       mu_error (_("format: divide by zero"));
       mach->stop = 1;
     }
   else
-    mach->num[R_REG] /= mach->num[R_ARG];
+    mach->arg_num = mach->reg_num / mach->arg_num;
 }
 
 static void
 builtin_modulo (struct mh_machine *mach)
 {
-  if (mach->num[R_ARG] == 0)
+  if (!mach->arg_num)
     {
       mu_error (_("format: divide by zero"));
       mach->stop = 1;
     }
   else
-    mach->num[R_REG] %= mach->num[R_ARG];
+    mach->arg_num = mach->reg_num % mach->arg_num;
 }
 
 static void
 builtin_num (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mach->num[R_ARG];
+  mach->reg_num = mach->arg_num;
 }
 
 static void
 builtin_lit (struct mh_machine *mach)
 {
-  /* FIXME: do nothing */
+  /* do nothing */
 }
 
 static void
 builtin_getenv (struct mh_machine *mach)
 {
-  char const *val = getenv (mh_string_value (&mach->str[R_ARG]));
-  mh_string_load (&mach->str[R_REG], val);
+  char *val = getenv (strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
+  strobj_create (&mach->arg_str, val);
 }
 
 static void
 builtin_profile (struct mh_machine *mach)
 {
-  char const *val = mh_global_profile_get (mh_string_value (&mach->str[R_ARG]),
-					   "");
-  mh_string_load (&mach->str[R_REG], val);
+  char *val = strobj_ptr (&mach->arg_str);
+  strobj_free (&mach->arg_str);
+  strobj_create (&mach->arg_str, mh_global_profile_get (val, ""));
 }
 
 static void
 builtin_nonzero (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mach->num[R_ARG] != 0;
+    mach->arg_num = mach->reg_num;
 }
 
 static void
 builtin_zero (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mach->num[R_ARG] == 0;
+  mach->arg_num = !mach->reg_num;
 }
 
 static void
 builtin_null (struct mh_machine *mach)
 {
-  mach->num[R_REG] = mh_string_is_null (&mach->str[R_ARG]);
+  char *s = strobj_ptr (&mach->reg_str);
+  mach->arg_num = !s && !s[0];
 }
 
 static void
 builtin_nonnull (struct mh_machine *mach)
 {
-  mach->num[R_REG] = !mh_string_is_null (&mach->str[R_ARG]);
+  char *s = strobj_ptr (&mach->reg_str);
+  mach->arg_num = s && s[0];
 }
 
 /*     comp       comp     string   Set str to component text*/
 static void
 builtin_comp (struct mh_machine *mach)
 {
-  /* FIXME: Check this */
-  mh_string_move (mach, R_REG, R_ARG);
+  strobj_assign (&mach->reg_str, &mach->arg_str);
 }
 
 /*     compval    comp     integer  num set to "atoi(comp)"*/
 static void
 builtin_compval (struct mh_machine *mach)
 {
-  /* FIXME: Check this */
-  mach->num[R_REG] = strtol (mh_string_value (&mach->str[R_ARG]), NULL, 0);
+  mach->reg_num = strtoul (strobj_ptr (&mach->arg_str), NULL, 0);
 }
 
 /*     trim       expr              trim trailing white-space from str*/
 static void
 builtin_trim (struct mh_machine *mach)
 {
-  if (!mh_string_is_null (&mach->str[R_REG]))
-    mu_rtrim_class (mach->str[R_REG].ptr, MU_CTYPE_SPACE);
+  char *p, *start;
+  int len;
+  
+  if (strobj_is_static (&mach->arg_str))
+    strobj_copy (&mach->arg_str, &mach->arg_str);
+
+  start = strobj_ptr (&mach->arg_str);
+  len = strlen (start);
+  if (len == 0)
+    return;
+  for (p = start + len - 1; p >= start && isspace (*p); p--)
+    ;
+  p[1] = 0;
 }
 
 /*     putstr     expr              print str*/
 static void
 builtin_putstr (struct mh_machine *mach)
 {
-  print_string (mach, 0, mh_string_value (&mach->str[R_ARG]));
+  print_string (mach, 0, strobj_ptr (&mach->arg_str));
 }
 
 /*     putstrf    expr              print str in a fixed width*/
 static void
 builtin_putstrf (struct mh_machine *mach)
 {
-  format_str (mach, mh_string_value (&mach->str[R_ARG]));
+  format_str (mach, strobj_ptr (&mach->arg_str));
 }
 
 /*     putnum     expr              print num*/
@@ -953,7 +1148,7 @@ static void
 builtin_putnum (struct mh_machine *mach)
 {
   char *p;
-  mu_asprintf (&p, "%ld", mach->num[R_ARG]);
+  mu_asprintf (&p, "%ld", mach->arg_num);
   print_string (mach, 0, p);
   free (p);
 }
@@ -962,16 +1157,16 @@ builtin_putnum (struct mh_machine *mach)
 static void
 builtin_putnumf (struct mh_machine *mach)
 {
-  format_num (mach, mach->num[R_ARG]);
+  format_num (mach, mach->arg_num);
 }
 
 static int
 _parse_date (struct mh_machine *mach, struct tm *tm, struct mu_timezone *tz)
 {
-  char const *date = mh_string_value (&mach->str[R_ARG]);
+  char *date = strobj_ptr (&mach->arg_str);
   const char *p = date;
   
-  if (mu_parse822_date_time (&p, date + strlen(date), tm, tz))
+  if (mu_parse822_date_time (&p, date+strlen(date), tm, tz))
     {
       time_t t;
       
@@ -994,7 +1189,7 @@ builtin_sec (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_sec;
+  mach->arg_num = tm.tm_sec;
 }
 
 /*     min        date     integer  minutes of the hour*/
@@ -1007,7 +1202,7 @@ builtin_min (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_min;
+  mach->arg_num = tm.tm_min;
 }
 
 /*     hour       date     integer  hours of the day (0-23)*/
@@ -1020,7 +1215,7 @@ builtin_hour (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_hour;
+  mach->arg_num = tm.tm_hour;
 }
 
 /*     wday       date     integer  day of the week (Sun=0)*/
@@ -1033,7 +1228,7 @@ builtin_wday (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_wday;
+  mach->arg_num = tm.tm_wday;
 }
 
 /*     day        date     string   day of the week (abbrev.)*/
@@ -1048,7 +1243,8 @@ builtin_day (struct mh_machine *mach)
     return;
 
   strftime (buf, sizeof buf, "%a", &tm);
-  mh_string_load (&mach->str[R_REG], buf);
+  strobj_free (&mach->arg_str);
+  strobj_create (&mach->arg_str, buf);
 }
 
 /*     weekday    date     string   day of the week */
@@ -1061,8 +1257,10 @@ builtin_weekday (struct mh_machine *mach)
   
   if (_parse_date (mach, &tm, &tz))
     return;
+
   strftime (buf, sizeof buf, "%A", &tm);
-  mh_string_load (&mach->str[R_REG], buf);
+  strobj_free (&mach->arg_str);
+  strobj_create (&mach->arg_str, buf);
 }
 
 /*      sday       date     integer  day of the week known?
@@ -1075,9 +1273,9 @@ builtin_sday (struct mh_machine *mach)
 
   /*FIXME: more elaborate check needed */
   if (_parse_date (mach, &tm, &tz))
-    mach->num[R_REG] = -1;
+    mach->arg_num = -1;
   else
-    mach->num[R_REG] = 1;
+    mach->arg_num = 1;
 }
 
 /*     mday       date     integer  day of the month*/
@@ -1090,7 +1288,7 @@ builtin_mday (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_mday;
+  mach->arg_num = tm.tm_mday;
 }
 
 /*      yday       date     integer  day of the year */
@@ -1103,7 +1301,7 @@ builtin_yday (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_yday;
+  mach->arg_num = tm.tm_yday;
 }
 
 /*     mon        date     integer  month of the year*/
@@ -1116,7 +1314,7 @@ builtin_mon (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_mon + 1;
+  mach->arg_num = tm.tm_mon+1;
 }
 
 /*     month      date     string   month of the year (abbrev.) */
@@ -1131,7 +1329,8 @@ builtin_month (struct mh_machine *mach)
     return;
 
   strftime (buf, sizeof buf, "%b", &tm);
-  mh_string_load (&mach->str[R_REG], buf);
+  strobj_free (&mach->arg_str);
+  strobj_create (&mach->arg_str, buf);
 }
 
 /*      lmonth     date     string   month of the year*/
@@ -1146,7 +1345,8 @@ builtin_lmonth (struct mh_machine *mach)
     return;
 
   strftime (buf, sizeof buf, "%B", &tm);
-  mh_string_load (&mach->str[R_REG], buf);
+  strobj_free (&mach->arg_str);
+  strobj_create (&mach->arg_str, buf);
 }
 
 /*     year       date     integer  year (may be > 100)*/
@@ -1159,7 +1359,7 @@ builtin_year (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tm.tm_year + 1900;
+  mach->arg_num = tm.tm_year + 1900;
 }
 
 /*     zone       date     integer  timezone in hours*/
@@ -1172,7 +1372,7 @@ builtin_zone (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 
-  mach->num[R_REG] = tz.utc_offset;
+  mach->arg_num = tz.utc_offset;
 }
 
 /*     tzone      date     string   timezone string */
@@ -1185,8 +1385,9 @@ builtin_tzone (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
   
+  strobj_free (&mach->arg_str);
   if (tz.tz_name)
-    mh_string_load (&mach->str[R_REG], tz.tz_name);
+    strobj_create (&mach->arg_str, (char*) tz.tz_name);
   else
     {
       char buf[6];
@@ -1200,7 +1401,7 @@ builtin_tzone (struct mh_machine *mach)
 	s = '+';
       snprintf (buf, sizeof buf, "%c%02d%02d", s,
 		tz.utc_offset/3600, tz.utc_offset/60);
-      mh_string_load (&mach->str[R_REG], buf);
+      strobj_create (&mach->arg_str, buf);
     }
 }
 
@@ -1214,15 +1415,9 @@ builtin_szone (struct mh_machine *mach)
 
   /*FIXME: more elaborate check needed */
   if (_parse_date (mach, &tm, &tz))
-    mach->num[R_REG] = -1;
+    mach->arg_num = -1;
   else
-    mach->num[R_REG] = 1;
-}
-
-static void
-builtin_str_noop (struct mh_machine *mach)
-{
-  mh_string_move (mach, R_REG, R_ARG);
+    mach->arg_num = 1;
 }
 
 /*     date2local date              coerce date to local timezone*/
@@ -1230,7 +1425,6 @@ static void
 builtin_date2local (struct mh_machine *mach)
 {
   /*FIXME: Noop*/
-  builtin_str_noop (mach);
 }
 
 /*     date2gmt   date              coerce date to GMT*/
@@ -1238,7 +1432,6 @@ static void
 builtin_date2gmt (struct mh_machine *mach)
 {
   /*FIXME: Noop*/
-  builtin_str_noop (mach);
 }
 
 /*     dst        date     integer  daylight savings in effect?*/
@@ -1251,9 +1444,9 @@ builtin_dst (struct mh_machine *mach)
   if (_parse_date (mach, &tm, &tz))
     return;
 #ifdef HAVE_STRUCT_TM_TM_ISDST  
-  mach->num[R_REG] = tm.tm_isdst;
+  mach->arg_num = tm.tm_isdst;
 #else
-  mach->num[R_REG] = 0;
+  mach->arg_num = 0;
 #endif
 }
 
@@ -1266,7 +1459,7 @@ builtin_clock (struct mh_machine *mach)
 
   if (_parse_date (mach, &tm, &tz))
     return;
-  mach->num[R_REG] = mu_datetime_to_utc (&tm, &tz);
+  mach->arg_num = mu_datetime_to_utc (&tm, &tz);
 }
 
 /*     rclock     date     integer  seconds prior to current time*/
@@ -1279,7 +1472,7 @@ builtin_rclock (struct mh_machine *mach)
   
   if (_parse_date (mach, &tm, &tz))
     return;
-  mach->num[R_REG] = now - mu_datetime_to_utc (&tm, &tz);
+  mach->arg_num = now - mu_datetime_to_utc (&tm, &tz);
 }
 
 struct
@@ -1353,7 +1546,7 @@ date_cvt (struct mh_machine *mach, int pretty)
       min %= 60;
       snprintf (buf + len, sizeof(buf) - len, "%c%02d%02d", sign, hrs, min);
     }
-  mh_string_load (&mach->str[R_REG], buf);
+  strobj_create (&mach->arg_str, buf);
 }
 
 /*      tws        date     string   official 822 rendering */
@@ -1377,7 +1570,7 @@ builtin_nodate (struct mh_machine *mach)
   struct tm tm;
   struct mu_timezone tz;
   
-  mach->num[R_REG] = _parse_date (mach, &tm, &tz);
+  mach->arg_num = _parse_date (mach, &tm, &tz);
 }
 
 /*     proper     addr     string   official 822 rendering */
@@ -1385,7 +1578,6 @@ static void
 builtin_proper (struct mh_machine *mach)
 {
   /*FIXME: noop*/
-  builtin_str_noop (mach);
 }
 
 /*     friendly   addr     string   user-friendly rendering*/
@@ -1396,13 +1588,14 @@ builtin_friendly (struct mh_machine *mach)
   const char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
+  rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
   if (rc)
     return;
 
   if (mu_address_sget_personal (addr, 1, &str) == 0 && str)
     {
-      mh_string_load (&mach->str[R_ARG], str);
+      strobj_free (&mach->arg_str);
+      strobj_create (&mach->arg_str, str);
     }
   mu_address_destroy (&addr);
 }
@@ -1415,13 +1608,13 @@ builtin_addr (struct mh_machine *mach)
   const char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
 
   if (mu_address_sget_email (addr, 1, &str) == 0)
-    mh_string_load (&mach->str[R_REG], str);
+    strobj_create (&mach->arg_str, str);
   mu_address_destroy (&addr);
 }
 
@@ -1433,13 +1626,13 @@ builtin_pers (struct mh_machine *mach)
   const char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
 
-  if (mu_address_sget_personal (addr, 1, &str) == 0)
-    mh_string_load (&mach->str[R_REG], str);
+  if (mu_address_sget_personal (addr, 1, &str) == 0 && str)
+    strobj_create (&mach->arg_str, str);
   mu_address_destroy (&addr);
 }
 
@@ -1452,13 +1645,13 @@ builtin_note (struct mh_machine *mach)
   const char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
 
   if (mu_address_sget_comments (addr, 1, &str) == 0)
-    mh_string_load (&mach->str[R_REG], str);
+    strobj_create (&mach->arg_str, str);
   mu_address_destroy (&addr);
 }
 
@@ -1470,8 +1663,8 @@ builtin_mbox (struct mh_machine *mach)
   char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
 
@@ -1480,7 +1673,7 @@ builtin_mbox (struct mh_machine *mach)
       char *p = strchr (str, '@');
       if (p)
 	*p = 0;
-      mh_string_load (&mach->str[R_REG], str);
+      strobj_create (&mach->arg_str, p);
       free (str);
     }
   mu_address_destroy (&addr);
@@ -1493,13 +1686,12 @@ builtin_mymbox (struct mh_machine *mach)
   mu_address_t addr;
   const char *str;
   
-  if (mu_address_create (&addr, mh_string_value (&mach->str[R_ARG])))
+  mach->arg_num = 0;
+  if (mu_address_create (&addr, strobj_ptr (&mach->arg_str)))
     return;
 
   if (mu_address_sget_email (addr, 1, &str) == 0 && str)
-    mach->num[R_REG] = mh_is_my_name (str);
-  else
-    mach->num[R_REG] = 0;
+    mach->arg_num = mh_is_my_name (str);
   mu_address_destroy (&addr);
 }
 
@@ -1511,8 +1703,8 @@ builtin_host (struct mh_machine *mach)
   char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
 
@@ -1520,7 +1712,7 @@ builtin_host (struct mh_machine *mach)
     {
       char *p = strchr (str, '@');
       if (p)
-	mh_string_load (&mach->str[R_REG], p + 1);
+	strobj_create (&mach->arg_str, p+1);
       free (str);
     }
   mu_address_destroy (&addr);
@@ -1533,15 +1725,15 @@ builtin_nohost (struct mh_machine *mach)
   mu_address_t addr;
   const char *str;
   
-  int rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  int rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
 
   if (mu_address_sget_email (addr, 1, &str) == 0 && str)
-    mach->num[R_REG] = strchr (str, '@') != NULL;
+    mach->arg_num = strchr (str, '@') != NULL;
   else
-    mach->num[R_REG] = 0;
+    mach->arg_num = 0;
   mu_address_destroy (&addr);
 }
 
@@ -1554,22 +1746,22 @@ builtin_type (struct mh_machine *mach)
   int rc;
   const char *str;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
 
   if (mu_address_sget_email (addr, 1, &str) == 0 && str)
     {
       if (strchr (str, '@'))
-	mach->num[R_REG] = 1;
+	mach->arg_num = 1;
       else if (strchr (str, '!'))
-	mach->num[R_REG] = -1;
+	mach->arg_num = -1;
       else
-	mach->num[R_REG] = 0; /* assume local */
+	mach->arg_num = 0; /* assume local */
     }
   else
-    mach->num[R_REG] = 2;
+    mach->arg_num = 2;
   mu_address_destroy (&addr);
 }
 
@@ -1579,12 +1771,12 @@ builtin_path (struct mh_machine *mach)
 {
   mu_address_t addr;
   const char *str;
-  int rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
+  int rc = mu_address_create (&addr, strobj_ptr (&mach->arg_str));
+  strobj_free (&mach->arg_str);
   if (rc)
     return;
   if (mu_address_sget_route (addr, 1, &str))
-    mh_string_load (&mach->str[R_REG], str);
+    strobj_create (&mach->arg_str, str);
   mu_address_destroy (&addr);
 }
 
@@ -1594,7 +1786,6 @@ builtin_ingrp (struct mh_machine *mach)
 {
   /*FIXME:*/
   builtin_not_implemented ("ingrp");
-  mach->num[R_REG] = 0;
 }
 
 /*     gname      addr     string   name of group**/
@@ -1603,7 +1794,6 @@ builtin_gname (struct mh_machine *mach)
 {
   /*FIXME:*/
   builtin_not_implemented ("gname");
-  builtin_str_noop (mach);
 }
 
 /*     formataddr expr              append arg to str as a
@@ -1616,12 +1806,12 @@ builtin_formataddr (struct mh_machine *mach)
   size_t num;
   const char *buf;
   
-  if (mh_string_is_null (&mach->str[R_REG]))
+  if (strobj_len (&mach->reg_str) == 0)
     dest = NULL;
-  else if (mu_address_create (&dest, mh_string_value (&mach->str[R_REG])))
+  else if (mu_address_create (&dest, strobj_ptr (&mach->reg_str)))
     return;
     
-  if (mu_address_create (&addr, mh_string_value (&mach->str[R_ARG])))
+  if (mu_address_create (&addr, strobj_ptr (&mach->arg_str)))
     {
       mu_address_destroy (&dest);
       return;
@@ -1648,9 +1838,10 @@ builtin_formataddr (struct mh_machine *mach)
     }
 
   if (mu_address_sget_printable (dest, &buf) == 0)
-    mh_string_load (&mach->str[R_REG], buf);
-  else
-    mh_string_clear (&mach->str[R_REG]);
+    {
+      strobj_realloc (&mach->reg_str, strlen (buf) + 1);
+      strcpy (strobj_ptr (&mach->reg_str), buf);
+    }
   mu_address_destroy (&dest);
 }
 
@@ -1663,10 +1854,10 @@ builtin_formataddr (struct mh_machine *mach)
 static void
 builtin_putaddr (struct mh_machine *mach)
 {
-  if (!mh_string_is_null (&mach->str[R_ARG]))
-    print_hdr_string (mach, mh_string_value (&mach->str[R_ARG]));
-  if (!mh_string_is_null (&mach->str[R_REG]))
-    print_hdr_string (mach, mh_string_value (&mach->str[R_REG]));
+  if (!strobj_is_null (&mach->arg_str))
+    print_hdr_string (mach, strobj_ptr (&mach->arg_str));
+  if (!strobj_is_null (&mach->reg_str))
+    print_hdr_string (mach, strobj_ptr (&mach->reg_str));
 }
 
 /* GNU extension: Strip leading whitespace and eventual Re: (or Re\[[0-9]+\]:)
@@ -1674,15 +1865,14 @@ builtin_putaddr (struct mh_machine *mach)
 static void
 builtin_unre (struct mh_machine *mach)
 {
-  char const *arg = mh_string_value (&mach->str[R_ARG]);
-  char const *p;
-  int rc = mu_unre_subject (arg, &p);
-  mh_string_clear (&mach->str[R_REG]);
-  if (rc == 0 && p != arg)
+  const char *p;
+  int rc = mu_unre_subject (strobj_ptr (&mach->arg_str), &p);
+  if (rc == 0 && p != strobj_ptr (&mach->arg_str))
     {
-      char *q = mu_strdup (p); /* Create a copy, since mh_string_load can
+      char *q = mu_strdup (p); /* Create a copy, since strobj_create will
 			          destroy p */
-      mh_string_load (&mach->str[R_REG], q);
+      strobj_free (&mach->arg_str);
+      strobj_create (&mach->arg_str, q);
       free (q);
     }
 }  
@@ -1692,7 +1882,7 @@ builtin_isreply (struct mh_machine *mach)
 {
   int rc;
   
-  if (mh_string_is_null (&mach->str[R_ARG]))
+  if (strobj_is_null (&mach->arg_str))
     {
       mu_header_t hdr = NULL;
       char *value = NULL;
@@ -1703,31 +1893,37 @@ builtin_isreply (struct mh_machine *mach)
       free (value);
     }
   else
-    rc = mu_unre_subject (mh_string_value (&mach->str[R_ARG]), NULL);
+    rc = mu_unre_subject (strobj_ptr (&mach->arg_str), NULL);
 
-  mach->num[R_REG] = !rc;
+  mach->arg_num = !rc;
 }
 
 static void
-builtin_decode (struct mh_machine *mach)
+decode_string (strobj_t *obj)
 {
   char *tmp;
   
-  if (mh_string_is_null (&mach->str[R_ARG]))
+  if (strobj_is_null (obj))
     return;
 
-  mh_string_clear (&mach->str[R_REG]);
-  if (mh_decode_2047 (mh_string_value (&mach->str[R_ARG]), &tmp) == 0)
+  if (mh_decode_2047 (strobj_ptr (obj), &tmp) == 0)
     {
-      mh_string_load (&mach->str[R_REG], tmp);
+      strobj_free (obj);
+      strobj_create (obj, tmp);
       free (tmp);
     }
 }
 
 static void
+builtin_decode (struct mh_machine *mach)
+{
+  decode_string (&mach->arg_str);
+}
+
+static void
 builtin_reply_regex (struct mh_machine *mach)
 {
-  mh_set_reply_regex (mh_string_value (&mach->str[R_ARG]));
+  mh_set_reply_regex (strobj_ptr (&mach->arg_str));
 }
 
 int
@@ -1748,34 +1944,34 @@ mh_decode_rcpt_flag (const char *arg)
 static void
 builtin_rcpt (struct mh_machine *mach)
 {
-  int rc = mh_decode_rcpt_flag (mh_string_value (&mach->str[R_ARG]));
+  int rc = mh_decode_rcpt_flag (strobj_ptr (&mach->arg_str));
   if (rc == RCPT_NONE)
     {
       mu_error (_("invalid recipient mask"));
       /* try to continue anyway */
     }
-  mach->num[R_REG] = !!(rc & rcpt_mask);
+  mach->arg_num = rc & rcpt_mask;
 }
 
 static void
 builtin_concat (struct mh_machine *mach)
 {
-  if (mh_string_is_null (&mach->str[R_ARG]))
-    return;
+  size_t size = strobj_len (&mach->arg_str);
 
-  compress_ws (mach, mach->str[R_ARG].ptr);
-  if (mh_string_is_null (&mach->str[R_REG]))
-    mh_string_move (mach, R_REG, R_ARG);
+  if (size == 0)
+    return;
+  COMPRESS_WS (mach, strobj_ptr (&mach->arg_str), &size);
+  if (strobj_len (&mach->reg_str) == 0)
+    strobj_copy (&mach->reg_str, &mach->arg_str);
   else
     {
-      size_t length = 1;
+      int length = 1;
     
-      length += 1 + mh_string_length (&mach->str[R_REG]);
-                  /* reserve en extra space */
-      length += mh_string_length (&mach->str[R_ARG]);
-      mh_string_realloc (&mach->str[R_REG], length);
-      strcat (strcat (mach->str[R_REG].ptr, " "),
-	      mh_string_value (&mach->str[R_ARG]));
+      length += 1 + strobj_len (&mach->reg_str); /* reserve en extra space */
+      length += strobj_len (&mach->arg_str);
+      strobj_realloc (&mach->reg_str, length);
+      strcat (strcat (strobj_ptr (&mach->reg_str), " "),
+	      strobj_ptr (&mach->arg_str));
     }
 }
 
@@ -1785,17 +1981,17 @@ builtin_printhdr (struct mh_machine *mach)
   char *tmp = NULL;
   size_t s = 0;
   
-  if (!mh_string_is_null (&mach->str[R_ARG]))
+  if (!strobj_is_null (&mach->arg_str))
     {
-      s = mh_string_length (&mach->str[R_ARG]);
-      tmp = mu_strdup (mh_string_value (&mach->str[R_ARG]));
+      s = strobj_len (&mach->arg_str);
+      tmp = mu_strdup (strobj_ptr (&mach->arg_str));
     }
   
-  if (!mh_string_is_null (&mach->str[R_REG]))
+  if (!strobj_is_null (&mach->reg_str))
     {
-      s += mh_string_length (&mach->str[R_REG]) + 1;
-      tmp = mu_realloc (tmp, s);
-      strcat (tmp, mh_string_value (&mach->str[R_REG]));
+      s += strobj_len (&mach->reg_str) + 1;
+      tmp = realloc (tmp, s);
+      strcat (tmp, strobj_ptr (&mach->reg_str));
     }
 
   if (tmp)
@@ -1810,10 +2006,10 @@ builtin_in_reply_to (struct mh_machine *mach)
 {
   char *value;
 
-  mh_string_clear (&mach->str[R_REG]);
+  strobj_free (&mach->arg_str);
   if (mu_rfc2822_in_reply_to (mach->message, &value) == 0)
     {
-      mh_string_load (&mach->str[R_REG], value);
+      strobj_create (&mach->arg_str, value);
       free (value);
     }
 }
@@ -1823,10 +2019,10 @@ builtin_references (struct mh_machine *mach)
 {
   char *value;
 
-  mh_string_clear (&mach->str[R_REG]);
+  strobj_free (&mach->arg_str);
   if (mu_rfc2822_references (mach->message, &value) == 0)
     {
-      mh_string_load (&mach->str[R_REG], value);
+      strobj_create (&mach->arg_str, value);
       free (value);
     }
 }
@@ -1834,19 +2030,22 @@ builtin_references (struct mh_machine *mach)
 static void
 builtin_package (struct mh_machine *mach)
 {
-  mh_string_load (&mach->str[R_REG], PACKAGE);
+  strobj_free (&mach->arg_str);
+  strobj_set (&mach->arg_str, PACKAGE);
 }
 
 static void
 builtin_package_string (struct mh_machine *mach)
 {
-  mh_string_load (&mach->str[R_REG], PACKAGE_STRING);
+  strobj_free (&mach->arg_str);
+  strobj_set (&mach->arg_str, PACKAGE_STRING);
 }
 
 static void
 builtin_version (struct mh_machine *mach)
 {
-  mh_string_load (&mach->str[R_REG], VERSION);
+  strobj_free (&mach->arg_str);
+  strobj_set (&mach->arg_str, VERSION);
 }
 
 /* Builtin function table */
@@ -1936,19 +2135,24 @@ mh_builtin_t builtin_tab[] = {
   { "reply_regex", builtin_reply_regex, mhtype_none, mhtype_str },
   { "isreply", builtin_isreply, mhtype_num, mhtype_str, MHA_OPTARG },
   { "decode", builtin_decode, mhtype_str, mhtype_str },
-  { "void",   NULL, mhtype_none, mhtype_none, MHA_VOID },
   { 0 }
 };
 
 mh_builtin_t *
-mh_lookup_builtin (char *name, size_t len)
+mh_lookup_builtin (char *name, int *rest)
 {
   mh_builtin_t *bp;
+  int namelen = strlen (name);
   
   for (bp = builtin_tab; bp->name; bp++)
     {
-      if (strlen (bp->name) == len && memcmp (name, bp->name, len) == 0)
-	return bp;
+      int len = strlen (bp->name);
+      if (len >= namelen
+	  && memcmp (name, bp->name, len) == 0)
+	{
+	  *rest = namelen - len;
+	  return bp;
+	}
     }
   return NULL;
 }
@@ -1962,152 +2166,4 @@ _get_builtin_name (mh_builtin_fp ptr)
     if (bp->fun == ptr)
       return bp->name;
   return NULL;
-}
-
-void
-mh_format_dump_disass (mh_format_t fmt)
-{
-  mh_instr_t *prog = fmt->prog;
-  size_t pc = 1;
-  int stop = 0;
-  static char *regname[] = {
-    [R_REG] = "reg",
-    [R_ARG] = "arg"
-  };
-
-  if (!prog)
-    return;
-  while (!stop)
-    {
-      mh_opcode_t opcode;
-
-      printf ("% 4.4ld: ", (long) pc);
-      switch (opcode = MHI_OPCODE (prog[pc++]))
-	{
-	case mhop_stop:
-	  printf ("stop");
-	  stop = 1;
-	  break;
-
-	case mhop_branch:
-	  {
-	    long n =  MHI_NUM (prog[pc++]);
-	    printf ("branch %ld", pc + n - 1);
-	  }
-	  break;
-
-	case mhop_brzn:
-	  {
-	    long n =  MHI_NUM (prog[pc++]);
-	    printf ("brzn %ld", pc + n - 1);
-	  }
-	  break;
-
-	case mhop_brzs:
-	  {
-	    long n =  MHI_NUM (prog[pc++]);
-	    printf ("brzs %ld", pc + n - 1);
-	  }
-	  break;
-
-	case mhop_setn:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    long n = MHI_NUM (prog[pc++]);
-	    printf ("setn %s, %ld", regname[reg], n);
-	  }
-	  break;
-	  
-	case mhop_sets:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    size_t skip = MHI_NUM (prog[pc++]);
-	    char const *str = MHI_STR (prog[pc]);
-	    char *prt;
-	    
-	    MU_ASSERT (mu_c_str_escape_trans (str,
-					      "\\\\\"\"a\ab\bf\fn\nr\rt\tv\v",
-					      &prt));
-	    
-	    pc += skip;
-	    printf ("setn %s, \"%s\"", regname[reg], prt);
-	    free (prt);
-	  }
-	  break;
-
-	case mhop_movn:
-	  {
-	    long dst = MHI_NUM (prog[pc++]);
-	    long src = MHI_NUM (prog[pc++]);
-	    printf ("movn %s, %s", regname[dst], regname[src]);
-	  }
-	  break;
-	  
-	case mhop_movs:
-	  {
-	    long dst = MHI_NUM (prog[pc++]);
-	    long src = MHI_NUM (prog[pc++]);
-	    printf ("movs %s, %s", regname[dst], regname[src]);
-	  }
-	  break;
-
-	case mhop_ldcomp:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    size_t skip = MHI_NUM (prog[pc++]);
-	    char const *comp = MHI_STR (prog[pc]);
-	    pc += skip;
-	    printf ("ldcomp %s, \"%s\"", regname[reg], comp);
-	  }
-	  break;
-
-	case mhop_ldbody:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    printf ("ldbody %s", regname[reg]);
-	  }
-	  break;
-
-	case mhop_call:
-	  {
-	    char *name = _get_builtin_name (MHI_BUILTIN (prog[pc++]));
-	    printf ("call %s", name ? name : "UNKNOWN");
-	  }
-	  break;
-
-	case mhop_atoi:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    printf ("atoi %s", regname[reg]);
-	  }
-	  break;
-	  
-	case mhop_itoa:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    printf ("itoa %s", regname[reg]);
-	  }
-	  break;
-
-	case mhop_printn:
-	  printf ("printn");
-	  break;
-	  
-	case mhop_prints:
-	  printf ("prints");
-	  break;
-	  
-	case mhop_fmtspec:
-	  {
-	    int fmtspec = MHI_NUM (prog[pc++]);
-	    printf ("fmtspec ");
-	    mh_print_fmtspec (fmtspec);
-	  }
-	  break;
-
-	default:
-	  abort ();
-	}
-      printf ("\n");
-    }
 }
