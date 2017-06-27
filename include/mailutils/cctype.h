@@ -37,6 +37,9 @@ extern "C" {
 #define MU_CTYPE_XLETR   0x0400
 #define MU_CTYPE_ENDLN   0x0800
 #define MU_CTYPE_TSPEC   0x1000  /* tspecials: RFC 2045, section 5.1. */
+#define MU_CTYPE_IDENT   0x2000  /* Valid identifier consituent: alnum or _ */
+#define MU_CTYPE_HEADR   0x4000  /* Valid header name consituent: alnum, _,
+				    or - */
 
 #define MU_C_TAB_MAX     128
 
@@ -60,7 +63,9 @@ extern int mu_c_tab[MU_C_TAB_MAX];
 #define mu_isblank(c) mu_c_is_class (c, MU_CTYPE_BLANK)
 #define mu_isendln(c) mu_c_is_class (c, MU_CTYPE_ENDLN)
 #define mu_istspec(c) mu_c_is_class (c, MU_CTYPE_TSPEC)
-  
+#define mu_isident(c) mu_c_is_class (c, MU_CTYPE_IDENT)
+#define mu_isheadr(c) mu_c_is_class (c, MU_CTYPE_HEADR)
+
 #define mu_tolower(c)					\
   ({ int __c = (c);					\
     (__c >= 'A' && __c <= 'Z' ? __c - 'A' + 'a' : __c); \
