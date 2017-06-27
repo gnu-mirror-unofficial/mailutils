@@ -64,12 +64,12 @@ enum mh_opcode
   mhop_call,
 
   /* Convert string register to number reg
-     Format: mhop_atoi reg
+     Format: mhop_atoi
    */
   mhop_atoi,
   
   /* Convert numeric register to string
-     Format: mhop_itoa reg */
+     Format: mhop_itoa */
   mhop_itoa,
 
   /* Print num reg */
@@ -116,8 +116,10 @@ struct mh_format
   size_t progmax;          /* Size of allocated program*/
   size_t progcnt;          /* Actual number of elements used */
   mh_instr_t *prog;        /* Program itself */
-  struct node *tree;
-  mu_opool_t pool;
+  /* The tree and pool members are filled only if mh_format_parse
+     was called with MH_FMT_PARSE_TREE flag */
+  struct node *tree;       /* Parse tree */  
+  mu_opool_t pool;         /* Literal pool */
 };
 
 #define MHA_DEFAULT       0

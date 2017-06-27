@@ -64,8 +64,6 @@ mh_read_formfile (char const *name, char **pformat)
 {
   FILE *fp;
   struct stat st;
-  char *ptr;
-  size_t off = 0;
   char *format_str;
   char *file_name;
   int rc;
@@ -93,31 +91,18 @@ mh_read_formfile (char const *name, char **pformat)
       free (file_name);
       return -1;
     }
+  
+  format_str = mu_alloc (st.st_size + 1);
+  if (fread (format_str, st.st_size, 1, fp) != 1)
+    {
+      mu_error (_("error reading format file %s: %s"), file_name,
+		strerror (errno));
+      free (file_name);
+      return -1;
+    }
   free (file_name);
   
-  format_str = mu_alloc (st.st_size+1);
-  while ((ptr = fgets (format_str + off, st.st_size - off + 1, fp)) != NULL)
-    {
-      int len = strlen (ptr);
-      if (len == 0)
-	break;
-
-      if (*ptr == '%' && ptr[1] == ';')
-	continue;
-      
-      if (len > 0 && ptr[len-1] == '\n')
-	{
-	  if (ptr[len-2] == '\\')
-	    {
-	      len -= 2;
-	      ptr[len] = 0;
-	    }
-	}
-      off += len;
-    }
-  if (off > 0 && format_str[off-1] == '\n')
-    off--;
-  format_str[off] = 0;
+  format_str[st.st_size] = 0;
   fclose (fp);
   *pformat = format_str;
   return 0;

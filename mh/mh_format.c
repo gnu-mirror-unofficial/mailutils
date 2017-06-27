@@ -648,20 +648,18 @@ mh_format (mu_stream_t output, mh_format_t fmt,
 	  /* Convert string register to number */
 	case mhop_atoi:
 	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    if (mh_string_is_null (&mach.str[reg]))
-	      mach.num[reg] = 0;
+	    if (mh_string_is_null (&mach.str[R_REG]))
+	      mach.num[R_REG] = 0;
 	    else
-	      mach.num[reg] = strtoul (mach.str[reg].ptr, NULL, 0);
+	      mach.num[R_REG] = strtoul (mach.str[R_REG].ptr, NULL, 0);
 	  }
 	  break;
   
 	  /* Convert numeric register to string */
 	case mhop_itoa:
 	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    mu_asnprintf (&mach.str[reg].ptr, &mach.str[reg].size,
-			  "%lu", mach.num[reg]);
+	    mu_asnprintf (&mach.str[R_REG].ptr, &mach.str[R_REG].size,
+			  "%lu", mach.num[R_REG]);
 	  }
 	  break;
 
@@ -1878,7 +1876,7 @@ mh_builtin_t builtin_tab[] = {
   { "nonnull",  builtin_nonnull,  mhtype_num,  mhtype_str,  MHA_OPTARG },
   { "comp",     builtin_comp,     mhtype_num,  mhtype_str,  MHA_OPTARG },
   { "compval",  builtin_compval,  mhtype_num,  mhtype_str },	   
-  { "trim",     builtin_trim,     mhtype_str,  mhtype_str,  MHA_OPTARG },
+  { "trim",     builtin_trim,     mhtype_none, mhtype_str,  MHA_OPTARG },
   { "putstr",   builtin_putstr,   mhtype_none, mhtype_str,  MHA_OPTARG },
   { "putstrf",  builtin_putstrf,  mhtype_none, mhtype_str,  MHA_OPTARG },
   { "putnum",   builtin_putnum,   mhtype_none, mhtype_num,  MHA_OPTARG },
@@ -1899,8 +1897,8 @@ mh_builtin_t builtin_tab[] = {
   { "zone",     builtin_zone,     mhtype_num,  mhtype_str },
   { "tzone",    builtin_tzone,    mhtype_str,  mhtype_str },
   { "szone",    builtin_szone,    mhtype_num,  mhtype_str },
-  { "date2local", builtin_date2local, mhtype_str, mhtype_str },
-  { "date2gmt", builtin_date2gmt, mhtype_str,  mhtype_str },
+  { "date2local", builtin_date2local, mhtype_none, mhtype_str },
+  { "date2gmt", builtin_date2gmt, mhtype_none,  mhtype_str },
   { "dst",      builtin_dst,      mhtype_num,  mhtype_str },
   { "clock",    builtin_clock,    mhtype_num,  mhtype_str },
   { "rclock",   builtin_rclock,   mhtype_num,  mhtype_str },
@@ -2073,17 +2071,11 @@ mh_format_dump_disass (mh_format_t fmt)
 	  break;
 
 	case mhop_atoi:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    printf ("atoi %s", regname[reg]);
-	  }
+	  printf ("atoi");
 	  break;
 	  
 	case mhop_itoa:
-	  {
-	    long reg = MHI_NUM (prog[pc++]);
-	    printf ("itoa %s", regname[reg]);
-	  }
+	  printf ("itoa");
 	  break;
 
 	case mhop_printn:

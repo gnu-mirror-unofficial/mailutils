@@ -74,7 +74,7 @@ enum node_type
   fmtnode_comp,
   fmtnode_funcall,
   fmtnode_cntl,
-  fmtnode_typecast
+  fmtnode_typecast,
 };
 
 struct node
@@ -118,6 +118,7 @@ static struct node *typecast (struct node *node, enum mh_type type);
 
 %union {
   char *str;
+  char const *mesg;
   long num;
   struct {
     struct node *head, *tail;
@@ -401,17 +402,143 @@ else_part : ELSE zlist
 %%
 
 static char *start;
+static char *tok_start;
 static char *curp;
+static mu_linetrack_t trk;
+static struct mu_locus_range yylloc;
 
+static inline size_t
+token_leng (void)
+{
+  return curp - tok_start;
+}
+
+static inline void
+mark (void)
+{
+  if (curp > tok_start)
+    mu_linetrack_advance (trk, &yylloc, tok_start, token_leng ());
+  tok_start = curp;
+}
+
+static inline int
+input (void)
+{
+  if (*curp == 0)
+    return 0;
+  return *curp++;
+}
+
+static inline void
+eatinput (size_t n)
+{
+  mark ();
+  while (n--)
+    input ();
+  mark ();
+}
+
+static inline int
+peek (void)
+{
+  return *curp;
+}
+
+static inline int
+unput (int c)
+{
+  if (curp == start)
+    {
+      mu_error (_("%s:%d: INTERNAL ERROR: out of unput space: please report"),
+		__FILE__, __LINE__);
+      abort ();
+    }
+  return *--curp = c;
+}
+
+static int
+skip (int class)
+{
+  curp = mu_str_skip_class (curp, class);
+  return *curp;
+}
+
+static int
+skipeol (void)
+{
+  int c;
+
+  do
+    {
+      c = input ();
+      if (c == '\\' && (c = input ()) == '\n')
+	c = input ();
+    }
+  while (c && c != '\n');
+  return *curp;
+}
+	 
+
+static inline int
+bogus (const char *mesg)
+{
+  yylval.mesg = mesg;
+  return BOGUS;
+}
+
+static char *
+find_bol (unsigned line)
+{
+  char *p = start;
+
+  while (--line)
+    {
+      while (*p != '\n')
+	{
+	  if (*p == 0)
+	    return p;
+	  p++;
+	}
+      p++;
+    }
+  return p;
+}	      
+  
 int
 yyerror (const char *s)
 {
   if (yychar != BOGUS)
     {
-      int len;
-      mu_error ("%s: %s", start, s);
-      len = curp - start;
-      mu_error ("%*.*s^", len, len, "");
+      char *bol;
+      size_t len;
+      static char tab[] = "        ";
+      size_t b = 0, e = 0;
+      size_t i;
+      
+      bol = find_bol (yylloc.beg.mu_line);
+      len = strcspn (bol, "\n");
+      
+      mu_diag_at_locus_range (MU_DIAG_ERROR, &yylloc, "%s", s);
+      for (i = 0; i < len; i++)
+	/* How ... tribal! */
+	{
+	  if (bol[i] == '\t')
+	    {
+	      mu_stream_write (mu_strerr, tab, strlen (tab), NULL);
+	      if (yylloc.beg.mu_col > i)
+		b += strlen (tab) - 1;
+	      if (yylloc.end.mu_col > i)
+		e += strlen (tab) - 1;
+	    }
+	  else
+	    mu_stream_write (mu_strerr, bol + i, 1, NULL);
+	}
+      mu_stream_write (mu_strerr, "\n", 1, NULL);
+      mu_error ("%*.*s^%*.*s^",
+		b + yylloc.beg.mu_col - 1,
+		b + yylloc.beg.mu_col - 1, "",
+		e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1,
+		e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1, "");
     }
   return 0;
 }
@@ -438,56 +565,57 @@ static struct lexer_tab lexer_tab[] = {
   
 int
 yylex (void)
-{  
+{
+  int tok;
+
+  mark ();
   if (yydebug)
     fprintf (stderr, "lex: [%s] at %-10.10s...]\n",
 	     lexer_tab[ctx_get ()].ctx_name, curp);
-  return lexer_tab[ctx_get ()].lexer ();
+  tok = lexer_tab[ctx_get ()].lexer ();
+  mark ();
+  if (tok == BOGUS)
+    yyerror (yylval.mesg);
+  return tok;
 }
 
 static int
 token_fmtspec (int flags)
 {
   int num = 0;
-
-  if (*curp == '0')
+  
+  if (peek () == '0')
     {
       flags |= MH_FMT_ZEROPAD;
-      curp++;
+      input ();
     }
-  else if (!mu_isdigit (*curp))
+  else if (!mu_isdigit (peek ()))
     {
-      yyerror ("expected digit");
-      return BOGUS;
+      return bogus ("expected digit");
     }
-  
-  while (*curp && mu_isdigit (*curp))
-    num = num * 10 + *curp++ - '0';
+  mark ();
+  while (*curp && mu_isdigit (peek ()))
+    num = num * 10 + input () - '0';
   yylval.fmtspec = flags | num;
-  *--curp = '%'; /* FIXME: dirty hack */
+  unput ('%');
   return FMTSPEC;
 }
 
 static int
 token_function (void)
 {
-  char *start;
-  
-  curp++;
-  start = curp;
-  curp = mu_str_skip_class (start, MU_CTYPE_IDENT);
-  if (start == curp || !strchr (" \t(){%", *curp))
+  eatinput (1);
+  skip (MU_CTYPE_IDENT);
+  if (token_leng () == 0 || !strchr (" \t(){%", peek ()))
     {
-      yyerror ("expected function name");
-      return BOGUS;
+      return bogus ("expected function name");
     }
 
-  yylval.builtin = mh_lookup_builtin (start, curp - start);
+  yylval.builtin = mh_lookup_builtin (tok_start, token_leng ());
 
   if (!yylval.builtin)
     {
-      yyerror ("unknown function");
-      return BOGUS;
+      return bogus ("unknown function");
     }
   
   return FUNCTION;
@@ -496,77 +624,89 @@ token_function (void)
 static int
 token_component (void)
 {
-  char *start;
-  
-  curp++;
-  if (!mu_isalpha (*curp))
+  eatinput (1);
+  if (!mu_isalpha (peek ()))
     {
-      yyerror ("component name expected");
-      return BOGUS;
+      return bogus ("component name expected");
     }
-  start = curp;
-  for (; *curp != '}'; curp++)
+  mark ();
+  if (skip (MU_CTYPE_HEADR) != '}')
     {
-      if (!(mu_isalnum (*curp) || *curp == '_' || *curp == '-'))
-	{
-	  yyerror ("component name expected");
-	  return BOGUS;
-	}
+      return bogus ("component name expected");
     }
-  mu_opool_append (tokpool, start, curp - start);
+  mu_opool_append (tokpool, tok_start, token_leng ());
   mu_opool_append_char (tokpool, 0);
   yylval.str = mu_opool_finish (tokpool, NULL);
-  curp++;
+  eatinput (1);
   return COMPONENT;
 }
 
 int
 yylex_initial (void)
 {
-  if (*curp == '%')
-    {
-      int c;
-      curp++;
+  int c;
 
-      switch (c = *curp++)
+ again:
+  mark ();
+  if (peek () == '%')
+    {
+      input ();
+
+      switch (c = input ())
 	{
+	case ';':
+	  skipeol ();
+	  goto again;
 	case '<':
 	  return IF;
 	case '%':
 	  return '%';
 	case '(':
-	  curp--;
+	  unput (c);
 	  return token_function ();
 	case '{':
-	  curp--;
+	  unput (c);
 	  return token_component ();
 	case '-':
 	  return token_fmtspec (MH_FMT_RALIGN);
 	case '0': case '1': case '2': case '3': case '4':
 	case '5': case '6': case '7': case '8': case '9':
-	  curp--;
+	  unput (c);
 	  return token_fmtspec (MH_FMT_DEFAULT);
 	default:
-	  yyerror ("component or function name expected");
-	  return BOGUS;
+	  return bogus ("component or function name expected");
       }
     }
 
-  if (*curp == 0)
+  c = peek ();
+  
+  if (c == 0)
     return 0;
 
-  do
+  while ((c = input ()) != 0)
     {
-      if (*curp == '\\')
+      if (c == '%')
 	{
-	  int c = backslash (*++curp);
-	  mu_opool_append_char (tokpool, c);
+	  if (peek () == '%')
+	    mu_opool_append_char (tokpool, input ());
+	  else
+	    {
+	      unput (c);
+	      break;
+	    }
+	}
+      else if (c == '\\')
+	{
+	  if ((c = input ()) == 0)
+	    {
+	      return bogus ("unexpected end of file");
+	    }
+	  if (c != '\n')
+	    mu_opool_append_char (tokpool, backslash (c));
 	}
       else
-	mu_opool_append_char (tokpool, *curp);
-      curp++;
+	mu_opool_append_char (tokpool, c);
     }
-  while (*curp && *curp != '%');
 
   mu_opool_append_char (tokpool, 0);
   yylval.str = mu_opool_finish (tokpool, NULL);
@@ -576,25 +716,25 @@ yylex_initial (void)
 int
 yylex_cond (void)
 {
-  switch (*curp)
+  switch (peek ())
     {
     case '(':
       return token_function ();
     case '{':
       return token_component ();
     default:
-      yyerror ("'(' or '{' expected");
-      return BOGUS;
+      return bogus ("'(' or '{' expected");
     }
 }
 
 int
 yylex_expr (void)
 {
-  if (*curp == '%')
+  int c;
+  
+  if ((c = input ()) == '%')
     {
-      curp++;
-      switch (*curp++)
+      switch (c = input ())
 	{
 	case '?':
 	  return ELIF;
@@ -603,8 +743,11 @@ yylex_expr (void)
 	case '>':
 	  return FI;
 	}
-      curp -= 2;
+      unput (c);
+      unput ('%');
     }
+  else
+    unput (c);
   return yylex_initial ();
 }
 
@@ -612,73 +755,74 @@ int
 yylex_func (void)
 {
   /* Expected argument or closing parenthesis */
-  while (*curp && mu_isspace (*curp))
-    curp++;
-
-  switch (*curp)
+  mark ();
+  skip (MU_CTYPE_SPACE);
+  mark ();
+  switch (peek ())
     {
     case '(':
       return token_function ();
       
     case ')':
-      curp++;
+      eatinput (1);
       return EOFN;
       
     case '{':
       return token_component ();
 
     case '%':
-      curp++;
-      switch (*curp)
+      input ();
+      switch (peek ())
 	{
 	case '<':
-	  curp++;
+	  input ();
 	  return IF;
 
 	case '%':
 	  break;
 
 	default:
-	  yyerror ("expected '%' or '<'");
-	  return BOGUS;
+	  return bogus ("expected '%' or '<'");
 	}
     }
 
-  if (mu_isdigit (*curp))
+  if (mu_isdigit (peek ()))
     {
       yylval.arg.type = mhtype_num;
       yylval.arg.v.num = strtol (curp, &curp, 0);
     }
   else
     {
-      do
+      int c;
+
+      while ((c = input ()) != ')')
 	{
-	  if (*curp == 0)
+	  if (c == 0)
 	    {
-	      yyerror("expected ')'");
-	      return BOGUS;
+	      return bogus ("expected ')'");
 	    }
       
-	  if (*curp == '\\')
+	  if (c == '\\')
 	    {
-	      int c = backslash (*++curp);
-	      mu_opool_append_char (tokpool, c);
+	      if ((c = input ()) == 0)
+		{
+		  return bogus ("unexpected end of file");
+		}
+	      mu_opool_append_char (tokpool, backslash (c));
 	    }
 	  else
-	    mu_opool_append_char (tokpool, *curp);
-	  curp++;
+	    mu_opool_append_char (tokpool, c);
 	}
-      while (*curp != ')');
-      mu_opool_append_char (tokpool, 0);
+	mu_opool_append_char (tokpool, 0);
 
       yylval.arg.type = mhtype_str;
       yylval.arg.v.str = mu_opool_finish (tokpool, NULL);
+      unput (c);
     }
-
-  if (*curp != ')')
+  
+  if (peek () != ')')
     {
-      yyerror("expected ')'");
-      return BOGUS;
+      return bogus ("expected ')'");
     }
   
   return ARGUMENT;
@@ -698,11 +842,13 @@ mh_format_parse (mh_format_t *fmtptr, char *format_str, int flags)
   
   if (p || mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE2))
     yydebug = 1;
-  start = curp = format_str;
+  start = tok_start = curp = format_str;
   mu_opool_create (&tokpool, MU_OPOOL_ENOMEMABRT);
 
   ctx_tos = 0;
   ctx_push (ctx_init);
+  mu_linetrack_create (&trk, "input", 2); //FIXME: file name
+  mu_locus_range_init (&yylloc);
   
   rc = yyparse ();
   if (rc == 0)
@@ -710,6 +856,9 @@ mh_format_parse (mh_format_t *fmtptr, char *format_str, int flags)
   else
     mu_opool_destroy (&tokpool);
 
+  mu_locus_range_deinit (&yylloc);
+  mu_linetrack_destroy (&trk);
+  
   parse_tree = NULL;
   tokpool = NULL;
   return rc;
@@ -797,6 +946,7 @@ typecast (struct node *node, enum mh_type type)
     /* FIXME: when passing optional argument, the caller must know the
        type of value returned by the previous expression */
     return node;
+  
   if (node->datatype == type)
     return node;
   if (node->nodetype == fmtnode_cntl)
@@ -859,7 +1009,9 @@ static char *typename[] = { "NONE", "NUM", "STR" };
 
 static void
 dump_node_pretty (struct node *node, int level)
-{  
+{
+  if (!node)
+    return;  
   switch (node->nodetype)
     {
     case fmtnode_print:
@@ -1116,7 +1268,7 @@ emit_funcall (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
     }
   else if (builtin->argtype != mhtype_none)
     {
-      emit_opcode_typed (fmt, builtin->type, mhop_movn, mhop_movs);
+      emit_opcode_typed (fmt, builtin->argtype, mhop_movn, mhop_movs);
       emit_instr (fmt, (mh_instr_t) (long) R_ARG);
       emit_instr (fmt, (mh_instr_t) (long) R_REG);
     }
@@ -1128,6 +1280,8 @@ emit_funcall (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
 static void
 codegen_node (struct mh_format *fmt, struct node *node)
 {
+  if (!node)
+    return;
   switch (node->nodetype)
     {
     case fmtnode_print:
@@ -1212,18 +1366,18 @@ codegen_node (struct mh_format *fmt, struct node *node)
       switch (node->datatype)
 	{
 	case mhtype_num:
-	  emit_opcode (fmt, mhop_itoa);
+	  emit_opcode (fmt, mhop_atoi);
 	  break;
 
 	case mhtype_str:
-	  emit_opcode (fmt, mhop_atoi);
+	  emit_opcode (fmt, mhop_itoa);
 	  break;
 
 	default:
 	  abort ();
 	}
       break;
-      
+
     default:
       abort ();
     }
@@ -1245,12 +1399,12 @@ codegen (mh_format_t *fmtptr, int tree)
   struct mh_format *fmt;
 
   fmt = mu_zalloc (sizeof *fmt);
-
+  
   *fmtptr = fmt;
   emit_opcode (fmt, mhop_stop);
   codegen_nodelist (fmt, parse_tree);
   emit_opcode (fmt, mhop_stop);
-
+  
   if (tree)
     {
       fmt->tree = parse_tree;
