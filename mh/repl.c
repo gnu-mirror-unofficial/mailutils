@@ -173,16 +173,17 @@ static struct mu_option options[] = {
 };
 
 static char default_format_str[] =
-"%(lit)%(formataddr %<{reply-to}%?{from}%?{sender}%?{return-path}%>)"
-"%<(nonnull)%(void(width))%(putaddr To: )\\n%>"
-"%(lit)%<(rcpt to)%(formataddr{to})%>%<(rcpt cc)%(formataddr{cc})%>%<(rcpt me)%(formataddr(me))%>"
-"%<(nonnull)%(void(width))%(putaddr cc: )\\n%>"
-"%<{fcc}Fcc: %{fcc}\\n%>"
-"%<{subject}Subject: Re: %(unre{subject})\\n%>"
-"%(lit)%(concat(in_reply_to))%<(nonnull)%(void(width))%(printhdr In-reply-to: )\\n%>"
-"%(lit)%(concat(references))%<(nonnull)%(void(width))%(printhdr References: )\\n%>"
-"X-Mailer: MH \\(%(package_string)\\)\\n" 
-"--------\n";
+    "%(lit)%(formataddr %<{reply-to}%?{from}%?{sender}%?{return-path}%>)"
+    "%<(nonnull)%(void(width))%(putaddr To: )\\n%>"
+    "%(lit)%<(rcpt to)%(formataddr{to})%>%<(rcpt cc)%(formataddr{cc})%>%<(rcpt me)%(formataddr(me))%>"
+    "%<(nonnull)%(void(width))%(putaddr cc: )\\n%>"
+    "%<(mymbox{from})%<{fcc}Fcc: %{fcc}\\n%>%>"
+    "Subject: %<{subject}%(putstr %<(profile reply-prefix)%|"
+    "%(void Re:)%>) %(void(unre{subject}))%(trim)%(putstr)%>\n"
+    "%(lit)%<(in_reply_to)%(void(width))%(printhdr In-reply-to: )\\n%>"
+    "%(lit)%<(references)%(void(width))%(printhdr References: )\\n%>"
+    "X-Mailer: MH (%(package_string))\n"
+    "--------\n";
 
 void
 make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
