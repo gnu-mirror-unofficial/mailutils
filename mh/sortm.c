@@ -442,11 +442,8 @@ void
 list_message (size_t num)
 {
   mu_message_t msg = NULL;
-  char *buffer;
   mu_mailbox_get_message (mbox, num, &msg);
-  mh_format (&format, msg, num, width, &buffer);
-  printf ("%s\n", buffer);
-  free (buffer);
+  mh_format (mu_strout, format, msg, num, width, MH_FMT_FORCENL);
 }
 
 void
@@ -612,7 +609,8 @@ main (int argc, char **argv)
   if (!oplist)
     addop ("date", comp_date);
 
-  if (action == ACTION_LIST && mh_format_parse (format_str, &format))
+  if (action == ACTION_LIST
+      && mh_format_parse (&format, format_str, MH_FMT_PARSE_DEFAULT))
     {
       mu_error (_("Bad format string"));
       exit (1);

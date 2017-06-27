@@ -106,7 +106,7 @@ main (int argc, char **argv)
   mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
 	     args_doc, prog_doc, NULL);
 
-  if (mh_format_parse (format_str, &format))
+  if (mh_format_parse (&format, format_str, 0))
     {
       mu_error (_("Bad format string"));
       exit (1);
@@ -214,14 +214,6 @@ clear_screen ()
 static int
 list_message (size_t num, mu_message_t msg, void *data)
 {
-  char *buffer;
-  int len;
-  
-  mh_format (&format, msg, num, width, &buffer);
-  printf ("%s", buffer);
-  len = strlen (buffer);
-  if (len > 0 && buffer[len-1] != '\n')
-    printf("\n");
-  free (buffer);
+  mh_format (mu_strout, format, msg, num, width, MH_FMT_FORCENL);
   return 0;
 }

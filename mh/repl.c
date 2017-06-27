@@ -227,7 +227,6 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
   if (disp == DISP_REPLACE)
     {
       mu_stream_t str;
-      char *buf;
       
       rc = mu_file_stream_create (&str, wh->file,
 				  MU_STREAM_WRITE|MU_STREAM_CREAT);
@@ -248,14 +247,12 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	  mu_message_get_header (tmp_msg, &hdr);
 	  text = mu_opool_finish (fcc_pool, NULL);
 	  mu_header_set_value (hdr, MU_HEADER_FCC, text, 1);
-	  mh_format (&format, tmp_msg, msgno, width, &buf);
+	  mh_format (str, format, tmp_msg, msgno, width, 0);
 	  mu_message_destroy (&tmp_msg, NULL);
 	}
       else
-	mh_format (&format, msg, msgno, width, &buf);
+	mh_format (str, format, msg, msgno, width, 0);
       
-      mu_stream_write (str, buf, strlen (buf), NULL);
-
       if (mhl_filter)
 	{
 	  mu_list_t filter = mhl_format_compile (mhl_filter);
@@ -266,7 +263,6 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	}
 
       mu_stream_destroy (&str);
-      free (buf);
     }
 
   {
@@ -306,7 +302,7 @@ main (int argc, char **argv)
   if (!format_str)
     format_str = default_format_str;
 
-  if (mh_format_parse (format_str, &format))
+  if (mh_format_parse (&format, format_str, MH_FMT_PARSE_DEFAULT))
     {
       mu_error (_("Bad format string"));
       exit (1);

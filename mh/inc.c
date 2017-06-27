@@ -126,18 +126,18 @@ static struct mu_option options[] = {
 };
 
 void
-list_message (mh_format_t *format, mu_mailbox_t mbox, size_t msgno,
+list_message (mh_format_t format, mu_mailbox_t mbox, size_t msgno,
 	      size_t width)
 {
   mu_message_t msg;
-  char *buf = NULL;
 
   mu_mailbox_get_message (mbox, msgno, &msg);
-  mh_format (format, msg, msgno, width, &buf);
-  printf ("%s\n", buf);
+  mh_format (mu_strout, format, msg, msgno, width, MH_FMT_FORCENL);
+#warning "AUDIT not implemented"
+  /*
   if (audit_fp)
     fprintf (audit_fp, "%s\n", buf);
-  free (buf);
+  */
 }
 
 struct incdat
@@ -281,7 +281,7 @@ incmbx (void *item, void *data)
 
       ++dp->lastmsg;
       if (!quiet)
-	list_message (&dp->format, dp->output, dp->lastmsg, width);
+	list_message (dp->format, dp->output, dp->lastmsg, width);
       
       if (f_truncate)
 	{
@@ -360,7 +360,8 @@ main (int argc, char **argv)
   mh_mailbox_cur_default = 1;
 
   memset (&incdat, 0, sizeof (incdat));
-  if (!quiet && mh_format_parse (format_str, &incdat.format))
+  if (!quiet
+      && mh_format_parse (&incdat.format, format_str, MH_FMT_PARSE_DEFAULT))
     {
       mu_error (_("Bad format string"));
       exit (1);

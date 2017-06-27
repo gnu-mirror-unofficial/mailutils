@@ -169,8 +169,10 @@ int mh_makedir (const char *p);
 
 typedef struct mh_format *mh_format_t;
 
-int mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
-	       size_t width, mu_stream_t str);
+#define MH_FMT_FORCENL 1
+int mh_format (mu_stream_t str, mh_format_t fmt,
+	       mu_message_t msg, size_t msgno,
+	       size_t width, int flags);
 int mh_format_str (mh_format_t fmt, char *str, size_t width, char **pret);
 
 void mh_format_dump_code (mh_format_t fmt);

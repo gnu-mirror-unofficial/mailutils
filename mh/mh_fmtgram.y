@@ -214,32 +214,51 @@ component : COMPONENT
 funcall   : function argument EOFN
             {
 	      ctx_pop ();
-	      if ($1->optarg == MHA_VOID) /*FIXME*/
+	      if ($1->optarg & MHA_VOID) /*FIXME*/
 		{
 		  $2->noprint = 1;
 		  $$ = $2;
 		}
 	      else
 		{
+		  struct node *arg = $2;
 		  if ($1->argtype == mhtype_none)
 		    {
-		      if ($2)
+		      if (arg)
 			{
 			  yyerror ("function doesn't take arguments");
 			  YYABORT;
 			}
 		    }
-		  else if ($2 == NULL)
+		  else if (arg == NULL)
 		    {
-		      if ($1->optarg != MHA_OPTARG)
+		      if (($1->optarg & MHA_LITERAL)
+			  && $1->argtype == mhtype_str)
+			{
+			  arg = new_node (fmtnode_literal, mhtype_str);
+			  arg->v.str = "";
+			}
+		      else if ($1->optarg & MHA_OPTARG)
+			/* ok - ignore */;
+		      else
 			{
 			  yyerror ("required argument missing");
 			  YYABORT;
 			}
 		    }
+		  else if ($1->optarg & MHA_LITERAL)
+		    {
+		      if (!(arg->nodetype == fmtnode_literal
+			    || arg->nodetype == fmtnode_number))
+			{
+			  yyerror ("argument must be literal");
+			  YYABORT;
+			}
+		    }
+			
 		  $$ = new_node (fmtnode_funcall, $1->type);
 		  $$->v.funcall.builtin = $1;
-		  $$->v.funcall.arg = typecast ($2, $1->argtype);
+		  $$->v.funcall.arg = typecast (arg, $1->argtype);
 		  $$->noprint = $1->type == mhtype_none;
 		}
 	    }
@@ -373,7 +392,7 @@ elif_list : elif cond zlist
 	    }	      
           ;
 
-else_part : ELSE list
+else_part : ELSE zlist
 	    {
 	      $$ = $2.head;
 	    }
@@ -456,7 +475,7 @@ token_function (void)
   
   curp++;
   start = curp;
-  curp = mu_str_skip_class (start, MU_CTYPE_ALPHA);
+  curp = mu_str_skip_class (start, MU_CTYPE_IDENT);
   if (start == curp || !strchr (" \t(){%", *curp))
     {
       yyerror ("expected function name");
@@ -724,6 +743,8 @@ static void node_list_free (struct node *node);
 static void
 node_free (struct node *node)
 {
+  if (!node)
+    return;
   switch (node->nodetype)
     {
     case fmtnode_print:
@@ -1065,14 +1086,40 @@ emit_funcall (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
 {
   if (arg)
     {
-      codegen_node (fmt, arg);
-      emit_opcode_typed (fmt, arg->datatype, mhop_movn, mhop_movs);
+      if (builtin->optarg & MHA_LITERAL)
+	{
+	  switch (arg->nodetype)
+	    {
+	    case fmtnode_literal:
+	      emit_opcode (fmt, mhop_sets);
+	      emit_instr (fmt, (mh_instr_t) (long) R_ARG);
+	      emit_string (fmt, arg->v.str);
+	      break;
+
+	    case fmtnode_number:
+	      emit_opcode (fmt, mhop_setn);
+	      emit_instr (fmt, (mh_instr_t) (long) R_ARG);
+	      emit_instr (fmt, (mh_instr_t) (long) arg->v.num);
+	      break;
+
+	    default:
+	      abort ();
+	    }
+	}
+      else
+	{
+	  codegen_node (fmt, arg);
+	  emit_opcode_typed (fmt, arg->datatype, mhop_movn, mhop_movs);
+	  emit_instr (fmt, (mh_instr_t) (long) R_ARG);
+	  emit_instr (fmt, (mh_instr_t) (long) R_REG);
+	}
     }
   else if (builtin->argtype != mhtype_none)
-    emit_opcode_typed (fmt, builtin->type, mhop_movn, mhop_movs);
-
-  emit_instr (fmt, (mh_instr_t) (long) R_ARG);
-  emit_instr (fmt, (mh_instr_t) (long) R_REG);
+    {
+      emit_opcode_typed (fmt, builtin->type, mhop_movn, mhop_movs);
+      emit_instr (fmt, (mh_instr_t) (long) R_ARG);
+      emit_instr (fmt, (mh_instr_t) (long) R_REG);
+    }
   
   emit_opcode (fmt, mhop_call);
   emit_instr (fmt, (mh_instr_t) builtin->fun);
@@ -1105,6 +1152,7 @@ codegen_node (struct mh_format *fmt, struct node *node)
     case fmtnode_number:
       emit_opcode (fmt, mhop_setn);
       emit_instr (fmt, (mh_instr_t) (long) R_REG);
+      emit_instr (fmt, (mh_instr_t) (long) node->v.num);
       break;
 
     case fmtnode_body:
@@ -1144,6 +1192,17 @@ codegen_node (struct mh_format *fmt, struct node *node)
 	  {
 	    codegen_nodelist (fmt, node->v.cntl.iffalse);
 	  }
+	else
+	  {
+	    emit_opcode (fmt, mhop_setn);
+	    emit_instr (fmt, (mh_instr_t) (long) R_REG);
+	    emit_instr (fmt, (mh_instr_t) (long) 0);
+
+	    emit_opcode (fmt, mhop_sets);
+	    emit_instr (fmt, (mh_instr_t) (long) R_REG);
+	    emit_string (fmt, "");
+	  }
+	
 	fmt->prog[pc[1]].num = fmt->progcnt - pc[1];
       }
       break;

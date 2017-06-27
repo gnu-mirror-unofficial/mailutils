@@ -120,10 +120,10 @@ struct mh_format
   mu_opool_t pool;
 };
 
-#define MHA_REQUIRED       0
-#define MHA_OPTARG         1
-#define MHA_OPT_CLEAR      2
-#define MHA_VOID           3
+#define MHA_DEFAULT       0
+#define MHA_OPTARG        0x1
+#define MHA_LITERAL       0x2
+#define MHA_VOID          0x4
 
 typedef struct mh_builtin mh_builtin_t;
 
@@ -155,7 +155,8 @@ struct mh_machine
   size_t width;             /* Output line width */
   size_t ind;               /* Output line index */
   mu_stream_t output;       /* Output stream */
-
+  int flags;
+  
   mu_list_t addrlist;       /* The list of email addresses output this far */
   int fmtflags;             /* Current formatting flags */
 

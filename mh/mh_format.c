@@ -91,7 +91,7 @@ mh_string_load (struct mh_string *s, char const *str)
     mh_string_clear (s);
   else
     {
-      mh_string_realloc (s, strlen (str));
+      mh_string_realloc (s, strlen (str) + 1);
       strcpy (s->ptr, str);
     }
 }
@@ -100,7 +100,7 @@ static void
 mh_string_move (struct mh_machine *mach, enum regid dst, enum regid src)
 {
   mh_string_load (&mach->str[dst], mach->str[src].ptr);
-  mh_string_clear (&mach->str[src]);
+  //  mh_string_clear (&mach->str[src]);
 }
 
 
@@ -475,8 +475,9 @@ addrlist_destroy (mu_list_t *list)
 /* Execute pre-compiled format on message msg with number msgno.
  */
 int
-mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
-	   size_t width, mu_stream_t output)
+mh_format (mu_stream_t output, mh_format_t fmt,
+	   mu_message_t msg, size_t msgno,
+	   size_t width, int flags)
 {
   struct mh_machine mach;
   const char *charset = mh_global_profile_get ("Charset", NULL);
@@ -488,6 +489,7 @@ mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
   mach.message = msg;
   mach.msgno = msgno;
   mach.output = output;
+  mach.flags = flags;
   
   if (width == 0)
     width = mh_width ();
@@ -498,7 +500,6 @@ mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
   
   reset_fmt_defaults (&mach);
 
-#if HAVE_SETLOCALE
   if (charset && strcmp (charset, "auto"))
     {
       /* Try to set LC_CTYPE according to the value of Charset variable.
@@ -523,7 +524,6 @@ mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
         mu_error (_("cannot set LC_CTYPE %s"), locale);
       free (locale);
     }
-#endif
   
   while (!mach.stop)
     {
@@ -682,31 +682,45 @@ mh_format (mh_format_t fmt, mu_message_t msg, size_t msgno,
 	  abort ();
 	}
     }
+  if ((mach.flags & MH_FMT_FORCENL) && mach.ind != 0)
+    put_string (&mach, "\n", 1);
+
   mh_string_free (&mach.str[R_REG]);
   mh_string_free (&mach.str[R_ARG]);
   addrlist_destroy (&mach.addrlist);
   return mach.ind;
 }
 
-//FIXME
-#if 0
 int
-mh_format_str (mh_format_t *fmt, char *str, size_t width, char **pret)
+mh_format_str (mh_format_t fmt, char *str, size_t width, char **pstr)
 {
   mu_message_t msg = NULL;
   mu_header_t hdr = NULL;
-  int rc;
+  int rc = 0;
+  mu_stream_t outstr;
+  char *buf;
+  mu_off_t size;
   
-  if (mu_message_create (&msg, NULL))
-    return -1;
-  mu_message_get_header (msg, &hdr);
-  mu_header_set_value (hdr, "text", str, 1);
-  rc = mh_format (fmt, msg, 1, width, pret);
+  MU_ASSERT (mu_message_create (&msg, NULL));
+  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_header_set_value (hdr, "text", str, 1));
+  MU_ASSERT (mu_memory_stream_create (&outstr, MU_STREAM_RDWR));
+  
+  rc = mh_format (outstr, fmt, msg, 1, width, 0);
+
+  MU_ASSERT (mu_stream_size (outstr, &size));
+  buf = mu_alloc (size + 1);
+  MU_ASSERT (mu_stream_seek (outstr, 0, MU_SEEK_SET, NULL));
+  MU_ASSERT (mu_stream_read (outstr, buf, size, NULL));
+
+  *pstr = buf;
+  
   mu_message_destroy (&msg, NULL);
+  mu_stream_destroy (&outstr);
+  
   return rc;
 }
-#endif
-
+
 /* Built-in functions */
 
 /* Handler for unimplemented functions */
@@ -868,7 +882,7 @@ builtin_num (struct mh_machine *mach)
 static void
 builtin_lit (struct mh_machine *mach)
 {
-  /* FIXME: do nothing */
+  mh_string_move (mach, R_REG, R_ARG);
 }
 
 static void
@@ -1402,7 +1416,7 @@ builtin_friendly (struct mh_machine *mach)
 
   if (mu_address_sget_personal (addr, 1, &str) == 0 && str)
     {
-      mh_string_load (&mach->str[R_ARG], str);
+      mh_string_load (&mach->str[R_REG], str);
     }
   mu_address_destroy (&addr);
 }
@@ -1411,29 +1425,34 @@ builtin_friendly (struct mh_machine *mach)
 static void
 builtin_addr (struct mh_machine *mach)
 {
+  const char *arg = mh_string_value (&mach->str[R_ARG]);
   mu_address_t addr;
   const char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
-  mh_string_clear (&mach->str[R_REG]);
-  if (rc)
-    return;
-
-  if (mu_address_sget_email (addr, 1, &str) == 0)
-    mh_string_load (&mach->str[R_REG], str);
-  mu_address_destroy (&addr);
+  rc = mu_address_create (&addr, arg);
+  if (rc == 0)
+    {
+      int rc = mu_address_sget_email (addr, 1, &str);
+      if (rc == 0)
+	mh_string_load (&mach->str[R_REG], str);
+      mu_address_destroy (&addr);
+      if (rc == 0)
+	return;
+    }
+  mh_string_load (&mach->str[R_REG], arg);  
 }
 
 /*     pers       addr     string   the personal name**/
 static void
 builtin_pers (struct mh_machine *mach)
 {
+  char const *arg = mh_string_value (&mach->str[R_ARG]);
   mu_address_t addr;
   const char *str;
   int rc;
   
-  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
+  rc = mu_address_create (&addr, arg);
   mh_string_clear (&mach->str[R_REG]);
   if (rc)
     return;
@@ -1677,7 +1696,7 @@ builtin_unre (struct mh_machine *mach)
   char const *arg = mh_string_value (&mach->str[R_ARG]);
   char const *p;
   int rc = mu_unre_subject (arg, &p);
-  mh_string_clear (&mach->str[R_REG]);
+
   if (rc == 0 && p != arg)
     {
       char *q = mu_strdup (p); /* Create a copy, since mh_string_load can
@@ -1685,6 +1704,8 @@ builtin_unre (struct mh_machine *mach)
       mh_string_load (&mach->str[R_REG], q);
       free (q);
     }
+  else
+    mh_string_load (&mach->str[R_REG], arg);
 }  
 
 static void
@@ -1716,7 +1737,6 @@ builtin_decode (struct mh_machine *mach)
   if (mh_string_is_null (&mach->str[R_ARG]))
     return;
 
-  mh_string_clear (&mach->str[R_REG]);
   if (mh_decode_2047 (mh_string_value (&mach->str[R_ARG]), &tmp) == 0)
     {
       mh_string_load (&mach->str[R_REG], tmp);
@@ -1755,28 +1775,6 @@ builtin_rcpt (struct mh_machine *mach)
       /* try to continue anyway */
     }
   mach->num[R_REG] = !!(rc & rcpt_mask);
-}
-
-static void
-builtin_concat (struct mh_machine *mach)
-{
-  if (mh_string_is_null (&mach->str[R_ARG]))
-    return;
-
-  compress_ws (mach, mach->str[R_ARG].ptr);
-  if (mh_string_is_null (&mach->str[R_REG]))
-    mh_string_move (mach, R_REG, R_ARG);
-  else
-    {
-      size_t length = 1;
-    
-      length += 1 + mh_string_length (&mach->str[R_REG]);
-                  /* reserve en extra space */
-      length += mh_string_length (&mach->str[R_ARG]);
-      mh_string_realloc (&mach->str[R_REG], length);
-      strcat (strcat (mach->str[R_REG].ptr, " "),
-	      mh_string_value (&mach->str[R_ARG]));
-    }
 }
 
 static void
@@ -1852,7 +1850,7 @@ builtin_version (struct mh_machine *mach)
 /* Builtin function table */
 
 mh_builtin_t builtin_tab[] = {
-  /* Name       Handling function Return type  Arg type      Opt. arg */ 
+  /* Name       Handling function Return type  Arg type      Flags */ 
   { "msg",      builtin_msg,      mhtype_num,  mhtype_none },
   { "cur",      builtin_cur,      mhtype_num,  mhtype_none },
   { "size",     builtin_size,     mhtype_num,  mhtype_none },
@@ -1861,19 +1859,19 @@ mh_builtin_t builtin_tab[] = {
   { "charleft", builtin_charleft, mhtype_num,  mhtype_none },
   { "timenow",  builtin_timenow,  mhtype_num,  mhtype_none },
   { "me",       builtin_me,       mhtype_str,  mhtype_none },
-  { "eq",       builtin_eq,       mhtype_num,  mhtype_num  },
-  { "ne",       builtin_ne,       mhtype_num,  mhtype_num  },
-  { "gt",       builtin_gt,       mhtype_num,  mhtype_num  },
-  { "match",    builtin_match,    mhtype_num,  mhtype_str },
-  { "amatch",   builtin_amatch,   mhtype_num,  mhtype_str },
-  { "plus",     builtin_plus,     mhtype_num,  mhtype_num },
-  { "minus",    builtin_minus,    mhtype_num,  mhtype_num },
-  { "divide",   builtin_divide,   mhtype_num,  mhtype_num },
-  { "modulo",   builtin_modulo,   mhtype_num,  mhtype_num },
-  { "num",      builtin_num,      mhtype_num,  mhtype_num },
-  { "lit",      builtin_lit,      mhtype_str,  mhtype_str,  MHA_OPT_CLEAR },
-  { "getenv",   builtin_getenv,   mhtype_str,  mhtype_str },
-  { "profile",  builtin_profile,  mhtype_str,  mhtype_str },
+  { "eq",       builtin_eq,       mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "ne",       builtin_ne,       mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "gt",       builtin_gt,       mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "match",    builtin_match,    mhtype_num,  mhtype_str,  MHA_LITERAL },
+  { "amatch",   builtin_amatch,   mhtype_num,  mhtype_str,  MHA_LITERAL },
+  { "plus",     builtin_plus,     mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "minus",    builtin_minus,    mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "divide",   builtin_divide,   mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "modulo",   builtin_modulo,   mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "num",      builtin_num,      mhtype_num,  mhtype_num,  MHA_LITERAL },
+  { "lit",      builtin_lit,      mhtype_str,  mhtype_str,  MHA_LITERAL },
+  { "getenv",   builtin_getenv,   mhtype_str,  mhtype_str,  MHA_LITERAL },
+  { "profile",  builtin_profile,  mhtype_str,  mhtype_str,  MHA_LITERAL },
   { "nonzero",  builtin_nonzero,  mhtype_num,  mhtype_num,  MHA_OPTARG },
   { "zero",     builtin_zero,     mhtype_num,  mhtype_num,  MHA_OPTARG },
   { "null",     builtin_null,     mhtype_num,  mhtype_str,  MHA_OPTARG },
@@ -1923,11 +1921,10 @@ mh_builtin_t builtin_tab[] = {
   { "ingrp",    builtin_ingrp,    mhtype_num,  mhtype_str },
   { "gname",    builtin_gname,    mhtype_str,  mhtype_str},
   { "formataddr", builtin_formataddr, mhtype_none, mhtype_str, MHA_OPTARG },
-  { "putaddr",  builtin_putaddr,  mhtype_none, mhtype_str },
+  { "putaddr",  builtin_putaddr,  mhtype_none, mhtype_str, MHA_LITERAL },
   { "unre",     builtin_unre,     mhtype_str,  mhtype_str },
   { "rcpt",     builtin_rcpt,     mhtype_num,  mhtype_str },
-  { "concat",   builtin_concat,   mhtype_none, mhtype_str,     MHA_OPTARG },
-  { "printhdr", builtin_printhdr, mhtype_none, mhtype_str },
+  { "printhdr", builtin_printhdr, mhtype_none, mhtype_str, MHA_LITERAL },
   { "in_reply_to", builtin_in_reply_to, mhtype_str,  mhtype_none },
   { "references", builtin_references, mhtype_str,  mhtype_none },
   { "package",  builtin_package,  mhtype_str, mhtype_none },
@@ -2030,7 +2027,7 @@ mh_format_dump_disass (mh_format_t fmt)
 					      &prt));
 	    
 	    pc += skip;
-	    printf ("setn %s, \"%s\"", regname[reg], prt);
+	    printf ("sets %s, \"%s\"", regname[reg], prt);
 	    free (prt);
 	  }
 	  break;

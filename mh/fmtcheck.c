@@ -62,8 +62,7 @@ static void
 run (void)
 {
   mu_message_t msg = mh_file_to_message (NULL, input_file);
-  mh_format (format, msg, msgno, width, mu_strout);
-  mu_printf ("\n");
+  mh_format (mu_strout, format, msg, msgno, width, MH_FMT_FORCENL);
 }
 
 int

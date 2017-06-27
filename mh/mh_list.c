@@ -317,7 +317,6 @@ _destroy_value (enum mhl_datatype type, mhl_value_t *val)
 
     case dt_format:
       mh_format_free (val->fmt);
-      free (val->fmt);
       break;
 
     default:
