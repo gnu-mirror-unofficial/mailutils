@@ -364,3 +364,21 @@ mh_opt_read_formfile (struct mu_parseopt *po, struct mu_option *opt,
 {
   mh_read_formfile (arg, opt->opt_ptr);
 }
+
+void
+mh_opt_parse_formfile (struct mu_parseopt *po, struct mu_option *opt,
+		       char const *arg)
+{
+  mh_format_destroy ((mh_format_t*) opt->opt_ptr);
+  if (mh_format_file_parse (opt->opt_ptr, arg, MH_FMT_PARSE_DEFAULT))
+    exit (1);
+}
+
+void
+mh_opt_parse_format (struct mu_parseopt *po, struct mu_option *opt,
+		     char const *arg)
+{
+  mh_format_destroy ((mh_format_t*) opt->opt_ptr);
+  if (mh_format_string_parse (opt->opt_ptr, arg, NULL, MH_FMT_PARSE_DEFAULT))
+    exit (1);
+}

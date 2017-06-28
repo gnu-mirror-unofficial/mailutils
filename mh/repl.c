@@ -25,7 +25,6 @@
 static char prog_doc[] = N_("Reply to a message");
 static char args_doc[] = N_("[MESSAGE]");
 
-static char *format_str = NULL;
 static mh_format_t format;
 static int width;
 
@@ -91,16 +90,13 @@ set_whatnowproc (struct mu_parseopt *po, struct mu_option *opt,
 static void
 set_group (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
 {
+  mh_format_destroy (&format);
   if (strcmp (arg, "1") == 0)
     {
-      if (mh_read_formfile ("replgroupcomps", &format_str))
+      if (mh_format_file_parse (&format, "replgroupcomps",
+				MH_FMT_PARSE_DEFAULT))
 	exit (1);
       rcpt_mask |= RCPT_ALL;
-    }
-  else
-    {
-      free (format_str);
-      format_str = NULL;
     }
 }
 
@@ -141,9 +137,9 @@ static struct mu_option options[] = {
   { "filter", 0, N_("MHL-FILTER"), MU_OPTION_DEFAULT,
     N_("set the mhl filter to preprocess the body of the message being replied"),
     mu_c_string, &mhl_filter, mh_opt_find_file },
-  { "form",   0, N_("FILE"), MU_OPTION_DEFAULT,
-    N_("read format from given file") ,
-    mu_c_string, &format_str, mh_opt_read_formfile },
+  { "form",    0, N_("FILE"),   MU_OPTION_DEFAULT,
+    N_("read format from given file"),
+    mu_c_string, &format, mh_opt_parse_formfile },
   { "format", 0, NULL, MU_OPTION_DEFAULT,
     N_("include a copy of the message being replied; the message will be processed using either the default filter \"mhl.reply\", or the filter specified by --filter option"),
     mu_c_string, &mhl_filter, mh_opt_find_file, "mhl.repl" },
@@ -299,16 +295,16 @@ main (int argc, char **argv)
 
   mh_getopt_ext (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER, optinit,
 		 args_doc, prog_doc, NULL);
-  
-  if (!format_str)
-    format_str = default_format_str;
-
-  if (mh_format_parse (&format, format_str, MH_FMT_PARSE_DEFAULT))
+  if (!format)
     {
-      mu_error (_("Bad format string"));
-      exit (1);
+      if (mh_format_string_parse (&format, default_format_str,
+				  NULL, MH_FMT_PARSE_DEFAULT))
+	{
+	  mu_error (_("INTERNAL ERROR: bad built-in format; please report"));
+	  exit (1);
+	}
     }
-
+  
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_RDWR);
   mh_msgset_parse (&msgset, mbox, argc, argv, "cur");
   if (!mh_msgset_single_message (msgset))

@@ -18,7 +18,8 @@
 
 #include <mh.h>
 #include <mh_format.h>
-
+#include <sys/stat.h>
+  
 int yyerror (const char *s);
 int yylex (void);
  
@@ -834,8 +835,10 @@ mh_format_debug (int val)
   yydebug = val;
 }
 
-int
-mh_format_parse (mh_format_t *fmtptr, char *format_str, int flags)
+static int
+format_parse (mh_format_t *fmtptr, char *format_str,
+	      struct mu_locus_point const *locus,
+	      int flags)
 {
   int rc;
   char *p = getenv ("MHFORMAT_DEBUG");
@@ -847,7 +850,9 @@ mh_format_parse (mh_format_t *fmtptr, char *format_str, int flags)
 
   ctx_tos = 0;
   ctx_push (ctx_init);
-  mu_linetrack_create (&trk, "input", 2); //FIXME: file name
+  mu_linetrack_create (&trk, "input", 2);
+  if (locus && locus->mu_file)
+    mu_linetrack_rebase (trk, locus);
   mu_locus_range_init (&yylloc);
   
   rc = yyparse ();
@@ -861,6 +866,86 @@ mh_format_parse (mh_format_t *fmtptr, char *format_str, int flags)
   
   parse_tree = NULL;
   tokpool = NULL;
+  return rc;
+}
+
+int
+mh_format_string_parse (mh_format_t *retfmt, char const *format_str,
+			struct mu_locus_point const *locus,
+			int flags)
+{
+  char *fmts = mu_strdup (format_str);
+  int rc = format_parse (retfmt, fmts, locus, flags);
+  free (fmts);
+  return rc;
+}
+
+int
+mh_read_formfile (char const *name, char **pformat)
+{
+  FILE *fp;
+  struct stat st;
+  char *format_str;
+  char *file_name;
+  int rc;
+  
+  rc = mh_find_file (name, &file_name);
+  if (rc)
+    {
+      mu_error (_("cannot access format file %s: %s"), name, strerror (rc));
+      return -1;
+    }
+  
+  if (stat (file_name, &st))
+    {
+      mu_error (_("cannot stat format file %s: %s"), file_name,
+		strerror (errno));
+      free (file_name);
+      return -1;
+    }
+  
+  fp = fopen (file_name, "r");
+  if (!fp)
+    {
+      mu_error (_("cannot open format file %s: %s"), file_name,
+		strerror (errno));
+      free (file_name);
+      return -1;
+    }
+  
+  format_str = mu_alloc (st.st_size + 1);
+  if (fread (format_str, st.st_size, 1, fp) != 1)
+    {
+      mu_error (_("error reading format file %s: %s"), file_name,
+		strerror (errno));
+      free (file_name);
+      return -1;
+    }
+  free (file_name);
+  
+  format_str[st.st_size] = 0;
+  mu_rtrim_class (format_str, MU_CTYPE_ENDLN);
+  fclose (fp);
+  *pformat = format_str;
+  return 0;
+}
+
+int
+mh_format_file_parse (mh_format_t *retfmt, char const *formfile, int flags)
+{
+  char *fmts;
+  int rc;
+  
+  rc = mh_read_formfile (formfile, &fmts);
+  if (rc == 0)
+    {
+      struct mu_locus_point loc;
+      loc.mu_file = formfile;
+      loc.mu_line = 1;
+      loc.mu_col = 0;   
+      rc = format_parse (retfmt, fmts, &loc, flags);
+      free (fmts);
+    }
   return rc;
 }
 

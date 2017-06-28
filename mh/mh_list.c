@@ -218,8 +218,9 @@ parse_variable (locus_t *loc, mu_list_t formlist, char *str)
 	  break;
 
 	case dt_format:
-	  if (mh_format_parse (&stmt->v.variable.value.fmt, value,
-			       MH_FMT_PARSE_DEFAULT))
+#warning "Pass locus"	  
+	  if (mh_format_string_parse (&stmt->v.variable.value.fmt, value, NULL,
+				      MH_FMT_PARSE_DEFAULT))
 	    {
 	      mu_error (_("%s:%d: bad format string"),
 			loc->filename,

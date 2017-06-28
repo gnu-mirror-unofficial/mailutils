@@ -23,6 +23,7 @@ static char prog_doc[] = N_("Check MH format string");
 static char args_doc[] = N_("[FILE]");
 
 static char *format_str;
+static struct mu_locus_point locus = MU_LOCUS_POINT_INITIALIZER;
 static mh_format_t format;
 static int dump_option;
 static int disass_option;
@@ -31,14 +32,32 @@ static char *input_file;
 static size_t width;
 static size_t msgno;
 
+void
+opt_formfile (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  free (format_str);
+  if (mh_read_formfile (arg, &format_str))
+    exit (1);
+  mu_locus_point_set_file (&locus, arg);
+  locus.mu_line = 1;
+  locus.mu_col = 0;
+}
+
+void
+opt_format (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  free (format_str);
+  format_str = mu_strdup (arg);
+}
+
 static struct mu_option options[] = {
   { "form",    0, N_("FILE"),   MU_OPTION_DEFAULT,
     N_("read format from given file"),
-    mu_c_string, &format_str, mh_opt_read_formfile },
+    mu_c_string, NULL, opt_formfile },
   
   { "format",  0, N_("FORMAT"), MU_OPTION_DEFAULT,
     N_("use this format string"),
-    mu_c_string, &format_str },
+    mu_c_string, NULL, opt_format },
   { "dump",    0, NULL,     MU_OPTION_HIDDEN,
     N_("dump the listing of compiled format code"),
     mu_c_bool,   &dump_option },
@@ -90,7 +109,7 @@ main (int argc, char **argv)
       mu_error (_("Format string not specified"));
       return 1;
     }
-  if (mh_format_parse (&format, format_str, MH_FMT_PARSE_TREE))
+  if (mh_format_string_parse (&format, format_str, &locus, MH_FMT_PARSE_TREE))
     {
       mu_error (_("Bad format string"));
       exit (1);

@@ -50,7 +50,6 @@ enum
   };
 static int algorithm = algo_quicksort;
 static int action = ACTION_REORDER;
-static char *format_str = mh_list_format;
 static mh_format_t format;
 
 typedef int (*compfun) (void *, void *);
@@ -176,10 +175,10 @@ static struct mu_option options[] = {
   
   { "form",    0, N_("FILE"),   MU_OPTION_DEFAULT,
     N_("read format from given file"),
-    mu_c_string, &format_str, mh_opt_read_formfile },
+    mu_c_string, &format, mh_opt_parse_formfile },
   { "format",  0, N_("FORMAT"), MU_OPTION_DEFAULT,
     N_("use this format string"),
-    mu_c_string, &format_str },
+    mu_c_string, &format, mh_opt_parse_format },
 
   { "verbose",  0, NULL,   MU_OPTION_DEFAULT,
     N_("verbosely list executed actions"),
@@ -609,12 +608,8 @@ main (int argc, char **argv)
   if (!oplist)
     addop ("date", comp_date);
 
-  if (action == ACTION_LIST
-      && mh_format_parse (&format, format_str, MH_FMT_PARSE_DEFAULT))
-    {
-      mu_error (_("Bad format string"));
-      exit (1);
-    }
+  if (action == ACTION_LIST && !format)
+    format = mh_scan_format ();
   
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_READ);
   mu_mailbox_get_url (mbox, &url);

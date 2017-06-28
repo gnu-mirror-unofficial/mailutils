@@ -31,18 +31,8 @@
 #include <fnmatch.h>
 #include <sys/ioctl.h>
 
-char mh_list_format[] = 
-  "%4(msg)"
-  "%<(cur)+%| %>"
-  "%<{replied}-%?{encrypted}E%| %>"
-  "%02(mon{date})/%02(mday{date})"
-  "%<{date} %|*%>"
-  "%<(mymbox{from})%<{to}To:%14(decode(friendly{to}))%>%>"
-  "%<(zero)%17(decode(friendly{from}))%>"
-  "  %(decode{subject})%<{body}<<%{body}>>%>";
-
 void
-mh_init ()
+mh_init (void)
 {
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
   
@@ -54,58 +44,9 @@ mh_init ()
 }
 
 void
-mh_init2 ()
+mh_init2 (void)
 {
   mh_current_folder ();
-}
-
-int
-mh_read_formfile (char const *name, char **pformat)
-{
-  FILE *fp;
-  struct stat st;
-  char *format_str;
-  char *file_name;
-  int rc;
-  
-  rc = mh_find_file (name, &file_name);
-  if (rc)
-    {
-      mu_error (_("cannot access format file %s: %s"), name, strerror (rc));
-      return -1;
-    }
-  
-  if (stat (file_name, &st))
-    {
-      mu_error (_("cannot stat format file %s: %s"), file_name,
-		strerror (errno));
-      free (file_name);
-      return -1;
-    }
-  
-  fp = fopen (file_name, "r");
-  if (!fp)
-    {
-      mu_error (_("cannot open format file %s: %s"), file_name,
-		strerror (errno));
-      free (file_name);
-      return -1;
-    }
-  
-  format_str = mu_alloc (st.st_size + 1);
-  if (fread (format_str, st.st_size, 1, fp) != 1)
-    {
-      mu_error (_("error reading format file %s: %s"), file_name,
-		strerror (errno));
-      free (file_name);
-      return -1;
-    }
-  free (file_name);
-  
-  format_str[st.st_size] = 0;
-  fclose (fp);
-  *pformat = format_str;
-  return 0;
 }
 
 void
@@ -305,7 +246,7 @@ mh_check_folder (const char *pathname, int confirm)
 }
 
 int
-mh_interactive_mode_p ()
+mh_interactive_mode_p (void)
 {
   static int interactive = -1;
 
@@ -370,16 +311,17 @@ mh_getyn_interactive (const char *fmt, ...)
   return rc;
 }
 	    
-FILE *
+mu_stream_t
 mh_audit_open (char *name, mu_mailbox_t mbox)
 {
-  FILE *fp;
+  mu_stream_t str;
   char date[64];
   time_t t;
   struct tm *tm;
   mu_url_t url;
   char *namep;
-  
+  int rc;
+    
   namep = mu_tilde_expansion (name, MU_HIERARCHY_DELIMITER, NULL);
   if (strchr (namep, MU_HIERARCHY_DELIMITER) == NULL)
     {
@@ -388,10 +330,10 @@ mh_audit_open (char *name, mu_mailbox_t mbox)
       namep = p;
     }
 
-  fp = fopen (namep, "a");
-  if (!fp)
+  rc = mu_file_stream_create (&str, namep, MU_STREAM_CREAT|MU_STREAM_APPEND);
+  if (rc)
     {
-      mu_error (_("cannot open audit file %s: %s"), namep, strerror (errno));
+      mu_error (_("cannot open audit file %s: %s"), namep, strerror (rc));
       free (namep);
       return NULL;
     }
@@ -402,17 +344,17 @@ mh_audit_open (char *name, mu_mailbox_t mbox)
   mu_strftime (date, sizeof date, "%a, %d %b %Y %H:%M:%S %Z", tm);
   mu_mailbox_get_url (mbox, &url);
   
-  fprintf (fp, "<<%s>> %s %s\n",
-	   mu_program_name,
-	   date,
-	   mu_url_to_string (url));
-  return fp;
+  mu_stream_printf (str, "<<%s>> %s %s\n",
+		    mu_program_name,
+		    date,
+		    mu_url_to_string (url));
+  return str;
 }
 
 void
-mh_audit_close (FILE *fp)
+mh_audit_close (mu_stream_t str)
 {
-  fclose (fp);
+  mu_stream_close (str);
 }
 
 int
@@ -450,7 +392,7 @@ mh_open_folder (const char *folder, int flags)
 }
 
 char *
-mh_get_dir ()
+mh_get_dir (void)
 {
   const char *mhdir = mh_global_profile_get ("Path", "Mail");
   char *mhcopy;

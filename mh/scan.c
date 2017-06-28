@@ -30,7 +30,6 @@ static char prog_doc[] = N_("Produce a one line per message scan listing");
 static char args_doc[] = N_("[MSGLIST]");
 
 static int clear;
-static char *format_str = mh_list_format;
 
 static int width;
 static int reverse;
@@ -40,23 +39,16 @@ static mh_format_t format;
 
 static mu_msgset_t msgset;
 
-static void
-form_handler (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
-{
-  if (mh_read_formfile (arg, &format_str))
-    exit (1);
-}
-
 static struct mu_option options[] = {
   { "clear",   0, NULL, MU_OPTION_DEFAULT,
     N_("clear screen after displaying the list"),
     mu_c_bool, &clear },
   { "form",    0, N_("FILE"),   MU_OPTION_DEFAULT,
     N_("read format from given file"),
-    mu_c_string, NULL, form_handler },
+    mu_c_string, &format, mh_opt_parse_formfile },
   { "format",  0, N_("FORMAT"), MU_OPTION_DEFAULT,
     N_("use this format string"),
-    mu_c_string, &format_str },
+    mu_c_string, &format, mh_opt_parse_format },
   { "header",  0, NULL,   MU_OPTION_DEFAULT,
     N_("display header"),
     mu_c_bool, &header },
@@ -105,13 +97,9 @@ main (int argc, char **argv)
   
   mh_getopt (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER,
 	     args_doc, prog_doc, NULL);
-
-  if (mh_format_parse (&format, format_str, 0))
-    {
-      mu_error (_("Bad format string"));
-      exit (1);
-    }
-
+  if (!format)
+    format = mh_scan_format ();
+  
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_READ);
 
   if ((argc == 0 || strcmp (argv[0], "all") == 0) && !reverse)

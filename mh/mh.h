@@ -110,7 +110,6 @@ struct mh_whatnow_env     /* whatnow shell environment */
 #define SEQ_PRIVATE 1
 #define SEQ_ZERO    2
 
-extern char mh_list_format[];
 extern int rcpt_mask;
 extern int mh_mailbox_cur_default;
 
@@ -180,7 +179,13 @@ void mh_format_dump_disass (mh_format_t fmt);
 
 #define MH_FMT_PARSE_DEFAULT 0
 #define MH_FMT_PARSE_TREE 0x01
-int mh_format_parse (mh_format_t *fmt, char *format_str, int flags);
+int mh_format_string_parse (mh_format_t *retfmt, char const *format_str,
+			    struct mu_locus_point const *locus,
+			    int flags);
+int mh_format_file_parse (mh_format_t *retfmt, char const *formfile,
+			  int flags);
+mh_format_t mh_scan_format (void);
+
 
 void mh_format_debug (int val);
 void mh_format_free (mh_format_t fmt);
@@ -189,8 +194,8 @@ void mh_format_destroy (mh_format_t *fmt);
 void mh_error (const char *fmt, ...) MU_PRINTFLIKE(1,2);
 void mh_err_memory (int fatal);
 
-FILE *mh_audit_open (char *name, mu_mailbox_t mbox);
-void mh_audit_close (FILE *fp);
+mu_stream_t mh_audit_open (char *name, mu_mailbox_t mbox);
+void mh_audit_close (mu_stream_t);
 
 int mh_message_number (mu_message_t msg, size_t *pnum);
 

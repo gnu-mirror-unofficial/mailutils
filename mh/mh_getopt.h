@@ -44,6 +44,12 @@ void mh_opt_find_file (struct mu_parseopt *po, struct mu_option *opt,
 		       char const *arg);
 void mh_opt_read_formfile (struct mu_parseopt *po, struct mu_option *opt,
 			   char const *arg);
+
+void mh_opt_parse_formfile (struct mu_parseopt *po, struct mu_option *opt,
+			    char const *arg);
+void mh_opt_parse_format (struct mu_parseopt *po, struct mu_option *opt,
+			  char const *arg);
+
 void mh_opt_set_folder (struct mu_parseopt *po, struct mu_option *opt,
 			char const *arg);
 

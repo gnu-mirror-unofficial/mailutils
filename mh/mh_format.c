@@ -346,13 +346,13 @@ print_fmt_segment (struct mh_machine *mach, size_t fmtwidth, char const *str,
 static void
 print_fmt_string (struct mh_machine *mach, size_t fmtwidth, char const *str)
 {
-  char *p = strchr (str, '\n');
-  while (p)
+  char *p;
+  while ((p = strchr (str, '\n')))
     {
-      print_fmt_segment (mach, fmtwidth, str, p - str + 1);
+      print_fmt_segment (mach, fmtwidth, str, p - str);
+      mu_stream_write (mach->output, "\n", 1, NULL);
       mach->ind = 0;
       str = p + 1;
-      p = strchr (str, '\n');
     }
   if (str[0])
     print_fmt_segment (mach, fmtwidth, str, strlen (str));
