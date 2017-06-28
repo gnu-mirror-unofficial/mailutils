@@ -30,7 +30,9 @@ mu_utc_offset (void)
   struct tm ltm = *localtime (&t);
   struct tm gtm = *gmtime (&t);
   int d = TMSEC (&ltm) - TMSEC (&gtm);
-  if (!(ltm.tm_year = gtm.tm_year && ltm.tm_mon == gtm.tm_mon))
+  if (!(ltm.tm_year = gtm.tm_year
+	&& ltm.tm_mon == gtm.tm_mon
+	&& ltm.tm_mday == gtm.tm_mday))
     d += 86400;
   return d;
 }
