@@ -834,12 +834,6 @@ yylex_func (void)
   return ARGUMENT;
 }
 
-void
-mh_format_debug (int val)
-{
-  yydebug = val;
-}
-
 static int
 format_parse (mh_format_t *fmtptr, char *format_str,
 	      struct mu_locus_point const *locus,
@@ -848,7 +842,7 @@ format_parse (mh_format_t *fmtptr, char *format_str,
   int rc;
   char *p = getenv ("MHFORMAT_DEBUG");
   
-  if (p || mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE2))
+  if (p || (flags & MH_FMT_PARSE_DEBUG))
     yydebug = 1;
   start = tok_start = curp = format_str;
   mu_opool_create (&tokpool, MU_OPOOL_ENOMEMABRT);
@@ -1112,7 +1106,7 @@ dump_node_pretty (struct node *node, int level)
 	  printf(", %d, ", node->v.prt.fmtspec & MH_WIDTH_MASK);
 	}
       else
-	printf ("PRINT(%d,", node->v.prt.fmtspec);
+	printf ("PRINT(");
       dump_statement (node->v.prt.arg, INLINE);
       printf (")");
       break;

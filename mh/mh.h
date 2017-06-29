@@ -179,6 +179,7 @@ void mh_format_dump_disass (mh_format_t fmt);
 
 #define MH_FMT_PARSE_DEFAULT 0
 #define MH_FMT_PARSE_TREE 0x01
+#define MH_FMT_PARSE_DEBUG 0x02
 int mh_format_string_parse (mh_format_t *retfmt, char const *format_str,
 			    struct mu_locus_point const *locus,
 			    int flags);
@@ -187,7 +188,6 @@ int mh_format_file_parse (mh_format_t *retfmt, char const *formfile,
 mh_format_t mh_scan_format (void);
 
 
-void mh_format_debug (int val);
 void mh_format_free (mh_format_t fmt);
 void mh_format_destroy (mh_format_t *fmt);
 

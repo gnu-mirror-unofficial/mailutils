@@ -103,18 +103,16 @@ main (int argc, char **argv)
       return 1;
     }
   
-  mh_format_debug (debug_option);
   if (!format_str)
     {
       mu_error (_("Format string not specified"));
       return 1;
     }
-  if (mh_format_string_parse (&format, format_str, &locus, MH_FMT_PARSE_TREE))
-    {
-      mu_error (_("Bad format string"));
-      exit (1);
-    }
-
+  if (mh_format_string_parse (&format, format_str, &locus,
+			      MH_FMT_PARSE_TREE
+			      | (debug_option ? MH_FMT_PARSE_DEBUG : 0)))
+    return 1;
+  
   if (dump_option)
     mh_format_dump_code (format);
   if (disass_option)
