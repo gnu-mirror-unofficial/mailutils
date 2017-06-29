@@ -420,6 +420,15 @@ NF: 1
 ],
 [input exhausted
 ])
+
+TESTWSP([incremental nosplit],[],[incremental nosplit],
+[incremental "input test" line
+],
+[NF: 1
+0: "incremental \"input test\" line"
+],
+[input exhausted
+])
 
 dnl Something that doesn't fit into TESTWSP
 

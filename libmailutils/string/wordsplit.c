@@ -2140,6 +2140,7 @@ mu_wordsplit_process_list (struct mu_wordsplit *wsp, size_t start)
       /* Treat entire input as a quoted argument */
       if (mu_wordsplit_add_segm (wsp, start, wsp->ws_len, _WSNF_QUOTE))
 	return wsp->ws_errno;
+      wsp->ws_endp = wsp->ws_len;
     }
   else
     {
