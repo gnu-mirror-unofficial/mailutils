@@ -569,11 +569,16 @@ yylex (void)
 {
   int tok;
 
-  mark ();
-  if (yydebug)
-    fprintf (stderr, "lex: [%s] at %-10.10s...]\n",
-	     lexer_tab[ctx_get ()].ctx_name, curp);
-  tok = lexer_tab[ctx_get ()].lexer ();
+  do
+    {
+      mark ();
+      if (yydebug)
+	fprintf (stderr, "lex: [%s] at %-10.10s...]\n",
+		 lexer_tab[ctx_get ()].ctx_name, curp);
+      tok = lexer_tab[ctx_get ()].lexer ();
+    }
+  while (tok == STRING && yylval.str[0] == 0);
+  
   mark ();
   if (tok == BOGUS)
     yyerror (yylval.mesg);
