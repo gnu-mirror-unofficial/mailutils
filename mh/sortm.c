@@ -51,6 +51,7 @@ enum
 static int algorithm = algo_quicksort;
 static int action = ACTION_REORDER;
 static mh_format_t format;
+static mh_fvm_t fvm;
 
 typedef int (*compfun) (void *, void *);
 static void addop (char const *field, compfun comp);
@@ -442,7 +443,7 @@ list_message (size_t num)
 {
   mu_message_t msg = NULL;
   mu_mailbox_get_message (mbox, num, &msg);
-  mh_format (mu_strout, format, msg, num, width, MH_FMT_FORCENL);
+  mh_fvm_run (fvm, msg, num);
 }
 
 void
@@ -608,8 +609,15 @@ main (int argc, char **argv)
   if (!oplist)
     addop ("date", comp_date);
 
-  if (action == ACTION_LIST && !format)
-    format = mh_scan_format ();
+  if (action == ACTION_LIST)
+    {
+      if (!format)
+	format = mh_scan_format ();
+      mh_fvm_create (&fvm, MH_FMT_FORCENL);
+      mh_fvm_set_format (fvm, format);
+      mh_fvm_set_width (fvm, width ? width : mh_width ());
+      mh_format_destroy (&format);
+    }      
   
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_READ);
   mu_mailbox_get_url (mbox, &url);

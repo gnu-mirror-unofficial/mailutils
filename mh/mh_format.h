@@ -95,7 +95,7 @@ enum mh_type
 typedef enum mh_opcode mh_opcode_t;
 
 struct mh_machine;
-typedef void (*mh_builtin_fp) (struct mh_machine *);
+typedef void (*mh_builtin_fp) (struct mh_fvm *);
 
 typedef union {
   mh_opcode_t opcode;
@@ -144,7 +144,7 @@ struct mh_string
   char *ptr;
 };
   
-struct mh_machine
+struct mh_fvm
 {
   long num[2];              /* numeric registers */
   struct mh_string str[2];  /* string registers */

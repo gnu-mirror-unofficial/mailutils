@@ -764,7 +764,7 @@ print_header_value (struct eval_env *env, char *val)
   if (env->fvar[F_FORMATFIELD])
     {
       if (mh_format_str (env->fvar[F_FORMATFIELD], val,
-			 env->ivar[I_WIDTH], &p))
+			 env->ivar[I_WIDTH], &p) == 0)
 	val = p;
     }
     

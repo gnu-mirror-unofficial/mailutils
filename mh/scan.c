@@ -36,7 +36,7 @@ static int reverse;
 static int header;
 
 static mh_format_t format;
-
+static mh_fvm_t fvm;
 static mu_msgset_t msgset;
 
 static struct mu_option options[] = {
@@ -64,9 +64,15 @@ static struct mu_option options[] = {
   MU_OPTION_END
 };
 
-static int list_message (size_t num, mu_message_t msg, void *data);
-void print_header (mu_mailbox_t mbox);
-void clear_screen (void);
+static void print_header (mu_mailbox_t mbox);
+static void clear_screen (void);
+
+static int
+list_message (size_t num, mu_message_t msg, void *data)
+{
+  mh_fvm_run (fvm, msg, num);
+  return 0;
+}
 
 /* Observable Action this is called at every message discover.  */
 static int
@@ -83,7 +89,7 @@ action (mu_observer_t o, size_t type, void *data, void *action_data)
       counter++;
       mu_mailbox_get_message (mbox, counter, &msg);
       mh_message_number (msg, &num);
-      list_message (num, msg, NULL);
+      mh_fvm_run (fvm, msg, num);
     }
   return 0;
 }
@@ -99,6 +105,11 @@ main (int argc, char **argv)
 	     args_doc, prog_doc, NULL);
   if (!format)
     format = mh_scan_format ();
+
+  mh_fvm_create (&fvm, MH_FMT_FORCENL);
+  mh_fvm_set_format (fvm, format);
+  mh_fvm_set_width (fvm, width ? width : mh_width ());
+  mh_format_destroy (&format);
   
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_READ);
 
@@ -136,13 +147,16 @@ main (int argc, char **argv)
     }
 
   clear_screen ();
+  mh_fvm_destroy (&fvm);
+
   mh_global_save_state ();
   mu_mailbox_close (mbox);
   mu_mailbox_destroy (&mbox);
+
   return status;
 }
 
-void
+static void
 print_header (mu_mailbox_t mbox)
 {
   if (header)
@@ -167,8 +181,8 @@ putstdout(char c)
 }
 #endif
 
-void
-clear_screen ()
+static void
+clear_screen (void)
 {
   if (clear)
     {
@@ -197,11 +211,4 @@ clear_screen ()
       /* Fall back to formfeed */
       fprintf (stdout, "\f");
     }
-}
-
-static int
-list_message (size_t num, mu_message_t msg, void *data)
-{
-  mh_format (mu_strout, format, msg, num, width, MH_FMT_FORCENL);
-  return 0;
 }

@@ -28,6 +28,7 @@ static char extra_doc[] = N_("Debug flags are:\n\
   l - sieve action logs");
 
 static mh_format_t format;
+static mh_fvm_t fvm;
 static int width;
 static mu_list_t input_file_list;
 static char *audit_file; 
@@ -126,15 +127,18 @@ static struct mu_option options[] = {
 };
 
 void
-list_message (mh_format_t format, mu_mailbox_t mbox, size_t msgno,
-	      size_t width)
+list_message (mu_mailbox_t mbox, size_t msgno)
 {
   mu_message_t msg;
 
   mu_mailbox_get_message (mbox, msgno, &msg);
-  mh_format (mu_strout, format, msg, msgno, width, MH_FMT_FORCENL);
+  mh_fvm_run (fvm, msg, msgno);
   if (audit_stream)
-    mh_format (audit_stream, format, msg, msgno, width, MH_FMT_FORCENL);
+    {
+      mh_fvm_set_output (fvm, audit_stream);
+      mh_fvm_run (fvm, msg, msgno);
+      mh_fvm_set_output (fvm, mu_strout);
+    }
 }
 
 struct incdat
@@ -277,7 +281,7 @@ incmbx (void *item, void *data)
 
       ++dp->lastmsg;
       if (!quiet)
-	list_message (format, dp->output, dp->lastmsg, width);
+	list_message (dp->output, dp->lastmsg);
       
       if (f_truncate)
 	{
@@ -358,6 +362,11 @@ main (int argc, char **argv)
   if (!format && !quiet)
     format = mh_scan_format ();
 
+  mh_fvm_create (&fvm, MH_FMT_FORCENL);
+  mh_fvm_set_format (fvm, format);
+  mh_fvm_set_width (fvm, width ? width : mh_width ());  
+  mh_format_destroy (&format);
+    
   memset (&incdat, 0, sizeof (incdat));
 
   incdat.output = mh_open_folder (append_folder,

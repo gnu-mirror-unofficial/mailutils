@@ -167,11 +167,18 @@ int mh_check_folder (const char *pathname, int confirm);
 int mh_makedir (const char *p);
 
 typedef struct mh_format *mh_format_t;
+typedef struct mh_fvm *mh_fvm_t;
 
 #define MH_FMT_FORCENL 1
-int mh_format (mu_stream_t str, mh_format_t fmt,
-	       mu_message_t msg, size_t msgno,
-	       size_t width, int flags);
+void mh_fvm_create (mh_fvm_t *fvm, int flags);
+void mh_fvm_destroy (mh_fvm_t *fvm);
+
+void mh_fvm_set_output (mh_fvm_t fvm, mu_stream_t str);
+void mh_fvm_set_width (mh_fvm_t fvm, size_t width);
+void mh_fvm_set_format (mh_fvm_t fvm, mh_format_t fmt);
+
+void mh_fvm_run (mh_fvm_t fvm, mu_message_t msg, size_t msgno);
+
 int mh_format_str (mh_format_t fmt, char *str, size_t width, char **pret);
 
 void mh_format_dump_code (mh_format_t fmt);

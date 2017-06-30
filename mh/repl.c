@@ -26,6 +26,7 @@ static char prog_doc[] = N_("Reply to a message");
 static char args_doc[] = N_("[MESSAGE]");
 
 static mh_format_t format;
+static mh_fvm_t fvm;
 static int width;
 
 struct mh_whatnow_env wh_env = { 0 };
@@ -234,6 +235,8 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	  exit (1);
 	}
 
+      mh_fvm_set_output (fvm, str);
+
       if (has_fcc)
 	{
 	  mu_message_t tmp_msg;
@@ -244,11 +247,11 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	  mu_message_get_header (tmp_msg, &hdr);
 	  text = mu_opool_finish (fcc_pool, NULL);
 	  mu_header_set_value (hdr, MU_HEADER_FCC, text, 1);
-	  mh_format (str, format, tmp_msg, msgno, width, 0);
+	  mh_fvm_run (fvm, tmp_msg, msgno);
 	  mu_message_destroy (&tmp_msg, NULL);
 	}
       else
-	mh_format (str, format, msg, msgno, width, 0);
+	mh_fvm_run (fvm, msg, msgno);
       
       if (mhl_filter)
 	{
@@ -259,6 +262,7 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	  mhl_format_destroy (&filter);
 	}
 
+      mh_fvm_set_output (fvm, mu_strout);
       mu_stream_destroy (&str);
     }
 
@@ -304,7 +308,12 @@ main (int argc, char **argv)
 	  exit (1);
 	}
     }
-  
+
+  mh_fvm_create (&fvm, 0);
+  mh_fvm_set_format (fvm, format);
+  mh_fvm_set_width (fvm, width ? width : mh_width ());
+  mh_format_destroy (&format);
+
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_RDWR);
   mh_msgset_parse (&msgset, mbox, argc, argv, "cur");
   if (!mh_msgset_single_message (msgset))

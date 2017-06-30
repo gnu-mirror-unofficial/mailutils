@@ -81,7 +81,13 @@ static void
 run (void)
 {
   mu_message_t msg = mh_file_to_message (NULL, input_file);
-  mh_format (mu_strout, format, msg, msgno, width, MH_FMT_FORCENL);
+  mh_fvm_t fvm;
+
+  mh_fvm_create (&fvm, MH_FMT_FORCENL);
+  mh_fvm_set_width (fvm, width ? width : mh_width ());  
+  mh_fvm_set_format (fvm, format);
+  mh_fvm_run (fvm, msg, msgno);
+  mh_fvm_destroy (&fvm);
 }
 
 int

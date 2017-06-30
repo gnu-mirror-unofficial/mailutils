@@ -97,17 +97,16 @@ mh_string_load (struct mh_string *s, char const *str)
 }
 
 static void
-mh_string_move (struct mh_machine *mach, enum regid dst, enum regid src)
+mh_string_move (struct mh_fvm *mach, enum regid dst, enum regid src)
 {
   mh_string_load (&mach->str[dst], mach->str[src].ptr);
-  //  mh_string_clear (&mach->str[src]);
 }
 
 
 static char *_get_builtin_name (mh_builtin_fp ptr);
 
 static inline size_t
-output_width (struct mh_machine *mach)
+output_width (struct mh_fvm *mach)
 {
   if (mach->width < mach->ind)
     return 0;
@@ -181,14 +180,14 @@ str_compress_ws (char *str)
 }
 
 static inline void
-compress_ws (struct mh_machine *mach, char *str)
+compress_ws (struct mh_fvm *mach, char *str)
 {
   if (mach->fmtflags & MH_FMT_COMPWS)
     str_compress_ws (str);
 }
 
 static void
-put_string (struct mh_machine *mach, char const *str, int len)
+put_string (struct mh_fvm *mach, char const *str, int len)
 {
   if (len == 0)
     return;
@@ -197,7 +196,7 @@ put_string (struct mh_machine *mach, char const *str, int len)
 }
 
 static void
-print_hdr_segment (struct mh_machine *mach, char const *str, size_t len)
+print_hdr_segment (struct mh_fvm *mach, char const *str, size_t len)
 {
   if (!len)
     len = strlen (str);
@@ -248,7 +247,7 @@ print_hdr_segment (struct mh_machine *mach, char const *str, size_t len)
 }
 
 static void
-print_hdr_string (struct mh_machine *mach, char const *str)
+print_hdr_string (struct mh_fvm *mach, char const *str)
 {
   char const *p;
   
@@ -269,7 +268,7 @@ print_hdr_string (struct mh_machine *mach, char const *str)
 }
 
 static void
-print_simple_segment (struct mh_machine *mach, size_t width,
+print_simple_segment (struct mh_fvm *mach, size_t width,
 		      char const *str, size_t len)
 {
   size_t rest;
@@ -295,7 +294,7 @@ print_simple_segment (struct mh_machine *mach, size_t width,
 }
 
 static void
-print_string (struct mh_machine *mach, size_t width, char const *str)
+print_string (struct mh_fvm *mach, size_t width, char const *str)
 {
   char *p;
   
@@ -319,7 +318,7 @@ print_string (struct mh_machine *mach, size_t width, char const *str)
 }
   
 static void
-print_fmt_segment (struct mh_machine *mach, size_t fmtwidth, char const *str,
+print_fmt_segment (struct mh_fvm *mach, size_t fmtwidth, char const *str,
 		   size_t len)
 {
   size_t width = mbsnlen (str, len);
@@ -344,7 +343,7 @@ print_fmt_segment (struct mh_machine *mach, size_t fmtwidth, char const *str,
 }
 
 static void
-print_fmt_string (struct mh_machine *mach, size_t fmtwidth, char const *str)
+print_fmt_string (struct mh_fvm *mach, size_t fmtwidth, char const *str)
 {
   char *p;
   while ((p = strchr (str, '\n')))
@@ -359,7 +358,7 @@ print_fmt_string (struct mh_machine *mach, size_t fmtwidth, char const *str)
 }
 
 static void
-reset_fmt_defaults (struct mh_machine *mach)
+reset_fmt_defaults (struct mh_fvm *mach)
 {
   const char *p;
   
@@ -371,7 +370,7 @@ reset_fmt_defaults (struct mh_machine *mach)
 }
 
 static void
-format_num (struct mh_machine *mach, long num)
+format_num (struct mh_fvm *mach, long num)
 {
   int n;
   char buf[64];
@@ -405,7 +404,7 @@ format_num (struct mh_machine *mach, long num)
 }
 
 static void
-format_str (struct mh_machine *mach, char const *str)
+format_str (struct mh_fvm *mach, char const *str)
 {
   if (!str)
     str = "";
@@ -474,138 +473,101 @@ addrlist_destroy (mu_list_t *list)
 
 /* Execute pre-compiled format on message msg with number msgno.
  */
-int
-mh_format (mu_stream_t output, mh_format_t fmt,
-	   mu_message_t msg, size_t msgno,
-	   size_t width, int flags)
+void
+mh_fvm_run (mh_fvm_t mach, mu_message_t msg, size_t msgno)
 {
-  struct mh_machine mach;
-  const char *charset = mh_global_profile_get ("Charset", NULL);
-  
-  memset (&mach, 0, sizeof (mach));
-  mach.progcnt = fmt->progcnt;
-  mach.prog = fmt->prog;
+  mach->message = msg;
+  mach->msgno = msgno;
 
-  mach.message = msg;
-  mach.msgno = msgno;
-  mach.output = output;
-  mach.flags = flags;
-  
-  if (width == 0)
-    width = mh_width ();
-  mach.width = width - 1; /* Count the newline */
-  mach.pc = 1;
+  reset_fmt_defaults (mach);
+  mu_list_clear (mach->addrlist);
+  mh_string_clear (&mach->str[R_REG]);
+  mh_string_clear (&mach->str[R_ARG]);
 
-  MU_ASSERT (mu_list_create (&mach.addrlist));
-  
-  reset_fmt_defaults (&mach);
-
-  if (charset && strcmp (charset, "auto"))
-    {
-      /* Try to set LC_CTYPE according to the value of Charset variable.
-	 If Charset is `auto', there's no need to do anything, since it
-	 is already set. Otherwise, we need to construct a valid locale
-	 value with Charset as its codeset part. The problem is, what
-	 language and territory to use for that locale.
-
-	 Neither LANG nor any other environment variable is of any use,
-	 because if it were, the user would have set "Charset: auto".
-	 It would be logical to use 'C' or 'POSIX', but these do not
-	 work with '.UTF-8'. So, in the absence of any viable alternative,
-	 'en_US' is selected. This choice may be overridden by setting
-	 the LC_BASE mh_profile variable to the desired base part.
-      */
-      const char *lc_base = mh_global_profile_get ("LC_BASE", "en_US");
-      char *locale = mu_alloc (strlen (lc_base) + 1 + strlen (charset) + 1);
-      strcpy (locale, lc_base);
-      strcat (locale, ".");
-      strcat (locale, charset);
-      if (!setlocale (LC_CTYPE, locale))
-        mu_error (_("cannot set LC_CTYPE %s"), locale);
-      free (locale);
-    }
-  
-  while (!mach.stop)
+  mach->pc = 1;
+  mach->stop = 0;
+  mach->ind = 0;
+  while (!mach->stop)
     {
       mh_opcode_t opcode;
       
-      switch (opcode = MHI_OPCODE (mach.prog[mach.pc++]))
+      switch (opcode = MHI_OPCODE (mach->prog[mach->pc++]))
 	{
 	case mhop_stop:
-	  mach.stop = 1;
+	  mach->stop = 1;
 	  break;
 
 	case mhop_branch:
-	  mach.pc += MHI_NUM (mach.prog[mach.pc]);
+	  mach->pc += MHI_NUM (mach->prog[mach->pc]);
 	  break;
 
 	case mhop_brzn:
-	  if (!mach.num[R_REG])
-	    mach.pc += MHI_NUM (mach.prog[mach.pc]);
+	  if (!mach->num[R_REG])
+	    mach->pc += MHI_NUM (mach->prog[mach->pc]);
 	  else
-	    mach.pc++;
+	    mach->pc++;
 	  break;
 
 	case mhop_brzs:
-	  if (mh_string_is_null (&mach.str[R_REG]))
-	    mach.pc += MHI_NUM (mach.prog[mach.pc]);
+	  if (mh_string_is_null (&mach->str[R_REG]))
+	    mach->pc += MHI_NUM (mach->prog[mach->pc]);
 	  else
-	    mach.pc++;
+	    mach->pc++;
 	  break;
 	  
 	case mhop_setn:
 	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    mach.num[reg] = MHI_NUM (mach.prog[mach.pc++]);
+	    long reg = MHI_NUM (mach->prog[mach->pc++]);
+	    mach->num[reg] = MHI_NUM (mach->prog[mach->pc++]);
 	  }
 	  break;
 
 	case mhop_sets:
 	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    size_t skip = MHI_NUM (mach.prog[mach.pc++]);
-	    char const *str = MHI_STR (mach.prog[mach.pc]);
+	    long reg = MHI_NUM (mach->prog[mach->pc++]);
+	    size_t skip = MHI_NUM (mach->prog[mach->pc++]);
+	    char const *str = MHI_STR (mach->prog[mach->pc]);
 
-	    mach.pc += skip;
+	    mach->pc += skip;
 	    
-	    mh_string_load (&mach.str[reg], str);
+	    mh_string_load (&mach->str[reg], str);
 	  }
 	  break;
 
 	case mhop_movn:
 	  {
-	    long dst = MHI_NUM (mach.prog[mach.pc++]);
-	    long src = MHI_NUM (mach.prog[mach.pc++]);
-	    mach.num[dst] = mach.num[src];
+	    long dst = MHI_NUM (mach->prog[mach->pc++]);
+	    long src = MHI_NUM (mach->prog[mach->pc++]);
+	    mach->num[dst] = mach->num[src];
 	  }
 	  break;
 
 	case mhop_movs:
 	  {
-	    long dst = MHI_NUM (mach.prog[mach.pc++]);
-	    long src = MHI_NUM (mach.prog[mach.pc++]);
-	    mh_string_move (&mach, dst, src);
+	    long dst = MHI_NUM (mach->prog[mach->pc++]);
+	    long src = MHI_NUM (mach->prog[mach->pc++]);
+	    mh_string_move (mach, dst, src);
 	    /* FIXME: perhaps copy, not move? */
 	  }
 	  break;
 	  
 	case mhop_ldcomp:
 	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
-	    size_t skip = MHI_NUM (mach.prog[mach.pc++]);
-	    char const *comp = MHI_STR (mach.prog[mach.pc]);
+	    long reg = MHI_NUM (mach->prog[mach->pc++]);
+	    size_t skip = MHI_NUM (mach->prog[mach->pc++]);
+	    char const *comp = MHI_STR (mach->prog[mach->pc]);
 	    mu_header_t hdr = NULL;
 	    char *value = NULL;
 
-	    mach.pc += skip;
+	    mach->pc += skip;
 
-	    mu_message_get_header (mach.message, &hdr);
+	    mu_message_get_header (mach->message, &hdr);
 	    mu_header_aget_value_unfold (hdr, comp, &value);
-	    mh_string_clear (&mach.str[reg]);
+	    mh_string_clear (&mach->str[reg]);
 	    if (value)
 	      {
-      		compress_ws (&mach, value);
-		mh_string_load (&mach.str[reg], value);
+      		compress_ws (mach, value);
+		mh_string_load (&mach->str[reg], value);
 		free (value);
 	      }
 	  }
@@ -613,15 +575,15 @@ mh_format (mu_stream_t output, mh_format_t fmt,
 
 	case mhop_ldbody:
 	  {
-	    long reg = MHI_NUM (mach.prog[mach.pc++]);
+	    long reg = MHI_NUM (mach->prog[mach->pc++]);
 	    mu_body_t body = NULL;
 	    mu_stream_t stream = NULL;
 	    size_t size = 0;
-	    size_t rest = output_width (&mach);
+	    size_t rest = output_width (mach);
 
-	    mh_string_clear (&mach.str[reg]);
+	    mh_string_clear (&mach->str[reg]);
 
-	    mu_message_get_body (mach.message, &body);
+	    mu_message_get_body (mach->message, &body);
 	    mu_body_size (body, &size);
 	    if (size == 0)
 	      break;
@@ -631,10 +593,10 @@ mh_format (mu_stream_t output, mh_format_t fmt,
 		if (size > rest)
 		  size = rest;
 
-		mh_string_realloc (&mach.str[reg], size + 1);
-		mu_stream_read (stream, mach.str[reg].ptr, size, NULL);
-		mach.str[reg].ptr[size] = 0;
-		compress_ws (&mach, mach.str[reg].ptr);
+		mh_string_realloc (&mach->str[reg], size + 1);
+		mu_stream_read (stream, mach->str[reg].ptr, size, NULL);
+		mach->str[reg].ptr[size] = 0;
+		compress_ws (mach, mach->str[reg].ptr);
 
 		mu_stream_destroy (&stream);
 	      }
@@ -642,37 +604,37 @@ mh_format (mu_stream_t output, mh_format_t fmt,
 	  break;
 
 	case mhop_call:
-	  MHI_BUILTIN (mach.prog[mach.pc++]) (&mach);
+	  MHI_BUILTIN (mach->prog[mach->pc++]) (mach);
 	  break;
 
 	  /* Convert string register to number */
 	case mhop_atoi:
 	  {
-	    if (mh_string_is_null (&mach.str[R_REG]))
-	      mach.num[R_REG] = 0;
+	    if (mh_string_is_null (&mach->str[R_REG]))
+	      mach->num[R_REG] = 0;
 	    else
-	      mach.num[R_REG] = strtoul (mach.str[R_REG].ptr, NULL, 0);
+	      mach->num[R_REG] = strtoul (mach->str[R_REG].ptr, NULL, 0);
 	  }
 	  break;
   
 	  /* Convert numeric register to string */
 	case mhop_itoa:
 	  {
-	    mu_asnprintf (&mach.str[R_REG].ptr, &mach.str[R_REG].size,
-			  "%lu", mach.num[R_REG]);
+	    mu_asnprintf (&mach->str[R_REG].ptr, &mach->str[R_REG].size,
+			  "%lu", mach->num[R_REG]);
 	  }
 	  break;
 
 	case mhop_printn:
-	  format_num (&mach, mach.num[R_REG]);
+	  format_num (mach, mach->num[R_REG]);
 	  break;
 
 	case mhop_prints:
-	  format_str (&mach, mach.str[R_REG].ptr);
+	  format_str (mach, mach->str[R_REG].ptr);
 	  break;
 
 	case mhop_fmtspec:
-	  mach.fmtflags = MHI_NUM (mach.prog[mach.pc++]);
+	  mach->fmtflags = MHI_NUM (mach->prog[mach->pc++]);
 	  break;
 
 	default:
@@ -680,13 +642,8 @@ mh_format (mu_stream_t output, mh_format_t fmt,
 	  abort ();
 	}
     }
-  if ((mach.flags & MH_FMT_FORCENL) && mach.ind != 0)
-    put_string (&mach, "\n", 1);
-
-  mh_string_free (&mach.str[R_REG]);
-  mh_string_free (&mach.str[R_ARG]);
-  addrlist_destroy (&mach.addrlist);
-  return mach.ind;
+  if ((mach->flags & MH_FMT_FORCENL) && mach->ind != 0)
+    put_string (mach, "\n", 1);
 }
 
 int
@@ -698,14 +655,21 @@ mh_format_str (mh_format_t fmt, char *str, size_t width, char **pstr)
   mu_stream_t outstr;
   char *buf;
   mu_off_t size;
+
+  mh_fvm_t fvm;
   
   MU_ASSERT (mu_message_create (&msg, NULL));
   MU_ASSERT (mu_message_get_header (msg, &hdr));
   MU_ASSERT (mu_header_set_value (hdr, "text", str, 1));
   MU_ASSERT (mu_memory_stream_create (&outstr, MU_STREAM_RDWR));
-  
-  rc = mh_format (outstr, fmt, msg, 1, width, 0);
 
+  mh_fvm_create (&fvm, 0);
+  mh_fvm_set_output (fvm, outstr);
+  mh_fvm_set_width (fvm, width);
+  mh_fvm_set_format (fvm, fmt);
+  mh_fvm_run (fvm, msg, 1);
+  mh_fvm_destroy (&fvm);
+	      
   MU_ASSERT (mu_stream_size (outstr, &size));
   buf = mu_alloc (size + 1);
   MU_ASSERT (mu_stream_seek (outstr, 0, MU_SEEK_SET, NULL));
@@ -729,7 +693,7 @@ builtin_not_implemented (char *name)
 }
 
 static void
-builtin_msg (struct mh_machine *mach)
+builtin_msg (struct mh_fvm *mach)
 {
   size_t msgno = mach->msgno;
   mh_message_number (mach->message, &msgno);
@@ -737,7 +701,7 @@ builtin_msg (struct mh_machine *mach)
 }
 
 static void
-builtin_cur (struct mh_machine *mach)
+builtin_cur (struct mh_fvm *mach)
 {
   size_t msgno = mach->msgno;
   size_t cur;
@@ -756,7 +720,7 @@ builtin_cur (struct mh_machine *mach)
 }
 
 static void
-builtin_size (struct mh_machine *mach)
+builtin_size (struct mh_fvm *mach)
 {
   size_t size;
   if (mu_message_size (mach->message, &size) == 0)
@@ -766,25 +730,25 @@ builtin_size (struct mh_machine *mach)
 }
 
 static void
-builtin_strlen (struct mh_machine *mach)
+builtin_strlen (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mh_string_length (&mach->str[R_ARG]);
 }
 
 static void
-builtin_width (struct mh_machine *mach)
+builtin_width (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mach->width;
 }
 
 static void
-builtin_charleft (struct mh_machine *mach)
+builtin_charleft (struct mh_fvm *mach)
 {
   mach->num[R_REG] = output_width (mach);
 }
 
 static void
-builtin_timenow (struct mh_machine *mach)
+builtin_timenow (struct mh_fvm *mach)
 {
   time_t t;
   
@@ -793,7 +757,7 @@ builtin_timenow (struct mh_machine *mach)
 }
 
 static void
-builtin_me (struct mh_machine *mach)
+builtin_me (struct mh_fvm *mach)
 {
   char *s;
   mu_asprintf (&s, "<%s>", mh_my_email ());
@@ -802,32 +766,32 @@ builtin_me (struct mh_machine *mach)
 }
 
 static void
-builtin_eq (struct mh_machine *mach)
+builtin_eq (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mach->num[R_REG] == mach->num[R_ARG];
 }
 
 static void
-builtin_ne (struct mh_machine *mach)
+builtin_ne (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mach->num[R_REG] != mach->num[R_ARG];
 }
 
 static void
-builtin_gt (struct mh_machine *mach)
+builtin_gt (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mach->num[R_REG] > mach->num[R_ARG];
 }
 
 static void
-builtin_match (struct mh_machine *mach)
+builtin_match (struct mh_fvm *mach)
 {
   mach->num[R_REG] = strstr (mh_string_value (&mach->str[R_REG]),
 			     mh_string_value (&mach->str[R_ARG])) != NULL;
 }
 
 static void
-builtin_amatch (struct mh_machine *mach)
+builtin_amatch (struct mh_fvm *mach)
 {
   char const *arg = mh_string_value (&mach->str[R_ARG]);
   size_t len = strlen (arg);
@@ -835,19 +799,19 @@ builtin_amatch (struct mh_machine *mach)
 }
 
 static void
-builtin_plus (struct mh_machine *mach)
+builtin_plus (struct mh_fvm *mach)
 {
   mach->num[R_REG] += mach->num[R_ARG];
 }
 
 static void
-builtin_minus (struct mh_machine *mach)
+builtin_minus (struct mh_fvm *mach)
 {
   mach->num[R_REG] -= mach->num[R_ARG];
 }
 
 static void
-builtin_divide (struct mh_machine *mach)
+builtin_divide (struct mh_fvm *mach)
 {
   if (mach->num[R_ARG] == 0)
     {
@@ -860,7 +824,7 @@ builtin_divide (struct mh_machine *mach)
 }
 
 static void
-builtin_modulo (struct mh_machine *mach)
+builtin_modulo (struct mh_fvm *mach)
 {
   if (mach->num[R_ARG] == 0)
     {
@@ -872,26 +836,26 @@ builtin_modulo (struct mh_machine *mach)
 }
 
 static void
-builtin_num (struct mh_machine *mach)
+builtin_num (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mach->num[R_ARG];
 }
 
 static void
-builtin_lit (struct mh_machine *mach)
+builtin_lit (struct mh_fvm *mach)
 {
   mh_string_move (mach, R_REG, R_ARG);
 }
 
 static void
-builtin_getenv (struct mh_machine *mach)
+builtin_getenv (struct mh_fvm *mach)
 {
   char const *val = getenv (mh_string_value (&mach->str[R_ARG]));
   mh_string_load (&mach->str[R_REG], val);
 }
 
 static void
-builtin_profile (struct mh_machine *mach)
+builtin_profile (struct mh_fvm *mach)
 {
   char const *val = mh_global_profile_get (mh_string_value (&mach->str[R_ARG]),
 					   "");
@@ -899,32 +863,32 @@ builtin_profile (struct mh_machine *mach)
 }
 
 static void
-builtin_nonzero (struct mh_machine *mach)
+builtin_nonzero (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mach->num[R_ARG] != 0;
 }
 
 static void
-builtin_zero (struct mh_machine *mach)
+builtin_zero (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mach->num[R_ARG] == 0;
 }
 
 static void
-builtin_null (struct mh_machine *mach)
+builtin_null (struct mh_fvm *mach)
 {
   mach->num[R_REG] = mh_string_is_null (&mach->str[R_ARG]);
 }
 
 static void
-builtin_nonnull (struct mh_machine *mach)
+builtin_nonnull (struct mh_fvm *mach)
 {
   mach->num[R_REG] = !mh_string_is_null (&mach->str[R_ARG]);
 }
 
 /*     comp       comp     string   Set str to component text*/
 static void
-builtin_comp (struct mh_machine *mach)
+builtin_comp (struct mh_fvm *mach)
 {
   /* FIXME: Check this */
   mh_string_move (mach, R_REG, R_ARG);
@@ -932,7 +896,7 @@ builtin_comp (struct mh_machine *mach)
 
 /*     compval    comp     integer  num set to "atoi(comp)"*/
 static void
-builtin_compval (struct mh_machine *mach)
+builtin_compval (struct mh_fvm *mach)
 {
   /* FIXME: Check this */
   mach->num[R_REG] = strtol (mh_string_value (&mach->str[R_ARG]), NULL, 0);
@@ -940,7 +904,7 @@ builtin_compval (struct mh_machine *mach)
 
 /*     trim       expr              trim trailing white-space from str*/
 static void
-builtin_trim (struct mh_machine *mach)
+builtin_trim (struct mh_fvm *mach)
 {
   if (!mh_string_is_null (&mach->str[R_REG]))
     mu_rtrim_class (mach->str[R_REG].ptr, MU_CTYPE_SPACE);
@@ -948,21 +912,21 @@ builtin_trim (struct mh_machine *mach)
 
 /*     putstr     expr              print str*/
 static void
-builtin_putstr (struct mh_machine *mach)
+builtin_putstr (struct mh_fvm *mach)
 {
   print_string (mach, 0, mh_string_value (&mach->str[R_ARG]));
 }
 
 /*     putstrf    expr              print str in a fixed width*/
 static void
-builtin_putstrf (struct mh_machine *mach)
+builtin_putstrf (struct mh_fvm *mach)
 {
   format_str (mach, mh_string_value (&mach->str[R_ARG]));
 }
 
 /*     putnum     expr              print num*/
 static void
-builtin_putnum (struct mh_machine *mach)
+builtin_putnum (struct mh_fvm *mach)
 {
   char *p;
   mu_asprintf (&p, "%ld", mach->num[R_ARG]);
@@ -972,13 +936,13 @@ builtin_putnum (struct mh_machine *mach)
 
 /*     putnumf    expr              print num in a fixed width*/
 static void
-builtin_putnumf (struct mh_machine *mach)
+builtin_putnumf (struct mh_fvm *mach)
 {
   format_num (mach, mach->num[R_ARG]);
 }
 
 static int
-_parse_date (struct mh_machine *mach, struct tm *tm, struct mu_timezone *tz)
+_parse_date (struct mh_fvm *mach, struct tm *tm, struct mu_timezone *tz)
 {
   char const *date = mh_string_value (&mach->str[R_ARG]);
   const char *p = date;
@@ -998,7 +962,7 @@ _parse_date (struct mh_machine *mach, struct tm *tm, struct mu_timezone *tz)
 
 /*     sec        date     integer  seconds of the minute*/
 static void
-builtin_sec (struct mh_machine *mach)
+builtin_sec (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1011,7 +975,7 @@ builtin_sec (struct mh_machine *mach)
 
 /*     min        date     integer  minutes of the hour*/
 static void
-builtin_min (struct mh_machine *mach)
+builtin_min (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1024,7 +988,7 @@ builtin_min (struct mh_machine *mach)
 
 /*     hour       date     integer  hours of the day (0-23)*/
 static void
-builtin_hour (struct mh_machine *mach)
+builtin_hour (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1037,7 +1001,7 @@ builtin_hour (struct mh_machine *mach)
 
 /*     wday       date     integer  day of the week (Sun=0)*/
 static void
-builtin_wday (struct mh_machine *mach)
+builtin_wday (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1050,7 +1014,7 @@ builtin_wday (struct mh_machine *mach)
 
 /*     day        date     string   day of the week (abbrev.)*/
 static void
-builtin_day (struct mh_machine *mach)
+builtin_day (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1065,7 +1029,7 @@ builtin_day (struct mh_machine *mach)
 
 /*     weekday    date     string   day of the week */
 static void
-builtin_weekday (struct mh_machine *mach)
+builtin_weekday (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1080,7 +1044,7 @@ builtin_weekday (struct mh_machine *mach)
 /*      sday       date     integer  day of the week known?
 	(0=implicit,-1=unknown) */
 static void
-builtin_sday (struct mh_machine *mach)
+builtin_sday (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1094,7 +1058,7 @@ builtin_sday (struct mh_machine *mach)
 
 /*     mday       date     integer  day of the month*/
 static void
-builtin_mday (struct mh_machine *mach)
+builtin_mday (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1107,7 +1071,7 @@ builtin_mday (struct mh_machine *mach)
 
 /*      yday       date     integer  day of the year */
 static void
-builtin_yday (struct mh_machine *mach)
+builtin_yday (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1120,7 +1084,7 @@ builtin_yday (struct mh_machine *mach)
 
 /*     mon        date     integer  month of the year*/
 static void
-builtin_mon (struct mh_machine *mach)
+builtin_mon (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1133,7 +1097,7 @@ builtin_mon (struct mh_machine *mach)
 
 /*     month      date     string   month of the year (abbrev.) */
 static void
-builtin_month (struct mh_machine *mach)
+builtin_month (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1148,7 +1112,7 @@ builtin_month (struct mh_machine *mach)
 
 /*      lmonth     date     string   month of the year*/
 static void
-builtin_lmonth (struct mh_machine *mach)
+builtin_lmonth (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1163,7 +1127,7 @@ builtin_lmonth (struct mh_machine *mach)
 
 /*     year       date     integer  year (may be > 100)*/
 static void
-builtin_year (struct mh_machine *mach)
+builtin_year (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1176,7 +1140,7 @@ builtin_year (struct mh_machine *mach)
 
 /*     zone       date     integer  timezone in hours*/
 static void
-builtin_zone (struct mh_machine *mach)
+builtin_zone (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1189,7 +1153,7 @@ builtin_zone (struct mh_machine *mach)
 
 /*     tzone      date     string   timezone string */
 static void
-builtin_tzone (struct mh_machine *mach)
+builtin_tzone (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1219,7 +1183,7 @@ builtin_tzone (struct mh_machine *mach)
 /*      szone      date     integer  timezone explicit?
 	(0=implicit,-1=unknown) */
 static void
-builtin_szone (struct mh_machine *mach)
+builtin_szone (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1232,14 +1196,14 @@ builtin_szone (struct mh_machine *mach)
 }
 
 static void
-builtin_str_noop (struct mh_machine *mach)
+builtin_str_noop (struct mh_fvm *mach)
 {
   mh_string_move (mach, R_REG, R_ARG);
 }
 
 /*     date2local date              coerce date to local timezone*/
 static void
-builtin_date2local (struct mh_machine *mach)
+builtin_date2local (struct mh_fvm *mach)
 {
   /*FIXME: Noop*/
   builtin_str_noop (mach);
@@ -1247,7 +1211,7 @@ builtin_date2local (struct mh_machine *mach)
 
 /*     date2gmt   date              coerce date to GMT*/
 static void
-builtin_date2gmt (struct mh_machine *mach)
+builtin_date2gmt (struct mh_fvm *mach)
 {
   /*FIXME: Noop*/
   builtin_str_noop (mach);
@@ -1255,7 +1219,7 @@ builtin_date2gmt (struct mh_machine *mach)
 
 /*     dst        date     integer  daylight savings in effect?*/
 static void
-builtin_dst (struct mh_machine *mach)
+builtin_dst (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1271,7 +1235,7 @@ builtin_dst (struct mh_machine *mach)
 
 /*     clock      date     integer  seconds since the UNIX epoch*/
 static void
-builtin_clock (struct mh_machine *mach)
+builtin_clock (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1283,7 +1247,7 @@ builtin_clock (struct mh_machine *mach)
 
 /*     rclock     date     integer  seconds prior to current time*/
 void
-builtin_rclock (struct mh_machine *mach)
+builtin_rclock (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1310,7 +1274,7 @@ struct
 };
 
 static void
-date_cvt (struct mh_machine *mach, int pretty)
+date_cvt (struct mh_fvm *mach, int pretty)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1370,21 +1334,21 @@ date_cvt (struct mh_machine *mach, int pretty)
 
 /*      tws        date     string   official 822 rendering */
 static void
-builtin_tws (struct mh_machine *mach)
+builtin_tws (struct mh_fvm *mach)
 {
   date_cvt (mach, 0);
 }
 
 /*     pretty     date     string   user-friendly rendering*/
 static void
-builtin_pretty (struct mh_machine *mach)
+builtin_pretty (struct mh_fvm *mach)
 {
   date_cvt (mach, 1);
 }
 
 /*     nodate     date     integer  str not a date string */
 static void
-builtin_nodate (struct mh_machine *mach)
+builtin_nodate (struct mh_fvm *mach)
 {
   struct tm tm;
   struct mu_timezone tz;
@@ -1394,7 +1358,7 @@ builtin_nodate (struct mh_machine *mach)
 
 /*     proper     addr     string   official 822 rendering */
 static void
-builtin_proper (struct mh_machine *mach)
+builtin_proper (struct mh_fvm *mach)
 {
   /*FIXME: noop*/
   builtin_str_noop (mach);
@@ -1402,7 +1366,7 @@ builtin_proper (struct mh_machine *mach)
 
 /*     friendly   addr     string   user-friendly rendering*/
 static void
-builtin_friendly (struct mh_machine *mach)
+builtin_friendly (struct mh_fvm *mach)
 {
   mu_address_t addr;
   const char *str;
@@ -1421,7 +1385,7 @@ builtin_friendly (struct mh_machine *mach)
 
 /*     addr       addr     string   mbox@host or host!mbox rendering*/
 static void
-builtin_addr (struct mh_machine *mach)
+builtin_addr (struct mh_fvm *mach)
 {
   const char *arg = mh_string_value (&mach->str[R_ARG]);
   mu_address_t addr;
@@ -1443,7 +1407,7 @@ builtin_addr (struct mh_machine *mach)
 
 /*     pers       addr     string   the personal name**/
 static void
-builtin_pers (struct mh_machine *mach)
+builtin_pers (struct mh_fvm *mach)
 {
   char const *arg = mh_string_value (&mach->str[R_ARG]);
   mu_address_t addr;
@@ -1463,7 +1427,7 @@ builtin_pers (struct mh_machine *mach)
 /* FIXME: mu_address_get_comments never returns any comments. */
 /*     note       addr     string   commentary text*/
 static void
-builtin_note (struct mh_machine *mach)
+builtin_note (struct mh_fvm *mach)
 {
   mu_address_t addr;
   const char *str;
@@ -1481,7 +1445,7 @@ builtin_note (struct mh_machine *mach)
 
 /*     mbox       addr     string   the local mailbox**/
 static void
-builtin_mbox (struct mh_machine *mach)
+builtin_mbox (struct mh_fvm *mach)
 {
   mu_address_t addr;
   char *str;
@@ -1505,7 +1469,7 @@ builtin_mbox (struct mh_machine *mach)
 
 /*     mymbox     addr     integer  the user's addresses? (0=no,1=yes)*/
 static void
-builtin_mymbox (struct mh_machine *mach)
+builtin_mymbox (struct mh_fvm *mach)
 {
   mu_address_t addr;
   const char *str;
@@ -1522,7 +1486,7 @@ builtin_mymbox (struct mh_machine *mach)
 
 /*     host       addr     string   the host domain**/
 static void
-builtin_host (struct mh_machine *mach)
+builtin_host (struct mh_fvm *mach)
 {
   mu_address_t addr;
   char *str;
@@ -1545,7 +1509,7 @@ builtin_host (struct mh_machine *mach)
 
 /*     nohost     addr     integer  no host was present**/
 static void
-builtin_nohost (struct mh_machine *mach)
+builtin_nohost (struct mh_fvm *mach)
 {
   mu_address_t addr;
   const char *str;
@@ -1565,7 +1529,7 @@ builtin_nohost (struct mh_machine *mach)
 /*     type       addr     integer  host type* (0=local,1=network,
        -1=uucp,2=unknown)*/
 static void
-builtin_type (struct mh_machine *mach)
+builtin_type (struct mh_fvm *mach)
 {
   mu_address_t addr;
   int rc;
@@ -1592,7 +1556,7 @@ builtin_type (struct mh_machine *mach)
 
 /*     path       addr     string   any leading host route**/
 static void
-builtin_path (struct mh_machine *mach)
+builtin_path (struct mh_fvm *mach)
 {
   mu_address_t addr;
   const char *str;
@@ -1607,7 +1571,7 @@ builtin_path (struct mh_machine *mach)
 
 /*     ingrp      addr     integer  address was inside a group**/
 static void
-builtin_ingrp (struct mh_machine *mach)
+builtin_ingrp (struct mh_fvm *mach)
 {
   /*FIXME:*/
   builtin_not_implemented ("ingrp");
@@ -1616,7 +1580,7 @@ builtin_ingrp (struct mh_machine *mach)
 
 /*     gname      addr     string   name of group**/
 static void
-builtin_gname (struct mh_machine *mach)
+builtin_gname (struct mh_fvm *mach)
 {
   /*FIXME:*/
   builtin_not_implemented ("gname");
@@ -1626,7 +1590,7 @@ builtin_gname (struct mh_machine *mach)
 /*     formataddr expr              append arg to str as a
        (comma separated) address list */
 static void
-builtin_formataddr (struct mh_machine *mach)
+builtin_formataddr (struct mh_fvm *mach)
 {
   mu_address_t addr, dest;
   int i;
@@ -1678,7 +1642,7 @@ builtin_formataddr (struct mh_machine *mach)
    some address-checking as well.
 */
 static void
-builtin_putaddr (struct mh_machine *mach)
+builtin_putaddr (struct mh_fvm *mach)
 {
   if (!mh_string_is_null (&mach->str[R_ARG]))
     print_hdr_string (mach, mh_string_value (&mach->str[R_ARG]));
@@ -1689,7 +1653,7 @@ builtin_putaddr (struct mh_machine *mach)
 /* GNU extension: Strip leading whitespace and eventual Re: (or Re\[[0-9]+\]:)
    prefix from the argument */
 static void
-builtin_unre (struct mh_machine *mach)
+builtin_unre (struct mh_fvm *mach)
 {
   char const *arg = mh_string_value (&mach->str[R_ARG]);
   char const *p;
@@ -1707,7 +1671,7 @@ builtin_unre (struct mh_machine *mach)
 }  
 
 static void
-builtin_isreply (struct mh_machine *mach)
+builtin_isreply (struct mh_fvm *mach)
 {
   int rc;
   
@@ -1728,7 +1692,7 @@ builtin_isreply (struct mh_machine *mach)
 }
 
 static void
-builtin_decode (struct mh_machine *mach)
+builtin_decode (struct mh_fvm *mach)
 {
   char *tmp;
   
@@ -1743,7 +1707,7 @@ builtin_decode (struct mh_machine *mach)
 }
 
 static void
-builtin_reply_regex (struct mh_machine *mach)
+builtin_reply_regex (struct mh_fvm *mach)
 {
   mh_set_reply_regex (mh_string_value (&mach->str[R_ARG]));
 }
@@ -1764,7 +1728,7 @@ mh_decode_rcpt_flag (const char *arg)
 }
 
 static void
-builtin_rcpt (struct mh_machine *mach)
+builtin_rcpt (struct mh_fvm *mach)
 {
   int rc = mh_decode_rcpt_flag (mh_string_value (&mach->str[R_ARG]));
   if (rc == RCPT_NONE)
@@ -1776,7 +1740,7 @@ builtin_rcpt (struct mh_machine *mach)
 }
 
 static void
-builtin_printhdr (struct mh_machine *mach)
+builtin_printhdr (struct mh_fvm *mach)
 {
   char *tmp = NULL;
   size_t s = 0;
@@ -1802,7 +1766,7 @@ builtin_printhdr (struct mh_machine *mach)
 }
 
 static void
-builtin_in_reply_to (struct mh_machine *mach)
+builtin_in_reply_to (struct mh_fvm *mach)
 {
   char *value;
 
@@ -1815,7 +1779,7 @@ builtin_in_reply_to (struct mh_machine *mach)
 }
 
 static void
-builtin_references (struct mh_machine *mach)
+builtin_references (struct mh_fvm *mach)
 {
   char *value;
 
@@ -1828,19 +1792,19 @@ builtin_references (struct mh_machine *mach)
 }
 
 static void
-builtin_package (struct mh_machine *mach)
+builtin_package (struct mh_fvm *mach)
 {
   mh_string_load (&mach->str[R_REG], PACKAGE);
 }
 
 static void
-builtin_package_string (struct mh_machine *mach)
+builtin_package_string (struct mh_fvm *mach)
 {
   mh_string_load (&mach->str[R_REG], PACKAGE_STRING);
 }
 
 static void
-builtin_version (struct mh_machine *mach)
+builtin_version (struct mh_fvm *mach)
 {
   mh_string_load (&mach->str[R_REG], VERSION);
 }
@@ -2100,3 +2064,93 @@ mh_format_dump_disass (mh_format_t fmt)
       printf ("\n");
     }
 }
+
+void
+mh_fvm_create (mh_fvm_t *fvmp, int flags)
+{
+  mh_fvm_t fvm;
+  const char *charset;
+  
+  fvm = mu_zalloc (sizeof *fvm);
+
+  fvm->flags = flags;
+  
+  fvm->output = mu_strout;
+  mu_stream_ref (fvm->output);
+  
+  MU_ASSERT (mu_list_create (&fvm->addrlist));
+
+  charset = mh_global_profile_get ("Charset", NULL);
+  if (charset && strcmp (charset, "auto"))
+    {
+      /* Try to set LC_CTYPE according to the value of Charset variable.
+	 If Charset is `auto', there's no need to do anything, since it
+	 is already set. Otherwise, we need to construct a valid locale
+	 value with Charset as its codeset part. The problem is, what
+	 language and territory to use for that locale.
+	 
+	 Neither LANG nor any other environment variable is of any use,
+	 because if it were, the user would have set "Charset: auto".
+	 It would be logical to use 'C' or 'POSIX', but these do not
+	 work with '.UTF-8'. So, in the absence of any viable alternative,
+	 'en_US' is selected. This choice may be overridden by setting
+	 the LC_BASE mh_profile variable to the desired base part.
+      */
+      const char *lc_base = mh_global_profile_get ("LC_BASE", "en_US");
+      char *locale = mu_alloc (strlen (lc_base) + 1 + strlen (charset) + 1);
+      strcpy (locale, lc_base);
+      strcat (locale, ".");
+      strcat (locale, charset);
+      if (!setlocale (LC_CTYPE, locale))
+        mu_error (_("cannot set LC_CTYPE %s"), locale);
+      free (locale);
+    }
+  //FIXME fvm->charset = charset;
+
+  *fvmp = fvm;
+}
+
+void
+mh_fvm_destroy (mh_fvm_t *fvmp)
+{
+  if (fvmp)
+    {
+      mh_fvm_t fvm = *fvmp;
+
+      free (fvm->prog);
+      mh_string_free (&fvm->str[R_REG]);
+      mh_string_free (&fvm->str[R_ARG]);
+      addrlist_destroy (&fvm->addrlist);
+
+      mu_stream_unref (fvm->output);
+      
+      free (fvm);
+      *fvmp = fvm;
+    }
+}
+
+void
+mh_fvm_set_output (mh_fvm_t fvm, mu_stream_t str)
+{
+  mu_stream_unref (fvm->output);
+  fvm->output = str;
+  mu_stream_ref (fvm->output);
+}
+
+void
+mh_fvm_set_width (mh_fvm_t fvm, size_t width)
+{
+  fvm->width = width - 1;
+}
+
+void
+mh_fvm_set_format (mh_fvm_t fvm, mh_format_t fmt)
+{
+  size_t sz = fmt->progcnt * sizeof (fvm->prog[0]);
+  fvm->prog = mu_realloc (fvm->prog, sz);
+  memcpy (fvm->prog, fmt->prog, sz);
+}
+
+
+
+
