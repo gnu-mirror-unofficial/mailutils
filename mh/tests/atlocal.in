@@ -4,6 +4,7 @@
 # Inc.
 
 PATH=@abs_builddir@:@abs_top_builddir@/testsuite:@abs_top_builddir@/mh:$top_srcdir:$srcdir:$PATH
+MHETCDIR=@abs_top_srcdir@/mh/etc
 
 # mimeflt [FILE]
 # Filter out all variable information from a MIME message in FILE.

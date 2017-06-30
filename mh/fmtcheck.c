@@ -97,7 +97,8 @@ main (int argc, char **argv)
   switch (argc)
     {
     case 0:
-      dump_option = 1;
+      if (!disass_option)
+	dump_option = 1;
       break;
       
     case 1:

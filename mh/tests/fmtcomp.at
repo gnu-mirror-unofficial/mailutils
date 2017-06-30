@@ -1,0 +1,318 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2010-2012, 2014-2017 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_BANNER(Format compilation)
+
+dnl ------------------------------------------------------------
+dnl fmtcheck([NAME], [INPUT], [STDOUT = `'], [STDERR = `'])
+dnl
+m4_pushdef([FMTCOMP],[
+AT_SETUP([$1])
+AT_KEYWORDS([format fmtcomp])
+AT_CHECK([fmtcheck -disass -dump -format '$2'
+],
+[m4_if([$4],[],[0],[1])],
+[$3],[$4])
+AT_CLEANUP])
+
+FMTCOMP([literal],
+[text],
+[PRINT("text")
+ 0001: sets reg, "text"
+ 0007: prints
+ 0008: stop
+])
+
+FMTCOMP([component],
+[%{from}],
+[PRINT(COMPONENT.from)
+ 0001: ldcomp reg, "from"
+ 0007: prints
+ 0008: stop
+])
+
+FMTCOMP([component formatted],
+[%-40{from}],
+[FORMAT(RALIGN|NOZEROPAD|NOCOMPWS, 40, COMPONENT.from)
+ 0001: ldcomp reg, "from"
+ 0007: fmtspec RALIGN|NOZEROPAD|NOCOMPWS, 40
+ 0009: prints
+ 0010: stop
+])
+
+FMTCOMP([function call],
+[%(msg)],
+[PRINT(msg())
+ 0001: call msg
+ 0003: printn
+ 0004: stop
+])
+
+FMTCOMP([function call formatted],
+[%08(msg)],
+[FORMAT(NORALIGN|ZEROPAD|NOCOMPWS, 8, msg())
+ 0001: call msg
+ 0003: fmtspec NORALIGN|ZEROPAD|NOCOMPWS, 8
+ 0005: printn
+ 0006: stop
+])
+
+FMTCOMP([function call with argument],
+[%(lit text: )],
+[PRINT(lit("text: "))
+ 0001: sets arg, "text: "
+ 0007: call lit
+ 0009: prints
+ 0010: stop
+])
+
+FMTCOMP([function call with numeric argument],
+[%(num 10)],
+[PRINT(num(10))
+ 0001: setn arg, 10
+ 0004: call num
+ 0006: printn
+ 0007: stop
+])
+
+FMTCOMP([function call with numeric argument and format spec],
+[%08(num 10)],
+[FORMAT(NORALIGN|ZEROPAD|NOCOMPWS, 8, num(10))
+ 0001: setn arg, 10
+ 0004: call num
+ 0006: fmtspec NORALIGN|ZEROPAD|NOCOMPWS, 8
+ 0008: printn
+ 0009: stop
+])
+
+FMTCOMP([function call with component argument],
+[%(decode{subject})],
+[PRINT(decode(COMPONENT.subject))
+ 0001: ldcomp reg, "subject"
+ 0008: movs arg, reg
+ 0011: call decode
+ 0013: prints
+ 0014: stop
+])
+
+FMTCOMP([nested function calls],
+[%(null(decode{subject}))],
+[PRINT(null(decode(COMPONENT.subject)))
+ 0001: ldcomp reg, "subject"
+ 0008: movs arg, reg
+ 0011: call decode
+ 0013: movs arg, reg
+ 0016: call null
+ 0018: printn
+ 0019: stop
+])
+
+FMTCOMP([nested function calls with typecast],
+[%(zero(decode{subject}))],
+[PRINT(zero(NUM(decode(COMPONENT.subject))))
+ 0001: ldcomp reg, "subject"
+ 0008: movs arg, reg
+ 0011: call decode
+ 0013: atoi
+ 0014: movn arg, reg
+ 0017: call zero
+ 0019: printn
+ 0020: stop
+])
+
+FMTCOMP([simple conditional],
+[%<{replied}-%>],
+[IF (COMPONENT.replied) THEN
+  PRINT("-")
+FI
+ 0001: ldcomp reg, "replied"
+ 0008: brzs 18
+ 0010: sets reg, "-"
+ 0015: prints
+ 0016: branch 26
+ 0018: setn reg, 0
+ 0021: sets reg, ""
+ 0026: stop
+],[],[-format])
+
+FMTCOMP([if-else],
+[%<{replied}-%|+%>],
+[IF (COMPONENT.replied) THEN
+  PRINT("-")
+ELSE
+  PRINT("+")
+FI
+ 0001: ldcomp reg, "replied"
+ 0008: brzs 18
+ 0010: sets reg, "-"
+ 0015: prints
+ 0016: branch 24
+ 0018: sets reg, "+"
+ 0023: prints
+ 0024: stop
+])
+
+FMTCOMP([if-elsif-else],
+[%<{replied}-%?{encrypted}E%| %>],
+[IF (COMPONENT.replied) THEN
+  PRINT("-")
+ELSE
+  IF (COMPONENT.encrypted) THEN
+    PRINT("E")
+  ELSE
+    PRINT(" ")
+  FI
+FI
+ 0001: ldcomp reg, "replied"
+ 0008: brzs 18
+ 0010: sets reg, "-"
+ 0015: prints
+ 0016: branch 41
+ 0018: ldcomp reg, "encrypted"
+ 0025: brzs 35
+ 0027: sets reg, "E"
+ 0032: prints
+ 0033: branch 41
+ 0035: sets reg, " "
+ 0040: prints
+ 0041: stop
+])
+
+# The example below is taken from mh-format(1), subsection
+# "Other Hints and Tips".
+# It issues a spurious PRINT instruction, which is intended.  The following
+# testcase uses a fixed version. 
+FMTCOMP([inline conditional],
+[%(formataddr %<{reply-to}%|%{from}%>)],
+[formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE PRINT(COMPONENT.from); FI)
+ 0001: ldcomp reg, "reply-to"
+ 0008: brzs 12
+ 0010: branch 19
+ 0012: ldcomp reg, "from"
+ 0018: prints
+ 0019: movs arg, reg
+ 0022: call formataddr
+ 0024: stop
+])
+
+FMTCOMP([inline conditional (2)],
+[%(formataddr %<{reply-to}%|%(void{from})%>)],
+[formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE COMPONENT.from; FI)
+ 0001: ldcomp reg, "reply-to"
+ 0008: brzs 12
+ 0010: branch 18
+ 0012: ldcomp reg, "from"
+ 0018: movs arg, reg
+ 0021: call formataddr
+ 0023: stop
+])
+
+FMTCOMP([statement list],
+[%(formataddr %<{reply-to}%|%(void{from})%>)%(void(width))%(putaddr To: )],
+[formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE COMPONENT.from; FI)
+width()
+putaddr("To: ")
+ 0001: ldcomp reg, "reply-to"
+ 0008: brzs 12
+ 0010: branch 18
+ 0012: ldcomp reg, "from"
+ 0018: movs arg, reg
+ 0021: call formataddr
+ 0023: call width
+ 0025: sets arg, "To: "
+ 0031: call putaddr
+ 0033: stop
+])
+
+m4_popdef[FMTCOMP])
+
+# FMTCOMP(NAME,INPUT,ERR)
+m4_pushdef([FMTCOMP],[
+AT_SETUP([$1])
+AT_KEYWORDS([format fmtdiag])
+AT_DATA([input.fmt],[$2])
+AT_CHECK([fmtcheck -form input.fmt
+],
+[1],
+[],
+[$3])
+AT_CLEANUP])
+
+AT_BANNER(Format error diagnostics)
+
+FMTCOMP([unknown function],
+[%; comment
+test %(function)
+],
+[fmtcheck: input.fmt:2.8-15: unknown function
+fmtcheck: test %(function)
+fmtcheck:        ^      ^
+])
+
+FMTCOMP([condition syntax],
+[%<%{reply-to}%|%{from}%>
+],
+[[fmtcheck: input.fmt:1.1-2: '(' or '{' expected]
+fmtcheck: %<%{reply-to}%|%{from}%>
+fmtcheck: ^^
+])
+
+FMTCOMP([unclosed control],
+[%<{reply-to}%|%{from}>
+],
+[fmtcheck: input.fmt:1.22: syntax error, unexpected $end, expecting %>
+fmtcheck: %<{reply-to}%|%{from}
+fmtcheck:                      ^
+])
+
+FMTCOMP([extra ELSE],
+[%<{reply-to}%|test%|test%>
+],
+[fmtcheck: input.fmt:1.19-20: syntax error, unexpected %|, expecting %>
+fmtcheck: %<{reply-to}%|test%|test%>
+fmtcheck:                   ^^
+])
+
+# FIXME: Error locations in the following tests could be improved, if
+# %locations were enabled.
+
+FMTCOMP([unwanted argument],
+[%(msg 10)
+],
+[fmtcheck: input.fmt:1.9: function doesn't take arguments
+fmtcheck: %(msg 10)
+fmtcheck:         ^
+])
+
+FMTCOMP([missing argument],
+[%(decode)
+],
+[fmtcheck: input.fmt:1.9: required argument missing
+fmtcheck: %(decode)
+fmtcheck:         ^
+])
+
+FMTCOMP([argument type mismatch],
+[%(lit{comp})
+],
+[fmtcheck: input.fmt:1.12: argument must be literal
+fmtcheck: %(lit{comp})
+fmtcheck:            ^
+])
+
+m4_popdef[FMTCOMP])
+
+# End of fmtcomp.at

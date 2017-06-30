@@ -137,20 +137,22 @@ static struct node *typecast (struct node *node, enum mh_type type);
   } arg;
 };
 
-%token <num> NUMBER
-%token <str> STRING COMPONENT
-%token <arg> ARGUMENT
-%token <builtin> FUNCTION
-%token IF ELIF ELSE FI
-%token <fmtspec> FMTSPEC
+%token <num> NUMBER "number"
+%token <str> STRING "string" COMPONENT "component"
+%token <arg> ARGUMENT "argument"
+%token <builtin> FUNCTION "function name"
+%token IF "%<" ELIF "%?" ELSE "%|" FI "%>"
+%token <fmtspec> FMTSPEC "format specifier"
 %token BOGUS
-%token EOFN
+%token EOFN ")"
 
 %type <nodelist> list zlist elif_list
 %type <nodeptr> item escape component funcall cntl argument
 %type <nodeptr> cond cond_expr elif_part else_part printable
 %type <builtin> function
 %type <fmtspec> fmtspec
+
+%error-verbose
 
 %%
 
@@ -234,14 +236,28 @@ funcall   : function argument EOFN
 		    }
 		  else if (arg == NULL)
 		    {
-		      if (($1->optarg & MHA_LITERAL)
-			  && $1->argtype == mhtype_str)
+		      if ($1->optarg & MHA_OPTARG_NIL)
 			{
-			  arg = new_node (fmtnode_literal, mhtype_str);
-			  arg->v.str = "";
+			  switch ($1->argtype)
+			    {
+			    case mhtype_str:
+			      arg = new_node (fmtnode_literal, mhtype_str);
+			      arg->v.str = "";
+			      break;
+
+			    case mhtype_num:
+			      arg = new_node (fmtnode_number, mhtype_num);
+			      arg->v.num = 0;
+			      break;
+
+			    default:
+			      abort ();
+			    }
 			}
 		      else if ($1->optarg & MHA_OPTARG)
-			/* ok - ignore */;
+			{
+			  /* ok - ignore */;
+			}
 		      else
 			{
 			  yyerror ("required argument missing");
@@ -535,11 +551,16 @@ yyerror (const char *s)
 	    mu_stream_write (mu_strerr, bol + i, 1, NULL);
 	}
       mu_stream_write (mu_strerr, "\n", 1, NULL);
-      mu_error ("%*.*s^%*.*s^",
-		b + yylloc.beg.mu_col - 1,
-		b + yylloc.beg.mu_col - 1, "",
-		e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1,
-		e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1, "");
+      if (mu_locus_point_eq (&yylloc.beg, &yylloc.end))
+	mu_error ("%*.*s^",
+		  b + yylloc.beg.mu_col - 1,
+		  b + yylloc.beg.mu_col - 1, "");
+      else
+	mu_error ("%*.*s^%*.*s^",
+		  b + yylloc.beg.mu_col - 1,
+		  b + yylloc.beg.mu_col - 1, "",
+		  e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1,
+		  e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1, "");
     }
   return 0;
 }
@@ -666,7 +687,9 @@ yylex_initial (void)
 	case '<':
 	  return IF;
 	case '%':
-	  return '%';
+	  unput (c);
+	  unput (c);
+	  break;
 	case '(':
 	  unput (c);
 	  return token_function ();

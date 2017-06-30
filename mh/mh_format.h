@@ -126,6 +126,7 @@ struct mh_format
 #define MHA_OPTARG        0x1
 #define MHA_LITERAL       0x2
 #define MHA_VOID          0x4
+#define MHA_OPTARG_NIL    0x8
 
 typedef struct mh_builtin mh_builtin_t;
 

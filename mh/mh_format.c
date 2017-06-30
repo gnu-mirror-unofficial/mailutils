@@ -97,7 +97,7 @@ mh_string_load (struct mh_string *s, char const *str)
 }
 
 static void
-mh_string_move (struct mh_fvm *mach, enum regid dst, enum regid src)
+mh_string_copy (struct mh_fvm *mach, enum regid dst, enum regid src)
 {
   mh_string_load (&mach->str[dst], mach->str[src].ptr);
 }
@@ -546,7 +546,7 @@ mh_fvm_run (mh_fvm_t mach, mu_message_t msg, size_t msgno)
 	  {
 	    long dst = MHI_NUM (mach->prog[mach->pc++]);
 	    long src = MHI_NUM (mach->prog[mach->pc++]);
-	    mh_string_move (mach, dst, src);
+	    mh_string_copy (mach, dst, src);
 	    /* FIXME: perhaps copy, not move? */
 	  }
 	  break;
@@ -696,7 +696,8 @@ static void
 builtin_msg (struct mh_fvm *mach)
 {
   size_t msgno = mach->msgno;
-  mh_message_number (mach->message, &msgno);
+  if (msgno == 0)
+    mh_message_number (mach->message, &msgno);
   mach->num[R_REG] = msgno;
 }
 
@@ -714,7 +715,8 @@ builtin_cur (struct mh_fvm *mach)
       mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_mailbox", NULL, rc);
       exit (1);
     }
-  mh_message_number (mach->message, &msgno);
+  if (msgno == 0)
+    mh_message_number (mach->message, &msgno);
   mh_mailbox_get_cur (mbox, &cur); /* FIXME: Cache this */
   mach->num[R_REG] = msgno == cur;
 }
@@ -795,7 +797,8 @@ builtin_amatch (struct mh_fvm *mach)
 {
   char const *arg = mh_string_value (&mach->str[R_ARG]);
   size_t len = strlen (arg);
-  mach->num[R_REG] = strncmp (mh_string_value (&mach->str[R_REG]), arg, len);
+  mach->num[R_REG] =
+    strncmp (mh_string_value (&mach->str[R_REG]), arg, len) == 0;
 }
 
 static void
@@ -844,7 +847,7 @@ builtin_num (struct mh_fvm *mach)
 static void
 builtin_lit (struct mh_fvm *mach)
 {
-  mh_string_move (mach, R_REG, R_ARG);
+  mh_string_copy (mach, R_REG, R_ARG);
 }
 
 static void
@@ -891,7 +894,7 @@ static void
 builtin_comp (struct mh_fvm *mach)
 {
   /* FIXME: Check this */
-  mh_string_move (mach, R_REG, R_ARG);
+  mh_string_copy (mach, R_REG, R_ARG);
 }
 
 /*     compval    comp     integer  num set to "atoi(comp)"*/
@@ -1198,7 +1201,7 @@ builtin_szone (struct mh_fvm *mach)
 static void
 builtin_str_noop (struct mh_fvm *mach)
 {
-  mh_string_move (mach, R_REG, R_ARG);
+  mh_string_copy (mach, R_REG, R_ARG);
 }
 
 /*     date2local date              coerce date to local timezone*/
@@ -1830,15 +1833,15 @@ mh_builtin_t builtin_tab[] = {
   { "minus",    builtin_minus,    mhtype_num,  mhtype_num,  MHA_LITERAL },
   { "divide",   builtin_divide,   mhtype_num,  mhtype_num,  MHA_LITERAL },
   { "modulo",   builtin_modulo,   mhtype_num,  mhtype_num,  MHA_LITERAL },
-  { "num",      builtin_num,      mhtype_num,  mhtype_num,  MHA_LITERAL },
-  { "lit",      builtin_lit,      mhtype_str,  mhtype_str,  MHA_LITERAL },
+  { "num",      builtin_num,      mhtype_num,  mhtype_num,  MHA_LITERAL|MHA_OPTARG|MHA_OPTARG_NIL },
+  { "lit",      builtin_lit,      mhtype_str,  mhtype_str,  MHA_LITERAL|MHA_OPTARG|MHA_OPTARG_NIL },
   { "getenv",   builtin_getenv,   mhtype_str,  mhtype_str,  MHA_LITERAL },
   { "profile",  builtin_profile,  mhtype_str,  mhtype_str,  MHA_LITERAL },
   { "nonzero",  builtin_nonzero,  mhtype_num,  mhtype_num,  MHA_OPTARG },
   { "zero",     builtin_zero,     mhtype_num,  mhtype_num,  MHA_OPTARG },
   { "null",     builtin_null,     mhtype_num,  mhtype_str,  MHA_OPTARG },
   { "nonnull",  builtin_nonnull,  mhtype_num,  mhtype_str,  MHA_OPTARG },
-  { "comp",     builtin_comp,     mhtype_num,  mhtype_str,  MHA_OPTARG },
+  { "comp",     builtin_comp,     mhtype_str,  mhtype_str },
   { "compval",  builtin_compval,  mhtype_num,  mhtype_str },	   
   { "trim",     builtin_trim,     mhtype_none, mhtype_str,  MHA_OPTARG },
   { "putstr",   builtin_putstr,   mhtype_none, mhtype_str,  MHA_OPTARG },
@@ -2055,6 +2058,7 @@ mh_format_dump_disass (mh_format_t fmt)
 	    int fmtspec = MHI_NUM (prog[pc++]);
 	    printf ("fmtspec ");
 	    mh_print_fmtspec (fmtspec);
+	    printf(", %d", fmtspec & MH_WIDTH_MASK);
 	  }
 	  break;
 
