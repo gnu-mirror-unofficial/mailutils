@@ -706,7 +706,7 @@ yylex_initial (void)
 	  return bogus ("component or function name expected");
       }
     }
-
+  
   c = peek ();
   
   if (c == 0)
@@ -1392,16 +1392,32 @@ codegen_node (struct mh_format *fmt, struct node *node)
   switch (node->nodetype)
     {
     case fmtnode_print:
-      codegen_node (fmt, node->v.prt.arg);
-      if (node->v.prt.fmtspec)
+      if (node->v.prt.arg->nodetype == fmtnode_literal)
 	{
-	  emit_opcode (fmt, mhop_fmtspec);
-	  emit_instr (fmt, (mh_instr_t) (long) node->v.prt.fmtspec);
+	  emit_opcode (fmt, mhop_printlit);
+	  emit_string (fmt, node->v.prt.arg->v.str);
 	}
-
-      if (node->v.prt.arg->datatype != mhtype_none)
-	emit_opcode_typed (fmt, node->v.prt.arg->datatype,
-			   mhop_printn, mhop_prints);
+      else if (node->v.prt.arg->nodetype == fmtnode_number)
+	{
+	  char *s;
+	  emit_opcode (fmt, mhop_printlit);
+	  mu_asprintf (&s, "%ld", node->v.prt.arg->v.num);
+	  emit_string (fmt, s);
+	  free (s);
+	}
+      else
+	{
+	  codegen_node (fmt, node->v.prt.arg);
+	  if (node->v.prt.fmtspec)
+	    {
+	      emit_opcode (fmt, mhop_fmtspec);
+	      emit_instr (fmt, (mh_instr_t) (long) node->v.prt.fmtspec);
+	    }
+	  
+	  if (node->v.prt.arg->datatype != mhtype_none)
+	    emit_opcode_typed (fmt, node->v.prt.arg->datatype,
+			       mhop_printn, mhop_prints);
+	}
       break;
 
     case fmtnode_literal:

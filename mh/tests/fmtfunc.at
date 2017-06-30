@@ -84,14 +84,12 @@ FMTFUNC([void],
 [])
 
 FMTFUNC([strlen],
-[%(lit string)
-%(strlen)
+[%(lit string)=%(strlen)
 ],
 [
 
 ],
-[string
-6
+[string=6
 ])
 
 # FIXME: Not quite sure: perhaps it should report 80
@@ -221,7 +219,7 @@ AT_CHECK([MH_TEST=defined fmtcheck -form input.fmt -width 80 message
 AT_CLEANUP
 
 AT_SETUP([profile])
-AT_KEYWORDS([fmtfunc format])
+AT_KEYWORDS([fmtfunc format])xo
 AT_DATA([input.fmt],[%(profile Local-Mailbox)
 %(profile undefined)
 %(profile moreproc)
@@ -307,6 +305,68 @@ X-Level: 8
 ],
 [8
 ])
+
+# FIXME: This relies on LC_ALL=C
+FMTFUNC([decode],
+[%(decode{Subject})
+],
+[Subject: =?ISO-8859-1?B?SWYgeW91IGNhbiByZWFkIHRoaXMgeW8=?= ... =?ISO-8859-2?B?dSB1bmRlcnN0YW5kIHRoZSBleGFtcGxlLg==?=
+
+body
+],
+[If you can read this yo ... u understand the example.
+])
+
+# FIXME: unquote
+
+FMTFUNC([trim],
+[%(void(lit trailing    ))%(strlen)
+%(trim)%(strlen)
+],
+[
+
+],
+[12
+8
+])
+
+FMTFUNC([putstr],
+[%(void(lit string))%(putstr)
+%(putstr test)
+%(putstr{from})
+%(putstr(msg))
+],
+[From: foo@example.org
+
+],
+[string
+test
+foo@example.org
+1
+])
+
+# FIXME: putstrf
+
+FMTFUNC([putnum],
+[%(void(num 10))%(putnum)
+%(putnum 15)
+%(putnum{X-Number})
+%(putstr(msg))
+],
+[From: foo@example.org
+X-Number: 8
+
+body
+],
+[10
+15
+8
+1
+])
+
+# FIXME: putnumf
+
+# FIXME: putlit
 
 
 

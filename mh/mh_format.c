@@ -633,6 +633,15 @@ mh_fvm_run (mh_fvm_t mach, mu_message_t msg, size_t msgno)
 	  format_str (mach, mach->str[R_REG].ptr);
 	  break;
 
+	case mhop_printlit:
+	  {
+	    size_t skip = MHI_NUM (mach->prog[mach->pc++]);
+	    char const *str = MHI_STR (mach->prog[mach->pc]);
+	    format_str (mach, str);
+	    mach->pc += skip;
+	  }
+	  break;
+	  
 	case mhop_fmtspec:
 	  mach->fmtflags = MHI_NUM (mach->prog[mach->pc++]);
 	  break;
@@ -734,7 +743,7 @@ builtin_size (struct mh_fvm *mach)
 static void
 builtin_strlen (struct mh_fvm *mach)
 {
-  mach->num[R_REG] = mh_string_length (&mach->str[R_ARG]);
+  mach->num[R_REG] = mh_string_length (&mach->str[R_REG]);
 }
 
 static void
@@ -2051,6 +2060,15 @@ mh_format_dump_disass (mh_format_t fmt)
 	  
 	case mhop_prints:
 	  printf ("prints");
+	  break;
+
+	case mhop_printlit:
+	  {
+	    size_t skip = MHI_NUM (prog[pc++]);
+	    char const *str = MHI_STR (prog[pc]);
+	    pc += skip;
+	    printf ("printlit \"%s\"", str);
+	  }
 	  break;
 	  
 	case mhop_fmtspec:

@@ -78,6 +78,10 @@ enum mh_opcode
   /* Print str reg */
   mhop_prints,
 
+  /* Print literal
+     Format: mhop_printlit length string */
+  mhop_printlit,
+  
   /* Set format specification.
      Format: mhop_fmtspec number */
   mhop_fmtspec,
