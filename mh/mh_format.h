@@ -140,7 +140,7 @@ struct mh_builtin
   mh_builtin_fp fun;
   enum mh_type type;
   enum mh_type argtype;
-  int optarg;
+  int flags;
 };
 
 struct mh_string

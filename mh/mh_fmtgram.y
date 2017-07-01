@@ -218,7 +218,7 @@ component : COMPONENT
 funcall   : function argument EOFN
             {
 	      ctx_pop ();
-	      if ($1->optarg & MHA_VOID) /*FIXME*/
+	      if ($1->flags & MHA_VOID) /*FIXME*/
 		{
 		  $2->noprint = 1;
 		  $$ = $2;
@@ -236,7 +236,7 @@ funcall   : function argument EOFN
 		    }
 		  else if (arg == NULL)
 		    {
-		      if ($1->optarg & MHA_OPTARG_NIL)
+		      if ($1->flags & MHA_OPTARG_NIL)
 			{
 			  switch ($1->argtype)
 			    {
@@ -254,7 +254,7 @@ funcall   : function argument EOFN
 			      abort ();
 			    }
 			}
-		      else if ($1->optarg & MHA_OPTARG)
+		      else if ($1->flags & MHA_OPTARG)
 			{
 			  /* ok - ignore */;
 			}
@@ -264,7 +264,7 @@ funcall   : function argument EOFN
 			  YYABORT;
 			}
 		    }
-		  else if ($1->optarg & MHA_LITERAL)
+		  else if ($1->flags & MHA_LITERAL)
 		    {
 		      if (!(arg->nodetype == fmtnode_literal
 			    || arg->nodetype == fmtnode_number))
@@ -1345,7 +1345,7 @@ emit_funcall (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
 {
   if (arg)
     {
-      if (builtin->optarg & MHA_LITERAL)
+      if (builtin->flags & MHA_LITERAL)
 	{
 	  switch (arg->nodetype)
 	    {
