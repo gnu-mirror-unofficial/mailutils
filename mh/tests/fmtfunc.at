@@ -345,7 +345,16 @@ foo@example.org
 1
 ])
 
-# FIXME: putstrf
+FMTFUNC([putstrf],
+[%(void(comp{Subject}))%-20(putstrf)
+],
+[From: foo@example.org
+Subject: test message
+
+body
+],
+[        test message
+])
 
 FMTFUNC([putnum],
 [%(void(num 10))%(putnum)

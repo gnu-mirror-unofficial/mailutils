@@ -933,7 +933,7 @@ builtin_putstr (struct mh_fvm *mach)
 static void
 builtin_putstrf (struct mh_fvm *mach)
 {
-  format_str (mach, mh_string_value (&mach->str[R_ARG]));
+  mh_string_copy (mach, R_REG, R_ARG);
 }
 
 /*     putnum     expr              print num*/
@@ -1842,8 +1842,8 @@ mh_builtin_t builtin_tab[] = {
   { "minus",    builtin_minus,    mhtype_num,  mhtype_num,  MHA_LITERAL },
   { "divide",   builtin_divide,   mhtype_num,  mhtype_num,  MHA_LITERAL },
   { "modulo",   builtin_modulo,   mhtype_num,  mhtype_num,  MHA_LITERAL },
-  { "num",      builtin_num,      mhtype_num,  mhtype_num,  MHA_LITERAL|MHA_OPTARG|MHA_OPTARG_NIL },
-  { "lit",      builtin_lit,      mhtype_str,  mhtype_str,  MHA_LITERAL|MHA_OPTARG|MHA_OPTARG_NIL },
+  { "num",      NULL,             mhtype_num,  mhtype_num,  MHA_LITERAL|MHA_OPTARG|MHA_OPTARG_NIL|MHA_SPECIAL },
+  { "lit",      NULL,             mhtype_str,  mhtype_str,  MHA_LITERAL|MHA_OPTARG|MHA_OPTARG_NIL|MHA_SPECIAL },
   { "getenv",   builtin_getenv,   mhtype_str,  mhtype_str,  MHA_LITERAL },
   { "profile",  builtin_profile,  mhtype_str,  mhtype_str,  MHA_LITERAL },
   { "nonzero",  builtin_nonzero,  mhtype_num,  mhtype_num,  MHA_OPTARG },
@@ -1854,9 +1854,9 @@ mh_builtin_t builtin_tab[] = {
   { "compval",  builtin_compval,  mhtype_num,  mhtype_str },	   
   { "trim",     builtin_trim,     mhtype_none, mhtype_str,  MHA_OPTARG },
   { "putstr",   builtin_putstr,   mhtype_none, mhtype_str,  MHA_OPTARG },
-  { "putstrf",  builtin_putstrf,  mhtype_none, mhtype_str,  MHA_OPTARG },
+  { "putstrf",  NULL,             mhtype_str,  mhtype_str,  MHA_SPECIAL|MHA_OPTARG },
   { "putnum",   builtin_putnum,   mhtype_none, mhtype_num,  MHA_OPTARG },
-  { "putnumf",  builtin_putnumf,  mhtype_none, mhtype_num,  MHA_OPTARG },
+  { "putnumf",  NULL,             mhtype_num,  mhtype_num,  MHA_SPECIAL|MHA_OPTARG },
   { "sec",      builtin_sec,      mhtype_num,  mhtype_str },
   { "min",      builtin_min,      mhtype_num,  mhtype_str },
   { "hour",     builtin_hour,     mhtype_num,  mhtype_str },
@@ -1907,7 +1907,7 @@ mh_builtin_t builtin_tab[] = {
   { "reply_regex", builtin_reply_regex, mhtype_none, mhtype_str },
   { "isreply", builtin_isreply, mhtype_num, mhtype_str, MHA_OPTARG },
   { "decode", builtin_decode, mhtype_str, mhtype_str },
-  { "void",   NULL, mhtype_none, mhtype_none, MHA_VOID },
+  { "void",   NULL, mhtype_none, mhtype_str, MHA_VOID },
   { 0 }
 };
 

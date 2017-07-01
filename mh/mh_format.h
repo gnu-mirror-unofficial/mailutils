@@ -127,10 +127,15 @@ struct mh_format
 };
 
 #define MHA_DEFAULT       0
-#define MHA_OPTARG        0x1
-#define MHA_LITERAL       0x2
-#define MHA_VOID          0x4
-#define MHA_OPTARG_NIL    0x8
+#define MHA_IGNOREFMT     0x001
+#define MHA_NOPRINT       0x002 
+#define MHA_PRINT_MASK    0x003
+
+#define MHA_OPTARG        0x004
+#define MHA_OPTARG_NIL    0x008
+#define MHA_LITERAL       0x010
+#define MHA_VOID          0x020
+#define MHA_SPECIAL       0x040
 
 typedef struct mh_builtin mh_builtin_t;
 
@@ -173,3 +178,4 @@ struct mh_fvm
 
 mh_builtin_t *mh_lookup_builtin (char *name, size_t len);
 void mh_print_fmtspec (int fmtspec);
+

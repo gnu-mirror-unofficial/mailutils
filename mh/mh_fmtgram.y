@@ -82,7 +82,7 @@ struct node
 {
   enum node_type nodetype;
   enum mh_type datatype;
-  int noprint:1;
+  int printflag;
   struct node *prev, *next;
   union
   {
@@ -188,12 +188,12 @@ item      : STRING
 escape    : cntl
           | fmtspec printable
             {
-	      if ($2->noprint)
+	      if ($2->printflag & MHA_NOPRINT)
 		$$ = $2;
 	      else
 		{
 		  $$ = new_node (fmtnode_print, $2->datatype);
-		  $$->v.prt.fmtspec = $1;
+		  $$->v.prt.fmtspec = ($2->printflag & MHA_IGNOREFMT) ? 0 : $1;
 		  $$->v.prt.arg = $2;
 		}
 	    }
@@ -217,67 +217,99 @@ component : COMPONENT
 
 funcall   : function argument EOFN
             {
+	      struct node *arg;
+
 	      ctx_pop ();
-	      if ($1->flags & MHA_VOID) /*FIXME*/
+
+	      arg = $2;
+	      if ($1->argtype == mhtype_none)
 		{
-		  $2->noprint = 1;
-		  $$ = $2;
-		}
-	      else
-		{
-		  struct node *arg = $2;
-		  if ($1->argtype == mhtype_none)
+		  if (arg)
 		    {
-		      if (arg)
+		      yyerror ("function doesn't take arguments");
+		      YYABORT;
+		    }
+		}
+	      else if (arg == NULL)
+		{
+		  if ($1->flags & MHA_OPTARG_NIL)
+		    {
+		      switch ($1->argtype)
 			{
-			  yyerror ("function doesn't take arguments");
-			  YYABORT;
+			case mhtype_str:
+			  arg = new_node (fmtnode_literal, mhtype_str);
+			  arg->v.str = "";
+			  break;
+			  
+			case mhtype_num:
+			  arg = new_node (fmtnode_number, mhtype_num);
+			  arg->v.num = 0;
+			  break;
+			  
+			default:
+			  abort ();
 			}
 		    }
-		  else if (arg == NULL)
+		  else if ($1->flags & MHA_OPTARG)
 		    {
-		      if ($1->flags & MHA_OPTARG_NIL)
-			{
-			  switch ($1->argtype)
-			    {
-			    case mhtype_str:
-			      arg = new_node (fmtnode_literal, mhtype_str);
-			      arg->v.str = "";
-			      break;
-
-			    case mhtype_num:
-			      arg = new_node (fmtnode_number, mhtype_num);
-			      arg->v.num = 0;
-			      break;
-
-			    default:
-			      abort ();
-			    }
-			}
-		      else if ($1->flags & MHA_OPTARG)
-			{
-			  /* ok - ignore */;
-			}
+		      /* ok - ignore */;
+		    }
+		  else
+		    {
+		      yyerror ("required argument missing");
+		      YYABORT;
+		    }
+		}
+	      else if ($1->flags & MHA_LITERAL)
+		{
+		  switch ($1->argtype)
+		    {
+		    case mhtype_num:
+		      if (arg->nodetype == fmtnode_number)
+			/* ok */;
 		      else
 			{
-			  yyerror ("required argument missing");
+			  yyerror ("argument must be a number");
 			  YYABORT;
 			}
-		    }
-		  else if ($1->flags & MHA_LITERAL)
-		    {
-		      if (!(arg->nodetype == fmtnode_literal
-			    || arg->nodetype == fmtnode_number))
+		      break;
+
+		    case mhtype_str:
+		      if (arg->nodetype == fmtnode_literal)
+			/* ok */;
+		      else if (arg->nodetype == fmtnode_number)
+			{
+			  char *s;
+			  mu_asprintf (&s, "%ld", arg->v.num);
+			  arg->nodetype = fmtnode_literal;
+			  arg->datatype = mhtype_str;
+			  arg->v.str = s;
+			}
+		      else
 			{
 			  yyerror ("argument must be literal");
 			  YYABORT;
 			}
+		      break;
+
+		    default:
+		      break;
 		    }
-			
+		}
+	      
+	      if ($1->flags & MHA_VOID)
+		{
+		  $2->printflag = MHA_NOPRINT;
+		  $$ = $2;
+		}
+	      else
+		{
 		  $$ = new_node (fmtnode_funcall, $1->type);
 		  $$->v.funcall.builtin = $1;
 		  $$->v.funcall.arg = typecast (arg, $1->argtype);
-		  $$->noprint = $1->type == mhtype_none;
+		  $$->printflag = $1->flags & MHA_PRINT_MASK;
+		  if ($1->type == mhtype_none)
+		    $$->printflag = MHA_NOPRINT;
 		}
 	    }
           ;
@@ -783,9 +815,10 @@ yylex_expr (void)
 int
 yylex_func (void)
 {
+  int c;
+
   /* Expected argument or closing parenthesis */
-  mark ();
-  skip (MU_CTYPE_SPACE);
+ again:
   mark ();
   switch (peek ())
     {
@@ -813,42 +846,58 @@ yylex_func (void)
 	default:
 	  return bogus ("expected '%' or '<'");
 	}
+      break;
+
+    case ' ':
+    case '\t':
+      skip (MU_CTYPE_SPACE);
+      if (peek () == '%')
+	goto again;
+      break;
+
+    default:
+      return input ();
     }
 
-  if (mu_isdigit (peek ()))
-    {
-      yylval.arg.type = mhtype_num;
-      yylval.arg.v.num = strtol (curp, &curp, 0);
-    }
-  else
-    {
-      int c;
+  mark ();
 
-      while ((c = input ()) != ')')
+  while ((c = input ()) != ')')
+    {
+      if (c == 0)
 	{
-	  if (c == 0)
-	    {
-	      return bogus ("expected ')'");
-	    }
-      
-	  if (c == '\\')
-	    {
-	      if ((c = input ()) == 0)
-		{
-		  return bogus ("unexpected end of file");
-		}
-	      mu_opool_append_char (tokpool, backslash (c));
-	    }
-	  else
-	    mu_opool_append_char (tokpool, c);
+	  return bogus ("expected ')'");
 	}
-	mu_opool_append_char (tokpool, 0);
-
-      yylval.arg.type = mhtype_str;
-      yylval.arg.v.str = mu_opool_finish (tokpool, NULL);
-      unput (c);
+      
+      if (c == '\\')
+	{
+	  if ((c = input ()) == 0)
+	    {
+	      return bogus ("unexpected end of file");
+	    }
+	  mu_opool_append_char (tokpool, backslash (c));
+	}
+      else
+	mu_opool_append_char (tokpool, c);
     }
+  mu_opool_append_char (tokpool, 0);
+
+  yylval.arg.v.str = mu_opool_finish (tokpool, NULL);
+  yylval.arg.type = mhtype_str;
+  unput (c);
   
+  if (mu_isdigit (yylval.arg.v.str[0]))
+    {
+      long n;
+      char *p;
+      errno = 0;
+      n = strtol (yylval.arg.v.str, &p, 0);
+      if (errno == 0 && *p == 0)
+	{
+	  yylval.arg.type = mhtype_num;
+	  yylval.arg.v.num = n;
+	}
+    }
+
   if (peek () != ')')
     {
       return bogus ("expected ')'");
@@ -1056,17 +1105,20 @@ typecast (struct node *node, enum mh_type type)
   
   if (node->datatype == type)
     return node;
-  if (node->nodetype == fmtnode_cntl)
+  switch (node->nodetype)
     {
+    case fmtnode_cntl:
       node->v.cntl.iftrue = typecast (node->v.cntl.iftrue, type);
       node->v.cntl.iffalse = typecast (node->v.cntl.iffalse, type);
       node->datatype = type;
-    }
-  else
-    {
-      struct node *np = new_node (fmtnode_typecast, type);
-      np->v.arg = node;
-      node = np;
+      break;
+
+    default:
+      {
+	struct node *arg = new_node (fmtnode_typecast, type);
+	arg->v.arg = node;
+	node = arg;
+      }
     }
   return node;
 }
@@ -1341,8 +1393,44 @@ emit_opcode_typed (struct mh_format *fmt, enum mh_type type,
 }
 
 static void
+emit_special (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
+{
+  if (arg)
+    {
+      if (builtin->flags & MHA_LITERAL)
+	{
+	  switch (arg->nodetype)
+	    {
+	    case fmtnode_literal:
+	      emit_opcode (fmt, mhop_sets);
+	      emit_instr (fmt, (mh_instr_t) (long) R_REG);
+	      emit_string (fmt, arg->v.str);
+	      break;
+
+	    case fmtnode_number:
+	      emit_opcode (fmt, mhop_setn);
+	      emit_instr (fmt, (mh_instr_t) (long) R_REG);
+	      emit_instr (fmt, (mh_instr_t) (long) arg->v.num);
+	      break;
+
+	    default:
+	      abort ();
+	    }
+	}
+      else
+	codegen_node (fmt, arg);
+    }
+}
+
+static void
 emit_funcall (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
 {
+  if (builtin->flags & MHA_SPECIAL)
+    {
+      emit_special (fmt, builtin, arg);
+      return;
+    }
+
   if (arg)
     {
       if (builtin->flags & MHA_LITERAL)
@@ -1379,7 +1467,7 @@ emit_funcall (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
       emit_instr (fmt, (mh_instr_t) (long) R_ARG);
       emit_instr (fmt, (mh_instr_t) (long) R_REG);
     }
-  
+
   emit_opcode (fmt, mhop_call);
   emit_instr (fmt, (mh_instr_t) builtin->fun);
 }
@@ -1539,7 +1627,5 @@ codegen (mh_format_t *fmtptr, int tree)
       mu_opool_destroy (&tokpool);
     }
 }
-
-
-  
+
 

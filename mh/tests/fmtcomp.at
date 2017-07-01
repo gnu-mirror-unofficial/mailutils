@@ -69,29 +69,29 @@ FMTCOMP([function call formatted],
  0006: stop
 ])
 
-FMTCOMP([function call with argument],
-[%(lit text: )],
-[PRINT(lit("text: "))
- 0001: sets arg, "text: "
- 0007: call lit
+FMTCOMP([function call with literal argument],
+[%(getenv PATH)],
+[PRINT(getenv("PATH"))
+ 0001: sets arg, "PATH"
+ 0007: call getenv
  0009: prints
  0010: stop
 ])
 
 FMTCOMP([function call with numeric argument],
-[%(num 10)],
-[PRINT(num(10))
+[%(plus 10)],
+[PRINT(plus(10))
  0001: setn arg, 10
- 0004: call num
+ 0004: call plus
  0006: printn
  0007: stop
 ])
 
 FMTCOMP([function call with numeric argument and format spec],
-[%08(num 10)],
-[FORMAT(NORALIGN|ZEROPAD|NOCOMPWS, 8, num(10))
+[%08(plus 10)],
+[FORMAT(NORALIGN|ZEROPAD|NOCOMPWS, 8, plus(10))
  0001: setn arg, 10
- 0004: call num
+ 0004: call plus
  0006: fmtspec NORALIGN|ZEROPAD|NOCOMPWS, 8
  0008: printn
  0009: stop
@@ -131,6 +131,36 @@ FMTCOMP([nested function calls with typecast],
  0019: printn
  0020: stop
 ])
+
+FMTCOMP([lit],
+[%(lit string)%(lit 10)dnl
+[%(lit (comp)]dnl
+%(lit)],
+[PRINT(lit("string"))
+PRINT(lit("10"))
+PRINT(lit(["(comp"]))
+PRINT(lit(""))
+ 0001: sets reg, "string"
+ 0007: prints
+ 0008: sets reg, "10"
+ 0013: prints
+ 0014: sets reg, ["(comp"]
+ 0020: prints
+ 0021: sets reg, ""
+ 0026: prints
+ 0027: stop
+])
+
+FMTCOMP([num],
+[%(num 10)%(num)],
+[PRINT(num(10))
+PRINT(num(0))
+ 0001: setn reg, 10
+ 0004: printn
+ 0005: setn reg, 0
+ 0008: printn
+ 0009: stop
+])     
 
 FMTCOMP([simple conditional],
 [%<{replied}-%>],
