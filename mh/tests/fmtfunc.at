@@ -360,7 +360,7 @@ FMTFUNC([putnum],
 [%(void(num 10))%(putnum)
 %(putnum 15)
 %(putnum{X-Number})
-%(putstr(msg))
+%(putnum(msg))
 ],
 [From: foo@example.org
 X-Number: 8
@@ -373,8 +373,16 @@ body
 1
 ])
 
-# FIXME: putnumf
+FMTFUNC([putnumf],
+[%(void(num 10))%03(putnumf)
+%(void(num 65535))%03(putnumf)
+],
+[
 
+],
+[010
+?35
+])
 # FIXME: putlit
 
 

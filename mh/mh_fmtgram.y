@@ -676,6 +676,14 @@ token_function (void)
     {
       return bogus ("unknown function");
     }
+  if (!yylval.builtin->fun
+      && !(yylval.builtin->flags & (MHA_SPECIAL|MHA_VOID)))
+    {
+      mu_error ("INTERNAL ERROR at %s:%d: \"%s\" has no associated function"
+		" and is not marked as MHA_SPECIAL",
+		__FILE__, __LINE__, yylval.builtin->name);
+      abort ();
+    }
   
   return FUNCTION;
 }

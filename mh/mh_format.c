@@ -848,18 +848,6 @@ builtin_modulo (struct mh_fvm *mach)
 }
 
 static void
-builtin_num (struct mh_fvm *mach)
-{
-  mach->num[R_REG] = mach->num[R_ARG];
-}
-
-static void
-builtin_lit (struct mh_fvm *mach)
-{
-  mh_string_copy (mach, R_REG, R_ARG);
-}
-
-static void
 builtin_getenv (struct mh_fvm *mach)
 {
   char const *val = getenv (mh_string_value (&mach->str[R_ARG]));
@@ -920,37 +908,6 @@ builtin_trim (struct mh_fvm *mach)
 {
   if (!mh_string_is_null (&mach->str[R_REG]))
     mu_rtrim_class (mach->str[R_REG].ptr, MU_CTYPE_SPACE);
-}
-
-/*     putstr     expr              print str*/
-static void
-builtin_putstr (struct mh_fvm *mach)
-{
-  print_string (mach, 0, mh_string_value (&mach->str[R_ARG]));
-}
-
-/*     putstrf    expr              print str in a fixed width*/
-static void
-builtin_putstrf (struct mh_fvm *mach)
-{
-  mh_string_copy (mach, R_REG, R_ARG);
-}
-
-/*     putnum     expr              print num*/
-static void
-builtin_putnum (struct mh_fvm *mach)
-{
-  char *p;
-  mu_asprintf (&p, "%ld", mach->num[R_ARG]);
-  print_string (mach, 0, p);
-  free (p);
-}
-
-/*     putnumf    expr              print num in a fixed width*/
-static void
-builtin_putnumf (struct mh_fvm *mach)
-{
-  format_num (mach, mach->num[R_ARG]);
 }
 
 static int
@@ -1852,11 +1809,11 @@ mh_builtin_t builtin_tab[] = {
   { "nonnull",  builtin_nonnull,  mhtype_num,  mhtype_str,  MHA_OPTARG },
   { "comp",     builtin_comp,     mhtype_str,  mhtype_str },
   { "compval",  builtin_compval,  mhtype_num,  mhtype_str },	   
-  { "trim",     builtin_trim,     mhtype_none, mhtype_str,  MHA_OPTARG },
-  { "putstr",   builtin_putstr,   mhtype_none, mhtype_str,  MHA_OPTARG },
-  { "putstrf",  NULL,             mhtype_str,  mhtype_str,  MHA_SPECIAL|MHA_OPTARG },
-  { "putnum",   builtin_putnum,   mhtype_none, mhtype_num,  MHA_OPTARG },
-  { "putnumf",  NULL,             mhtype_num,  mhtype_num,  MHA_SPECIAL|MHA_OPTARG },
+  { "trim",     builtin_trim,     mhtype_none, mhtype_str, MHA_OPTARG },
+  { "putstr",   NULL,             mhtype_str,  mhtype_str, MHA_SPECIAL|MHA_OPTARG|MHA_OPTARG|MHA_IGNOREFMT },
+  { "putstrf",  NULL,             mhtype_str,  mhtype_str, MHA_SPECIAL|MHA_OPTARG },
+  { "putnum",   NULL,             mhtype_num,  mhtype_num, MHA_SPECIAL|MHA_OPTARG|MHA_IGNOREFMT },
+  { "putnumf",  NULL,             mhtype_num,  mhtype_num, MHA_SPECIAL|MHA_OPTARG },
   { "sec",      builtin_sec,      mhtype_num,  mhtype_str },
   { "min",      builtin_min,      mhtype_num,  mhtype_str },
   { "hour",     builtin_hour,     mhtype_num,  mhtype_str },
