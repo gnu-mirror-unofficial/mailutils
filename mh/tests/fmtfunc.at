@@ -399,4 +399,16 @@ body
 1
 ])
 
+FMTFUNC([formataddr],
+[%(formataddr{From})%(formataddr{To})%(formataddr{Reply-To})%(putstr)
+],
+[From: root@example.com
+To: gray@example.org
+Reply-To: root@example.com
+
+data
+],
+[<root@example.com>,<gray@example.org>
+])
+
 m4_popdef([FMTFUNC])

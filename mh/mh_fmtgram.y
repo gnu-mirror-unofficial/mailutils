@@ -1433,6 +1433,13 @@ emit_special (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
 static void
 emit_funcall (struct mh_format *fmt, mh_builtin_t *builtin, struct node *arg)
 {
+  if (builtin->flags & MHA_ACC)
+    {
+      emit_opcode (fmt, mhop_movs);
+      emit_instr (fmt, (mh_instr_t) (long) R_ACC);
+      emit_instr (fmt, (mh_instr_t) (long) R_REG);
+    }
+  
   if (builtin->flags & MHA_SPECIAL)
     {
       emit_special (fmt, builtin, arg);

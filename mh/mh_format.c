@@ -483,6 +483,7 @@ mh_fvm_run (mh_fvm_t mach, mu_message_t msg, size_t msgno)
   mu_list_clear (mach->addrlist);
   mh_string_clear (&mach->str[R_REG]);
   mh_string_clear (&mach->str[R_ARG]);
+  mh_string_clear (&mach->str[R_ACC]);
 
   mach->pc = 1;
   mach->stop = 0;
@@ -1569,9 +1570,9 @@ builtin_formataddr (struct mh_fvm *mach)
   size_t num;
   const char *buf;
   
-  if (mh_string_is_null (&mach->str[R_REG]))
+  if (mh_string_is_null (&mach->str[R_ACC]))
     dest = NULL;
-  else if (mu_address_create (&dest, mh_string_value (&mach->str[R_REG])))
+  else if (mu_address_create (&dest, mh_string_value (&mach->str[R_ACC])))
     return;
     
   if (mu_address_create (&addr, mh_string_value (&mach->str[R_ARG])))
@@ -1854,7 +1855,7 @@ mh_builtin_t builtin_tab[] = {
   { "path",     builtin_path,     mhtype_str,  mhtype_str },
   { "ingrp",    builtin_ingrp,    mhtype_num,  mhtype_str },
   { "gname",    builtin_gname,    mhtype_str,  mhtype_str},
-  { "formataddr", builtin_formataddr, mhtype_none, mhtype_str, MHA_OPTARG },
+  { "formataddr", builtin_formataddr, mhtype_none, mhtype_str, MHA_ACC },
   { "putaddr",  builtin_putaddr,  mhtype_none, mhtype_str, MHA_LITERAL },
   { "unre",     builtin_unre,     mhtype_str,  mhtype_str },
   { "rcpt",     builtin_rcpt,     mhtype_num,  mhtype_str },
@@ -1903,7 +1904,8 @@ mh_format_dump_disass (mh_format_t fmt)
   int stop = 0;
   static char *regname[] = {
     [R_REG] = "reg",
-    [R_ARG] = "arg"
+    [R_ARG] = "arg",
+    [R_ACC] = "acc"
   };
   static char c_trans[] = "\\\\\"\"a\ab\bf\fn\nr\rt\tv\v";
   
@@ -2104,6 +2106,7 @@ mh_fvm_destroy (mh_fvm_t *fvmp)
       free (fvm->prog);
       mh_string_free (&fvm->str[R_REG]);
       mh_string_free (&fvm->str[R_ARG]);
+      mh_string_free (&fvm->str[R_ACC]);
       addrlist_destroy (&fvm->addrlist);
 
       mu_stream_unref (fvm->output);

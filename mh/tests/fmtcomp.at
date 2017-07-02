@@ -221,26 +221,28 @@ FI
 FMTCOMP([inline conditional],
 [%(formataddr %<{reply-to}%|%{from}%>)],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE PRINT(COMPONENT.from); FI)
- 0001: ldcomp reg, "reply-to"
- 0008: brzs 12
- 0010: branch 19
- 0012: ldcomp reg, "from"
- 0018: prints
- 0019: movs arg, reg
- 0022: call formataddr
- 0024: stop
+ 0001: movs acc, reg
+ 0004: ldcomp reg, "reply-to"
+ 0011: brzs 15
+ 0013: branch 22
+ 0015: ldcomp reg, "from"
+ 0021: prints
+ 0022: movs arg, reg
+ 0025: call formataddr
+ 0027: stop
 ])
 
 FMTCOMP([inline conditional (2)],
 [%(formataddr %<{reply-to}%|%(void{from})%>)],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE COMPONENT.from; FI)
- 0001: ldcomp reg, "reply-to"
- 0008: brzs 12
- 0010: branch 18
- 0012: ldcomp reg, "from"
- 0018: movs arg, reg
- 0021: call formataddr
- 0023: stop
+ 0001: movs acc, reg
+ 0004: ldcomp reg, "reply-to"
+ 0011: brzs 15
+ 0013: branch 21
+ 0015: ldcomp reg, "from"
+ 0021: movs arg, reg
+ 0024: call formataddr
+ 0026: stop
 ])
 
 FMTCOMP([statement list],
@@ -248,16 +250,17 @@ FMTCOMP([statement list],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE COMPONENT.from; FI)
 width()
 putaddr("To: ")
- 0001: ldcomp reg, "reply-to"
- 0008: brzs 12
- 0010: branch 18
- 0012: ldcomp reg, "from"
- 0018: movs arg, reg
- 0021: call formataddr
- 0023: call width
- 0025: sets arg, "To: "
- 0031: call putaddr
- 0033: stop
+ 0001: movs acc, reg
+ 0004: ldcomp reg, "reply-to"
+ 0011: brzs 15
+ 0013: branch 21
+ 0015: ldcomp reg, "from"
+ 0021: movs arg, reg
+ 0024: call formataddr
+ 0026: call width
+ 0028: sets arg, "To: "
+ 0034: call putaddr
+ 0036: stop
 ])
 
 m4_popdef[FMTCOMP])

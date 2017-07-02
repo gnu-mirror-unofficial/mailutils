@@ -87,7 +87,7 @@ enum mh_opcode
   mhop_fmtspec,
 };    
 
-enum regid { R_REG, R_ARG };
+enum regid { R_REG, R_ARG, R_ACC };
 
 enum mh_type
 {
@@ -136,6 +136,7 @@ struct mh_format
 #define MHA_LITERAL       0x010
 #define MHA_VOID          0x020
 #define MHA_SPECIAL       0x040
+#define MHA_ACC           0x080
 
 typedef struct mh_builtin mh_builtin_t;
 
@@ -157,7 +158,7 @@ struct mh_string
 struct mh_fvm
 {
   long num[2];              /* numeric registers */
-  struct mh_string str[2];  /* string registers */
+  struct mh_string str[3];  /* string registers */
   
   size_t pc;                /* Program counter */
   size_t progcnt;           /* Size of allocated program*/
