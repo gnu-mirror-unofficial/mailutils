@@ -383,8 +383,20 @@ FMTFUNC([putnumf],
 [010
 ?35
 ])
+
 # FIXME: putlit
 
+FMTFUNC([nodate],
+[%(nodate{date})
+%(nodate{from})
+],
+[From: foo@example.org
+Date: Sat, 01 Jul 2017 08:00:01 +0300
 
+body
+],
+[0
+1
+])
 
 m4_popdef([FMTFUNC])

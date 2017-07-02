@@ -1319,10 +1319,13 @@ builtin_pretty (struct mh_fvm *mach)
 static void
 builtin_nodate (struct mh_fvm *mach)
 {
+  char const *date = mh_string_value (&mach->str[R_ARG]);
+  const char *p = date;
   struct tm tm;
   struct mu_timezone tz;
   
-  mach->num[R_REG] = _parse_date (mach, &tm, &tz);
+  mach->num[R_REG] =
+    mu_parse822_date_time (&p, date + strlen (date), &tm, &tz) != 0;
 }
 
 /*     proper     addr     string   official 822 rendering */
@@ -1902,7 +1905,8 @@ mh_format_dump_disass (mh_format_t fmt)
     [R_REG] = "reg",
     [R_ARG] = "arg"
   };
-
+  static char c_trans[] = "\\\\\"\"a\ab\bf\fn\nr\rt\tv\v";
+  
   if (!prog)
     return;
   while (!stop)
@@ -1953,9 +1957,7 @@ mh_format_dump_disass (mh_format_t fmt)
 	    char const *str = MHI_STR (prog[pc]);
 	    char *prt;
 	    
-	    MU_ASSERT (mu_c_str_escape_trans (str,
-					      "\\\\\"\"a\ab\bf\fn\nr\rt\tv\v",
-					      &prt));
+	    MU_ASSERT (mu_c_str_escape_trans (str, c_trans, &prt));
 	    
 	    pc += skip;
 	    printf ("sets %s, \"%s\"", regname[reg], prt);
@@ -2023,8 +2025,11 @@ mh_format_dump_disass (mh_format_t fmt)
 	  {
 	    size_t skip = MHI_NUM (prog[pc++]);
 	    char const *str = MHI_STR (prog[pc]);
+	    char *prt;
 	    pc += skip;
-	    printf ("printlit \"%s\"", str);
+	    MU_ASSERT (mu_c_str_escape_trans (str, c_trans, &prt));
+	    printf ("printlit \"%s\"", prt);
+	    free (prt);
 	  }
 	  break;
 	  
