@@ -31,105 +31,105 @@ AT_CLEANUP])
 FMTCOMP([literal],
 [text],
 [PRINT("text")
- 0001: printlit "text"
- 0006: stop
+        printlit "text"
+        stop
 ])
 
 FMTCOMP([component],
 [%{from}],
 [PRINT(COMPONENT.from)
- 0001: ldcomp reg, "from"
- 0007: prints
- 0008: stop
+        ldcomp reg, "from"
+        prints
+        stop
 ])
 
 FMTCOMP([component formatted],
 [%-40{from}],
 [FORMAT(RALIGN|NOZEROPAD|NOCOMPWS, 40, COMPONENT.from)
- 0001: ldcomp reg, "from"
- 0007: fmtspec RALIGN|NOZEROPAD|NOCOMPWS, 40
- 0009: prints
- 0010: stop
+        ldcomp reg, "from"
+        fmtspec RALIGN|NOZEROPAD|NOCOMPWS, 40
+        prints
+        stop
 ])
 
 FMTCOMP([function call],
 [%(msg)],
 [PRINT(msg())
- 0001: call msg
- 0003: printn
- 0004: stop
+        call msg
+        printn
+        stop
 ])
 
 FMTCOMP([function call formatted],
 [%08(msg)],
 [FORMAT(NORALIGN|ZEROPAD|NOCOMPWS, 8, msg())
- 0001: call msg
- 0003: fmtspec NORALIGN|ZEROPAD|NOCOMPWS, 8
- 0005: printn
- 0006: stop
+        call msg
+        fmtspec NORALIGN|ZEROPAD|NOCOMPWS, 8
+        printn
+        stop
 ])
 
 FMTCOMP([function call with literal argument],
 [%(getenv PATH)],
 [PRINT(getenv("PATH"))
- 0001: sets arg, "PATH"
- 0007: call getenv
- 0009: prints
- 0010: stop
+        sets arg, "PATH"
+        call getenv
+        prints
+        stop
 ])
 
 FMTCOMP([function call with numeric argument],
 [%(plus 10)],
 [PRINT(plus(10))
- 0001: setn arg, 10
- 0004: call plus
- 0006: printn
- 0007: stop
+        setn arg, 10
+        call plus
+        printn
+        stop
 ])
 
 FMTCOMP([function call with numeric argument and format spec],
 [%08(plus 10)],
 [FORMAT(NORALIGN|ZEROPAD|NOCOMPWS, 8, plus(10))
- 0001: setn arg, 10
- 0004: call plus
- 0006: fmtspec NORALIGN|ZEROPAD|NOCOMPWS, 8
- 0008: printn
- 0009: stop
+        setn arg, 10
+        call plus
+        fmtspec NORALIGN|ZEROPAD|NOCOMPWS, 8
+        printn
+        stop
 ])
 
 FMTCOMP([function call with component argument],
 [%(decode{subject})],
 [PRINT(decode(COMPONENT.subject))
- 0001: ldcomp reg, "subject"
- 0008: movs arg, reg
- 0011: call decode
- 0013: prints
- 0014: stop
+        ldcomp reg, "subject"
+        movs arg, reg
+        call decode
+        prints
+        stop
 ])
 
 FMTCOMP([nested function calls],
 [%(null(decode{subject}))],
 [PRINT(null(decode(COMPONENT.subject)))
- 0001: ldcomp reg, "subject"
- 0008: movs arg, reg
- 0011: call decode
- 0013: movs arg, reg
- 0016: call null
- 0018: printn
- 0019: stop
+        ldcomp reg, "subject"
+        movs arg, reg
+        call decode
+        movs arg, reg
+        call null
+        printn
+        stop
 ])
 
 FMTCOMP([nested function calls with typecast],
 [%(zero(decode{subject}))],
 [PRINT(zero(NUM(decode(COMPONENT.subject))))
- 0001: ldcomp reg, "subject"
- 0008: movs arg, reg
- 0011: call decode
- 0013: atoi
- 0014: movn arg, reg
- 0017: call zero
- 0019: printn
- 0020: stop
+        ldcomp reg, "subject"
+        movs arg, reg
+        call decode
+        atoi
+        movn arg, reg
+        call zero
+        printn
+        stop
 ])
 
 FMTCOMP([lit],
@@ -140,26 +140,26 @@ FMTCOMP([lit],
 PRINT(lit("10"))
 PRINT(lit(["(comp"]))
 PRINT(lit(""))
- 0001: sets reg, "string"
- 0007: prints
- 0008: sets reg, "10"
- 0013: prints
- 0014: sets reg, ["(comp"]
- 0020: prints
- 0021: sets reg, ""
- 0026: prints
- 0027: stop
+        sets reg, "string"
+        prints
+        sets reg, "10"
+        prints
+        sets reg, ["(comp"]
+        prints
+        sets reg, ""
+        prints
+        stop
 ])
 
 FMTCOMP([num],
 [%(num 10)%(num)],
 [PRINT(num(10))
 PRINT(num(0))
- 0001: setn reg, 10
- 0004: printn
- 0005: setn reg, 0
- 0008: printn
- 0009: stop
+        setn reg, 10
+        printn
+        setn reg, 0
+        printn
+        stop
 ])     
 
 FMTCOMP([simple conditional],
@@ -167,13 +167,13 @@ FMTCOMP([simple conditional],
 [IF (COMPONENT.replied) THEN
   PRINT("-")
 FI
- 0001: ldcomp reg, "replied"
- 0008: brzs 16
- 0010: printlit "-"
- 0014: branch 24
- 0016: setn reg, 0
- 0019: sets reg, ""
- 0024: stop
+        ldcomp reg, "replied"
+        brzs L1
+        printlit "-"
+        branch L2
+L1:     setn reg, 0
+        sets reg, ""
+L2:     stop
 ],[],[-format])
 
 FMTCOMP([if-else],
@@ -183,12 +183,12 @@ FMTCOMP([if-else],
 ELSE
   PRINT("+")
 FI
- 0001: ldcomp reg, "replied"
- 0008: brzs 16
- 0010: printlit "-"
- 0014: branch 20
- 0016: printlit "+"
- 0020: stop
+        ldcomp reg, "replied"
+        brzs L1
+        printlit "-"
+        branch L2
+L1:     printlit "+"
+L2:     stop
 ])
 
 FMTCOMP([if-elsif-else],
@@ -202,16 +202,16 @@ ELSE
     PRINT(" ")
   FI
 FI
- 0001: ldcomp reg, "replied"
- 0008: brzs 16
- 0010: printlit "-"
- 0014: branch 35
- 0016: ldcomp reg, "encrypted"
- 0023: brzs 31
- 0025: printlit "E"
- 0029: branch 35
- 0031: printlit " "
- 0035: stop
+        ldcomp reg, "replied"
+        brzs L1
+        printlit "-"
+        branch L3
+L1:     ldcomp reg, "encrypted"
+        brzs L2
+        printlit "E"
+        branch L3
+L2:     printlit " "
+L3:     stop
 ])
 
 # The example below is taken from mh-format(1), subsection
@@ -221,28 +221,28 @@ FI
 FMTCOMP([inline conditional],
 [%(formataddr %<{reply-to}%|%{from}%>)],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE PRINT(COMPONENT.from); FI)
- 0001: movs acc, reg
- 0004: ldcomp reg, "reply-to"
- 0011: brzs 15
- 0013: branch 22
- 0015: ldcomp reg, "from"
- 0021: prints
- 0022: movs arg, reg
- 0025: call formataddr
- 0027: stop
+        movs acc, reg
+        ldcomp reg, "reply-to"
+        brzs L1
+        branch L2
+L1:     ldcomp reg, "from"
+        prints
+L2:     movs arg, reg
+        call formataddr
+        stop
 ])
 
 FMTCOMP([inline conditional (2)],
 [%(formataddr %<{reply-to}%|%(void{from})%>)],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE COMPONENT.from; FI)
- 0001: movs acc, reg
- 0004: ldcomp reg, "reply-to"
- 0011: brzs 15
- 0013: branch 21
- 0015: ldcomp reg, "from"
- 0021: movs arg, reg
- 0024: call formataddr
- 0026: stop
+        movs acc, reg
+        ldcomp reg, "reply-to"
+        brzs L1
+        branch L2
+L1:     ldcomp reg, "from"
+L2:     movs arg, reg
+        call formataddr
+        stop
 ])
 
 FMTCOMP([statement list],
@@ -250,17 +250,17 @@ FMTCOMP([statement list],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE COMPONENT.from; FI)
 width()
 putaddr("To: ")
- 0001: movs acc, reg
- 0004: ldcomp reg, "reply-to"
- 0011: brzs 15
- 0013: branch 21
- 0015: ldcomp reg, "from"
- 0021: movs arg, reg
- 0024: call formataddr
- 0026: call width
- 0028: sets arg, "To: "
- 0034: call putaddr
- 0036: stop
+        movs acc, reg
+        ldcomp reg, "reply-to"
+        brzs L1
+        branch L2
+L1:     ldcomp reg, "from"
+L2:     movs arg, reg
+        call formataddr
+        call width
+        sets arg, "To: "
+        call putaddr
+        stop
 ])
 
 m4_popdef[FMTCOMP])

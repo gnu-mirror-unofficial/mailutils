@@ -31,6 +31,7 @@ static int debug_option;
 static char *input_file;
 static size_t width;
 static size_t msgno;
+static int pc_option;
 
 void
 opt_formfile (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -58,12 +59,15 @@ static struct mu_option options[] = {
   { "format",  0, N_("FORMAT"), MU_OPTION_DEFAULT,
     N_("use this format string"),
     mu_c_string, NULL, opt_format },
-  { "dump",    0, NULL,     MU_OPTION_HIDDEN,
+  { "dump",    0, NULL,     MU_OPTION_DEFAULT,
     N_("dump the listing of compiled format code"),
     mu_c_bool,   &dump_option },
-  { "disassemble",    0, NULL,     MU_OPTION_HIDDEN,
+  { "disassemble",    0, NULL,     MU_OPTION_DEFAULT,
     N_("dump disassembled format code"),
     mu_c_bool,   &disass_option },
+  { "pc",      0, NULL,     MU_OPTION_DEFAULT,
+    N_("print program counter along with disassembled code (implies --disassemble)"),
+    mu_c_bool,   &pc_option },
   { "debug",   0, NULL,     MU_OPTION_DEFAULT,
     N_("enable parser debugging output"),
     mu_c_bool,   &debug_option },
@@ -94,6 +98,8 @@ int
 main (int argc, char **argv)
 {
   mh_getopt (&argc, &argv, options, 0, args_doc, prog_doc, NULL);
+  if (pc_option)
+    disass_option = 1;
   switch (argc)
     {
     case 0:
@@ -123,7 +129,7 @@ main (int argc, char **argv)
   if (dump_option)
     mh_format_dump_code (format);
   if (disass_option)
-    mh_format_dump_disass (format);
+    mh_format_dump_disass (format, pc_option);
 
   if (input_file)
     run ();

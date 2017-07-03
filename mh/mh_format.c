@@ -1896,8 +1896,128 @@ _get_builtin_name (mh_builtin_fp ptr)
   return NULL;
 }
 
+/* Label array is used when disassembling the code, in order to create.
+   meaningful label names.  The array elements starting from index 1 keep
+   the code addesses to which branch instructions point, in ascending order.
+   Element 0 keeps the number of addresses stored.  Thus, the label
+   array LAB with contents { 3, 2, 5, 7 } declares three labels: "L1" on
+   address 2, "L2", on address 5, and "L3" on address 7.
+*/
+
+/* Find in LAB the index of the label corresponding to the given PC.  Return
+   0 if no label found. */
+size_t
+find_label (size_t *lab, size_t pc)
+{
+  if (lab)
+    {
+      size_t i;
+      for (i = 1; i <= lab[0]; i++)
+	{
+	  if (lab[i] == pc)
+	    return i;
+	}
+    }
+  return 0;
+}
+
+static int
+comp_pc (const void *a, const void *b)
+{
+  size_t pca = *(size_t*)a;
+  size_t pcb = *(size_t*)b;
+  if (pca < pcb)
+    return -1;
+  else if (pca > pcb)
+    return 1;
+  return 0;
+}
+
+/* Extract a label array from a compiled format FMT. */
+static size_t *
+extract_labels (mh_format_t fmt)
+{
+  size_t *lab;
+  size_t pc;
+  long n;
+  
+  lab = mu_calloc (fmt->progcnt, sizeof (lab[0]));
+  lab[0] = 0;
+  for (pc = 1; pc < fmt->progcnt; )
+    {
+      mh_opcode_t opcode = MHI_OPCODE (fmt->prog[pc++]);
+      if (opcode == mhop_stop)
+	break;
+      switch (opcode)
+	{
+	case mhop_branch:
+	case mhop_brzn:
+	case mhop_brzs:
+	  n = MHI_NUM (fmt->prog[pc++]);
+	  if (!find_label (lab, pc + n - 1))
+	    lab[++lab[0]] = pc + n - 1;
+	  break;
+	  
+	case mhop_setn:
+	  pc += 2;
+	  break;
+
+	case mhop_sets:
+	case mhop_ldcomp:
+	  pc += 2 + MHI_NUM (fmt->prog[pc + 1]);
+	  break;
+
+	case mhop_movn:
+	case mhop_movs:
+	  pc += 2;
+	  break;
+
+	case mhop_ldbody:
+	case mhop_call:
+	case mhop_fmtspec:
+	  pc++;
+	  break;
+
+ 	case mhop_printlit:
+	  pc += 1 + MHI_NUM (fmt->prog[pc]);
+	  break;
+
+	case mhop_atoi:
+	case mhop_itoa:
+	case mhop_printn:
+	case mhop_prints:
+	  break;
+
+	default:
+	  abort ();
+	}
+    }
+  if (lab[0] > 0)
+    qsort (lab + 1, lab[0], sizeof lab[0], comp_pc);
+  return lab;
+}
+
+/* Print to *PBUF (of size *PSZ) the label corresponding to the address PC.
+   If there's no label having this address (in particular, if LAB==NULL),
+   format the address itself to *PBUF.
+   Reallocate *PBUF, updating *PSZ, if necessary.
+*/
 void
-mh_format_dump_disass (mh_format_t fmt)
+format_label (size_t *lab, size_t pc, char **pbuf, size_t *psz)
+{
+  size_t ln = find_label (lab, pc);
+  if (ln)
+    mu_asnprintf (pbuf, psz, "L%ld", (long) ln);
+  else
+    mu_asnprintf (pbuf, psz, "%ld", (long) pc);
+}
+
+/* Dump disassembled code of FMT to stdout.  If ADDR is 0, print label names
+   where necessary, otherwise, prefix each line of output with its program
+   counter in decimal.
+*/
+void
+mh_format_dump_disass (mh_format_t fmt, int addr)
 {
   mh_instr_t *prog = fmt->prog;
   size_t pc = 1;
@@ -1908,14 +2028,46 @@ mh_format_dump_disass (mh_format_t fmt)
     [R_ACC] = "acc"
   };
   static char c_trans[] = "\\\\\"\"a\ab\bf\fn\nr\rt\tv\v";
+  size_t *lab;
+  size_t lc;
+  char *lbuf = NULL;
+  size_t lsz = 0;
   
   if (!prog)
     return;
+
+  if (!addr)
+    lab = extract_labels (fmt);
+  else
+    lab = NULL;
+  lc = lab ? 1 : 0;
+
   while (!stop)
     {
       mh_opcode_t opcode;
 
-      printf ("% 4.4ld: ", (long) pc);
+      if (addr)
+	printf ("% 4.4ld: ", (long) pc);
+      else
+	{
+	  int w = 0;
+	  if (lc <= lab[0] && lab[lc] == pc)
+	    {
+	      w = printf ("L%ld:", (long) lc);
+	      lc++;
+	    }
+	  if (w > 8)
+	    {
+	      putchar ('\n');
+	      w = 0;
+	    }
+	  while (w < 8)
+	    {
+	      putchar (' ');
+	      w++;
+	    }
+	}
+      
       switch (opcode = MHI_OPCODE (prog[pc++]))
 	{
 	case mhop_stop:
@@ -1926,21 +2078,24 @@ mh_format_dump_disass (mh_format_t fmt)
 	case mhop_branch:
 	  {
 	    long n =  MHI_NUM (prog[pc++]);
-	    printf ("branch %ld", pc + n - 1);
+	    format_label (lab, pc + n - 1, &lbuf, &lsz);
+	    printf ("branch %s", lbuf);
 	  }
 	  break;
 
 	case mhop_brzn:
 	  {
 	    long n =  MHI_NUM (prog[pc++]);
-	    printf ("brzn %ld", pc + n - 1);
+	    format_label (lab, pc + n - 1, &lbuf, &lsz);
+	    printf ("brzn %s", lbuf);
 	  }
 	  break;
 
 	case mhop_brzs:
 	  {
 	    long n =  MHI_NUM (prog[pc++]);
-	    printf ("brzs %ld", pc + n - 1);
+	    format_label (lab, pc + n - 1, &lbuf, &lsz);
+	    printf ("brzs %s", lbuf);
 	  }
 	  break;
 
@@ -2049,6 +2204,8 @@ mh_format_dump_disass (mh_format_t fmt)
 	}
       printf ("\n");
     }
+  free (lbuf);
+  free (lab);
 }
 
 void

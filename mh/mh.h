@@ -182,7 +182,7 @@ void mh_fvm_run (mh_fvm_t fvm, mu_message_t msg, size_t msgno);
 int mh_format_str (mh_format_t fmt, char *str, size_t width, char **pret);
 
 void mh_format_dump_code (mh_format_t fmt);
-void mh_format_dump_disass (mh_format_t fmt);
+void mh_format_dump_disass (mh_format_t fmt, int addr);
 
 #define MH_FMT_PARSE_DEFAULT 0
 #define MH_FMT_PARSE_TREE 0x01
