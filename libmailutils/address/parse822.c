@@ -1760,7 +1760,7 @@ mu_parse822_time (const char **p, const char *e,
 }
 
 #if 0
-For reference, especially the for the required range and values of the
+For reference, especially for the required range and values of the
 integer fields.
 
 struct tm
@@ -1843,6 +1843,9 @@ mu_parse822_date_time (const char **p, const char *e, struct tm *tm,
       tm->tm_hour = hour;
       tm->tm_min = min;
       tm->tm_sec = sec;
+
+      tm->tm_yday = mu_datetime_dayofyear (tm->tm_year + 1900,
+					   tm->tm_mon + 1, tm->tm_mday) - 1;
 
 #ifdef HAVE_STRUCT_TM_TM_ISDST
       tm->tm_isdst = -1;	/* unknown whether it's dst or not */
