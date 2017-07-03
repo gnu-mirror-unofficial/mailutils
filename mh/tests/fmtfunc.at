@@ -112,7 +112,6 @@ FMTFUNC([charleft],
 ])
 
 # FIXME: timenow
-# FIXME: ne
 # FIXME: myhost
 # FIXME: myname
 # FIXME: localmbox
@@ -410,5 +409,153 @@ data
 ],
 [<root@example.com>,<gray@example.org>
 ])
+
+FMTFUNC([sec],
+[%(sec{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[58
+])
+
+FMTFUNC([min],
+[%(min{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[17
+])
+
+FMTFUNC([hour],
+[%(hour{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[13
+])
+
+FMTFUNC([wday],
+[%(wday{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[1
+])
+
+FMTFUNC([day],
+[%(day{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[Mon
+])
+
+FMTFUNC([weekday],
+[%(weekday{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[Monday
+])
+
+# FIXME: sday
+
+FMTFUNC([mday],
+[%(mday{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[3
+])
+
+FMTFUNC([yday],
+[%(yday{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[183
+])
+
+FMTFUNC([mon],
+[%(mon{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[7
+])
+
+FMTFUNC([month],
+[%(month{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[Jul
+])
+
+FMTFUNC([lmonth],
+[%(lmonth{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[July
+])
+
+FMTFUNC([year],
+[%(year{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[2017
+])
+
+# FIXME: zone
+
+FMTFUNC([tzone],
+[%(tzone{Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+
+],
+[+0300
+])
+
+# FIXME: szone
+
+# FIXME: date2local
+
+# FIXME: date2gmt
+
+# FIXME: dst
+# FMTFUNC([dst],
+# [%(dst{Date})
+# %(dst{X-Date})
+# ],
+# [Date: Mon,  3 Jul 2017 13:17:58 +0300
+# X-Date: Sun,  1 Jan 2017 10:11:00 +0200
+
+# ],
+# [1
+# 0
+# ])
+
+# FIXME: clock
+
+# FIXME: rclock
+
+# FIXME: tws
+
+# FIXME: pretty
 
 m4_popdef([FMTFUNC])
