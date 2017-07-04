@@ -590,4 +590,83 @@ X-Date: Mon,  3 Jul 2017 13:17:58
 
 # FIXME: pretty
 
+FMTFUNC([proper],
+[%(proper{From})
+],
+[From: Sergey <gray@gnu.org>
+
+text
+],
+[Sergey <gray@gnu.org>
+])
+
+FMTFUNC([friendly],
+[%(friendly{From})
+%(friendly{To})
+],
+[From: Sergey <gray@gnu.org>
+To: root@example.com
+
+text
+],
+[Sergey
+root@example.com
+])
+
+FMTFUNC([addr],
+[%(addr{From})
+%(addr{To})
+],
+[From: Sergey <gray@gnu.org>
+To: root@example.com
+
+text
+],
+[gray@gnu.org
+root@example.com
+])
+
+FMTFUNC([pers],
+[from=%(pers{From})
+to=%(pers{To})
+],
+[From: Sergey <gray@gnu.org>
+To: root@example.com
+
+text
+],
+[from=Sergey
+to=
+])
+
+# FIXME: note
+
+FMTFUNC([mbox],
+[%(mbox{From})
+],
+[From: Sergey <gray@gnu.org>
+
+],
+[gray
+])
+
+# FIXME: mymbox
+
+FMTFUNC([host],
+[%(host{From})
+],
+[From: Sergey <gray@gnu.org>
+
+],
+[gnu.org
+])
+
+# FIXME: nohost
+
+# FIXME: path
+
+# FIXME: ingrp
+
+# FIXME: gname
+
 m4_popdef([FMTFUNC])

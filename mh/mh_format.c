@@ -1306,8 +1306,21 @@ builtin_nodate (struct mh_fvm *mach)
 static void
 builtin_proper (struct mh_fvm *mach)
 {
-  /*FIXME: noop*/
-  builtin_str_noop (mach);
+  int rc;
+  char const *str;
+  mu_address_t addr;
+  
+  rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
+  if (rc)
+    {
+      mh_string_copy (mach, R_REG, R_ARG);
+      return;
+    }
+  if (mu_address_sget_printable (addr, &str) == 0)
+    mh_string_load (&mach->str[R_REG], str);
+  else
+    mh_string_copy (mach, R_REG, R_ARG);
+  mu_address_destroy (&addr);
 }
 
 /*     friendly   addr     string   user-friendly rendering*/
@@ -1323,9 +1336,10 @@ builtin_friendly (struct mh_fvm *mach)
     return;
 
   if (mu_address_sget_personal (addr, 1, &str) == 0 && str)
-    {
-      mh_string_load (&mach->str[R_REG], str);
-    }
+    mh_string_load (&mach->str[R_REG], str);
+  else
+    mh_string_copy (mach, R_REG, R_ARG);
+
   mu_address_destroy (&addr);
 }
 
