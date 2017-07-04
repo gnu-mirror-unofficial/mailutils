@@ -1170,6 +1170,19 @@ mu_parse_date_dtl (const char *p, const time_t *now,
 	  start += delta;
 	}
     }
+
+  if (MASK_TEST (pd.date.mask, MU_PD_MASK_TZ))
+    {
+      pd.date.tz = - pd.date.tz * 60L;
+      if (!pd.date.tzname)
+	pd.date.tzname = tm.tm_isdst != -1 ? tzname[tm.tm_isdst] : NULL;
+#if HAVE_STRUCT_TM_TM_GMTOFF
+      tm.tm_gmtoff = pd.date.tz;
+#endif
+#if HAVE_STRUCT_TM_TM_ZONE 	
+      tm.tm_zone = pd.date.tzname;
+#endif
+    }
   if (rettime)
     *rettime = start;
   if (rettm)
@@ -1178,10 +1191,8 @@ mu_parse_date_dtl (const char *p, const time_t *now,
     {
       if (MASK_TEST (pd.date.mask, MU_PD_MASK_TZ))
 	{
-	  rettz->utc_offset = - pd.date.tz * 60L;
-	  rettz->tz_name = pd.date.tzname
-	                    ? pd.date.tzname
-	                    : (tm.tm_isdst != -1 ? tzname[tm.tm_isdst] : NULL);
+	  rettz->utc_offset = pd.date.tz;
+	  rettz->tz_name = pd.date.tzname;
 	}
       else
 	{
