@@ -585,14 +585,15 @@ yyerror (const char *s)
       mu_stream_write (mu_strerr, "\n", 1, NULL);
       if (mu_locus_point_eq (&yylloc.beg, &yylloc.end))
 	mu_error ("%*.*s^",
-		  b + yylloc.beg.mu_col - 1,
-		  b + yylloc.beg.mu_col - 1, "");
+		  (int) (b + yylloc.beg.mu_col - 1),
+		  (int) (b + yylloc.beg.mu_col - 1), "");
       else
 	mu_error ("%*.*s^%*.*s^",
-		  b + yylloc.beg.mu_col - 1,
-		  b + yylloc.beg.mu_col - 1, "",
-		  e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1,
-		  e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1, "");
+		  (int)(b + yylloc.beg.mu_col - 1),
+		  (int)(b + yylloc.beg.mu_col - 1), "",
+		  (int)(e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1),
+		  (int)(e + yylloc.end.mu_col - yylloc.beg.mu_col - b - 1),
+		  "");
     }
   return 0;
 }

@@ -106,6 +106,7 @@ typedef union {
   mh_builtin_fp builtin;
   long num;
   void *ptr;
+  size_t size;
   char str[1]; /* Any number of characters follows */
 } mh_instr_t;
 

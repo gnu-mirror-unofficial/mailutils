@@ -22,9 +22,11 @@ dnl
 m4_pushdef([FMTFUNC],[
 AT_SETUP([$1])
 AT_KEYWORDS([fmtfunc format])
+AT_DATA([mh_profile],[Charset: auto
+])
 AT_DATA([input.fmt],[$2])
 AT_DATA([message],[$3])
-AT_CHECK([fmtcheck -form input.fmt -msgno 1 -width 80 message
+AT_CHECK([MH=`pwd`/mh_profile fmtcheck -form input.fmt -msgno 1 -width 80 message
 ],
 [m4_if([$5],[],[0],[1])],
 [$4],[$5])
