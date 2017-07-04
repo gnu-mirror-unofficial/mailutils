@@ -1158,10 +1158,9 @@ mu_parse_date_dtl (const char *p, const time_t *now,
 	                    ? pd.date.tzname
 	                    : (tm.tm_isdst != -1 ? tzname[tm.tm_isdst] : NULL);
 	}
-      else // FIXME
+      else
 	{
-	  rettz->utc_offset = 0;
-	  rettz->tz_name = NULL;
+	  mu_datetime_tz_local (rettz);
 	}
     }
   if (retflags)
