@@ -522,14 +522,15 @@ FMTFUNC([year],
 
 # FIXME: zone
 
-FMTFUNC([tzone],
-[%(tzone{Date})
-],
-[Date: Mon,  3 Jul 2017 13:17:58 +0300
+# FIXME: This returns EEST if tz files are properly set
+# FMTFUNC([tzone],
+# [%(tzone{Date})
+# ],
+# [Date: Mon,  3 Jul 2017 13:17:58 +0300
 
-],
-[+0300
-])
+# ],
+# [+0300
+# ])
 
 # FIXME: szone
 

@@ -912,20 +912,30 @@ builtin_trim (struct mh_fvm *mach)
 }
 
 static void
-_parse_date (struct mh_fvm *mach, struct tm *tm, struct mu_timezone *tz)
+_parse_date (struct mh_fvm *mach, struct tm *tm, struct mu_timezone *tz,
+	     int *pflags)
 {
   char const *date = mh_string_value (&mach->str[R_ARG]);
-  const char *p = date;
+  int flags;
   
-  if (mu_parse822_date_time (&p, date + strlen(date), tm, tz))
+  if (!(mu_parse_date_dtl (date, NULL, NULL, tm, tz, &flags) == 0
+	&& (flags & (MU_PD_MASK_DATE|MU_PD_MASK_TIME))))
     {
-      time_t t;
       
       /*mu_error ("can't parse date: [%s]", date);*/
-      time (&t);
-      *tm = *localtime (&t);
-      mu_datetime_tz_local (tz);
+      if (tm)
+	{
+	  time_t t;
+	  time (&t);
+	  *tm = *localtime (&t);
+	}
+      
+      if (tz)
+	mu_datetime_tz_local (tz);
+      flags = 0;
     }
+  if (pflags)
+    *pflags = flags;
 }
 
 /*     sec        date     integer  seconds of the minute*/
@@ -933,9 +943,8 @@ static void
 builtin_sec (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
   mach->num[R_REG] = tm.tm_sec;
 }
 
@@ -944,9 +953,8 @@ static void
 builtin_min (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_min;
 }
@@ -956,9 +964,8 @@ static void
 builtin_hour (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_hour;
 }
@@ -968,9 +975,8 @@ static void
 builtin_wday (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_wday;
 }
@@ -980,10 +986,9 @@ static void
 builtin_day (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   char buf[80];
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   strftime (buf, sizeof buf, "%a", &tm);
   mh_string_load (&mach->str[R_REG], buf);
@@ -994,10 +999,9 @@ static void
 builtin_weekday (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   char buf[80];
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
   
   strftime (buf, sizeof buf, "%A", &tm);
   mh_string_load (&mach->str[R_REG], buf);
@@ -1008,9 +1012,9 @@ builtin_weekday (struct mh_fvm *mach)
 static void
 builtin_sday (struct mh_fvm *mach)
 {
-  /* FIXME */
-  return builtin_not_implemented ("sday");
-  mach->num[R_REG] = -1;
+  int flags;
+  _parse_date (mach, NULL, NULL, &flags);
+  mach->num[R_REG] = !!(flags & MU_PD_MASK_DOW); /* FIXME: how about unknown? */
 }
 
 /*     mday       date     integer  day of the month*/
@@ -1018,9 +1022,8 @@ static void
 builtin_mday (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_mday;
 }
@@ -1030,9 +1033,8 @@ static void
 builtin_yday (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_yday;
 }
@@ -1042,9 +1044,8 @@ static void
 builtin_mon (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
-  
-  _parse_date (mach, &tm, &tz);
+   
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_mon + 1;
 }
@@ -1054,10 +1055,9 @@ static void
 builtin_month (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   char buf[80];
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   strftime (buf, sizeof buf, "%b", &tm);
   mh_string_load (&mach->str[R_REG], buf);
@@ -1068,10 +1068,9 @@ static void
 builtin_lmonth (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   char buf[80];
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   strftime (buf, sizeof buf, "%B", &tm);
   mh_string_load (&mach->str[R_REG], buf);
@@ -1082,9 +1081,8 @@ static void
 builtin_year (struct mh_fvm *mach)
 {
   struct tm tm;
-  struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_year + 1900;
 }
@@ -1094,10 +1092,9 @@ builtin_year (struct mh_fvm *mach)
 static void
 builtin_zone (struct mh_fvm *mach)
 {
-  struct tm tm;
   struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, NULL, &tz, NULL);
 
   mach->num[R_REG] = tz.utc_offset / 3600;
 }
@@ -1106,10 +1103,9 @@ builtin_zone (struct mh_fvm *mach)
 static void
 builtin_tzone (struct mh_fvm *mach)
 {
-  struct tm tm;
   struct mu_timezone tz;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, NULL, &tz, NULL);
   
   if (tz.tz_name)
     mh_string_load (&mach->str[R_REG], tz.tz_name);
@@ -1138,9 +1134,10 @@ builtin_tzone (struct mh_fvm *mach)
 static void
 builtin_szone (struct mh_fvm *mach)
 {
-  /*FIXME:*/
-  builtin_not_implemented ("szone");
-  mach->num[R_REG] = -1;
+  int flags;
+  
+  _parse_date (mach, NULL, NULL, &flags);
+  mach->num[R_REG] = !!(flags & MU_PD_MASK_TZ);
 }
 
 static void
@@ -1171,9 +1168,8 @@ builtin_dst (struct mh_fvm *mach)
 {
 #ifdef HAVE_STRUCT_TM_TM_ISDST  
   struct tm tm;
-  struct mu_timezone tz;
 
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, NULL, NULL);
 
   mach->num[R_REG] = tm.tm_isdst;
 #else
@@ -1188,7 +1184,7 @@ builtin_clock (struct mh_fvm *mach)
   struct tm tm;
   struct mu_timezone tz;
 
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, &tz, NULL);
 
   mach->num[R_REG] = mu_datetime_to_utc (&tm, &tz);
 }
@@ -1201,7 +1197,7 @@ builtin_rclock (struct mh_fvm *mach)
   struct mu_timezone tz;
   time_t now = time (NULL);
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, &tz, NULL);
 
   mach->num[R_REG] = now - mu_datetime_to_utc (&tm, &tz);
 }
@@ -1230,7 +1226,7 @@ date_cvt (struct mh_fvm *mach, int pretty)
   int i, len;
   const char *tzname = NULL;
   
-  _parse_date (mach, &tm, &tz);
+  _parse_date (mach, &tm, &tz, NULL);
 
   if (pretty)
     {
@@ -1298,12 +1294,9 @@ static void
 builtin_nodate (struct mh_fvm *mach)
 {
   char const *date = mh_string_value (&mach->str[R_ARG]);
-  const char *p = date;
-  struct tm tm;
-  struct mu_timezone tz;
   
   mach->num[R_REG] =
-    mu_parse822_date_time (&p, date + strlen (date), &tm, &tz) != 0;
+    mu_parse_date_dtl (date, NULL, NULL, NULL, NULL, NULL) != 0;
 }
 
 /*     proper     addr     string   official 822 rendering */
