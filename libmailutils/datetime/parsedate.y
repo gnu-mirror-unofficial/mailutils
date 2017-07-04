@@ -116,7 +116,25 @@ struct pd_date
 #define SET_DAY(d,v)      __SET_DAY(d,v,YYERROR)      
 #define SET_MONTH(d,v)    __SET_MONTH(d,v,YYERROR)    
 #define SET_YEAR(d,v)     __SET_YEAR(d,v,YYERROR)     
-#define SET_TZ(d,v)       __SET_TZ(d,v,YYERROR)       
+#define SET_TZ(d,v)       __SET_TZ(d,v,YYERROR)
+/* Set timezone from a packed representation (HHMM)
+
+   The proper way of doing so would be:
+   
+#define SET_TZ_PACK(d,v)				  \
+  SET_TZ (d, ((v) < 0 ? -(-(v) % 100 + (-(v) / 100) * 60) \
+	              : ((v) % 100 + ((v) / 100) * 60)))
+
+   However, we need to invert the sign in order for mktime
+   to work properly (see mu_parse_date_dtl below).  The proper
+   sign is then restored upon return from the function.
+   
+   Once mu_mktime is in place, this can be changed.
+*/
+#define SET_TZ_PACK(d,v)				  \
+  SET_TZ (d, ((v) < 0 ? (-(v) % 100 + (-(v) / 100) * 60)  \
+	              : -((v) % 100 + ((v) / 100) * 60)))
+
 #define SET_MERIDIAN(d,v) __SET_MERIDIAN(d,v,YYERROR) 
 #define SET_ORDINAL(d,v)  __SET_ORDINAL(d,v,YYERROR)  
 #define SET_NUMBER(d,v)   __SET_NUMBER(d,v,YYERROR)   
@@ -225,7 +243,19 @@ spec	: /* NULL */
           {
 	    if (MASK_IS_SET ($1.date.mask, (MU_PD_MASK_TIME|MU_PD_MASK_DATE))
 		&& !$1.rel.mask)
-	      SET_YEAR ($1.date, $2);
+	      {
+		if (MASK_IS_SET ($1.date.mask, MU_PD_MASK_YEAR))
+		  {
+		    if (!MASK_IS_SET ($1.date.mask, MU_PD_MASK_TZ))
+		      SET_TZ_PACK ($1.date, $2);
+		    else
+		      YYERROR;
+		  }
+		else
+		  {
+		    SET_YEAR ($1.date, $2);
+		  }
+	      }
 	    else
 	      {
 		if ($2 > 10000)
@@ -277,10 +307,7 @@ time	: T_UNUMBER T_MERIDIAN
 	    SET_HOUR ($$, $1);
 	    SET_MINUTE ($$, $3);
 	    SET_MERIDIAN ($$, MER24);
-	    SET_TZ ($$, ($4 < 0
-			   ? -$4 % 100 + (-$4 / 100) * 60
-			   : - ($4 % 100 + ($4 / 100) * 60)));
-
+	    SET_TZ_PACK ($$, $4);
 	  }
 	| T_UNUMBER ':' T_UNUMBER ':' T_UNUMBER o_merid
           {
@@ -297,9 +324,7 @@ time	: T_UNUMBER T_MERIDIAN
 	    SET_MINUTE ($$, $3);
 	    SET_SECOND ($$, $5);
 	    SET_MERIDIAN ($$, MER24);
-	    SET_TZ ($$, ($6 < 0
-			 ? -$6 % 100 + (-$6 / 100) * 60
-			 : - ($6 % 100 + ($6 / 100) * 60)));
+	    SET_TZ_PACK ($$, $6);
 	  }
 	;
 
@@ -1153,7 +1178,7 @@ mu_parse_date_dtl (const char *p, const time_t *now,
     {
       if (MASK_TEST (pd.date.mask, MU_PD_MASK_TZ))
 	{
-	  rettz->utc_offset = pd.date.tz * 60L;
+	  rettz->utc_offset = - pd.date.tz * 60L;
 	  rettz->tz_name = pd.date.tzname
 	                    ? pd.date.tzname
 	                    : (tm.tm_isdst != -1 ? tzname[tm.tm_isdst] : NULL);

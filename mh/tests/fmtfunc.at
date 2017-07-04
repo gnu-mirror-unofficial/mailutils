@@ -464,7 +464,17 @@ FMTFUNC([weekday],
 [Monday
 ])
 
-# FIXME: sday
+FMTFUNC([sday],
+[%(sday{Date})
+%(sday{X-Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+X-Date: 3 Jul 2017 13:17:58 +0300
+
+],
+[1
+0
+])
 
 FMTFUNC([mday],
 [%(mday{Date})
@@ -522,17 +532,36 @@ FMTFUNC([year],
 
 # FIXME: zone
 
-# FIXME: This returns EEST if tz files are properly set
-# FMTFUNC([tzone],
-# [%(tzone{Date})
-# ],
-# [Date: Mon,  3 Jul 2017 13:17:58 +0300
+FMTFUNC([tzone],
+[%(tzone{Date})
+%(tzone{X-Date-1})
+%(tzone{X-Date-2})
+%(tzone{X-Date-3})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+X-Date-1: Mon,  3 Jul 2017 13:17:58 -0500
+X-Date-2: Mon,  3 Jul 2017 13:17:58 +0000
+X-Date-3: Mon,  3 Jul 2017 13:17:58 0000
 
-# ],
-# [+0300
-# ])
 
-# FIXME: szone
+],
+[+0300
+-0500
++0000
++0000
+])
+
+FMTFUNC([szone],
+[%(szone{Date})
+%(szone{X-Date})
+],
+[Date: Mon,  3 Jul 2017 13:17:58 +0300
+X-Date: Mon,  3 Jul 2017 13:17:58
+
+],
+[1
+0
+])
 
 # FIXME: date2local
 

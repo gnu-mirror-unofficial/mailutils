@@ -1104,29 +1104,32 @@ static void
 builtin_tzone (struct mh_fvm *mach)
 {
   struct mu_timezone tz;
+  char buf[6];
+  int s;
+  unsigned hrs;
   
   _parse_date (mach, NULL, &tz, NULL);
-  
+
+#if 0
+  /* FIXME: If symbolic tz representation is needed, we'd do: */
   if (tz.tz_name)
     mh_string_load (&mach->str[R_REG], tz.tz_name);
   else
-    {
-      char buf[6];
-      int s;
-      unsigned hrs;
+    /* .... */
+  /* However, MH's tzone function simply formats the timezone */
+#endif
       
-      if (tz.utc_offset < 0)
-	{
-	  s = '-';
-	  tz.utc_offset = - tz.utc_offset;
-	}
-      else
-	s = '+';
-      hrs = tz.utc_offset / 3600;
-      snprintf (buf, sizeof buf, "%c%02u%02u", s,
-		hrs, (tz.utc_offset - hrs * 3600) / 60);
-      mh_string_load (&mach->str[R_REG], buf);
+  if (tz.utc_offset < 0)
+    {
+      s = '-';
+      tz.utc_offset = - tz.utc_offset;
     }
+  else
+    s = '+';
+  hrs = tz.utc_offset / 3600;
+  snprintf (buf, sizeof buf, "%c%02u%02u", s,
+	    hrs, (tz.utc_offset - hrs * 3600) / 60);
+  mh_string_load (&mach->str[R_REG], buf);
 }
 
 /*      szone      date     integer  timezone explicit?
