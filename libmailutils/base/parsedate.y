@@ -28,46 +28,24 @@
 #endif
 
 #include <stdio.h>
-#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mailutils/cctype.h>
+#include <mailutils/cstr.h>
+#include <mailutils/datetime.h>
 
-#if HAVE_STDLIB_H
-# include <stdlib.h> /* for `free'; used by Bison 1.27 */
-#endif
+#define ISSPACE(c) mu_isspace (c)
+#define ISALPHA(c) mu_isalpha (c)
+#define ISUPPER(c) mu_isupper (c)
 
-#if defined (STDC_HEADERS) || (!defined (isascii) && !defined (HAVE_ISASCII))
-# define IN_CTYPE_DOMAIN(c) 1
-#else
-# define IN_CTYPE_DOMAIN(c) isascii(c)
-#endif
+static inline int ISDIGIT (unsigned c)
+{
+  return mu_isdigit (c);
+}
 
-#define ISSPACE(c) (IN_CTYPE_DOMAIN (c) && isspace (c))
-#define ISALPHA(c) (IN_CTYPE_DOMAIN (c) && isalpha (c))
-#define ISUPPER(c) (IN_CTYPE_DOMAIN (c) && isupper (c))
-#define ISDIGIT_LOCALE(c) (IN_CTYPE_DOMAIN (c) && isdigit (c))
-
-/* ISDIGIT differs from ISDIGIT_LOCALE, as follows:
-   - Its arg may be any int or unsigned int; it need not be an unsigned char.
-   - It's guaranteed to evaluate its argument exactly once.
-   - It's typically faster.
-   Posix 1003.2-1992 section 2.5.2.1 page 50 lines 1556-1558 says that
-   only '0' through '9' are digits.  Prefer ISDIGIT to ISDIGIT_LOCALE unless
-   it's important to use the locale's definition of `digit' even when the
-   host does not conform to Posix.  */
-#define ISDIGIT(c) ((unsigned) (c) - '0' <= 9)
-
-#if defined (STDC_HEADERS) || defined (USG)
-# include <string.h>
-#endif
-
-/* Some old versions of bison generate parsers that use bcopy.
-   That loses on systems that don't provide the function, so we have
-   to redefine it here.  */
-#if !defined (HAVE_BCOPY) && defined (HAVE_MEMCPY) && !defined (bcopy)
-# define bcopy(from, to, len) memcpy ((to), (from), (len))
-#endif
-
-static int yylex ();
-static int yyerror ();
+static int yyparse (void); 
+static int yylex (void);
+static int yyerror (char *s);
 
 #define EPOCH		1970
 #define HOUR(x)		((x) * 60)
@@ -92,21 +70,6 @@ typedef enum meridian {
   MERpm,
   MER24
 } MERIDIAN;
-
-#define PD_MASK_SECOND   00001
-#define PD_MASK_MINUTE   00002
-#define PD_MASK_HOUR     00004
-#define PD_MASK_DAY      00010
-#define PD_MASK_MONTH    00020
-#define PD_MASK_YEAR     00040
-#define PD_MASK_TZ       00100 
-#define PD_MASK_MERIDIAN 00200
-#define PD_MASK_ORDINAL  00400
-#define PD_MASK_NUMBER   01000
-
-#define PD_MASK_TIME PD_MASK_SECOND|PD_MASK_MINUTE|PD_MASK_HOUR
-#define PD_MASK_DATE PD_MASK_DAY|PD_MASK_MONTH|PD_MASK_YEAR
-#define PD_MASK_DOW PD_MASK_NUMBER
  
 #define MASK_IS_SET(f,m) (((f)&(m))==(m))
 #define MASK_TEST(f,m)   ((f)&(m)) 
@@ -120,6 +83,7 @@ struct pd_date
   int second;
   int year;
   int tz;
+  char const *tzname;
   enum meridian meridian;
   int number;
   int ordinal;
@@ -130,21 +94,21 @@ struct pd_date
  do                                                                       \
    {                                                                      \
      int __x = val;                                                       \
-     if (((m) != PD_MASK_TZ && __x < 0) || (lim && __x > lim)) onerror;   \
+     if (((m) != MU_PD_MASK_TZ && __x < 0) || (lim && __x > lim)) onerror;\
      date . memb = __x; date.mask |= m;                                   \
    }                                                                      \
  while (0)
    
-#define __SET_SECOND(d,v,a)   DATE_SET(d,second,PD_MASK_SECOND,v,59,a)
-#define __SET_MINUTE(d,v,a)   DATE_SET(d,minute,PD_MASK_MINUTE,v,59,a)  
-#define __SET_HOUR(d,v,a)     DATE_SET(d,hour,PD_MASK_HOUR,v,23,a)
-#define __SET_DAY(d,v,a)      DATE_SET(d,day,PD_MASK_DAY,v,31,a)   
-#define __SET_MONTH(d,v,a)    DATE_SET(d,month,PD_MASK_MONTH,v,12,a)
-#define __SET_YEAR(d,v,a)     DATE_SET(d,year,PD_MASK_YEAR,v,0,a)  
-#define __SET_TZ(d,v,a)       DATE_SET(d,tz,PD_MASK_TZ,v,0,a)
-#define __SET_MERIDIAN(d,v,a) DATE_SET(d,meridian,PD_MASK_MERIDIAN,v,MER24,a)
-#define __SET_ORDINAL(d,v,a)  DATE_SET(d,ordinal,PD_MASK_ORDINAL,v,0,a)
-#define __SET_NUMBER(d,v,a)   DATE_SET(d,number,PD_MASK_NUMBER,v,0,a) 
+#define __SET_SECOND(d,v,a)   DATE_SET(d,second,MU_PD_MASK_SECOND,v,59,a)
+#define __SET_MINUTE(d,v,a)   DATE_SET(d,minute,MU_PD_MASK_MINUTE,v,59,a)  
+#define __SET_HOUR(d,v,a)     DATE_SET(d,hour,MU_PD_MASK_HOUR,v,23,a)
+#define __SET_DAY(d,v,a)      DATE_SET(d,day,MU_PD_MASK_DAY,v,31,a)   
+#define __SET_MONTH(d,v,a)    DATE_SET(d,month,MU_PD_MASK_MONTH,v,12,a)
+#define __SET_YEAR(d,v,a)     DATE_SET(d,year,MU_PD_MASK_YEAR,v,0,a)  
+#define __SET_TZ(d,v,a)       DATE_SET(d,tz,MU_PD_MASK_TZ,v,0,a)
+#define __SET_MERIDIAN(d,v,a) DATE_SET(d,meridian,MU_PD_MASK_MERIDIAN,v,MER24,a)
+#define __SET_ORDINAL(d,v,a)  DATE_SET(d,ordinal,MU_PD_MASK_ORDINAL,v,0,a)
+#define __SET_NUMBER(d,v,a)   DATE_SET(d,number,MU_PD_MASK_NUMBER,v,0,a) 
  
 #define SET_SECOND(d,v)   __SET_SECOND(d,v,YYERROR)   
 #define SET_MINUTE(d,v)   __SET_MINUTE(d,v,YYERROR)   
@@ -166,34 +130,34 @@ pd_date_union (struct pd_date *a, struct pd_date *b)
 
   a->mask |= diff;
   
-  if (diff & PD_MASK_SECOND)
+  if (diff & MU_PD_MASK_SECOND)
     a->second = b->second;
   
-  if (diff & PD_MASK_MINUTE)
+  if (diff & MU_PD_MASK_MINUTE)
     a->minute = b->minute;
 
-  if (diff & PD_MASK_HOUR)
+  if (diff & MU_PD_MASK_HOUR)
     a->hour = b->hour;
 
-  if (diff & PD_MASK_DAY)
+  if (diff & MU_PD_MASK_DAY)
     a->day = b->day;
 
-  if (diff & PD_MASK_MONTH)
+  if (diff & MU_PD_MASK_MONTH)
     a->month = b->month;
 
-  if (diff & PD_MASK_YEAR)
+  if (diff & MU_PD_MASK_YEAR)
     a->year = b->year;
 
-  if (diff & PD_MASK_TZ)
+  if (diff & MU_PD_MASK_TZ)
     a->tz = b->tz;
 
-  if (diff & PD_MASK_MERIDIAN)
+  if (diff & MU_PD_MASK_MERIDIAN)
     a->meridian = b->meridian;
 
-  if (diff & PD_MASK_ORDINAL)
+  if (diff & MU_PD_MASK_ORDINAL)
     a->ordinal = b->ordinal;
 
-  if (diff & PD_MASK_NUMBER)
+  if (diff & MU_PD_MASK_NUMBER)
     a->number = b->number;
 
   return 0;
@@ -216,14 +180,16 @@ static const char	*yyinput;
   enum meridian meridian;
   struct pd_date date;
   struct pd_datespec datespec;
+  struct { char const *name; int delta; } tz;
 }
 
 /*FIXME: do we need T_ID? */
 %token  T_AGO T_DST  T_ID
 
-%token <number> T_DAY T_DAY_UNIT T_DAYZONE T_HOUR_UNIT T_MINUTE_UNIT
+%token <number> T_DAY T_DAY_UNIT T_HOUR_UNIT T_MINUTE_UNIT
 %token <number> T_MONTH T_MONTH_UNIT
-%token <number>	T_SEC_UNIT T_SNUMBER T_UNUMBER T_YEAR_UNIT T_ZONE
+%token <number>	T_SEC_UNIT T_SNUMBER T_UNUMBER T_YEAR_UNIT
+%token <tz>  T_ZONE T_DAYZONE
 %token <meridian> T_MERIDIAN
 
 %type <meridian> o_merid
@@ -257,7 +223,7 @@ spec	: /* NULL */
 	  }
         | spec T_UNUMBER
           {
-	    if (MASK_IS_SET ($1.date.mask, (PD_MASK_TIME|PD_MASK_DATE))
+	    if (MASK_IS_SET ($1.date.mask, (MU_PD_MASK_TIME|MU_PD_MASK_DATE))
 		&& !$1.rel.mask)
 	      SET_YEAR ($1.date, $2);
 	    else
@@ -340,17 +306,20 @@ time	: T_UNUMBER T_MERIDIAN
 zone	: T_ZONE
           {
 	    DATE_INIT ($$);
-	    SET_TZ ($$, $1);
+	    SET_TZ ($$, $1.delta);
+	    $$.tzname = $1.name;
 	  }
 	| T_DAYZONE
           {
 	    DATE_INIT ($$);
-	    SET_TZ ($$, $1 - 60);
+	    SET_TZ ($$, $1.delta - 60);
+	    $$.tzname = $1.name;
 	  }
 	| T_ZONE T_DST
           {
 	    DATE_INIT ($$);
-	    SET_TZ ($$, $1 - 60);
+	    SET_TZ ($$, $1.delta - 60);
+	    $$.tzname = $1.name;
 	  }
 	;
 
@@ -864,9 +833,7 @@ sym_lookup (char *buff)
   int abbrev;
   
   /* Make it lowercase. */
-  for (p = buff; *p; p++)
-    if (ISUPPER ((unsigned char) *p))
-      *p = tolower (*p);
+  mu_strlower (buff);
   
   if (strcmp (buff, "am") == 0 || strcmp (buff, "a.m.") == 0)
     {
@@ -910,7 +877,8 @@ sym_lookup (char *buff)
   for (tp = tz_tab; tp->name; tp++)
     if (strcmp (buff, tp->name) == 0)
       {
-	yylval.number = tp->value;
+        yylval.tz.name = tp->name;
+	yylval.tz.delta = tp->value;
 	return tp->type;
       }
 
@@ -951,7 +919,8 @@ sym_lookup (char *buff)
       for (tp = mil_tz_tab; tp->name; tp++)
 	if (strcmp (buff, tp->name) == 0)
 	  {
-	    yylval.number = tp->value;
+            yylval.tz.name = tp->name;
+	    yylval.tz.delta = tp->value;
 	    return tp->type;
 	  }
     }
@@ -975,7 +944,7 @@ sym_lookup (char *buff)
 }
 
 static int
-yylex ()
+yylex (void)
 {
   register unsigned char c;
   register char *p;
@@ -1056,7 +1025,11 @@ difftm (struct tm *a, struct tm *b)
 }
 
 int
-mu_parse_date (const char *p, time_t *rettime, const time_t *now)
+mu_parse_date_dtl (const char *p, const time_t *now, 
+		   time_t *rettime,
+		   struct tm *rettm,
+		   struct mu_timezone *rettz,
+		   int *retflags)
 {
   struct tm tm, tm0, *tmp;
   time_t start;
@@ -1073,27 +1046,27 @@ mu_parse_date (const char *p, time_t *rettime, const time_t *now)
   if (yyparse ())
     return -1;
   
-  if (!MASK_IS_SET (pd.date.mask, PD_MASK_YEAR))
+  if (!MASK_IS_SET (pd.date.mask, MU_PD_MASK_YEAR))
     __SET_YEAR (pd.date, tmp->tm_year + TM_YEAR_ORIGIN, return -1);
-  if (!MASK_IS_SET (pd.date.mask, PD_MASK_MONTH))
+  if (!MASK_IS_SET (pd.date.mask, MU_PD_MASK_MONTH))
     __SET_MONTH (pd.date, tmp->tm_mon + 1, return -1);
-  if (!MASK_IS_SET (pd.date.mask, PD_MASK_DAY))
+  if (!MASK_IS_SET (pd.date.mask, MU_PD_MASK_DAY))
     __SET_DAY (pd.date, tmp->tm_mday, return -1);
-  if (!MASK_IS_SET (pd.date.mask, PD_MASK_HOUR))
+  if (!MASK_IS_SET (pd.date.mask, MU_PD_MASK_HOUR))
     __SET_HOUR (pd.date, tmp->tm_hour, return -1);
-  if (!MASK_IS_SET (pd.date.mask, PD_MASK_MERIDIAN))
+  if (!MASK_IS_SET (pd.date.mask, MU_PD_MASK_MERIDIAN))
     __SET_MERIDIAN (pd.date, MER24, return -1);
-  if (!MASK_IS_SET (pd.date.mask, PD_MASK_MINUTE))
+  if (!MASK_IS_SET (pd.date.mask, MU_PD_MASK_MINUTE))
     __SET_MINUTE (pd.date, tmp->tm_min, return -1);
-  if (!MASK_IS_SET (pd.date.mask, PD_MASK_SECOND))
+  if (!MASK_IS_SET (pd.date.mask, MU_PD_MASK_SECOND))
     __SET_SECOND (pd.date, tmp->tm_sec, return -1);
   
   tm.tm_year = norm_year (pd.date.year) - TM_YEAR_ORIGIN + pd.rel.year;
   tm.tm_mon = pd.date.month - 1 + pd.rel.month;
   tm.tm_mday = pd.date.day + pd.rel.day;
-  if (MASK_TEST (pd.date.mask, PD_MASK_TIME)
-      || (pd.rel.mask && !MASK_TEST (pd.date.mask, PD_MASK_DATE)
-	  && !MASK_TEST (pd.date.mask, PD_MASK_DOW)))
+  if (MASK_TEST (pd.date.mask, MU_PD_MASK_TIME)
+      || (pd.rel.mask && !MASK_TEST (pd.date.mask, MU_PD_MASK_DATE)
+	  && !MASK_TEST (pd.date.mask, MU_PD_MASK_DOW)))
     {
       tm.tm_hour = norm_hour (pd.date.hour, pd.date.meridian);
       if (tm.tm_hour < 0)
@@ -1111,8 +1084,8 @@ mu_parse_date (const char *p, time_t *rettime, const time_t *now)
 
   /* Let mktime deduce tm_isdst if we have an absolute timestamp,
      or if the relative timestamp mentions days, months, or years.  */
-  if (MASK_TEST (pd.date.mask, PD_MASK_DATE | PD_MASK_DOW | PD_MASK_TIME)
-      || MASK_TEST (pd.rel.mask, PD_MASK_DOW | PD_MASK_MONTH | PD_MASK_YEAR))
+  if (MASK_TEST (pd.date.mask, MU_PD_MASK_DATE | MU_PD_MASK_DOW | MU_PD_MASK_TIME)
+      || MASK_TEST (pd.rel.mask, MU_PD_MASK_DOW | MU_PD_MASK_MONTH | MU_PD_MASK_YEAR))
     tm.tm_isdst = -1;
 
   tm0 = tm;
@@ -1130,7 +1103,7 @@ mu_parse_date (const char *p, time_t *rettime, const time_t *now)
          we apply mktime to 1970-01-02 08:00:00 instead and adjust the time
          zone by 24 hours to compensate.  This algorithm assumes that
          there is no DST transition within a day of the time_t boundaries.  */
-      if (MASK_TEST (pd.date.mask, PD_MASK_TZ))
+      if (MASK_TEST (pd.date.mask, MU_PD_MASK_TZ))
 	{
 	  tm = tm0;
 	  if (tm.tm_year <= EPOCH - TM_YEAR_ORIGIN)
@@ -1150,8 +1123,8 @@ mu_parse_date (const char *p, time_t *rettime, const time_t *now)
 	return -1;
     }
 
-  if (MASK_TEST (pd.date.mask, PD_MASK_DOW)
-      && !MASK_TEST (pd.date.mask, PD_MASK_DATE))
+  if (MASK_TEST (pd.date.mask, MU_PD_MASK_DOW)
+      && !MASK_TEST (pd.date.mask, MU_PD_MASK_DATE))
     {
       tm.tm_mday += ((pd.date.number - tm.tm_wday + 7) % 7
 		     + 7 * (pd.date.ordinal - (0 < pd.date.ordinal)));
@@ -1160,7 +1133,7 @@ mu_parse_date (const char *p, time_t *rettime, const time_t *now)
 	return -1;
     }
   
-  if (MASK_TEST (pd.date.mask, PD_MASK_TZ))
+  if (MASK_TEST (pd.date.mask, MU_PD_MASK_TZ))
     {
       long delta;
       struct tm *gmt = gmtime (&start);
@@ -1172,9 +1145,34 @@ mu_parse_date (const char *p, time_t *rettime, const time_t *now)
 	  start += delta;
 	}
     }
-  
-  *rettime = start;
+  if (rettime)
+    *rettime = start;
+  if (rettm)
+    *rettm = tm;
+  if (rettz)
+    {
+      if (MASK_TEST (pd.date.mask, MU_PD_MASK_TZ))
+	{
+	  rettz->utc_offset = pd.date.tz * 60L;
+	  rettz->tz_name = pd.date.tzname
+	                    ? pd.date.tzname
+	                    : (tm.tm_isdst != -1 ? tzname[tm.tm_isdst] : NULL);
+	}
+      else // FIXME
+	{
+	  rettz->utc_offset = 0;
+	  rettz->tz_name = NULL;
+	}
+    }
+  if (retflags)
+    *retflags = pd.date.mask;
   return 0;
+}
+
+int
+mu_parse_date (const char *p, time_t *rettime, const time_t *now)
+{
+  return mu_parse_date_dtl (p, now, rettime, NULL, NULL, NULL);
 }
 
 #ifdef STANDALONE
