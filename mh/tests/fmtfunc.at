@@ -650,7 +650,31 @@ FMTFUNC([mbox],
 [gray
 ])
 
-# FIXME: mymbox
+AT_SETUP([mymbox])
+AT_KEYWORDS([fmtfunc format])
+AT_DATA([mh_profile],[Charset: auto
+Local-Mailbox: mu@example.net
+Alternate-Mailboxes: gray, *@mailutils.*
+])
+AT_DATA([message],[From: mu@example.net
+X-From-1: gray@localhost
+X-From-2: root@mailutils.org
+X-From-3: mu@example.com
+])
+AT_DATA([input.fmt],[%(mymbox{From})
+%(mymbox{X-From-1})
+%(mymbox{X-From-2})
+%(mymbox{X-From-3})
+])
+AT_CHECK([MH=`pwd`/mh_profile fmtcheck -form input.fmt -msgno 1 -width 80 message
+],
+[0],
+[1
+1
+1
+0
+])
+AT_CLEANUP
 
 FMTFUNC([host],
 [%(host{From})

@@ -91,74 +91,207 @@ mh_my_email (void)
     }
   return my_email;
 }
+
+enum part_match_mode
+  {
+    part_match_local,
+    part_match_domain
+  };
 
-int
-emailcmp (char *pattern, char *name)
+enum part_match_result
+  {
+    part_match_false,
+    part_match_true,
+    part_match_abort
+  };
+
+static int match_char_class (char const **pexpr, char c, int icase);
+
+static enum part_match_result
+part_match (char const *expr, char const *name, enum part_match_mode mode)
 {
-  char *p;
+  int c;
 
-  p = strchr (pattern, '@');
-  if (p)
-    for (p++; *p; p++)
-      *p = mu_toupper (*p);
+  while (*expr)
+    {
+      if (*name == 0 && *expr != '*')
+	return part_match_abort;
+      switch (*expr)
+	{
+	case '*':
+	  while (*++expr == '*')
+	    ;
+	  if (*expr == 0)
+	    return part_match_true;
+	  while (*name)
+	    {
+	      int res = part_match (expr, name++, mode);
+	      if (res != part_match_false)
+		return res;
+	    }
+	  return part_match_abort;
 
-  return fnmatch (pattern, name, 0);
+	case '?':
+	  expr++;
+	  if (*name == 0)
+	    return part_match_false;
+	  name++;
+	  break;
+	  
+	case '[':
+	  if (!match_char_class (&expr, *name, mode == part_match_domain))
+	    return part_match_false;
+	  name++;
+	  break;
+
+	case '\\':
+	  if (expr[1])
+	    {
+	      c = *++expr; expr++;
+	      if (*name != mu_wordsplit_c_unquote_char (c))
+		return part_match_false;
+	      name++;
+	      break;
+	    }
+	  /* fall through */
+
+	default:
+	  if (mode == part_match_local)
+	    {
+	      if (*expr != *name)
+		return part_match_false;
+	      if ('@' == *name)
+		mode = part_match_domain;
+	    }
+	  else
+	    {
+	      if (mu_tolower (*expr) != mu_tolower (*name))
+		return part_match_false;
+	    }
+	  expr++;
+	  name++;
+	}
+    }
+
+  if (*name == 0)
+    return part_match_true;
+  
+  if (mode == part_match_local && *name == '@')
+    return part_match_true;
+
+  return part_match_false;
+}
+
+static int
+match_char_class (char const **pexpr, char c, int icase)
+{
+  int res;
+  int rc;
+  char const *expr = *pexpr;
+
+  if (icase)
+    c = mu_toupper (c);
+
+  expr++;
+  if (*expr == '^')
+    {
+      res = 0;
+      expr++;
+    }
+  else
+    res = 1;
+
+  if (*expr == '-' || *expr == ']')
+    rc = c == *expr++;
+  else
+    rc = !res;
+
+  for (; *expr && *expr != ']'; expr++)
+    {
+      if (rc == res)
+	{
+	  if (*expr == '\\' && expr[1] == ']')
+	    expr++;
+	}
+      else if (expr[1] == '-')
+	{
+	  if (*expr == '\\')
+	    rc = *++expr == c;
+	  else
+	    {
+	      if (icase)
+		rc = mu_toupper (*expr) <= c && c <= mu_toupper (expr[2]);
+	      else
+		rc = *expr <= c && c <= expr[2];
+	      expr += 2;
+	    }
+	}
+      else if (*expr == '\\' && expr[1] == ']')
+	rc = *++expr == c;
+      else if (icase)
+	rc = mu_toupper(*expr) == c;
+      else
+	rc = *expr == c;
+    }
+  *pexpr = *expr ? expr + 1 : expr;
+  return rc == res;
+}
+
+static int
+email_match (char const *pattern, char const *name)
+{
+  return part_match (pattern, name, part_match_local) == part_match_true;
 }
 
 int
 mh_is_my_name (const char *name)
 {
-  char *pname, *p;
-  int rc = 0;
+  static mu_address_t addr;
+  mu_address_t p;
   
-  pname = mu_strdup (name);
-  p = strchr (pname, '@');
-  if (p)
-    for (p++; *p; p++)
-      *p = mu_toupper (*p);
-  
-  if (emailcmp (mh_my_email (), pname) == 0)
-    rc = 1;
-  else
+  if (!addr)
     {
-      const char *nlist = mh_global_profile_get ("Alternate-Mailboxes", NULL);
+      const char *nlist;
+      int rc;
+      
+      rc = mu_address_create (&addr, mh_my_email ());
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_address_create", mh_my_email (),
+			   rc);
+	  return 0;
+	}
+      
+      nlist = mh_global_profile_get ("Alternate-Mailboxes", NULL);
       if (nlist)
 	{
-	  const char *end, *p;
-	  char *pat;
-	  int len;
-	  
-	  for (p = nlist; rc == 0 && *p; p = end)
+	  mu_address_t tmp;
+	  struct mu_address hint;
+
+	  hint.domain = NULL;
+	  rc = mu_address_create_hint (&tmp, nlist, &hint,
+				       MU_ADDR_HINT_DOMAIN);
+	  if (rc == 0)
 	    {
-	      
-	      while (*p && mu_isspace (*p))
-		p++;
-
-	      end = strchr (p, ',');
-	      if (end)
-		{
-		  len = end - p;
-		  end++;
-		}
-	      else
-		{
-		  len = strlen (p);
-		  end = p + len;
-		}
-
-	      while (len > 0 && mu_isspace (p[len-1]))
-		len--;
-
-	      pat = mu_alloc (len + 1);
-	      memcpy (pat, p, len);
-	      pat[len] = 0;
-	      rc = emailcmp (pat, pname) == 0;
-	      free (pat);
+	      rc = mu_address_union (&addr, tmp);
+	      if (rc)
+		mu_diag_funcall (MU_DIAG_ERROR, "mu_address_union", NULL, rc);
+	      mu_address_destroy (&tmp);
+	    }
+	  else
+	    {
+	      mu_error (_("bad Alternate-Mailboxes: %s; please fix"),
+			mu_strerror (rc));
 	    }
 	}
     }
-  free (pname);
-  return rc;
+
+  for (p = addr; p; p = p->next)
+    {
+      if (email_match (p->email, name))
+	return 1;
+    }
+  return 0;
 }
 
 static int
