@@ -32,8 +32,8 @@ AB_INIT
 
 dnl Library versioning
 AC_SUBST(VI_CURRENT,  5)
-AC_SUBST(VI_REVISION, 4)
-AC_SUBST(VI_AGE,      1)
+AC_SUBST(VI_REVISION, 5)
+AC_SUBST(VI_AGE,      0)
 
 dnl Library paths
 AC_SUBST(MU_LIB_AUTH,'${top_builddir}/libmu_auth/libmu_auth.la')
@@ -84,7 +84,7 @@ AC_PROG_LN_S
 AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
 MU_PROG_BISON
-MU_PROG_LEX
+MU_PROG_FLEX
 AM_PROG_LIBTOOL
 
 ## Predefine several variables used to display configuration status
