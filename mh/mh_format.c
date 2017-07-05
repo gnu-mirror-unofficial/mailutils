@@ -1471,19 +1471,22 @@ builtin_host (struct mh_fvm *mach)
 static void
 builtin_nohost (struct mh_fvm *mach)
 {
+  struct mu_address hint;
   mu_address_t addr;
-  const char *str;
-  
-  int rc = mu_address_create (&addr, mh_string_value (&mach->str[R_ARG]));
+  const char *dom;
+  int rc;
+
+  hint.domain = NULL;
+  rc = mu_address_create_hint (&addr, mh_string_value (&mach->str[R_ARG]),
+			       &hint, MU_ADDR_HINT_DOMAIN);
   mh_string_clear (&mach->str[R_REG]);
   if (rc)
-    return;
-
-  if (mu_address_sget_email (addr, 1, &str) == 0 && str)
-    mach->num[R_REG] = strchr (str, '@') != NULL;
+    mach->num[R_REG] = 1;
   else
-    mach->num[R_REG] = 0;
-  mu_address_destroy (&addr);
+    {
+      mach->num[R_REG] = !(mu_address_sget_domain (addr, 1, &dom) == 0 && dom);
+      mu_address_destroy (&addr);
+    }
 }
 
 /*     type       addr     integer  host type* (0=local,1=network,

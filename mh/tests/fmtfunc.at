@@ -685,7 +685,19 @@ FMTFUNC([host],
 [gnu.org
 ])
 
-# FIXME: nohost
+FMTFUNC([nohost],
+[%(nohost{From})
+%(nohost{To})
+%(nohost{Sender})
+],
+[From: gray
+To: mu@example.org
+
+],
+[1
+0
+1
+])
 
 # FIXME: path
 
