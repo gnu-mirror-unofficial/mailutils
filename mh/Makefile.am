@@ -81,6 +81,7 @@ libmh_a_SOURCES= \
  mh_stream.c\
  mh_whatnow.c\
  mh_whom.c\
+ scanfmt.c\
  seqelim.c\
  whatnowenv.c
 noinst_HEADERS = mh.h mh_alias_gram.h mh_format.h mh_getopt.h

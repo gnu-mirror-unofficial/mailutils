@@ -50,6 +50,8 @@ TESTSUITE_AT = \
  anno.at\
  burst.at\
  comp.at\
+ fmtcomp.at\
+ fmtfunc.at\
  folder.at\
  forw.at\
  inc.at\

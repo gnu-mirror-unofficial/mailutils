@@ -60,6 +60,25 @@ struct mu_timezone
        to be a pointer to static string, so will never be freed. */
 };
 
+#define MU_PD_MASK_SECOND   00001
+#define MU_PD_MASK_MINUTE   00002
+#define MU_PD_MASK_HOUR     00004
+#define MU_PD_MASK_DAY      00010
+#define MU_PD_MASK_MONTH    00020
+#define MU_PD_MASK_YEAR     00040
+#define MU_PD_MASK_TZ       00100 
+#define MU_PD_MASK_MERIDIAN 00200
+#define MU_PD_MASK_ORDINAL  00400
+#define MU_PD_MASK_NUMBER   01000
+
+#define MU_PD_MASK_TIME MU_PD_MASK_SECOND|MU_PD_MASK_MINUTE|MU_PD_MASK_HOUR
+#define MU_PD_MASK_DATE MU_PD_MASK_DAY|MU_PD_MASK_MONTH|MU_PD_MASK_YEAR
+#define MU_PD_MASK_DOW MU_PD_MASK_NUMBER
+
+int mu_parse_date_dtl (const char *p, const time_t *now, 
+		       time_t *rettime, struct tm *rettm,
+		       struct mu_timezone *rettz,
+		       int *retflags);
 int mu_parse_date (const char *p, time_t *rettime, const time_t *now);
 
 int mu_utc_offset (void);

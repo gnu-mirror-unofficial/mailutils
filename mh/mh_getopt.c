@@ -92,7 +92,7 @@ process_std_options (int argc, char **argv, struct mu_parseopt *po)
     }
   if (strcmp (argv[0], "--version") == 0)
     {
-      mu_program_version (po, mu_strout);
+      mu_version_hook (po, mu_strout);
       exit (0);
     }
 }
@@ -145,14 +145,13 @@ static struct mu_option folder_option[] = {
 void
 mh_version_hook (struct mu_parseopt *po, mu_stream_t stream)
 {
+  mu_stream_printf (stream, "%s (%s %s)\n", mu_program_name,
+		    PACKAGE_NAME, PACKAGE_VERSION);
 #if MU_GIT_COMMIT_DISTANCE > 0  
-  mu_stream_printf (stream, "%s (%s) %s-%d [%s]\n",
-		    mu_program_name, PACKAGE_NAME, PACKAGE_VERSION,
+  mu_stream_printf (stream, "version: %s %s-%d [%s]\n",
+		    PACKAGE_NAME, PACKAGE_VERSION,
 		    MU_GIT_COMMIT_DISTANCE,
 		    MU_GIT_DESCRIBE_STRING);
-#else
-  mu_stream_printf (stream, "%s (%s) %s\n", mu_program_name,
-		    PACKAGE_NAME, PACKAGE_VERSION);
 #endif
   /* TRANSLATORS: Translate "(C)" to the copyright symbol
      (C-in-a-circle), if this symbol is available in the user's
@@ -363,4 +362,22 @@ mh_opt_read_formfile (struct mu_parseopt *po, struct mu_option *opt,
 		      char const *arg)
 {
   mh_read_formfile (arg, opt->opt_ptr);
+}
+
+void
+mh_opt_parse_formfile (struct mu_parseopt *po, struct mu_option *opt,
+		       char const *arg)
+{
+  mh_format_destroy ((mh_format_t*) opt->opt_ptr);
+  if (mh_format_file_parse (opt->opt_ptr, arg, MH_FMT_PARSE_DEFAULT))
+    exit (1);
+}
+
+void
+mh_opt_parse_format (struct mu_parseopt *po, struct mu_option *opt,
+		     char const *arg)
+{
+  mh_format_destroy ((mh_format_t*) opt->opt_ptr);
+  if (mh_format_string_parse (opt->opt_ptr, arg, NULL, MH_FMT_PARSE_DEFAULT))
+    exit (1);
 }

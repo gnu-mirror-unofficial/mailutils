@@ -1,5 +1,5 @@
 /* GNU Mailutils -- a suite of utilities for electronic mail
-   Copyright (C) 1999-2001, 2007, 2009-2012, 2014-2017 Free Software
+   Copyright (C) 1999-2003, 2005-2012, 2014-2017 Free Software
    Foundation, Inc.
 
    GNU Mailutils is free software; you can redistribute it and/or modify
@@ -15,24 +15,29 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-#include <time.h>
+#include <mh.h>
 
-#define TMSEC(t) (((t)->tm_hour * 60 + (t)->tm_min) * 60 + (t)->tm_sec)
+static char mh_scan_format_str[] = 
+  "%4(msg)"
+  "%<(cur)+%| %>"
+  "%<{replied}-%?{encrypted}E%| %>"
+  "%02(mon{date})/%02(mday{date})"
+  "%<{date} %|*%>"
+  "%<(mymbox{from})%<{to}To:%14(decode(friendly{to}))%>%>"
+  "%<(zero)%17(decode(friendly{from}))%>"
+  "  %(decode{subject})%<{body}<<%{body}>>%>";
 
-/* Returns the offset of our timezone from UTC, in seconds. */
-int
-mu_utc_offset (void)
+mh_format_t
+mh_scan_format (void)
 {
-  time_t t = time (NULL);
-  struct tm ltm = *localtime (&t);
-  struct tm gtm = *gmtime (&t);
-  int d = TMSEC (&ltm) - TMSEC (&gtm);
-  if (!(ltm.tm_year = gtm.tm_year
-	&& ltm.tm_mon == gtm.tm_mon
-	&& ltm.tm_mday == gtm.tm_mday))
-    d += 86400;
-  return d;
+  mh_format_t fmt;
+  
+  if (mh_format_string_parse (&fmt, mh_scan_format_str,
+			      NULL, MH_FMT_PARSE_DEFAULT))
+    {
+      mu_error (_("INTERNAL ERROR: bad built-in format; please report"));
+      exit (1);
+    }
+  return fmt;
 }
+

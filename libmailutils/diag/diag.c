@@ -60,17 +60,25 @@ void
 mu_vdiag_at_locus_range (int level, struct mu_locus_range const *loc,
 			 const char *fmt, va_list ap)
 {
-  struct mu_locus_range old = MU_LOCUS_RANGE_INITIALIZER;
+  struct mu_locus_range old_loc = MU_LOCUS_RANGE_INITIALIZER;
+  int old_mode;
   int restore = 0;
   
   if (loc)
     {
       if (mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-			   MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE, &old) == 0)
+			   MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE, &old_loc) == 0)
 	{
-	  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-			     MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, (void*) loc);
-	  restore = 1;
+	  if (mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			       MU_IOCTL_LOGSTREAM_GET_MODE, &old_mode) == 0)
+	    {
+	      int mode = old_mode | MU_LOGMODE_LOCUS;
+	      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			       MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+	      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, (void*) loc);
+	      restore = 1;
+	    }
 	}
     }
 
@@ -79,8 +87,10 @@ mu_vdiag_at_locus_range (int level, struct mu_locus_range const *loc,
   if (restore)
     {
       mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &old);
-      mu_locus_range_deinit (&old);
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &old_loc);
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		       MU_IOCTL_LOGSTREAM_SET_MODE, &old_mode);
+      mu_locus_range_deinit (&old_loc);
     }
 }
 

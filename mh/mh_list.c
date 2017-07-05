@@ -21,13 +21,153 @@
 
 /* *********************** Compiler for MHL formats *********************** */
 
-typedef struct
+struct mhl_ctx
 {
-  char *filename;
-  int line;
-}
-locus_t;
+  mu_stream_t input;
+  mu_linetrack_t trk;
+  struct mu_locus_range loc;
+  char *bufptr;
+  size_t bufsize;
+  size_t buflen;
+  char *curptr;
+  mu_list_t formlist;
+  /* error stream state */
+  int errsaved;
+  struct mu_locus_range errloc;
+  int errmode;
+};
 
+static int
+mhl_ctx_init (struct mhl_ctx *ctx, char const *filename)
+{
+  int rc;
+  
+  rc = mu_file_stream_create (&ctx->input, filename, MU_STREAM_READ);
+  if (rc)
+    {
+      mu_error (_("cannot open format file %s: %s"), filename,
+		mu_strerror (rc));
+      return -1;
+    }
+  mu_linetrack_create (&ctx->trk, filename, 2);
+  mu_locus_range_init (&ctx->loc);
+  if ((rc = mu_list_create (&ctx->formlist)) != 0)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_create", NULL, rc);
+      mu_stream_unref (ctx->input);
+      return -1;
+    }
+  ctx->bufptr = ctx->curptr = NULL;
+  ctx->bufsize = ctx->buflen = 0;
+
+  if (mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		       MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE, &ctx->errloc) == 0)
+    {
+      if (mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			   MU_IOCTL_LOGSTREAM_GET_MODE, &ctx->errmode) == 0)
+	{
+	  int mode = ctx->errmode | MU_LOGMODE_LOCUS;
+	  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+	  ctx->errsaved = 1;
+	}
+    }
+  
+  return 0;
+}
+
+static void
+mhl_ctx_deinit (struct mhl_ctx *ctx)
+{
+  if (ctx->errsaved)
+    {
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &ctx->errloc);
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		       MU_IOCTL_LOGSTREAM_SET_MODE, &ctx->errmode);
+      mu_locus_range_deinit (&ctx->errloc);
+    }
+  mu_stream_destroy (&ctx->input);
+  mu_linetrack_destroy (&ctx->trk);
+  mu_locus_range_deinit (&ctx->loc);
+  free (ctx->bufptr);
+}
+  
+static void
+mhl_ctx_advance (struct mhl_ctx *ctx, size_t len)
+{
+  if (len)
+    {
+      mu_linetrack_advance (ctx->trk, &ctx->loc, ctx->curptr, len);
+      ctx->curptr += len;
+      if (ctx->errsaved)
+	mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			 MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &ctx->loc);
+    }
+}
+
+static inline void
+mhl_ctx_advance_to (struct mhl_ctx *ctx, char const *ptr)
+{
+  mhl_ctx_advance (ctx, ptr - ctx->curptr);
+}
+
+static inline int
+mhl_ctx_leng (struct mhl_ctx *ctx)
+{
+  return ctx->buflen - (ctx->curptr - ctx->bufptr);
+}
+
+static int
+mhl_ctx_getln (struct mhl_ctx *ctx)
+{
+  int rc;
+  char *p;
+
+  if (ctx->buflen)
+    {
+      /* Advance to new line */
+      mu_linetrack_advance (ctx->trk, &ctx->loc, "\n", 1);
+      if (ctx->errsaved)
+	mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+			 MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &ctx->loc);
+    }
+  
+  rc = mu_stream_getline (ctx->input, &ctx->bufptr, &ctx->bufsize,
+			  &ctx->buflen);
+  if (rc)
+    {
+      mu_error (_("error reading: %s"), mu_strerror (rc));
+      return -1;
+    }
+  ctx->curptr = ctx->bufptr;
+  if (ctx->buflen == 0)
+    return 1;
+
+  p = mu_str_stripws (ctx->bufptr);
+  if (!p)
+    return 1;
+  mhl_ctx_advance_to (ctx, p);
+  
+  return 0;
+}
+
+static inline int
+mhl_ctx_looking_at (struct mhl_ctx *ctx, char const *pat)
+{
+  size_t len = strlen (pat);
+  if (ctx->buflen < len)
+    return 0;
+  return memcmp (ctx->curptr, pat, len) == 0;
+}
+
+static inline int
+mhl_ctx_eol (struct mhl_ctx *ctx)
+{
+  return ctx->curptr[0] == 0;
+}
+
+
 enum mhl_type
 {
   stmt_cleartext,
@@ -46,7 +186,7 @@ enum mhl_datatype
 typedef union mhl_value {
   char *str;
   int num;
-  mh_format_t *fmt;
+  mh_format_t fmt;
 } mhl_value_t;
 
 typedef struct mhl_variable
@@ -95,66 +235,67 @@ stmt_alloc (enum mhl_type type)
 }
 
 static int
-compdecl (char **str, char **compname)
+looking_at_compdecl (struct mhl_ctx *ctx, char **compname)
 {
   char *p;
   
-  for (p = *str; *p && !mu_isspace (*p); p++)
+  for (p = ctx->curptr; *p && !mu_isspace (*p); p++)
     {
       if (*p == ':')
 	{
-	  int len = p - *str;
+	  int len = p - ctx->curptr;
 	  *compname = mu_alloc (len + 1);
-	  memcpy (*compname, *str, len);
+	  memcpy (*compname, ctx->curptr, len);
 	  (*compname)[len] = 0;
-	  *str = p + 1;
+	  mhl_ctx_advance_to (ctx, p + 1);
 	  return 0;
 	}
     }
   return 1;
 }
 
-static void parse_variable (locus_t *loc, mu_list_t formlist, char *str);
+static void parse_variable (struct mhl_ctx *ctx, mu_list_t formlist);
 
 static void
-parse_cleartext (locus_t *loc, mu_list_t formlist, char *str)
+parse_cleartext (struct mhl_ctx *ctx)
 {
-  int len;
   mhl_stmt_t *stmt = stmt_alloc (stmt_cleartext);
-  stmt->v.cleartext = mu_strdup (str);
-  len = strlen (stmt->v.cleartext);
-  if (len > 0 && stmt->v.cleartext[len-1] == '\n')
-    stmt->v.cleartext[len-1] = 0;
-  mu_list_append (formlist, stmt);
+
+  mhl_ctx_advance (ctx, 1);
+  stmt->v.cleartext = mu_strdup (ctx->curptr);
+  mu_rtrim_class (stmt->v.cleartext, MU_CTYPE_ENDLN);
+  mu_list_append (ctx->formlist, stmt);
 }
 
 static void
-parse_component (locus_t *loc, mu_list_t formlist, char *compname, char *str)
+parse_component (struct mhl_ctx *ctx, char *compname)
 {
   int rc;
   mhl_stmt_t *stmt = stmt_alloc (stmt_component);
   stmt->v.component.name = compname;
+
   if ((rc = mu_list_create (&stmt->v.component.format)) != 0)
     {
-      mu_error ("%s:%d: mu_list_create: %s",
-		loc->filename,
-		loc->line,
-		mu_strerror (rc));
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_create", NULL, rc);
       exit (1); /* FIXME */
     }
-  parse_variable (loc, stmt->v.component.format, str);
-  mu_list_append (formlist, stmt);
+  parse_variable (ctx, stmt->v.component.format);
+  mu_list_append (ctx->formlist, stmt);
 }
 
 static void
-parse_variable (locus_t *loc, mu_list_t formlist, char *str)
+parse_variable (struct mhl_ctx *ctx, mu_list_t formlist)
 {
-  size_t i;
   struct mu_wordsplit ws;
-  mh_format_t fmt;
   int wsflags;
+  int expect_comma = 0;
+  int rc;
+
+  if (mhl_ctx_eol (ctx))
+    return;
   
-  if (strncmp (str, "ignores=", 8) == 0 && str[8] != '"')
+  if (mhl_ctx_looking_at (ctx, "ignores=")
+      && !mhl_ctx_looking_at (ctx, "ignores=\""))
     {
       /* A hack to allow for traditional use of "ignores=", i.e.
 	 as a single statement on a line, without double-quotes around
@@ -167,137 +308,130 @@ parse_variable (locus_t *loc, mu_list_t formlist, char *str)
       wsflags = MU_WRDSF_DEFFLAGS|MU_WRDSF_DELIM|
 	        MU_WRDSF_WS|MU_WRDSF_RETURN_DELIMS;
     }
-  if (mu_wordsplit (str, &ws, wsflags))
+  wsflags |= MU_WRDSF_INCREMENTAL;
+
+  if (mu_wordsplit (ctx->curptr, &ws, wsflags))
     {
-      mu_error ("%s:%d: mu_wordsplit(%s): %s",
-		loc->filename,
-		loc->line,
-		str,
+      mu_error ("mu_wordsplit(%s): %s",	ctx->curptr,
 		mu_wordsplit_strerror (&ws));
       exit (1);
     }
 
-  for (i = 0; i < ws.ws_wordc; i++)
+  expect_comma = 0;
+  
+  do
     {
-      mhl_stmt_t *stmt;
-      char *name = ws.ws_wordv[i];
-      char *value = NULL;
-      mhl_variable_t *var;
-      
-      value = strchr (name, '=');
-      if (value)
-	*value++ = 0;
-      stmt = stmt_alloc (stmt_variable);
-      var = variable_lookup (name);
-      if (!var)
+      char *name = ws.ws_wordv[ws.ws_wordc - 1];
+
+      if (expect_comma)
 	{
-	  mu_error (_("%s:%d: unknown variable: %s"),
-		    loc->filename,
-		    loc->line,
-		    name);
-	  exit (1);
-	}
-
-      if ((var->type == dt_flag && value)
-	  || (var->type != dt_flag && !value))
-	{
-	  mu_error (_("%s:%d: wrong datatype for %s"),
-		    loc->filename,
-		    loc->line,
-		    var->name);
-	  exit (1);
-	}
-
-      switch (var->type)
-	{
-	case dt_string:
-	  stmt->v.variable.value.str = mu_strdup (value);
-	  break;
-
-	case dt_integer:
-	  stmt->v.variable.value.num = strtoul (value, NULL, 0);
-	  break;
-
-	case dt_format:
-	  if (mh_format_parse (value, &fmt))
+	  if (strcmp (name, ","))
 	    {
-	      mu_error (_("%s:%d: bad format string"),
-			loc->filename,
-			loc->line);
+	      mu_error (_("expected ',', but found \"%s\""), name);
+	    }
+	  mhl_ctx_advance (ctx, 1);
+	}
+      else
+	{
+	  mhl_stmt_t *stmt;
+	  char *value = NULL;
+	  mhl_variable_t *var;
+
+	  mhl_ctx_advance (ctx, strlen (name));
+	  value = strchr (name, '=');
+	  if (value)
+	    *value++ = 0;
+	  stmt = stmt_alloc (stmt_variable);
+	  var = variable_lookup (name);
+	  if (!var)
+	    {
+	      mu_error (_("unknown variable: %s"), name);
 	      exit (1);
 	    }
-	  stmt->v.variable.value.fmt = mu_alloc (sizeof (mh_format_t));
-	  *stmt->v.variable.value.fmt = fmt;
-	  break;
 
-	case dt_flag:
-	  stmt->v.variable.value.num = strcmp (var->name, name) == 0;
-	  break;
-	}
-      stmt->v.variable.id = var;
-      mu_list_append (formlist, stmt);
+	  if ((var->type == dt_flag && value)
+	      || (var->type != dt_flag && !value))
+	    {
+	      mu_error (_("wrong datatype for %s"), var->name);
+	      exit (1);
+	    }
 
-      i++;
-      if (i < ws.ws_wordc && ws.ws_wordv[i][0] != ',')
-	{
-	  mu_error (_("%s:%d: syntax error"), loc->filename, loc->line);
-	  exit (1);
+	  switch (var->type)
+	    {
+	    case dt_string:
+	      stmt->v.variable.value.str = mu_strdup (value);
+	      break;
+
+	    case dt_integer:
+	      stmt->v.variable.value.num = strtoul (value, NULL, 0);
+	      break;
+
+	    case dt_format:
+	      {
+		struct mu_locus_point pt = MU_LOCUS_POINT_INITIALIZER;
+		mu_locus_point_copy (&pt, &ctx->loc.beg);
+		/* Adjust locus
+		   FIXME: It assumes the value is quoted */
+		pt.mu_col += value - name + 1;
+		if (mh_format_string_parse (&stmt->v.variable.value.fmt,
+					    value, &ctx->loc.beg,
+					    MH_FMT_PARSE_DEFAULT))
+		  {
+		    exit (1);
+		  }
+		mu_locus_point_deinit (&pt);
+	      }
+	      break;
+	      
+	    case dt_flag:
+	      stmt->v.variable.value.num = strcmp (var->name, name) == 0;
+	      break;
+	    }
+	  stmt->v.variable.id = var;
+	  mu_list_append (formlist, stmt);
 	}
+      expect_comma = !expect_comma;
     }
+  while ((rc = mu_wordsplit (NULL, &ws, MU_WRDSF_INCREMENTAL)) == 0);
+  
   mu_wordsplit_free (&ws);
 }
 
 static int
-parse_line (locus_t *loc, mu_list_t formlist, char *str)
+parse_line (struct mhl_ctx *ctx)
 {
   char *compname;
   
-  if (*str == ':')
-    parse_cleartext (loc, formlist, str+1);
-  else if (compdecl (&str, &compname) == 0)
-    parse_component (loc, formlist, compname, str);
+  if (mhl_ctx_looking_at (ctx, ":"))
+    parse_cleartext (ctx);
+  else if (looking_at_compdecl (ctx, &compname) == 0)
+    parse_component (ctx, compname);
   else
-    parse_variable (loc, formlist, str);
+    parse_variable (ctx, ctx->formlist);
   return 0;
 }
 
 mu_list_t 
 mhl_format_compile (char *name)
 {
-  mu_stream_t stream;
-  mu_list_t formlist;
-  char *buf = NULL;
-  size_t size = 0, n;
-  locus_t loc;
   int rc;
-
-  rc = mu_file_stream_create (&stream, name, MU_STREAM_READ);
-  if (rc)
-    {
-      mu_error (_("cannot open format file %s: %s"), name, mu_strerror (rc));
-      return NULL;
-    }
-
-  if ((rc = mu_list_create (&formlist)) != 0)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_create", NULL, rc);
-      mu_stream_destroy (&stream);
-      return NULL;
-    }
-
-  loc.filename = name;
-  loc.line = 1;
-  while (mu_stream_getline (stream, &buf, &size, &n) == 0 && n > 0)
-    {
-      char *p = mu_str_stripws (buf);
-      if (!(*p == 0 || *p == ';'))
-	parse_line (&loc, formlist, p);
-      loc.line++;
-    }
-
-  free (buf);
-  mu_stream_destroy (&stream);
+  struct mhl_ctx ctx;
+  mu_list_t formlist;
   
+  rc = mhl_ctx_init (&ctx, name);
+  if (rc)
+    return NULL;
+  
+  while (mhl_ctx_getln (&ctx) == 0)
+    {
+      if (!mhl_ctx_looking_at (&ctx, ";"))
+	parse_line (&ctx);
+    }
+
+  formlist = ctx.formlist;
+  ctx.formlist = NULL;
+  mhl_ctx_deinit (&ctx);
+
   return formlist;
 }
 
@@ -319,7 +453,6 @@ _destroy_value (enum mhl_datatype type, mhl_value_t *val)
 
     case dt_format:
       mh_format_free (val->fmt);
-      free (val->fmt);
       break;
 
     default:
@@ -456,7 +589,7 @@ struct eval_env
   int ivar[I_MAX];
   int bvar[B_MAX];
   char *svar[S_MAX];
-  mh_format_t *fvar[F_MAX];
+  mh_format_t fvar[F_MAX];
   char *prefix;
 };
 
@@ -631,7 +764,7 @@ print_header_value (struct eval_env *env, char *val)
   if (env->fvar[F_FORMATFIELD])
     {
       if (mh_format_str (env->fvar[F_FORMATFIELD], val,
-			 env->ivar[I_WIDTH], &p))
+			 env->ivar[I_WIDTH], &p) == 0)
 	val = p;
     }
     

@@ -65,11 +65,6 @@
 
 #include <mu_umaxtostr.h>
 
-#define MH_FMT_RALIGN  0x1000
-#define MH_FMT_ZEROPAD 0x2000
-#define MH_FMT_COMPWS  0x4000
-#define MH_WIDTH_MASK  0x0fff
-
 #define MH_SEQUENCES_FILE ".mh_sequences"
 #define MH_USER_PROFILE ".mh_profile"
 #define MH_GLOBAL_PROFILE "mh-profile"
@@ -77,118 +72,6 @@
 #define DEFAULT_ALIAS_FILE MHLIBDIR "/MailAliases"
 
 #define is_true(arg) ((arg) == NULL||mu_true_answer_p (arg) == 1)
-
-enum mh_opcode
-{
-  /* 0. Stop. Format: mhop_stop */
-  mhop_stop,
-  /* 1. Branch.
-     Format: mhop_branch offset */
-  mhop_branch,
-  /* 2. Assign to numeric register
-     Format: mhop_num_asgn  */
-  mhop_num_asgn,
-  /* 3. Assign to string register
-     Format: mhop_str_asgn */
-  mhop_str_asgn,
-  /* 4. Numeric arg follows.
-     Format: mhop_num_arg number */
-  mhop_num_arg,
-  /* 5. String arg follows.
-     Format: mhop_str_arg length string */
-  mhop_str_arg,
-  /* 6. Branch if reg_num is zero.
-     Format: mhop_num_branch dest-off */
-  mhop_num_branch,
-  /* 7. Branch if reg_str is zero.
-     Format: mhop_str_branch dest-off */
-  mhop_str_branch,
-  /* 8. Set str to the value of the header component
-     Format: mhop_header */
-  mhop_header,
-
-  /* 9. Read message body contents into str.
-     Format: mhop_body */
-  mhop_body,
-  
-  /* 10. Call a function.
-     Format: mhop_call function-pointer */
-  mhop_call,
-
-  /* 11. assign reg_num to arg_num */
-  mhop_num_to_arg,
-
-  /* 12. assign reg_str to arg_str */
-  mhop_str_to_arg,
-
-  /* 13. Convert arg_str to arg_num */
-  mhop_str_to_num,
-  
-  /* 14. Convert arg_num to arg_str */
-  mhop_num_to_str,
-
-  /* 15. Print reg_num */
-  mhop_num_print,
-
-  /* 16. Print reg_str */
-  mhop_str_print,
-
-  /* 17. Set format specification.
-     Format: mhop_fmtspec number */
-  mhop_fmtspec,
-
-  /* 18. Noop */
-  mhop_nop
-};    
-
-enum mh_type
-{
-  mhtype_none,
-  mhtype_num,
-  mhtype_str
-};
-
-typedef enum mh_opcode mh_opcode_t;
-
-struct mh_machine;
-typedef void (*mh_builtin_fp) (struct mh_machine *);
-
-typedef union {
-  mh_opcode_t opcode;
-  mh_builtin_fp builtin;
-  int num;
-  void *ptr;
-  char str[1]; /* Any number of characters follows */
-} mh_instr_t;
-
-#define MHI_OPCODE(m) (m).opcode
-#define MHI_BUILTIN(m) (m).builtin
-#define MHI_NUM(m) (m).num
-#define MHI_PTR(m) (m).ptr
-#define MHI_STR(m) (m).str
-
-typedef struct mh_format mh_format_t;
-
-struct mh_format
-{
-  size_t progsize;          /* Size of allocated program*/
-  mh_instr_t *prog;         /* Program itself */
-};
-
-#define MHA_REQUIRED       0
-#define MHA_OPTARG         1
-#define MHA_OPT_CLEAR      2
-
-typedef struct mh_builtin mh_builtin_t;
-
-struct mh_builtin
-{
-  char *name;
-  mh_builtin_fp fun;
-  int type;
-  int argtype;
-  int optarg;
-};
 
 typedef struct
 {
@@ -227,7 +110,6 @@ struct mh_whatnow_env     /* whatnow shell environment */
 #define SEQ_PRIVATE 1
 #define SEQ_ZERO    2
 
-extern char mh_list_format[];
 extern int rcpt_mask;
 extern int mh_mailbox_cur_default;
 
@@ -284,20 +166,43 @@ int mu_getans (const char *variants, const char *fmt, ...)
 int mh_check_folder (const char *pathname, int confirm);
 int mh_makedir (const char *p);
 
-int mh_format (mh_format_t *fmt, mu_message_t msg, size_t msgno,
-	       size_t width, char **pret);
-int mh_format_str (mh_format_t *fmt, char *str, size_t width, char **pret);
-void mh_format_dump (mh_format_t *fmt);
-int mh_format_parse (char *format_str, mh_format_t *fmt);
-void mh_format_debug (int val);
-void mh_format_free (mh_format_t *fmt);
-mh_builtin_t *mh_lookup_builtin (char *name, int *rest);
+typedef struct mh_format *mh_format_t;
+typedef struct mh_fvm *mh_fvm_t;
+
+#define MH_FMT_FORCENL 1
+void mh_fvm_create (mh_fvm_t *fvm, int flags);
+void mh_fvm_destroy (mh_fvm_t *fvm);
+
+void mh_fvm_set_output (mh_fvm_t fvm, mu_stream_t str);
+void mh_fvm_set_width (mh_fvm_t fvm, size_t width);
+void mh_fvm_set_format (mh_fvm_t fvm, mh_format_t fmt);
+
+void mh_fvm_run (mh_fvm_t fvm, mu_message_t msg, size_t msgno);
+
+int mh_format_str (mh_format_t fmt, char *str, size_t width, char **pret);
+
+void mh_format_dump_code (mh_format_t fmt);
+void mh_format_dump_disass (mh_format_t fmt, int addr);
+
+#define MH_FMT_PARSE_DEFAULT 0
+#define MH_FMT_PARSE_TREE 0x01
+#define MH_FMT_PARSE_DEBUG 0x02
+int mh_format_string_parse (mh_format_t *retfmt, char const *format_str,
+			    struct mu_locus_point const *locus,
+			    int flags);
+int mh_format_file_parse (mh_format_t *retfmt, char const *formfile,
+			  int flags);
+mh_format_t mh_scan_format (void);
+
+
+void mh_format_free (mh_format_t fmt);
+void mh_format_destroy (mh_format_t *fmt);
 
 void mh_error (const char *fmt, ...) MU_PRINTFLIKE(1,2);
 void mh_err_memory (int fatal);
 
-FILE *mh_audit_open (char *name, mu_mailbox_t mbox);
-void mh_audit_close (FILE *fp);
+mu_stream_t mh_audit_open (char *name, mu_mailbox_t mbox);
+void mh_audit_close (mu_stream_t);
 
 int mh_message_number (mu_message_t msg, size_t *pnum);
 
@@ -350,7 +255,7 @@ int mh_whom_file (const char *filename, int check);
 int mh_whom_message (mu_message_t msg, int check);
 
 void mh_set_reply_regex (const char *str);
-int mh_decode_2047 (char *text, char **decoded_text);
+int mh_decode_2047 (char const *text, char **decoded_text);
 const char *mh_charset (const char *);
 
 int mh_alias_read (char const *name, int fail);

@@ -25,8 +25,8 @@
 static char prog_doc[] = N_("Reply to a message");
 static char args_doc[] = N_("[MESSAGE]");
 
-static char *format_str = NULL;
 static mh_format_t format;
+static mh_fvm_t fvm;
 static int width;
 
 struct mh_whatnow_env wh_env = { 0 };
@@ -91,16 +91,13 @@ set_whatnowproc (struct mu_parseopt *po, struct mu_option *opt,
 static void
 set_group (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
 {
+  mh_format_destroy (&format);
   if (strcmp (arg, "1") == 0)
     {
-      if (mh_read_formfile ("replgroupcomps", &format_str))
+      if (mh_format_file_parse (&format, "replgroupcomps",
+				MH_FMT_PARSE_DEFAULT))
 	exit (1);
       rcpt_mask |= RCPT_ALL;
-    }
-  else
-    {
-      free (format_str);
-      format_str = NULL;
     }
 }
 
@@ -141,9 +138,9 @@ static struct mu_option options[] = {
   { "filter", 0, N_("MHL-FILTER"), MU_OPTION_DEFAULT,
     N_("set the mhl filter to preprocess the body of the message being replied"),
     mu_c_string, &mhl_filter, mh_opt_find_file },
-  { "form",   0, N_("FILE"), MU_OPTION_DEFAULT,
-    N_("read format from given file") ,
-    mu_c_string, &format_str, mh_opt_read_formfile },
+  { "form",    0, N_("FILE"),   MU_OPTION_DEFAULT,
+    N_("read format from given file"),
+    mu_c_string, &format, mh_opt_parse_formfile },
   { "format", 0, NULL, MU_OPTION_DEFAULT,
     N_("include a copy of the message being replied; the message will be processed using either the default filter \"mhl.reply\", or the filter specified by --filter option"),
     mu_c_string, &mhl_filter, mh_opt_find_file, "mhl.repl" },
@@ -173,16 +170,17 @@ static struct mu_option options[] = {
 };
 
 static char default_format_str[] =
-"%(lit)%(formataddr %<{reply-to}%?{from}%?{sender}%?{return-path}%>)"
-"%<(nonnull)%(void(width))%(putaddr To: )\\n%>"
-"%(lit)%<(rcpt to)%(formataddr{to})%>%<(rcpt cc)%(formataddr{cc})%>%<(rcpt me)%(formataddr(me))%>"
-"%<(nonnull)%(void(width))%(putaddr cc: )\\n%>"
-"%<{fcc}Fcc: %{fcc}\\n%>"
-"%<{subject}Subject: Re: %(unre{subject})\\n%>"
-"%(lit)%(concat(in_reply_to))%<(nonnull)%(void(width))%(printhdr In-reply-to: )\\n%>"
-"%(lit)%(concat(references))%<(nonnull)%(void(width))%(printhdr References: )\\n%>"
-"X-Mailer: MH \\(%(package_string)\\)\\n" 
-"--------\n";
+    "%(lit)%(formataddr %<{reply-to}%?{from}%?{sender}%?{return-path}%>)"
+    "%<(nonnull)%(void(width))%(putaddr To: )\\n%>"
+    "%(lit)%<(rcpt to)%(formataddr{to})%>%<(rcpt cc)%(formataddr{cc})%>%<(rcpt me)%(formataddr(me))%>"
+    "%<(nonnull)%(void(width))%(putaddr cc: )\\n%>"
+    "%<(mymbox{from})%<{fcc}Fcc: %{fcc}\\n%>%>"
+    "Subject: %<{subject}%(putstr %<(profile reply-prefix)%|"
+    "%(void Re:)%>) %(void(unre{subject}))%(trim)%(putstr)%>\n"
+    "%(lit)%<(in_reply_to)%(void(width))%(printhdr In-reply-to: )\\n%>"
+    "%(lit)%<(references)%(void(width))%(printhdr References: )\\n%>"
+    "X-Mailer: MH (%(package_string))\n"
+    "--------\n";
 
 void
 make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
@@ -227,7 +225,6 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
   if (disp == DISP_REPLACE)
     {
       mu_stream_t str;
-      char *buf;
       
       rc = mu_file_stream_create (&str, wh->file,
 				  MU_STREAM_WRITE|MU_STREAM_CREAT);
@@ -237,6 +234,8 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 		    wh->file, mu_strerror (rc));
 	  exit (1);
 	}
+
+      mh_fvm_set_output (fvm, str);
 
       if (has_fcc)
 	{
@@ -248,14 +247,12 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	  mu_message_get_header (tmp_msg, &hdr);
 	  text = mu_opool_finish (fcc_pool, NULL);
 	  mu_header_set_value (hdr, MU_HEADER_FCC, text, 1);
-	  mh_format (&format, tmp_msg, msgno, width, &buf);
+	  mh_fvm_run (fvm, tmp_msg, msgno);
 	  mu_message_destroy (&tmp_msg, NULL);
 	}
       else
-	mh_format (&format, msg, msgno, width, &buf);
+	mh_fvm_run (fvm, msg, msgno);
       
-      mu_stream_write (str, buf, strlen (buf), NULL);
-
       if (mhl_filter)
 	{
 	  mu_list_t filter = mhl_format_compile (mhl_filter);
@@ -265,8 +262,8 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	  mhl_format_destroy (&filter);
 	}
 
+      mh_fvm_set_output (fvm, mu_strout);
       mu_stream_destroy (&str);
-      free (buf);
     }
 
   {
@@ -302,15 +299,20 @@ main (int argc, char **argv)
 
   mh_getopt_ext (&argc, &argv, options, MH_GETOPT_DEFAULT_FOLDER, optinit,
 		 args_doc, prog_doc, NULL);
-  
-  if (!format_str)
-    format_str = default_format_str;
-
-  if (mh_format_parse (format_str, &format))
+  if (!format)
     {
-      mu_error (_("Bad format string"));
-      exit (1);
+      if (mh_format_string_parse (&format, default_format_str,
+				  NULL, MH_FMT_PARSE_DEFAULT))
+	{
+	  mu_error (_("INTERNAL ERROR: bad built-in format; please report"));
+	  exit (1);
+	}
     }
+
+  mh_fvm_create (&fvm, 0);
+  mh_fvm_set_format (fvm, format);
+  mh_fvm_set_width (fvm, width ? width : mh_width ());
+  mh_format_destroy (&format);
 
   mbox = mh_open_folder (mh_current_folder (), MU_STREAM_RDWR);
   mh_msgset_parse (&msgset, mbox, argc, argv, "cur");

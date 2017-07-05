@@ -21,6 +21,7 @@ libdatetime_la_SOURCES = \
  dow.c\
  doy.c\
  jd.c\
+ parsedate.y\
  scantime.c\
  streamftime.c\
  strftime.c\
@@ -31,3 +32,5 @@ libdatetime_la_SOURCES = \
  yd.c
 
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+YLWRAP = @MU_YLWRAP@
+EXTRA_DIST = gylwrap.conf

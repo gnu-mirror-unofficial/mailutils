@@ -129,7 +129,6 @@ libproto/mailer/smtp_gsasl.c
 libmailutils/auth/mu_auth.c
 
 libmailutils/base/mutil.c
-libmailutils/base/parsedate.y
 libmailutils/base/registrar.c
 libmailutils/base/version.c
 libmailutils/base/tempfile.c
@@ -140,6 +139,8 @@ libmailutils/string/str_to_c.c
 libmailutils/stdstream/basestr.c
 libmailutils/stdstream/strerr.c
 libmailutils/stdstream/dbgstream.c
+
+libmailutils/datetime/parsedate.y
 
 messages/messages.c
 

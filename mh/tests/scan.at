@@ -93,5 +93,65 @@ scan | sed 's/ *$//'
    5  07/13 To:Foo Bar         Empty MIME Parts<<------- =_aaaaaaaaaa0 Content-
 ])
 
+MH_CHECK([default format],[scan06 scan.default],[
+MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+scan -form $MHETCDIR/scan.default| sed 's/ *$//'
+],
+[0],
+[   1  12/28 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy toves
+   2  12/28 Bar                Re: Jabberwocky<<It seems very pretty, but it's
+   3  07/13 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   4  07/13 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   5  07/13 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Content-
+])
+
+MH_CHECK([mailx format],[scan07 scan.mailx],[
+MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+scan -form $MHETCDIR/scan.mailx| sed 's/ *$//'
+],
+[0],
+[ N    1 Foo Bar           Fri Dec 28 22:18 Jabberwocky
+ N    2 Bar               Fri Dec 28 23:28 Re: Jabberwocky
+ N    3 Sergey Poznyakoff Sat Jul 13 00:43 Simple MIME
+ N    4 Sergey Poznyakoff Sat Jul 13 00:50 Nested MIME
+ N    5 Sergey Poznyakoff Sat Jul 13 00:43 Empty MIME Parts
+])
+
+MH_CHECK([size format],[scan08 scan.size],[
+MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+scan -form $MHETCDIR/scan.size| sed 's/ *$//'
+],
+[0],
+[   1  12/28  1354 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy
+   2  12/28   614 Bar                Re: Jabberwocky<<It seems very pretty, but
+   3  07/13  1647 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Content
+   4  07/13  3477 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Content
+   5  07/13   935 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Co
+])
+
+MH_CHECK([time format],[scan08 scan.time],[
+MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+scan -form $MHETCDIR/scan.time| sed 's/ *$//'
+],
+[0],
+[   1  12/28 22:18+02 Foo Bar            Jabberwocky<<`Twas brillig, and the sli
+   2  12/28 23:28+02 Bar                Re: Jabberwocky<<It seems very pretty,
+   3  07/13 00:43+03 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Cont
+   4  07/13 00:50+03 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Cont
+   5  07/13 00:43+03 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0
+])
+
+MH_CHECK([timely format],[scan09 scan.timely],[
+MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+scan -form $MHETCDIR/scan.timely| sed 's/ *$//'
+],
+[0],
+[   1  Dec01 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy toves
+   2  Dec01 Bar                Re: Jabberwocky<<It seems very pretty, but it's
+   3  Jul02 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   4  Jul02 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   5  Jul02 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Content-
+])
+
 m4_popdef[MH_KEYWORDS])
 # End of scan.at

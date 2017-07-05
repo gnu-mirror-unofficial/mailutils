@@ -54,7 +54,6 @@ libbase_la_SOURCES = \
  observer.c\
  onexit.c\
  opool.c\
- parsedate.y\
  permstr.c\
  registrar.c\
  refcount.c\
@@ -82,10 +81,6 @@ AM_CPPFLAGS = \
  -DLOCALEDIR=\"$(localedir)\"
 
 
-YLWRAP = @MU_YLWRAP@
-EXTRA_DIST = gylwrap.conf
-AM_YFLAGS=
-AM_LFLAGS=
 
 
 

@@ -31,18 +31,8 @@
 #include <fnmatch.h>
 #include <sys/ioctl.h>
 
-char mh_list_format[] = 
-  "%4(msg)"
-  "%<(cur)+%| %>"
-  "%<{replied}-%?{encrypted}E%| %>"
-  "%02(mon{date})/%02(mday{date})"
-  "%<{date} %|*%>"
-  "%<(mymbox{from})%<{to}To:%14(decode(friendly{to}))%>%>"
-  "%<(zero)%17(decode(friendly{from}))%>"
-  "  %(decode{subject})%<{body}<<%{body}>>%>";
-
 void
-mh_init ()
+mh_init (void)
 {
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
   
@@ -54,73 +44,9 @@ mh_init ()
 }
 
 void
-mh_init2 ()
+mh_init2 (void)
 {
   mh_current_folder ();
-}
-
-int
-mh_read_formfile (char const *name, char **pformat)
-{
-  FILE *fp;
-  struct stat st;
-  char *ptr;
-  size_t off = 0;
-  char *format_str;
-  char *file_name;
-  int rc;
-  
-  rc = mh_find_file (name, &file_name);
-  if (rc)
-    {
-      mu_error (_("cannot access format file %s: %s"), name, strerror (rc));
-      return -1;
-    }
-  
-  if (stat (file_name, &st))
-    {
-      mu_error (_("cannot stat format file %s: %s"), file_name,
-		strerror (errno));
-      free (file_name);
-      return -1;
-    }
-  
-  fp = fopen (file_name, "r");
-  if (!fp)
-    {
-      mu_error (_("cannot open format file %s: %s"), file_name,
-		strerror (errno));
-      free (file_name);
-      return -1;
-    }
-  free (file_name);
-  
-  format_str = mu_alloc (st.st_size+1);
-  while ((ptr = fgets (format_str + off, st.st_size - off + 1, fp)) != NULL)
-    {
-      int len = strlen (ptr);
-      if (len == 0)
-	break;
-
-      if (*ptr == '%' && ptr[1] == ';')
-	continue;
-      
-      if (len > 0 && ptr[len-1] == '\n')
-	{
-	  if (ptr[len-2] == '\\')
-	    {
-	      len -= 2;
-	      ptr[len] = 0;
-	    }
-	}
-      off += len;
-    }
-  if (off > 0 && format_str[off-1] == '\n')
-    off--;
-  format_str[off] = 0;
-  fclose (fp);
-  *pformat = format_str;
-  return 0;
 }
 
 void
@@ -165,74 +91,207 @@ mh_my_email (void)
     }
   return my_email;
 }
+
+enum part_match_mode
+  {
+    part_match_local,
+    part_match_domain
+  };
 
-int
-emailcmp (char *pattern, char *name)
+enum part_match_result
+  {
+    part_match_false,
+    part_match_true,
+    part_match_abort
+  };
+
+static int match_char_class (char const **pexpr, char c, int icase);
+
+static enum part_match_result
+part_match (char const *expr, char const *name, enum part_match_mode mode)
 {
-  char *p;
+  int c;
 
-  p = strchr (pattern, '@');
-  if (p)
-    for (p++; *p; p++)
-      *p = mu_toupper (*p);
+  while (*expr)
+    {
+      if (*name == 0 && *expr != '*')
+	return part_match_abort;
+      switch (*expr)
+	{
+	case '*':
+	  while (*++expr == '*')
+	    ;
+	  if (*expr == 0)
+	    return part_match_true;
+	  while (*name)
+	    {
+	      int res = part_match (expr, name++, mode);
+	      if (res != part_match_false)
+		return res;
+	    }
+	  return part_match_abort;
 
-  return fnmatch (pattern, name, 0);
+	case '?':
+	  expr++;
+	  if (*name == 0)
+	    return part_match_false;
+	  name++;
+	  break;
+	  
+	case '[':
+	  if (!match_char_class (&expr, *name, mode == part_match_domain))
+	    return part_match_false;
+	  name++;
+	  break;
+
+	case '\\':
+	  if (expr[1])
+	    {
+	      c = *++expr; expr++;
+	      if (*name != mu_wordsplit_c_unquote_char (c))
+		return part_match_false;
+	      name++;
+	      break;
+	    }
+	  /* fall through */
+
+	default:
+	  if (mode == part_match_local)
+	    {
+	      if (*expr != *name)
+		return part_match_false;
+	      if ('@' == *name)
+		mode = part_match_domain;
+	    }
+	  else
+	    {
+	      if (mu_tolower (*expr) != mu_tolower (*name))
+		return part_match_false;
+	    }
+	  expr++;
+	  name++;
+	}
+    }
+
+  if (*name == 0)
+    return part_match_true;
+  
+  if (mode == part_match_local && *name == '@')
+    return part_match_true;
+
+  return part_match_false;
+}
+
+static int
+match_char_class (char const **pexpr, char c, int icase)
+{
+  int res;
+  int rc;
+  char const *expr = *pexpr;
+
+  if (icase)
+    c = mu_toupper (c);
+
+  expr++;
+  if (*expr == '^')
+    {
+      res = 0;
+      expr++;
+    }
+  else
+    res = 1;
+
+  if (*expr == '-' || *expr == ']')
+    rc = c == *expr++;
+  else
+    rc = !res;
+
+  for (; *expr && *expr != ']'; expr++)
+    {
+      if (rc == res)
+	{
+	  if (*expr == '\\' && expr[1] == ']')
+	    expr++;
+	}
+      else if (expr[1] == '-')
+	{
+	  if (*expr == '\\')
+	    rc = *++expr == c;
+	  else
+	    {
+	      if (icase)
+		rc = mu_toupper (*expr) <= c && c <= mu_toupper (expr[2]);
+	      else
+		rc = *expr <= c && c <= expr[2];
+	      expr += 2;
+	    }
+	}
+      else if (*expr == '\\' && expr[1] == ']')
+	rc = *++expr == c;
+      else if (icase)
+	rc = mu_toupper(*expr) == c;
+      else
+	rc = *expr == c;
+    }
+  *pexpr = *expr ? expr + 1 : expr;
+  return rc == res;
+}
+
+static int
+email_match (char const *pattern, char const *name)
+{
+  return part_match (pattern, name, part_match_local) == part_match_true;
 }
 
 int
 mh_is_my_name (const char *name)
 {
-  char *pname, *p;
-  int rc = 0;
+  static mu_address_t addr;
+  mu_address_t p;
   
-  pname = mu_strdup (name);
-  p = strchr (pname, '@');
-  if (p)
-    for (p++; *p; p++)
-      *p = mu_toupper (*p);
-  
-  if (emailcmp (mh_my_email (), pname) == 0)
-    rc = 1;
-  else
+  if (!addr)
     {
-      const char *nlist = mh_global_profile_get ("Alternate-Mailboxes", NULL);
+      const char *nlist;
+      int rc;
+      
+      rc = mu_address_create (&addr, mh_my_email ());
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_address_create", mh_my_email (),
+			   rc);
+	  return 0;
+	}
+      
+      nlist = mh_global_profile_get ("Alternate-Mailboxes", NULL);
       if (nlist)
 	{
-	  const char *end, *p;
-	  char *pat;
-	  int len;
-	  
-	  for (p = nlist; rc == 0 && *p; p = end)
+	  mu_address_t tmp;
+	  struct mu_address hint;
+
+	  hint.domain = NULL;
+	  rc = mu_address_create_hint (&tmp, nlist, &hint,
+				       MU_ADDR_HINT_DOMAIN);
+	  if (rc == 0)
 	    {
-	      
-	      while (*p && mu_isspace (*p))
-		p++;
-
-	      end = strchr (p, ',');
-	      if (end)
-		{
-		  len = end - p;
-		  end++;
-		}
-	      else
-		{
-		  len = strlen (p);
-		  end = p + len;
-		}
-
-	      while (len > 0 && mu_isspace (p[len-1]))
-		len--;
-
-	      pat = mu_alloc (len + 1);
-	      memcpy (pat, p, len);
-	      pat[len] = 0;
-	      rc = emailcmp (pat, pname) == 0;
-	      free (pat);
+	      rc = mu_address_union (&addr, tmp);
+	      if (rc)
+		mu_diag_funcall (MU_DIAG_ERROR, "mu_address_union", NULL, rc);
+	      mu_address_destroy (&tmp);
+	    }
+	  else
+	    {
+	      mu_error (_("bad Alternate-Mailboxes: %s; please fix"),
+			mu_strerror (rc));
 	    }
 	}
     }
-  free (pname);
-  return rc;
+
+  for (p = addr; p; p = p->next)
+    {
+      if (email_match (p->email, name))
+	return 1;
+    }
+  return 0;
 }
 
 static int
@@ -320,7 +379,7 @@ mh_check_folder (const char *pathname, int confirm)
 }
 
 int
-mh_interactive_mode_p ()
+mh_interactive_mode_p (void)
 {
   static int interactive = -1;
 
@@ -385,16 +444,17 @@ mh_getyn_interactive (const char *fmt, ...)
   return rc;
 }
 	    
-FILE *
+mu_stream_t
 mh_audit_open (char *name, mu_mailbox_t mbox)
 {
-  FILE *fp;
+  mu_stream_t str;
   char date[64];
   time_t t;
   struct tm *tm;
   mu_url_t url;
   char *namep;
-  
+  int rc;
+    
   namep = mu_tilde_expansion (name, MU_HIERARCHY_DELIMITER, NULL);
   if (strchr (namep, MU_HIERARCHY_DELIMITER) == NULL)
     {
@@ -403,10 +463,10 @@ mh_audit_open (char *name, mu_mailbox_t mbox)
       namep = p;
     }
 
-  fp = fopen (namep, "a");
-  if (!fp)
+  rc = mu_file_stream_create (&str, namep, MU_STREAM_CREAT|MU_STREAM_APPEND);
+  if (rc)
     {
-      mu_error (_("cannot open audit file %s: %s"), namep, strerror (errno));
+      mu_error (_("cannot open audit file %s: %s"), namep, strerror (rc));
       free (namep);
       return NULL;
     }
@@ -417,17 +477,17 @@ mh_audit_open (char *name, mu_mailbox_t mbox)
   mu_strftime (date, sizeof date, "%a, %d %b %Y %H:%M:%S %Z", tm);
   mu_mailbox_get_url (mbox, &url);
   
-  fprintf (fp, "<<%s>> %s %s\n",
-	   mu_program_name,
-	   date,
-	   mu_url_to_string (url));
-  return fp;
+  mu_stream_printf (str, "<<%s>> %s %s\n",
+		    mu_program_name,
+		    date,
+		    mu_url_to_string (url));
+  return str;
 }
 
 void
-mh_audit_close (FILE *fp)
+mh_audit_close (mu_stream_t str)
 {
-  fclose (fp);
+  mu_stream_close (str);
 }
 
 int
@@ -465,7 +525,7 @@ mh_open_folder (const char *folder, int flags)
 }
 
 char *
-mh_get_dir ()
+mh_get_dir (void)
 {
   const char *mhdir = mh_global_profile_get ("Path", "Mail");
   char *mhcopy;
@@ -913,7 +973,7 @@ mh_charset (const char *dfl)
 }
 
 int
-mh_decode_2047 (char *text, char **decoded_text)
+mh_decode_2047 (char const *text, char **decoded_text)
 {
   const char *charset = mh_charset (NULL);
   if (!charset)

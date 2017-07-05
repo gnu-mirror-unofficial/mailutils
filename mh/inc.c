@@ -27,11 +27,12 @@ static char extra_doc[] = N_("Debug flags are:\n\
   i - sieve instructions trace (MU_SIEVE_DEBUG_INSTR)\n\
   l - sieve action logs");
 
-static char *format_str = mh_list_format;
+static mh_format_t format;
+static mh_fvm_t fvm;
 static int width;
 static mu_list_t input_file_list;
 static char *audit_file; 
-static FILE *audit_fp;
+static mu_stream_t audit_stream;
 static int changecur = -1;
 static int truncate_source = -1;
 static int quiet = 0;
@@ -92,12 +93,12 @@ static struct mu_option options[] = {
   { "changecur", 0, NULL, MU_OPTION_DEFAULT,
     N_("mark first incorporated message as current (default)"),
     mu_c_bool, &changecur },
-  { "form",      0, N_("FILE"),   MU_OPTION_DEFAULT,
+  { "form",    0, N_("FILE"),   MU_OPTION_DEFAULT,
     N_("read format from given file"),
-    mu_c_string, &format_str, mh_opt_read_formfile },
-  { "format",    0, N_("FORMAT"), MU_OPTION_DEFAULT,
+    mu_c_string, &format, mh_opt_parse_formfile },
+  { "format",  0, N_("FORMAT"), MU_OPTION_DEFAULT,
     N_("use this format string"),
-    mu_c_string, &format_str },
+    mu_c_string, &format, mh_opt_parse_format },
   { "truncate",  0, NULL, MU_OPTION_DEFAULT,
     N_("truncate source mailbox after incorporating (default)"),
     mu_c_bool, &truncate_source },
@@ -126,25 +127,24 @@ static struct mu_option options[] = {
 };
 
 void
-list_message (mh_format_t *format, mu_mailbox_t mbox, size_t msgno,
-	      size_t width)
+list_message (mu_mailbox_t mbox, size_t msgno)
 {
   mu_message_t msg;
-  char *buf = NULL;
 
   mu_mailbox_get_message (mbox, msgno, &msg);
-  mh_format (format, msg, msgno, width, &buf);
-  printf ("%s\n", buf);
-  if (audit_fp)
-    fprintf (audit_fp, "%s\n", buf);
-  free (buf);
+  mh_fvm_run (fvm, msg, msgno);
+  if (audit_stream)
+    {
+      mh_fvm_set_output (fvm, audit_stream);
+      mh_fvm_run (fvm, msg, msgno);
+      mh_fvm_set_output (fvm, mu_strout);
+    }
 }
 
 struct incdat
 {
   mu_mailbox_t output;
   size_t lastmsg;
-  mh_format_t format;
   mu_script_t handler;
   mu_script_descr_t descr;
 };
@@ -232,7 +232,7 @@ incmbx (void *item, void *data)
   
   /* Open audit file, if specified */
   if (audit_file)
-    audit_fp = mh_audit_open (audit_file, input);
+    audit_stream = mh_audit_open (audit_file, input);
 
   for (n = 1; n <= total; n++)
     {
@@ -281,7 +281,7 @@ incmbx (void *item, void *data)
 
       ++dp->lastmsg;
       if (!quiet)
-	list_message (&dp->format, dp->output, dp->lastmsg, width);
+	list_message (dp->output, dp->lastmsg);
       
       if (f_truncate)
 	{
@@ -323,10 +323,10 @@ incmbx (void *item, void *data)
       mu_mailbox_expunge (input);
     }
   
-  if (audit_fp)
+  if (audit_stream)
     {
-      mh_audit_close (audit_fp);
-      audit_fp = NULL;
+      mh_audit_close (audit_stream);
+      mu_stream_destroy (&audit_stream);
     }
 
   mu_mailbox_close (input);
@@ -359,12 +359,15 @@ main (int argc, char **argv)
   /* Inc sets missing cur to 1 */
   mh_mailbox_cur_default = 1;
 
+  if (!format && !quiet)
+    format = mh_scan_format ();
+
+  mh_fvm_create (&fvm, MH_FMT_FORCENL);
+  mh_fvm_set_format (fvm, format);
+  mh_fvm_set_width (fvm, width ? width : mh_width ());  
+  mh_format_destroy (&format);
+    
   memset (&incdat, 0, sizeof (incdat));
-  if (!quiet && mh_format_parse (format_str, &incdat.format))
-    {
-      mu_error (_("Bad format string"));
-      exit (1);
-    }
 
   incdat.output = mh_open_folder (append_folder,
 				  MU_STREAM_READ|MU_STREAM_APPEND|MU_STREAM_CREAT);
