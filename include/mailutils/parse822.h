@@ -202,11 +202,6 @@ extern int mu_parse822_field_name       (const char **p, const char *e,
 
 /***** From RFC 822, 5.1 Date and Time Specification Syntax *****/
 
-extern int mu_parse822_day       (const char **p, const char *e, int *day);
-extern int mu_parse822_date      (const char **p, const char *e, int *day,
-				  int *mon, int *year);
-extern int mu_parse822_time      (const char **p, const char *e, int *h,
-				  int *m, int *s, int *tz, const char **tz_name);
 extern int mu_parse822_date_time (const char **p, const char *e,
 				  struct tm *tm, struct mu_timezone *tz);
 
