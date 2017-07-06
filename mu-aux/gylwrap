@@ -281,7 +281,7 @@ sub filter {
 	    s{$input_rx/}{};
 	    s{"$from"}{"$target"};
 	}
-	if ($yyrx) {
+	if ($yyrepl) {
 	    s{\byy($yyrx)\b}{${yyrepl}$1}g;
 	}
 	print $ofd $_
