@@ -25,6 +25,7 @@
 
 #include <mailutils/types.h>
 #include <mailutils/datetime.h>
+#include <mailutils/cctype.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,19 +37,95 @@ extern "C" {
 */
 
 /* From RFC 822, 3.3 Lexical Tokens */
+/*
+ * Character Classification
+ *  
+ * Note that all return values are:
+ *   1 -> TRUE
+ *   0 -> FALSE
+ * This may be appear different than the 0 == success return
+ * values of the other functions, but I was getting lost in
+ * boolean arithmetic.
+ */
+static inline int
+mu_parse822_is_char (char c)
+{
+  return mu_isascii (c);
+}
 
-extern int mu_parse822_is_char        (char c);
-extern int mu_parse822_is_digit       (char c);
-extern int mu_parse822_is_ctl         (char c);
-extern int mu_parse822_is_space       (char c);
-extern int mu_parse822_is_htab        (char c);
-extern int mu_parse822_is_lwsp_char   (char c);
-extern int mu_parse822_is_special     (char c);
-extern int mu_parse822_is_atom_char   (char c);
-extern int mu_parse822_is_q_text      (char c);
-extern int mu_parse822_is_d_text      (char c);
-extern int mu_parse822_is_smtp_q      (char c);
+static inline int
+mu_parse822_is_digit (char c)
+{
+  /* digit = <any ASCII decimal digit> */
 
+  return mu_isdigit (c);
+}
+
+static inline int
+mu_parse822_is_ctl (char c)
+{
+  return mu_isnwctl (c);
+}
+
+static inline int
+mu_parse822_is_space (char c)
+{
+  return c == ' ';
+}
+
+static inline int
+mu_parse822_is_htab (char c)
+{
+  return c == '\t';
+}
+
+static inline int
+mu_parse822_is_lwsp_char (char c)
+{
+  return mu_isspace (c);
+}
+
+static inline int
+mu_parse822_is_special (char c)
+{
+  return mu_isimspc (c);
+}
+
+static inline int
+mu_parse822_is_atom_char (char c)
+{
+  return mu_isimatm (c);
+}
+
+static inline int
+mu_parse822_is_q_text (char c)
+{
+return mu_parse822_is_char (c)
+         && c != '"'
+         && c != '\\'
+         && c != '\r';
+}
+
+static inline int
+mu_parse822_is_d_text (char c)
+{
+  return mu_parse822_is_char (c)
+         && c != '['
+         && c != ']'
+         && c != '\\'
+         && c != '\r';
+}
+/*
+ * SMTP's version of qtext, called <q> in the RFC 821 syntax,
+ * also excludes <LF>.
+ */
+static inline int
+mu_parse822_is_smtp_q (char c)
+{
+  return mu_parse822_is_q_text (c) && c != '\n';
+}
+
+
 extern int mu_parse822_skip_crlf      (const char **p, const char *e);
 extern int mu_parse822_skip_lwsp_char (const char **p, const char *e);
 extern int mu_parse822_skip_lwsp      (const char **p, const char *e);

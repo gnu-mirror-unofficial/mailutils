@@ -24,22 +24,27 @@
 extern "C" {
 #endif
 
-#define MU_CTYPE_ALPHA   0x0001
-#define MU_CTYPE_DIGIT   0x0002
-#define MU_CTYPE_BLANK   0x0004
-#define MU_CTYPE_CNTRL   0x0008
-#define MU_CTYPE_GRAPH   0x0010
-#define MU_CTYPE_LOWER   0x0020
-#define MU_CTYPE_UPPER   0x0040
-#define MU_CTYPE_PRINT   0x0080
-#define MU_CTYPE_PUNCT   0x0100
-#define MU_CTYPE_SPACE   0x0200
-#define MU_CTYPE_XLETR   0x0400
-#define MU_CTYPE_ENDLN   0x0800
-#define MU_CTYPE_TSPEC   0x1000  /* tspecials: RFC 2045, section 5.1. */
-#define MU_CTYPE_IDENT   0x2000  /* Valid identifier consituent: alnum or _ */
-#define MU_CTYPE_HEADR   0x4000  /* Valid header name consituent: alnum, _,
+#define MU_CTYPE_ALPHA   0x00001
+#define MU_CTYPE_DIGIT   0x00002
+#define MU_CTYPE_BLANK   0x00004
+#define MU_CTYPE_CNTRL   0x00008
+#define MU_CTYPE_GRAPH   0x00010
+#define MU_CTYPE_LOWER   0x00020
+#define MU_CTYPE_UPPER   0x00040
+#define MU_CTYPE_PRINT   0x00080
+#define MU_CTYPE_PUNCT   0x00100
+#define MU_CTYPE_SPACE   0x00200
+#define MU_CTYPE_XLETR   0x00400
+#define MU_CTYPE_ENDLN   0x00800
+#define MU_CTYPE_TSPEC   0x01000 /* tspecials: RFC 2045, section 5.1. */
+#define MU_CTYPE_IDENT   0x02000 /* Valid identifier consituent: alnum or _ */
+#define MU_CTYPE_HEADR   0x04000 /* Valid header name consituent: alnum, _,
 				    or - */
+#define MU_CTYPE_IMSPC   0x08000 /* Internet Message Format Specials:
+				    RFC2822, 3.2.1 */
+#define MU_CTYPE_NWCTL   0x10000 /* Internet Message NO-WS-CTL:
+				    RFC2822, 3.2.1 */
+#define MU_CTYPE_IMATM   0x20000 /* Internet Message atom constituent */
 
 #define MU_C_TAB_MAX     128
 
@@ -65,6 +70,9 @@ extern int mu_c_tab[MU_C_TAB_MAX];
 #define mu_istspec(c) mu_c_is_class (c, MU_CTYPE_TSPEC)
 #define mu_isident(c) mu_c_is_class (c, MU_CTYPE_IDENT)
 #define mu_isheadr(c) mu_c_is_class (c, MU_CTYPE_HEADR)
+#define mu_isimspc(c) mu_c_is_class (c, MU_CTYPE_IMSPC)
+#define mu_isnwctl(c) mu_c_is_class (c, MU_CTYPE_NWCTL)
+#define mu_isimatm(c) mu_c_is_class (c, MU_CTYPE_IMATM)
 
 #define mu_tolower(c)					\
   ({ int __c = (c);					\

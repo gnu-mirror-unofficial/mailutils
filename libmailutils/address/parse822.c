@@ -174,108 +174,6 @@ str_free (char **s)
     }
 }
 
-/*
- * Character Classification - could be rewritten in a C library
- * independent way, my system's C library matches the RFC
- * definitions. I don't know if that's guaranteed.
- *  
- * Note that all return values are:
- *   1 -> TRUE
- *   0 -> FALSE
- * This may be appear different than the 0 == success return
- * values of the other functions, but I was getting lost in
- * boolean arithmetic.
- */
-int
-mu_parse822_is_char (char c)
-{
-  return mu_isascii (c);
-}
-
-int
-mu_parse822_is_digit (char c)
-{
-  /* digit = <any ASCII decimal digit> */
-
-  return mu_isdigit ((unsigned) c);
-}
-
-int
-mu_parse822_is_ctl (char c)
-{
-  return mu_iscntrl ((unsigned) c) || c == 127 /* DEL */ ;
-}
-
-int
-mu_parse822_is_space (char c)
-{
-  return c == ' ';
-}
-
-int
-mu_parse822_is_htab (char c)
-{
-  return c == '\t';
-}
-
-int
-mu_parse822_is_lwsp_char (char c)
-{
-  return mu_parse822_is_space (c) || mu_parse822_is_htab (c);
-}
-
-int
-mu_parse822_is_special (char c)
-{
-  return strchr ("()<>@,;:\\\".[]", c) ? 1 : 0;
-}
-
-int
-parse822_is_atom_char_ex (char c)
-{
-  return !mu_parse822_is_special (c)
-    && !mu_parse822_is_space (c)
-    && !mu_parse822_is_ctl (c);
-}
-
-int
-mu_parse822_is_atom_char (char c)
-{
-  return mu_parse822_is_char (c) && parse822_is_atom_char_ex (c);
-}
-
-int
-mu_parse822_is_q_text (char c)
-{
-  return
-    mu_parse822_is_char (c) &&
-    c != '"' &&
-    c != '\\' &&
-    c != '\r';
-}
-
-int
-mu_parse822_is_d_text (char c)
-{
-  return
-    mu_parse822_is_char (c) &&
-    c != '[' &&
-    c != ']' &&
-    c != '\\' &&
-    c != '\r';
-}
-/*
- * SMTP's version of qtext, called <q> in the RFC 821 syntax,
- * also excludes <LF>.
- */
-int
-mu_parse822_is_smtp_q (char c)
-{
-  return
-    mu_parse822_is_q_text (c) &&
-    c != '\n';
-}
-
 /***** From RFC 822, 3.3 Lexical Tokens *****/
 
 int
@@ -500,7 +398,7 @@ parse822_atom_ex (const char **p, const char *e, char **atom)
 
   mu_parse822_skip_comments (p, e);
 
-  for (ptr = *p; (ptr != e) && parse822_is_atom_char_ex (*ptr); ptr++)
+  for (ptr = *p; (ptr != e) && mu_parse822_is_atom_char (*ptr); ptr++)
     ;
   if (ptr - *p == 0)
     return EPARSE;
