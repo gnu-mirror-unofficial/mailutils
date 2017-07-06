@@ -63,6 +63,9 @@ int mu_opool_union (mu_opool_t *dst, mu_opool_t *src);
    begin a new object. */
 void mu_opool_clear (mu_opool_t opool);
 
+/* Reset the length of the current object to SIZE bytes */
+void mu_opool_less (mu_opool_t opool, size_t size);
+
 /* Free object OBJ from the pool.  If OBJ is NULL, free all created objects,
    including the one being built */
 void mu_opool_free (mu_opool_t pool, void *obj);

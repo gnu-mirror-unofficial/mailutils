@@ -182,6 +182,35 @@ mu_opool_clear (mu_opool_t opool)
 }	
 
 void
+mu_opool_less (mu_opool_t opool, size_t sz)
+{
+  union mu_opool_bucket *p;
+  size_t total = 0;
+  
+  if (!opool)
+    return;
+  for (p = opool->bkt_head; p; p = p->hdr.next)
+    {
+      if (total + p->hdr.level >= sz)
+	{
+	  union mu_opool_bucket *t;
+	  p->hdr.level = sz - total;
+	  t = p->hdr.next;
+	  p->hdr.next = NULL;
+
+	  while (t)
+	    {
+	      union mu_opool_bucket *next = t->hdr.next;
+	      free (t);
+	      t = next;
+	    }
+	  break;
+	}
+      total += p->hdr.level;
+    }
+}	    
+
+void
 mu_opool_destroy (mu_opool_t *popool)
 {
   union mu_opool_bucket *p;
