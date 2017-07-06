@@ -22,11 +22,10 @@ use strict;
 use warnings;
 use Getopt::Long qw(:config gnu_getopt no_ignore_case require_order auto_version);
 use File::Basename;
-use File::Temp qw(tempdir);
+use File::Temp qw(tempdir tempfile);
 use Pod::Man;
 use Pod::Usage;
 use Cwd 'abs_path';
-use List::Regexp;
 
 =head1 NAME
 
@@ -36,6 +35,7 @@ gylwrap - wrapper for yacc, lex and similar programs
 
 B<gylwrap>
 [B<-?>]    
+[B<--reset>]    
 [B<--yyrepl=>I<PREFIX>]
 [B<--yysym=>I<STRING>]
 [B<--help>]
@@ -44,6 +44,12 @@ I<INPUT>
 [I<OUTPUT> I<DESIRED>]...
 B<--> I<PROGRAM> [I<ARGS>]    
 
+B<gylwrap>
+B<--dump>
+[B<--reset>]    
+[B<--yyrepl=>I<PREFIX>]
+[I<OUTFILE>]
+  
 =head1 DESCRIPTION
 
 Wraps B<lex> and B<yacc> invocations to rename their output files.  
@@ -102,6 +108,17 @@ command line argument.
 
 =over 4
 
+=item B<--dump>
+
+Dumps the entire program (after applying any eventual B<--yysym> options)
+to I<OUTFILE>.  If I<OUTFILE> is not given, rewrite the program file with
+the output.  Use this option to hardcode more replaceable symbols into
+this program.  See the BOOTSTRAP section for an example.    
+
+=item B<--reset>
+
+Clears the yysym array.     
+    
 =item B<--yyrepl=>I<PREFIX>
 
 Replace the B<yy> prefix in global symbols with I<PREFIX>.
@@ -124,6 +141,8 @@ Displays program version and exits.
 
 This script is an improved version of the B<ylwrap> script, included
 in the GNU Automake distribution.    
+
+=head1 BOOTSTRAP
     
 =cut    
 
@@ -192,7 +211,9 @@ my @yysym = qw(
      yyfree
 );
 
-our $VERSION = '1.00';
+my @addsym;
+
+our $VERSION = '1.01';
 
 # If prefix replacement is requested, the list above is assembled into
 # a single regular expression, stored here.
@@ -269,15 +290,119 @@ sub readconf {
     close($fd);
 }
 
+sub mkrx {
+    my $ret = eval {
+	require List::Regexp;
+	List::Regexp::regexp_opt({ type => 'pcre' }, map { s/^yy//; $_ } @yysym);
+    };
+    if ($@) {	
+	if ($@ =~ /^Can't locate.*Regexp\.pm/) {
+	    die "Perl module List::Regexp is not installed.  Please install it and try again";
+	} else {
+	    die $@;
+	}
+    }
+    return $ret;
+}
+
+sub backup {
+    my $file = shift;
+    my $level = shift || 0;
+    my $bak = "$file~";
+
+    if (-e $bak) {
+	if ($level == 3) {
+	    unlink $bak
+		or die "can't unlink outdated backup file $bak: $!";
+	} else {
+	    backup($bak, $level + 1);
+	}
+    }
+    rename $file, $bak
+	or die "can't rename $file to $bak";
+}
+
+sub dumpme {
+    my $outname = shift || $0;
+    die "too many arguments for --dump option" if @_;
+    open(my $in, '<', $0)
+	or die "can't open $0 for reading: $!";
+    my ($out, $tempname) = tempfile(basename($outname) . ".XXXXXX",
+				    DIR => dirname($outname));
+    push @yysym, @addsym;
+    while (<$in>) {
+	chomp;
+	if (/^(my\s+\$yyrx)\s*(?=.*)?;\s*?/) {
+	    my $rx = mkrx;
+	    print $out "$1 = q{$rx};\n";
+	} elsif (s/^(my \@yysym\s+=).*/$1/) {
+	    my $start = $.;
+	    print $out "$_ qw(\n"
+		  . join("\n", map { "     $_" } @yysym) . "\n";
+	    while (<$in>) {
+		if (/^\);/) {
+		    $start = undef;
+		    last;
+		}
+	    }
+
+	    die "can't find closing parenthesis in definition at $0:$start"
+		if defined $start;
+	    redo;
+	} elsif (/^=head1\s+BOOTSTRAP/) {
+	    print $out "$_\n\n";
+	    print $out "This version of gylwrap was bootstrapped as follows:\n\n";
+	    my $s = "  gylwrap --dump --reset ";
+	    print $out $s;
+	    my $len = length($s);
+	    foreach my $sym (@yysym) {
+		my $opt = "--yysym=$sym";
+		my $l = length($opt);
+		if ($len + $l + 1 > 64) {
+		    print $out "\\\n          ";
+		    $len = 10;
+		} else {
+		    $opt = " $opt";
+		}
+		print $out $opt;
+		$len += length($opt);
+	    }
+	    print $out "\n\n";
+	} else {
+	    print $out "$_\n";
+	}
+    }
+    close($in);
+    close($out);
+
+    if (-e $outname) {
+	backup($outname);
+    }
+    
+    rename $tempname, $outname
+	or die "can't rename $tempname to $outname: $!";
+    chmod 0755, $outname;
+    
+    exit(0);
+}
+
 my $input;
 my @output;
+my $dump;
 
 GetOptions("yyrepl=s" => \$yyrepl,
-	   "yysym=s@" => \@yysym,
+	   "yysym=s@" => \@addsym,
+	   "reset" => sub { $yyrx = undef; @yysym = () },
+	   "dump" => \$dump,
 	   "help|?" => sub {
 	       pod2usage(-exitstatus => 0, -verbose => 2);
 	   }	   
     ) or exit(1);
+
+die "some --yysym arguments don't start with yy"
+    if @addsym && grep(!/^yy/, @addsym);
+
+dumpme(@ARGV) if $dump;
 
 $input = shift @ARGV;
 while (my $arg = shift @ARGV) {
@@ -302,14 +427,16 @@ unless ($yyrepl) {
     $yyrepl = $config{$input_base}{yyrepl} || $config{''}{yyrepl};
 }
 if ($yyrepl) {
-    push @yysym, @{$config{$input_base}{yysym}}
+    push @addsym, @{$config{$input_base}{yysym}}
         if exists $config{$input_base}{yysym};
-    push @yysym, @{$config{''}{yysym}}
+    push @addsym, @{$config{''}{yysym}}
         if exists $config{''}{yysym};
-    if ($yyrepl) {
-	$yyrx = regexp_opt({ type => 'pcre' }, map { s/^yy//; $_ } @yysym);
+    if (@addsym) {
+	push @yysym, @addsym;
+	$yyrx = undef;
     }
 }
+$yyrx = mkrx unless defined($yyrx);
 
 if (my $flags = $config{$input_base}{flags} || $config{''}{flags}) {
     push @ARGV, @$flags;
