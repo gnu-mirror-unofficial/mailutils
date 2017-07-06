@@ -143,6 +143,32 @@ This script is an improved version of the B<ylwrap> script, included
 in the GNU Automake distribution.    
 
 =head1 BOOTSTRAP
+
+This version of gylwrap was bootstrapped as follows:
+
+  gylwrap --dump --reset  --yysym=yymaxdepth --yysym=yyparse\
+          --yysym=yylex --yysym=yyerror --yysym=yylval\
+          --yysym=yychar --yysym=yydebug --yysym=yypact\
+          --yysym=yyr1 --yysym=yyr2 --yysym=yydef --yysym=yychk\
+          --yysym=yypgo --yysym=yyact --yysym=yyexca\
+          --yysym=yyerrflag --yysym=yynerrs --yysym=yyps\
+          --yysym=yypv --yysym=yys --yysym=yy_yys\
+          --yysym=yystate --yysym=yytmp --yysym=yyv\
+          --yysym=yy_yyv --yysym=yyval --yysym=yylloc\
+          --yysym=yyreds --yysym=yytoks --yysym=yylhs\
+          --yysym=yylen --yysym=yydefred --yysym=yydgoto\
+          --yysym=yysindex --yysym=yyrindex --yysym=yygindex\
+          --yysym=yytable --yysym=yycheck --yysym=yyname\
+          --yysym=yyrule --yysym=yy_create_buffer\
+          --yysym=yy_delete_buffer --yysym=yy_flex_debug\
+          --yysym=yy_init_buffer --yysym=yy_flush_buffer\
+          --yysym=yy_load_buffer_state\
+          --yysym=yy_switch_to_buffer --yysym=yyin\
+          --yysym=yyleng --yysym=yylex --yysym=yylineno\
+          --yysym=yyout --yysym=yyrestart --yysym=yytext\
+          --yysym=yywrap --yysym=yyalloc --yysym=yyrealloc\
+          --yysym=yyfree
+
     
 =cut    
 
@@ -150,47 +176,46 @@ in the GNU Automake distribution.
 # options --yyrepl and --yysym, and similar statements in the configuration
 # file.
 my @yysym = qw(
-     yymaxdepth 
-     yyparse 
-     yylex   
-     yyerror 
-     yylval  
-     yychar  
-     yydebug 
-     yypact  
-     yyr1    
-     yyr2    
-     yydef   
-     yychk   
-     yypgo   
-     yyact   
-     yyexca  
+     yymaxdepth
+     yyparse
+     yylex
+     yyerror
+     yylval
+     yychar
+     yydebug
+     yypact
+     yyr1
+     yyr2
+     yydef
+     yychk
+     yypgo
+     yyact
+     yyexca
      yyerrflag
-     yynerrs 
-     yyps    
-     yypv    
-     yys     
-     yy_yys  
-     yystate 
-     yytmp   
-     yyv     
-     yy_yyv  
-     yyval   
-     yylloc  
-     yyreds  
-     yytoks  
-     yylhs   
-     yylen   
-     yydefred 
-     yydgoto  
-     yysindex 
-     yyrindex 
-     yygindex 
-     yytable  
-     yycheck  
-     yyname   
+     yynerrs
+     yyps
+     yypv
+     yys
+     yy_yys
+     yystate
+     yytmp
+     yyv
+     yy_yyv
+     yyval
+     yylloc
+     yyreds
+     yytoks
+     yylhs
+     yylen
+     yydefred
+     yydgoto
+     yysindex
+     yyrindex
+     yygindex
+     yytable
+     yycheck
+     yyname
      yyrule
-
      yy_create_buffer
      yy_delete_buffer
      yy_flex_debug
@@ -217,7 +242,7 @@ our $VERSION = '1.01';
 
 # If prefix replacement is requested, the list above is assembled into
 # a single regular expression, stored here.
-my $yyrx;
+my $yyrx = q{(?:_(?:(?:crea|dele)te_buffer|fl(?:ex_debug|ush_buffer)|init_buffer|load_buffer_state|switch_to_buffer|yy[sv])|a(?:ct|lloc)|ch(?:ar|(?:ec)?k)|d(?:e(?:bug|f(?:red)?)|goto)|e(?:rr(?:flag|or)|xca)|free|gindex|(?:le|i)n|l(?:e(?:ng|x)|hs|ineno|loc|val)|maxdepth|n(?:ame|errs)|(?:ou|pac)t|p(?:arse|go|[sv])|r(?:e(?:alloc|ds|start)|index|ule|[12])|s(?:index|tate)?|t(?:able|ext|mp|oks)|v(?:al)?|wrap)};
 
 # String to replace the "yy" prefix with.
 my $yyrepl;
