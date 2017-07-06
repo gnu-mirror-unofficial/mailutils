@@ -8,5 +8,6 @@ AC_DEFUN([MU_PROG_FLEX],
       AC_SUBST([LEX_OUTPUT_ROOT], [lex.yy])
       AC_SUBST([LEXLIB], [''])
    fi
+ fi
 ])
    
