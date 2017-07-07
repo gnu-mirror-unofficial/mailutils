@@ -81,16 +81,27 @@ static struct mu_option options[] = {
   MU_OPTION_END
 };
 
+static int
+msg_uid (mu_message_t msg MU_ARG_UNUSED, size_t *ret)
+{
+  if (!ret)
+    return MU_ERR_OUT_PTR_NULL;
+  *ret = msgno;
+  return 0;
+}
+
 static void
 run (void)
 {
   mu_message_t msg = mh_file_to_message (NULL, input_file);
   mh_fvm_t fvm;
 
+  MU_ASSERT (mu_message_set_uid (msg, msg_uid, mu_message_get_owner (msg)));
+  
   mh_fvm_create (&fvm, MH_FMT_FORCENL);
   mh_fvm_set_width (fvm, width ? width : mh_width ());  
   mh_fvm_set_format (fvm, format);
-  mh_fvm_run (fvm, msg, msgno);
+  mh_fvm_run (fvm, msg);
   mh_fvm_destroy (&fvm);
 }
 

@@ -68,9 +68,10 @@ static void print_header (mu_mailbox_t mbox);
 static void clear_screen (void);
 
 static int
-list_message (size_t num, mu_message_t msg, void *data)
+list_message (size_t num MU_ARG_UNUSED, mu_message_t msg,
+	      void *data MU_ARG_UNUSED)
 {
-  mh_fvm_run (fvm, msg, num);
+  mh_fvm_run (fvm, msg);
   return 0;
 }
 
@@ -88,8 +89,7 @@ action (mu_observer_t o, size_t type, void *data, void *action_data)
       mbox = mu_observer_get_owner (o);
       counter++;
       mu_mailbox_get_message (mbox, counter, &msg);
-      mh_message_number (msg, &num);
-      mh_fvm_run (fvm, msg, num);
+      mh_fvm_run (fvm, msg);
     }
   return 0;
 }

@@ -247,11 +247,11 @@ make_draft (mu_mailbox_t mbox, int disp, struct mh_whatnow_env *wh)
 	  mu_message_get_header (tmp_msg, &hdr);
 	  text = mu_opool_finish (fcc_pool, NULL);
 	  mu_header_set_value (hdr, MU_HEADER_FCC, text, 1);
-	  mh_fvm_run (fvm, tmp_msg, msgno);
+	  mh_fvm_run (fvm, tmp_msg);
 	  mu_message_destroy (&tmp_msg, NULL);
 	}
       else
-	mh_fvm_run (fvm, msg, msgno);
+	mh_fvm_run (fvm, msg);
       
       if (mhl_filter)
 	{

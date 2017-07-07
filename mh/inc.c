@@ -132,11 +132,11 @@ list_message (mu_mailbox_t mbox, size_t msgno)
   mu_message_t msg;
 
   mu_mailbox_get_message (mbox, msgno, &msg);
-  mh_fvm_run (fvm, msg, msgno);
+  mh_fvm_run (fvm, msg);
   if (audit_stream)
     {
       mh_fvm_set_output (fvm, audit_stream);
-      mh_fvm_run (fvm, msg, msgno);
+      mh_fvm_run (fvm, msg);
       mh_fvm_set_output (fvm, mu_strout);
     }
 }

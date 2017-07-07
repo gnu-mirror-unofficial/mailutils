@@ -474,10 +474,9 @@ addrlist_destroy (mu_list_t *list)
 /* Execute pre-compiled format on message msg with number msgno.
  */
 void
-mh_fvm_run (mh_fvm_t mach, mu_message_t msg, size_t msgno)
+mh_fvm_run (mh_fvm_t mach, mu_message_t msg)
 {
   mach->message = msg;
-  mach->msgno = msgno;
 
   reset_fmt_defaults (mach);
   mu_list_clear (mach->addrlist);
@@ -656,6 +655,15 @@ mh_fvm_run (mh_fvm_t mach, mu_message_t msg, size_t msgno)
     put_string (mach, "\n", 1);
 }
 
+static int
+msg_uid_1 (mu_message_t msg MU_ARG_UNUSED, size_t *ret)
+{
+  if (!ret)
+    return MU_ERR_OUT_PTR_NULL;
+  *ret = 1;
+  return 0;
+}
+    
 int
 mh_format_str (mh_format_t fmt, char *str, size_t width, char **pstr)
 {
@@ -672,12 +680,13 @@ mh_format_str (mh_format_t fmt, char *str, size_t width, char **pstr)
   MU_ASSERT (mu_message_get_header (msg, &hdr));
   MU_ASSERT (mu_header_set_value (hdr, "text", str, 1));
   MU_ASSERT (mu_memory_stream_create (&outstr, MU_STREAM_RDWR));
-
+  MU_ASSERT (mu_message_set_uid (msg, msg_uid_1, NULL));
+    
   mh_fvm_create (&fvm, 0);
   mh_fvm_set_output (fvm, outstr);
   mh_fvm_set_width (fvm, width);
   mh_fvm_set_format (fvm, fmt);
-  mh_fvm_run (fvm, msg, 1);
+  mh_fvm_run (fvm, msg);
   mh_fvm_destroy (&fvm);
 	      
   MU_ASSERT (mu_stream_size (outstr, &size));
@@ -705,16 +714,15 @@ builtin_not_implemented (char *name)
 static void
 builtin_msg (struct mh_fvm *mach)
 {
-  size_t msgno = mach->msgno;
-  if (msgno == 0)
-    mh_message_number (mach->message, &msgno);
+  size_t msgno;
+  mh_message_number (mach->message, &msgno);
   mach->num[R_REG] = msgno;
 }
 
 static void
 builtin_cur (struct mh_fvm *mach)
 {
-  size_t msgno = mach->msgno;
+  size_t msgno;
   size_t cur;
   int rc;
   mu_mailbox_t mbox;
@@ -725,8 +733,7 @@ builtin_cur (struct mh_fvm *mach)
       mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_mailbox", NULL, rc);
       exit (1);
     }
-  if (msgno == 0)
-    mh_message_number (mach->message, &msgno);
+  mh_message_number (mach->message, &msgno);
   mh_mailbox_get_cur (mbox, &cur); /* FIXME: Cache this */
   mach->num[R_REG] = msgno == cur;
 }

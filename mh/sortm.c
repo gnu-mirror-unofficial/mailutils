@@ -443,7 +443,7 @@ list_message (size_t num)
 {
   mu_message_t msg = NULL;
   mu_mailbox_get_message (mbox, num, &msg);
-  mh_fvm_run (fvm, msg, num);
+  mh_fvm_run (fvm, msg);
 }
 
 void

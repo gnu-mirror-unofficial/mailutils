@@ -87,6 +87,19 @@ grep ^cur: Mail/inbox/.mh_sequences
 cur: 1  
 ])
 
+MH_CHECK([sparse numbering],[inc05 inc-sparse],[
+MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mv Mail/inbox/5 Mail/inbox/20
+MUT_MBCOPY([$abs_top_srcdir/testsuite/spool/mbox1])
+inc -changecur -file ./mbox1 | sed 's/ *$//'
+],
+[0],
+[  21+ 12/28 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy toves
+  22  12/28 Bar                Re: Jabberwocky<<It seems very pretty, but it's
+  23  07/13 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Content-Type:
+  24  07/13 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Content-Type:
+  25  07/13 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Content-
+])
 
 m4_popdef[MH_KEYWORDS])
 # End of inc.at

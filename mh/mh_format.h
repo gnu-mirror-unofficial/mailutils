@@ -175,7 +175,6 @@ struct mh_fvm
   int fmtflags;             /* Current formatting flags */
 
   mu_message_t message;     /* Current message */
-  size_t msgno;             /* Its number */
 };
 
 mh_builtin_t *mh_lookup_builtin (char *name, size_t len);
