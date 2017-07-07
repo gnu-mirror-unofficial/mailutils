@@ -82,7 +82,6 @@ action (mu_observer_t o, size_t type, void *data, void *action_data)
   static int counter;
   mu_mailbox_t mbox;
   mu_message_t msg = NULL;
-  size_t num;
 
   if (type == MU_EVT_MESSAGE_ADD)
     {

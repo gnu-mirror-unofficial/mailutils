@@ -502,17 +502,25 @@ mh_fvm_run (mh_fvm_t mach, mu_message_t msg)
 	  break;
 
 	case mhop_brzn:
-	  if (!mach->num[R_REG])
-	    mach->pc += MHI_NUM (mach->prog[mach->pc]);
-	  else
-	    mach->pc++;
+	  {
+	    int res = mach->num[R_REG] == 0;
+	    if (res)
+	      mach->pc += MHI_NUM (mach->prog[mach->pc]);
+	    else
+	      mach->pc++;
+	    mach->num[R_REG] = !res;
+	  }
 	  break;
 
 	case mhop_brzs:
-	  if (mh_string_is_null (&mach->str[R_REG]))
-	    mach->pc += MHI_NUM (mach->prog[mach->pc]);
-	  else
-	    mach->pc++;
+	  {
+	    int res = mh_string_is_null (&mach->str[R_REG]);
+	    if (res)
+	      mach->pc += MHI_NUM (mach->prog[mach->pc]);
+	    else
+	      mach->pc++;
+	    mach->num[R_REG] = !res;
+	  }
 	  break;
 	  
 	case mhop_setn:
@@ -1855,7 +1863,7 @@ mh_builtin_t builtin_tab[] = {
   { "formataddr", builtin_formataddr, mhtype_none, mhtype_str, MHA_ACC },
   { "putaddr",  builtin_putaddr,  mhtype_none, mhtype_str, MHA_LITERAL },
   { "unre",     builtin_unre,     mhtype_str,  mhtype_str },
-  { "rcpt",     builtin_rcpt,     mhtype_num,  mhtype_str },
+  { "rcpt",     builtin_rcpt,     mhtype_num,  mhtype_str, MHA_LITERAL },
   { "printhdr", builtin_printhdr, mhtype_none, mhtype_str, MHA_LITERAL },
   { "in_reply_to", builtin_in_reply_to, mhtype_str,  mhtype_none },
   { "references", builtin_references, mhtype_str,  mhtype_none },

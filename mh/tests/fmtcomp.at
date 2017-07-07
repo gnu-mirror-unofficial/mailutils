@@ -170,10 +170,7 @@ FI
         ldcomp reg, "replied"
         brzs L1
         printlit "-"
-        branch L2
-L1:     setn reg, 0
-        sets reg, ""
-L2:     stop
+L1:     stop
 ],[],[-format])
 
 FMTCOMP([if-else],

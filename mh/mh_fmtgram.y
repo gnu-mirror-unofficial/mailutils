@@ -1004,7 +1004,8 @@ mh_read_formfile (char const *name, char **pformat)
   free (file_name);
   
   format_str[st.st_size] = 0;
-  mu_rtrim_class (format_str, MU_CTYPE_ENDLN);
+  if (format_str[st.st_size-1] == '\n')
+    format_str[st.st_size-1] = 0;
   fclose (fp);
   *pformat = format_str;
   return 0;
@@ -1564,27 +1565,19 @@ codegen_node (struct mh_format *fmt, struct node *node)
 	  {
 	    codegen_nodelist (fmt, node->v.cntl.iftrue);
 	  }
-	emit_opcode (fmt, mhop_branch);
-	pc[1] = fmt->progcnt;
-	emit_instr (fmt, (mh_instr_t) NULL);
-	
-	fmt->prog[pc[0]].num = fmt->progcnt - pc[0];
+
 	if (node->v.cntl.iffalse)
 	  {
+	    emit_opcode (fmt, mhop_branch);
+	    pc[1] = fmt->progcnt;
+	    emit_instr (fmt, (mh_instr_t) NULL);
+	
+	    fmt->prog[pc[0]].num = fmt->progcnt - pc[0];
 	    codegen_nodelist (fmt, node->v.cntl.iffalse);
+	    fmt->prog[pc[1]].num = fmt->progcnt - pc[1];
 	  }
 	else
-	  {
-	    emit_opcode (fmt, mhop_setn);
-	    emit_instr (fmt, (mh_instr_t) (long) R_REG);
-	    emit_instr (fmt, (mh_instr_t) (long) 0);
-
-	    emit_opcode (fmt, mhop_sets);
-	    emit_instr (fmt, (mh_instr_t) (long) R_REG);
-	    emit_string (fmt, "");
-	  }
-	
-	fmt->prog[pc[1]].num = fmt->progcnt - pc[1];
+	  fmt->prog[pc[0]].num = fmt->progcnt - pc[0];
       }
       break;
 
