@@ -536,6 +536,8 @@ add_body (mu_message_t inmsg, compose_env_t *env)
   aptr->name = NULL;
   aptr->filename = NULL;
   aptr->source = str;
+  if (str)
+    mu_stream_ref (str);
   aptr->skip_empty = skip_empty_attachments || multipart_alternative;
   if (!env->attlist)
     env->attlist = attlist_new ();
