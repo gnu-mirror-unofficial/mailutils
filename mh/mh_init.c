@@ -57,39 +57,55 @@ mh_err_memory (int fatal)
     abort ();
 }
 
-static char *my_name;
-static char *my_email;
-
-static char *
-mh_get_my_name (void)
+static mu_address_t
+mh_local_mailbox (void)
 {
-  if (!my_name)
+  static mu_address_t local_mailbox;
+  if (!local_mailbox)
     {
-      struct passwd *pw = getpwuid (getuid ());
-      if (!pw)
-	{
-	  mu_error (_("cannot determine my username"));
-	  my_name = mu_strdup ("unknown");
-	}
-      else
-	my_name = mu_strdup (pw->pw_name);
+      const char *p = mh_global_profile_get ("Local-Mailbox", NULL);
+      if (!p)
+	p = mu_get_user_email (NULL);
+      mu_address_create (&local_mailbox, p);
     }
-  return my_name;
+  return local_mailbox;
 }
 
-char *
+char const *
+mh_get_my_user_name (void)
+{
+  mu_address_t addr = mh_local_mailbox ();
+  char const *s;
+  MU_ASSERT (mu_address_sget_local_part (addr, 1, &s));
+  return s;
+}
+
+char const *
+mh_get_my_real_name (void)
+{
+  mu_address_t addr = mh_local_mailbox ();
+  char const *s;
+  if (mu_address_sget_personal (addr, 1, &s))
+    return NULL;
+  return s;
+}
+
+char const *
 mh_my_email (void)
 {
-  char *username = mh_get_my_name ();
-  if (!my_email)
-    {  
-      const char *p = mh_global_profile_get ("Local-Mailbox", NULL);
-      if (p)
-	my_email = mu_strdup (p);
-      else
-	my_email = mu_get_user_email (username);
-    }
-  return my_email;
+  mu_address_t addr = mh_local_mailbox ();
+  char const *s;
+  MU_ASSERT (mu_address_sget_printable (addr, &s));
+  return s;
+}
+
+char const *
+mh_my_host (void)
+{
+  mu_address_t addr = mh_local_mailbox ();
+  char const *s;
+  MU_ASSERT (mu_address_sget_domain (addr, 1, &s));
+  return s;
 }
 
 enum part_match_mode

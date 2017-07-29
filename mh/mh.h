@@ -231,7 +231,11 @@ void mh_expand_aliases (mu_message_t msg, mu_address_t *addr_to,
 			mu_address_t *addr_bcc);
 
 int mh_is_my_name (const char *name);
-char * mh_my_email (void);
+char const *mh_get_my_real_name (void);
+char const *mh_get_my_user_name (void);
+char const *mh_my_email (void);
+char const *mh_my_host (void);
+
 
 size_t mh_get_message (mu_mailbox_t mbox, size_t seqno, mu_message_t *mesg);
 

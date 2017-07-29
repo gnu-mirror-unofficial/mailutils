@@ -7,7 +7,7 @@
 %;
 %(lit)%(formataddr %<{reply-to}%?{from}%?{sender}%?{return-path}%>)\
 %<(nonnull)%(void(width))%(putaddr To: )\n%>\
-%(lit)%<(rcpt to)%(formataddr{to})%>%<(rcpt cc)%(formataddr{cc})%>%<(rcpt me)%(formataddr(me))%>\
+%(lit)%<(rcpt to)%(formataddr{to})%>%<(rcpt cc)%(formataddr{cc})%>%<(rcpt me)%(formataddr(localmbox))%>\
 %<(nonnull)%(void(width))%(putaddr cc: )\n%>\
 %<(mymbox{from})%<{fcc}Fcc: %{fcc}\n%>%>\
 Subject: %<{subject}%(putstr %<(profile reply-prefix)%|\

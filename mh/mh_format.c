@@ -786,10 +786,25 @@ builtin_timenow (struct mh_fvm *mach)
 static void
 builtin_me (struct mh_fvm *mach)
 {
-  char *s;
-  mu_asprintf (&s, "<%s>", mh_my_email ());
-  mh_string_load (&mach->str[R_REG], s);
-  free (s);
+  mh_string_load (&mach->str[R_REG], mh_get_my_user_name ());
+}
+
+static void
+builtin_myhost (struct mh_fvm *mach)
+{
+  mh_string_load (&mach->str[R_REG], mh_my_host ());
+}
+
+static void
+builtin_myname (struct mh_fvm *mach)
+{
+  mh_string_load (&mach->str[R_REG], mh_get_my_real_name ());
+}
+
+static void
+builtin_localmbox (struct mh_fvm *mach)
+{
+  mh_string_load (&mach->str[R_REG], mh_my_email ());
 }
 
 static void
@@ -1579,33 +1594,31 @@ builtin_formataddr (struct mh_fvm *mach)
     dest = NULL;
   else if (mu_address_create (&dest, mh_string_value (&mach->str[R_ACC])))
     return;
-    
-  if (mu_address_create (&addr, mh_string_value (&mach->str[R_ARG])))
-    {
-      mu_address_destroy (&dest);
-      return;
-    }
 
-  mu_address_get_count (addr, &num);
-  for (i = 1; i <= num; i++)
+  if (!mh_string_is_null (&mach->str[R_ARG])
+      && mu_address_create (&addr, mh_string_value (&mach->str[R_ARG])) == 0)
     {
-      if (mu_address_sget_email (addr, i, &buf) == 0)
+      mu_address_get_count (addr, &num);
+      for (i = 1; i <= num; i++)
 	{
-	  if ((rcpt_mask & RCPT_ME) || !mh_is_my_name (buf))
+	  if (mu_address_sget_email (addr, i, &buf) == 0)
 	    {
-	      mu_address_t subaddr;
-	      mu_address_get_nth (addr, i, &subaddr);
-	      if (!addrlist_lookup (mach->addrlist, subaddr))
+	      if ((rcpt_mask & RCPT_ME) || !mh_is_my_name (buf))
 		{
-		  mu_list_append (mach->addrlist, subaddr);
-		  mu_address_union (&dest, subaddr);
+		  mu_address_t subaddr;
+		  mu_address_get_nth (addr, i, &subaddr);
+		  if (!addrlist_lookup (mach->addrlist, subaddr))
+		    {
+		      mu_list_append (mach->addrlist, subaddr);
+		      mu_address_union (&dest, subaddr);
+		    }
+		  else
+		    mu_address_destroy (&subaddr);
 		}
-	      else
-		mu_address_destroy (&subaddr);
 	    }
 	}
     }
-
+  
   if (mu_address_sget_printable (dest, &buf) == 0)
     mh_string_load (&mach->str[R_REG], buf);
   else
@@ -1799,6 +1812,9 @@ mh_builtin_t builtin_tab[] = {
   { "charleft", builtin_charleft, mhtype_num,  mhtype_none },
   { "timenow",  builtin_timenow,  mhtype_num,  mhtype_none },
   { "me",       builtin_me,       mhtype_str,  mhtype_none },
+  { "myhost",   builtin_myhost,   mhtype_str,  mhtype_none },
+  { "myname",   builtin_myname,   mhtype_str,  mhtype_none },
+  { "localmbox",builtin_localmbox,mhtype_str,  mhtype_none },
   { "eq",       builtin_eq,       mhtype_num,  mhtype_num,  MHA_LITERAL },
   { "ne",       builtin_ne,       mhtype_num,  mhtype_num,  MHA_LITERAL },
   { "gt",       builtin_gt,       mhtype_num,  mhtype_num,  MHA_LITERAL },

@@ -91,11 +91,10 @@ set_whatnowproc (struct mu_parseopt *po, struct mu_option *opt,
 static void
 set_group (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
 {
-  mh_format_destroy (&format);
   if (strcmp (arg, "1") == 0)
     {
-      if (mh_format_file_parse (&format, "replgroupcomps",
-				MH_FMT_PARSE_DEFAULT))
+      if (!format && mh_format_file_parse (&format, "replgroupcomps",
+					   MH_FMT_PARSE_DEFAULT))
 	exit (1);
       rcpt_mask |= RCPT_ALL;
     }
