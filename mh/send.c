@@ -362,7 +362,7 @@ open_mailer ()
   status = mu_mailer_open (mailer, MU_STREAM_RDWR);
   if (status)
     {
-      mu_error (_("cannot open mailer `%s'"), url);
+      mu_error (_("cannot open mailer `%s': %s"), url, mu_strerror (status));
       return NULL;
     }
   return mailer;

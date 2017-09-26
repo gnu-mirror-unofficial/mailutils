@@ -319,6 +319,7 @@ _date_mapper (union mu_imap_fetch_response *resp,
   if (mu_scan_datetime (elt->v.string, MU_DATETIME_INTERNALDATE, &tm, &tz,
 			NULL))
     return MU_ERR_FAILURE;
+  mu_datetime_tz_utc (&tz);
   resp->internaldate.tm = tm;
   resp->internaldate.tz = tz;
   return 0;

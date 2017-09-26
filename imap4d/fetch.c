@@ -866,6 +866,7 @@ _frt_internaldate (struct fetch_function_closure *ffc,
       && mu_scan_datetime (date, MU_DATETIME_FROM, &tm, &tz, NULL) == 0)
     {
       tmp = &tm;
+      mu_datetime_tz_utc (&tz);
     }
   else
     {
