@@ -135,7 +135,7 @@ mu_ident_stat (mu_stream_t str)
 	{
 	  i = 0;
 	  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
-	       mu_iterator_next (itr), i)
+	       mu_iterator_next (itr), i++)
 	    {
 	      const char *key;
 	      struct mu_ident_ref *ref;
