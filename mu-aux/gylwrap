@@ -167,9 +167,16 @@ This version of gylwrap was bootstrapped as follows:
           --yysym=yyleng --yysym=yylex --yysym=yylineno\
           --yysym=yyout --yysym=yyrestart --yysym=yytext\
           --yysym=yywrap --yysym=yyalloc --yysym=yyrealloc\
-          --yysym=yyfree
+          --yysym=yyfree --yysym=yy_scan_buffer\
+          --yysym=yy_scan_bytes --yysym=yy_scan_string\
+          --yysym=yyget_debug --yysym=yyget_in\
+          --yysym=yyget_leng --yysym=yyget_lineno\
+          --yysym=yyget_out --yysym=yyget_text\
+          --yysym=yylex_destroy --yysym=yypop_buffer_state\
+          --yysym=yypush_buffer_state --yysym=yyset_debug\
+          --yysym=yyset_in --yysym=yyset_lineno\
+          --yysym=yyset_out
 
-    
 =cut    
 
 # List of symbols suitable for prefix replacements.  See the
@@ -234,6 +241,22 @@ my @yysym = qw(
      yyalloc
      yyrealloc
      yyfree
+     yy_scan_buffer
+     yy_scan_bytes
+     yy_scan_string
+     yyget_debug
+     yyget_in
+     yyget_leng
+     yyget_lineno
+     yyget_out
+     yyget_text
+     yylex_destroy
+     yypop_buffer_state
+     yypush_buffer_state
+     yyset_debug
+     yyset_in
+     yyset_lineno
+     yyset_out
 );
 
 my @addsym;
@@ -242,7 +265,7 @@ our $VERSION = '1.01';
 
 # If prefix replacement is requested, the list above is assembled into
 # a single regular expression, stored here.
-my $yyrx = q{(?:_(?:(?:crea|dele)te_buffer|fl(?:ex_debug|ush_buffer)|init_buffer|load_buffer_state|switch_to_buffer|yy[sv])|a(?:ct|lloc)|ch(?:ar|(?:ec)?k)|d(?:e(?:bug|f(?:red)?)|goto)|e(?:rr(?:flag|or)|xca)|free|gindex|(?:le|i)n|l(?:e(?:ng|x)|hs|ineno|loc|val)|maxdepth|n(?:ame|errs)|(?:ou|pac)t|p(?:arse|go|[sv])|r(?:e(?:alloc|ds|start)|index|ule|[12])|s(?:index|tate)?|t(?:able|ext|mp|oks)|v(?:al)?|wrap)};
+my $yyrx = q{(?:_(?:(?:crea|dele)te_buffer|fl(?:ex_debug|ush_buffer)|init_buffer|load_buffer_state|s(?:can_(?:b(?:uffer|ytes)|string)|witch_to_buffer)|yy[sv])|a(?:ct|lloc)|ch(?:ar|(?:ec)?k)|d(?:e(?:bug|f(?:red)?)|goto)|e(?:rr(?:flag|or)|xca)|free|g(?:et_(?:debug|in|l(?:eng|ineno)|(?:ou|tex)t)|index)|(?:le|i)n|l(?:e(?:ng|x(?:_destroy)?)|hs|ineno|loc|val)|maxdepth|n(?:ame|errs)|(?:ou|pac)t|p(?:arse|go|op_buffer_state|ush_buffer_state|[sv])|r(?:e(?:alloc|ds|start)|index|ule|[12])|s(?:et_(?:debug|in|lineno|out)|index|tate)?|t(?:able|ext|mp|oks)|v(?:al)?|wrap)};
 
 # String to replace the "yy" prefix with.
 my $yyrepl;
@@ -355,8 +378,14 @@ sub dumpme {
     my ($out, $tempname) = tempfile(basename($outname) . ".XXXXXX",
 				    DIR => dirname($outname));
     push @yysym, @addsym;
+    my $skip;
     while (<$in>) {
 	chomp;
+	if ($skip) {
+	    next unless /^=/;
+	    $skip = 0;
+	}
+	
 	if (/^(my\s+\$yyrx)\s*(?=.*)?;\s*?/) {
 	    my $rx = mkrx;
 	    print $out "$1 = q{$rx};\n";
@@ -393,6 +422,7 @@ sub dumpme {
 		$len += length($opt);
 	    }
 	    print $out "\n\n";
+	    $skip = 1;
 	} else {
 	    print $out "$_\n";
 	}

@@ -150,13 +150,20 @@ mu_i_sv_load_add_dir (mu_sieve_machine_t mach, const char *name)
 void *
 mu_sieve_load_ext (mu_sieve_machine_t mach, const char *name)
 {
-  return 1;
+  errno = ENOSYS;
+  return NULL;
+}
+
+void
+mu_sieve_unload_ext (void *data)
+{
 }
 
 int
 mu_i_sv_load_add_dir (mu_sieve_machine_t mach, const char *name)
 {
-  return NULL;
+  errno = ENOSYS;
+  return 1;
 }
 
 #endif /* HAVE_LIBLTDL */
