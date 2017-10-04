@@ -514,14 +514,15 @@ _mime_header_parse (const char *text, char **pvalue,
 	      param->lang = strdup (lang);
 	      if (!param->lang)
 		rc = ENOMEM;
-	      else
+	    }
+
+	  if (rc == 0 && cset)
+	    {
+	      param->cset = strdup (cset);
+	      if (!param->cset)
 		{
-		  param->cset = strdup (cset);
-		  if (!param->cset)
-		    {
-		      free (param->lang);
-		      rc = ENOMEM;
-		    }
+		  free (param->lang);
+		  rc = ENOMEM;
 		}
 	    }
 	  
