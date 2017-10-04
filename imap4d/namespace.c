@@ -176,7 +176,7 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 
       name += pfxlen;
 
-      if (pfx->ns == NS_PERSONAL && strcmp (name, "INBOX") == 0)
+      if (pfx->ns == NS_PERSONAL && mu_c_strcasecmp (name, "INBOX") == 0)
 	{
 	  tmpl = mu_strdup (auth_data->mailbox);
 	  return tmpl;//FIXME

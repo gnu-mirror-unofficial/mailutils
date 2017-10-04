@@ -58,7 +58,7 @@ imap4d_select0 (struct imap4d_command *command, const char *mboxname,
       imap4d_sync ();
     }
 
-  if (strcmp (mboxname, "INBOX") == 0)
+  if (mu_c_strcasecmp (mboxname, "INBOX") == 0)
     flags |= MU_STREAM_CREAT;
   mailbox_name = namespace_get_name (mboxname, &record, NULL);
 

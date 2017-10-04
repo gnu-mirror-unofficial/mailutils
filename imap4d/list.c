@@ -45,7 +45,7 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   name = resp->name + refinfo->dirlen;
 
   /* There can be only one INBOX */
-  if (refinfo->reflen == 0 && strcmp (name, "INBOX") == 0)
+  if (refinfo->reflen == 0 &&  mu_c_strcasecmp (name, "INBOX") == 0)
     return 0;
 
   /* Ignore mailboxes that contain delimiter as part of their name */
