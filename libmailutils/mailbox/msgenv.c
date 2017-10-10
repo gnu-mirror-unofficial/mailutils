@@ -105,16 +105,21 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
       status = mu_address_sget_email (address, 1, &sender);
       if (status == 0)
 	{
-	  size_t n = strlen (sender);
-	  if (buf && len > 0)
+	  if (sender == NULL)
+	    status = MU_ERR_NOENT;
+	  else
 	    {
-	      len--; /* One for the null.  */
-	      n = (n < len) ? n : len;
-	      memcpy (buf, sender, n);
-	      buf[n] = '\0';
+	      size_t n = strlen (sender);
+	      if (buf && len > 0)
+		{
+		  len--; /* One for the null.  */
+		  n = (n < len) ? n : len;
+		  memcpy (buf, sender, n);
+		  buf[n] = '\0';
+		}
+	      if (pnwrite)
+		*pnwrite = n;
 	    }
-	  if (pnwrite)
-	    *pnwrite = n;
 	}
       mu_address_destroy (&address);
     }

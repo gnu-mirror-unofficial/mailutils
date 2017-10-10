@@ -63,13 +63,13 @@ parse (const char *str)
 
       if (isgroup)
         {
-          mu_address_sget_personal (address, i, &buf);
-          printf ("group <%s>:\n", buf);
+          if (mu_address_sget_personal (address, i, &buf) == 0 && buf)
+	    printf ("group <%s>:\n", buf);
         }
       else
         {
-          mu_address_sget_email (address, i, &buf);
-          printf ("email <%s>:\n", buf);
+          if (mu_address_sget_email (address, i, &buf) == 0 && buf)
+	    printf ("email <%s>:\n", buf);
         }
 
       if (mu_address_sget_personal (address, i, &buf) == 0 && buf && !isgroup)

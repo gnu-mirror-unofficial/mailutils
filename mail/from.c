@@ -238,7 +238,7 @@ hdr_from (struct header_call_args *args, void *data)
 	      char *name;
 	      const char *email;
 	  
-	      if (mu_address_sget_email (address, 1, &email) == 0)
+	      if (mu_address_sget_email (address, 1, &email) == 0 && email)
 		{
 		  if (mailvar_is_true ("showto") && mail_is_my_name (email))
 		    {

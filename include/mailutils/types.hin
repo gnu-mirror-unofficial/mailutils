@@ -147,6 +147,12 @@ typedef unsigned int mu_debug_level_t;
 #define mu_offsetof(s,f) ((size_t)&((s*)0)->f)
 #define MU_ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 
+static inline char const *
+mu_prstr (char const *s)
+{
+  return s ? s : "";
+}
+  
 #define MU_DEFAULT_RECORD _MU_DEFAULT_RECORD_
 
 /* This structure used to be called mu_locus in mailutils up to

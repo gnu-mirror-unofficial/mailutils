@@ -392,6 +392,8 @@ mu_sieve_vlist_compare (mu_sieve_machine_t mach,
       
       for (j = 0; (rc = retr (item, data, j, &sample)) == 0; j++)
 	{
+	  if (!sample)
+	    continue;
 	  rc = mu_list_append (tmp, sample);
 	  if (rc)
 	    {

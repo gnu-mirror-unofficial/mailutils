@@ -504,7 +504,7 @@ util_get_sender (int msgno, int strip)
   mu_message_t msg = NULL;
   mu_address_t addr = NULL;
   char *buf = NULL, *p;
-
+  
   mu_mailbox_get_message (mbox, msgno, &msg);
   addr = get_sender_address (msg);
   if (!addr)
@@ -520,7 +520,7 @@ util_get_sender (int msgno, int strip)
 	}
     }
 
-  if (mu_address_aget_email (addr, 1, &buf))
+  if (mu_address_aget_email (addr, 1, &buf) || !buf)
     {
       mu_error (_("Cannot determine sender name (msg %d)"), msgno);
       mu_address_destroy (&addr);
@@ -851,6 +851,8 @@ util_merge_addresses (char **addr_str, const char *value)
       rc = mu_address_aget_printable (addr, &val);
       if (rc == 0)
 	{
+	  if (!val)
+	    return MU_ERR_NOENT;
 	  free (*addr_str);
 	  *addr_str = val;
 	}
@@ -957,7 +959,7 @@ util_header_expand (mu_header_t *phdr)
 	      const char *newvalue;
 	      
 	      rc = mu_address_sget_printable (addr, &newvalue);
-	      if (rc == 0)
+	      if (rc == 0 && newvalue)
 		mu_header_set_value (hdr, name, newvalue, 1);
 	      mu_address_destroy (&addr);
 	    }

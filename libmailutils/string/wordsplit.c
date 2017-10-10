@@ -1043,7 +1043,9 @@ expvar (struct mu_wordsplit *wsp, const char *str, size_t len,
       else
 	rc = MU_WRDSE_UNDEF;
 
-      if (rc == MU_WRDSE_OK && value[0] == 0 && defstr && defstr[-1] == ':')
+      if (rc == MU_WRDSE_OK
+	  && (!value || value[0] == 0)
+	  && defstr && defstr[-1] == ':')
 	{
 	  free (value);
 	  rc = MU_WRDSE_UNDEF;

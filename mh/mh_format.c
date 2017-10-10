@@ -443,7 +443,7 @@ addr_cmp (void *item, void *data)
   for (i = 1; rc == 0 && i <= count; i++)
     {
       const char *str;
-      if (mu_address_sget_email (a, i, &str))
+      if (mu_address_sget_email (a, i, &str) || str)
 	continue;
       rc = mu_address_contains_email (b, str);
     }
@@ -1346,7 +1346,7 @@ builtin_proper (struct mh_fvm *mach)
       mh_string_copy (mach, R_REG, R_ARG);
       return;
     }
-  if (mu_address_sget_printable (addr, &str) == 0)
+  if (mu_address_sget_printable (addr, &str) == 0 && str)
     mh_string_load (&mach->str[R_REG], str);
   else
     mh_string_copy (mach, R_REG, R_ARG);
@@ -1387,7 +1387,7 @@ builtin_addr (struct mh_fvm *mach)
     {
       int rc = mu_address_sget_email (addr, 1, &str);
       if (rc == 0)
-	mh_string_load (&mach->str[R_REG], str);
+	mh_string_load (&mach->str[R_REG], mu_prstr (str));
       mu_address_destroy (&addr);
       if (rc == 0)
 	return;
@@ -1409,7 +1409,7 @@ builtin_pers (struct mh_fvm *mach)
   if (rc)
     return;
 
-  if (mu_address_sget_personal (addr, 1, &str) == 0)
+  if (mu_address_sget_personal (addr, 1, &str) == 0 && str)
     mh_string_load (&mach->str[R_REG], str);
   mu_address_destroy (&addr);
 }
@@ -1428,7 +1428,7 @@ builtin_note (struct mh_fvm *mach)
   if (rc)
     return;
 
-  if (mu_address_sget_comments (addr, 1, &str) == 0)
+  if (mu_address_sget_comments (addr, 1, &str) == 0 && str)
     mh_string_load (&mach->str[R_REG], str);
   mu_address_destroy (&addr);
 }
@@ -1446,7 +1446,7 @@ builtin_mbox (struct mh_fvm *mach)
   if (rc)
     return;
 
-  if (mu_address_aget_email (addr, 1, &str) == 0)
+  if (mu_address_aget_email (addr, 1, &str) == 0 && str)
     {
       char *p = strchr (str, '@');
       if (p)
@@ -1487,7 +1487,7 @@ builtin_host (struct mh_fvm *mach)
   if (rc)
     return;
 
-  if (mu_address_aget_email (addr, 1, &str) == 0)
+  if (mu_address_aget_email (addr, 1, &str) == 0 && str)
     {
       char *p = strchr (str, '@');
       if (p)
@@ -1557,7 +1557,7 @@ builtin_path (struct mh_fvm *mach)
   mh_string_clear (&mach->str[R_REG]);
   if (rc)
     return;
-  if (mu_address_sget_route (addr, 1, &str))
+  if (mu_address_sget_route (addr, 1, &str) && str)
     mh_string_load (&mach->str[R_REG], str);
   mu_address_destroy (&addr);
 }
@@ -1601,7 +1601,7 @@ builtin_formataddr (struct mh_fvm *mach)
       mu_address_get_count (addr, &num);
       for (i = 1; i <= num; i++)
 	{
-	  if (mu_address_sget_email (addr, i, &buf) == 0)
+	  if (mu_address_sget_email (addr, i, &buf) == 0 && buf)
 	    {
 	      if ((rcpt_mask & RCPT_ME) || !mh_is_my_name (buf))
 		{
@@ -1619,7 +1619,7 @@ builtin_formataddr (struct mh_fvm *mach)
 	}
     }
   
-  if (mu_address_sget_printable (dest, &buf) == 0)
+  if (mu_address_sget_printable (dest, &buf) == 0 && buf)
     mh_string_load (&mach->str[R_REG], buf);
   else
     mh_string_clear (&mach->str[R_REG]);

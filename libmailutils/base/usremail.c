@@ -20,7 +20,6 @@
 # include <config.h>
 #endif
 
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -31,6 +30,7 @@
 #include <mailutils/mu_auth.h>
 #include <mailutils/util.h>
 #include <mailutils/parse822.h>
+#include <mailutils/errno.h>
 
 /*
  * Functions used to convert unix mailbox/user names into RFC822 addr-specs.
@@ -68,13 +68,24 @@ mu_set_user_email (const char *candidate)
 
   if ((err = mu_address_aget_email (addr, 1, &email)) != 0)
     goto cleanup;
-
+  else if (email == NULL)
+    {
+      err = MU_ERR_NOENT;
+      goto cleanup;
+    }
+  
   free (mu_user_email);
 
   mu_user_email = email;
 
-  if ((err = mu_address_sget_domain (addr, 1, &domain)) == 0)
-    mu_set_user_email_domain (domain);
+  if ((err = mu_address_sget_domain (addr, 1, &domain)) != 0)
+    goto cleanup;
+  else if (domain == NULL)
+    {
+      err = MU_ERR_NOENT;
+      goto cleanup;
+    }
+  mu_set_user_email_domain (domain);
   
 cleanup:
   mu_address_destroy (&addr);

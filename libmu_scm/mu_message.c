@@ -54,7 +54,7 @@ _get_envelope_sender (mu_envelope_t env)
 {
   mu_address_t addr;
   const char *buffer;
-  char *ptr;
+  char *ptr = NULL;
   
   if (mu_envelope_sget_sender (env, &buffer)
       || mu_address_create (&addr, buffer))
@@ -65,7 +65,7 @@ _get_envelope_sender (mu_envelope_t env)
       mu_address_destroy (&addr);
       return NULL;
     }
-
+  
   mu_address_destroy (&addr);
   return ptr;
 }
@@ -76,7 +76,6 @@ mu_scm_message_print (SCM message_smob, SCM port, scm_print_state * pstate)
   struct mu_message *mum = (struct mu_message *) SCM_CDR (message_smob);
   mu_envelope_t env = NULL;
   const char *buffer;
-  const char *p;
   size_t m_size = 0, m_lines = 0;
   struct tm tm;
   struct mu_timezone tz;
@@ -93,18 +92,21 @@ mu_scm_message_print (SCM message_smob, SCM port, scm_print_state * pstate)
     }
   else
     {
+      char *p;
+      char const *s;
+      
       p = _get_envelope_sender (env);
       scm_puts ("\"", port);
       if (p)
 	{
 	  scm_puts (p, port);
-	  free ((void *) p);
+	  free (p);
 	}
       else
 	scm_puts ("UNKNOWN", port);
       
-      if (mu_envelope_sget_date (env, &p) == 0
-          && mu_scan_datetime (p, MU_DATETIME_FROM, &tm, &tz, NULL) == 0)
+      if (mu_envelope_sget_date (env, &s) == 0
+          && mu_scan_datetime (s, MU_DATETIME_FROM, &tm, &tz, NULL) == 0)
 	{
 	  strftime (datebuf, sizeof (datebuf), "%a %b %e %H:%M", &tm);
 	  buffer = datebuf;
@@ -435,7 +437,6 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_sender, "mu-message-get-sender", 1, 0, 0,
   mu_message_t msg;
   mu_envelope_t env = NULL;
   int status;
-  SCM ret;
   
   SCM_ASSERT (mu_scm_is_message (mesg), mesg, SCM_ARG1, FUNC_NAME);
   msg = mu_scm_message_get (mesg);
@@ -443,14 +444,18 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_sender, "mu-message-get-sender", 1, 0, 0,
   if (status == 0)
     {
       char *p = _get_envelope_sender (env);
-      ret = scm_from_locale_string (p);
-      free (p);
+      if (p)
+	{
+	  SCM ret = scm_from_locale_string (p);
+	  free (p);
+	  return ret;
+	}
     }
-  else
-    mu_scm_error (FUNC_NAME, status,
-		  "Cannot get envelope of message ~A",
-		  scm_list_1 (mesg));
-  return ret;
+
+  mu_scm_error (FUNC_NAME, status,
+		"Cannot get envelope of message ~A",
+		scm_list_1 (mesg));
+  return SCM_UNDEFINED;
 }
 #undef FUNC_NAME
 

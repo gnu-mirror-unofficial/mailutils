@@ -131,7 +131,9 @@ scan_addrs (const char *str, int isbcc)
 	  mu_error ("mu_address_aget_email: %s", mu_strerror (rc));
 	  continue;
 	}
-
+      else if (!buf)
+	continue;
+      
       p = strchr (buf, '@');
      
       if (ismydomain (p))

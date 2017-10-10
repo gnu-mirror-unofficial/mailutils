@@ -432,7 +432,7 @@ _rcpt_to_addr (mu_smtp_t smtp, mu_address_t addr, size_t *pcount)
       const char *to = NULL;
 
       status = mu_address_sget_email (addr, i, &to);
-      if (status == 0)
+      if (status == 0 && to)
 	{
 	  status = mu_smtp_rcpt_basic (smtp, to, NULL);
 	  if (status == 0)
@@ -474,7 +474,9 @@ smtp_send_message (mu_mailer_t mailer, mu_message_t msg,
   status = mu_address_sget_email (argfrom, 1, &mail_from);
   if (status)
     return status;
-  
+  if (!mail_from)
+    return MU_ERR_NOENT;
+      
   if (mu_smtp_capa_test (smtp, "SIZE", &size_str) == 0 &&
       mu_message_size (msg, &size) == 0 &&
       mu_message_lines (msg, &lines) == 0)

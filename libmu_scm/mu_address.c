@@ -56,7 +56,7 @@ _get_address_part (const char *func_name, address_get_fp fun,
   mu_address_destroy (&addr);
 
   if (status == 0)
-    ret = scm_from_locale_string (str);
+    ret = scm_from_locale_string (mu_prstr (str));
   else
     {
       free (str);

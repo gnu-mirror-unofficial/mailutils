@@ -373,22 +373,26 @@ check_redirect_loop (mu_message_t msg)
   mu_header_get_field_count (hdr, &num);
   for (i = 1; !loop && i <= num; i++)
     {
-      mu_header_get_field_name (hdr, i, buf, sizeof buf, NULL);
+      if (mu_header_get_field_name (hdr, i, buf, sizeof buf, NULL))
+	continue;
       if (mu_c_strcasecmp (buf, "X-Loop-Prevention") == 0)
 	{
 	  size_t j, cnt = 0;
 	  mu_address_t addr;
 	  
-	  mu_header_get_field_value (hdr, i, buf, sizeof buf, NULL);
+	  if (mu_header_get_field_value (hdr, i, buf, sizeof buf, NULL))
+	    continue;
 	  if (mu_address_create (&addr, buf))
 	    continue;
 
-	  mu_address_get_count (addr, &cnt);
-	  for (j = 1; !loop && j <= cnt; j++)
+	  if (mu_address_get_count (addr, &cnt) == 0)
 	    {
-	      mu_address_get_email (addr, j, buf, sizeof buf, NULL);
-	      if (mu_c_strcasecmp (buf, email) == 0)
-		loop = 1;
+	      for (j = 1; !loop && j <= cnt; j++)
+		{
+		  if (mu_address_get_email (addr, j, buf, sizeof buf, NULL) == 0
+		      && mu_c_strcasecmp (buf, email) == 0)
+		    loop = 1;
+		}
 	    }
 	  mu_address_destroy (&addr);
 	}

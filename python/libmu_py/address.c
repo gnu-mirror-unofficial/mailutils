@@ -200,7 +200,7 @@ api_address_get_email (PyObject *self, PyObject *args)
   ASSERT_INDEX_RANGE (n, "address");
   
   status = mu_address_sget_email (py_addr->addr, n, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -217,7 +217,7 @@ api_address_get_local_part (PyObject *self, PyObject *args)
   ASSERT_INDEX_RANGE (n, "address part");
 
   status = mu_address_sget_local_part (py_addr->addr, n, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -232,7 +232,7 @@ api_address_get_domain (PyObject *self, PyObject *args)
     return NULL;
   ASSERT_INDEX_RANGE (n, "address part");
   status = mu_address_sget_domain (py_addr->addr, n, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -247,7 +247,7 @@ api_address_get_personal (PyObject *self, PyObject *args)
     return NULL;
   ASSERT_INDEX_RANGE (n,  "address part");
   status = mu_address_sget_personal (py_addr->addr, n, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -262,7 +262,7 @@ api_address_get_comments (PyObject *self, PyObject *args)
     return NULL;
   ASSERT_INDEX_RANGE (n, "address part");
   status = mu_address_sget_comments (py_addr->addr, n, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -277,7 +277,7 @@ api_address_get_route (PyObject *self, PyObject *args)
     return NULL;
   ASSERT_INDEX_RANGE (n, "address part");
   status = mu_address_sget_route (py_addr->addr, n, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -291,7 +291,7 @@ api_address_to_string (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_address_sget_printable (py_addr->addr, &sptr);
-  return status_object (status, PyString_FromString (sptr));
+  return status_object (status, PyString_FromString (mu_prstr (sptr)));
 }
 
 static PyMethodDef methods[] = {

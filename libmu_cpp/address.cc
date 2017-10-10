@@ -100,7 +100,7 @@ Address :: get_email (size_t n)
   else if (status == ENOENT)
     throw Address::ENoent ("Address::get_email", status);
 
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string
@@ -113,7 +113,7 @@ Address :: get_local_part (size_t n)
   else if (status == ENOENT)
     throw Address::ENoent ("Address::get_local_part", status);
 
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string
@@ -126,7 +126,7 @@ Address :: get_domain (size_t n)
   else if (status == ENOENT)
     throw Address::ENoent ("Address::get_domain", status);
 
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string
@@ -139,7 +139,7 @@ Address :: get_personal (size_t n)
   else if (status == ENOENT)
     throw Address::ENoent ("Address::get_personal", status);
 
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string
@@ -152,7 +152,7 @@ Address :: get_comments (size_t n)
   else if (status == ENOENT)
     throw Address::ENoent ("Address::get_comments", status);
 
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string
@@ -165,7 +165,7 @@ Address :: get_route (size_t n)
   else if (status == ENOENT)
     throw Address::ENoent ("Address::get_route", status);
 
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string

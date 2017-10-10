@@ -162,6 +162,7 @@ _expand_sender (struct prog_exp *pe, char **ret)
   switch (status)
     {
     case 0:
+      /* Even if ret==NULL, wordsplit will cope with it */
       return MU_WRDSE_OK;
 
     case ENOMEM:
@@ -249,7 +250,8 @@ _expand_rcpt (struct prog_exp *pe, char **ret)
 	  mu_address_destroy (&tmp_addr);
 	  return _expand_err (ret, "reading email", status);
 	}
-      len += strlen (email);
+      if (email)
+	len += strlen (email);
     }
 
   str = malloc (len + 1);
@@ -265,7 +267,7 @@ _expand_rcpt (struct prog_exp *pe, char **ret)
       const char *email;
       if (i > 1)
 	*str++ = ' ';
-      if (mu_address_sget_email (addr, i, &email))
+      if (mu_address_sget_email (addr, i, &email) || !email)
 	continue;
       strcpy (str, email);
       str += strlen (email);

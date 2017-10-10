@@ -228,14 +228,18 @@ check_address (char *arg, int with_domain, char **pret)
   else
     {
       mu_address_t addr;
+      char *s;
       int rc = mu_address_create (&addr, arg);
       if (rc)
 	return 1;
       if (with_domain)
-	mu_address_aget_email (addr, 1, pret);
+	rc = mu_address_aget_email (addr, 1, &s);
       else
-	mu_address_aget_local_part (addr, 1, pret);
+	rc = mu_address_aget_local_part (addr, 1, &s);
       mu_address_destroy (&addr);
+      if (rc || !s)
+	return 1;
+      *pret = s;
     }
   return 0;
 }
