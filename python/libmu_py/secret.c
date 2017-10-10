@@ -124,7 +124,7 @@ api_secret_password (PyObject *self, PyObject *args)
     return NULL;
 
   pass = mu_secret_password (py_secret->secret);
-  return _ro (PyString_FromString (pass ? pass : ""));
+  return _ro (PyString_FromString (mu_prstr (pass)));
 }
 
 static PyObject *

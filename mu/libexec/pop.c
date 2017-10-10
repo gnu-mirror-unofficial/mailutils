@@ -205,7 +205,7 @@ com_capa (int argc, char **argv)
 	    {
 	      char *capa = NULL;
 	      mu_iterator_current (iterator, (void **) &capa);
-	      mu_printf ("CAPA: %s\n", capa ? capa : "");
+	      mu_printf ("CAPA: %s\n", mu_prstr (capa));
 	    }
 	  mu_iterator_destroy (&iterator);
 	}
@@ -230,7 +230,7 @@ com_uidl (int argc, char **argv)
 	    {
 	      char *uidl = NULL;
 	      mu_iterator_current (uidl_iterator, (void **) &uidl);
-	      mu_stream_printf (out, "UIDL: %s\n", uidl ? uidl : "");
+	      mu_stream_printf (out, "UIDL: %s\n", mu_prstr (uidl));
 	    }
 	  mu_iterator_destroy (&uidl_iterator);
 	}
@@ -242,7 +242,7 @@ com_uidl (int argc, char **argv)
       unsigned int msgno = strtoul (argv[1], NULL, 10);
       status = mu_pop3_uidl (pop3, msgno, &uidl);
       if (status == 0)
-	mu_printf ("Msg: %d UIDL: %s\n", msgno, uidl ? uidl : "");
+	mu_printf ("Msg: %d UIDL: %s\n", msgno, mu_prstr (uidl));
       free (uidl);
     }
   return status;
@@ -265,7 +265,7 @@ com_list (int argc, char **argv)
 	    {
 	      char *list = NULL;
 	      mu_iterator_current (list_iterator, (void **) &list);
-	      mu_stream_printf (out, "LIST: %s\n", (list) ? list : "");
+	      mu_stream_printf (out, "LIST: %s\n", mu_prstr (list));
 	    }
 	  mu_iterator_destroy (&list_iterator);
 	  mu_stream_destroy (&out);

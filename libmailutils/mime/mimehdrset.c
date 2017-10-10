@@ -122,8 +122,8 @@ mime_store_parameter (char const *name, void *value, void *data)
       if (vlen)
 	{
 	  mu_stream_printf (hbuf->str, "%s'%s'",
-			    p->lang ? p->lang : "",
-			    p->cset ? p->cset : "");
+			    mu_prstr (p->lang),
+			    mu_prstr (p->cset));
 	  vlen = 0;
 	}
       else if (quote)
@@ -225,8 +225,8 @@ mime_store_parameter (char const *name, void *value, void *data)
 	  if (vlen)
 	    {
 	      mu_stream_printf (hbuf->str, "%s'%s'",
-				p->lang ? p->lang : "",
-				p->cset ? p->cset : "");
+				mu_prstr (p->lang),
+				mu_prstr (p->cset));
 	      vlen = 0;
 	    }
 	  else if (quote)

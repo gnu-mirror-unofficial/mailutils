@@ -22,8 +22,6 @@
 #include <stdlib.h>
 #include <mailutils/mailutils.h>
 
-#define S(str) ((str) ? (str) : "")
-
 static void
 print_param (const char *prefix, mu_assoc_t assoc, int indent)
 {
@@ -85,34 +83,35 @@ print_imapenvelope (struct mu_imapenvelope *env, int level)
   indent += 4;
   mu_printf ("%*sTime: ", indent, "");
   mu_c_streamftime (mu_strout, "%c%n", &env->date, &env->tz);
-  mu_printf ("%*sSubject: %s\n", indent, "", S(env->subject));
+  mu_printf ("%*sSubject: %s\n", indent, "", mu_prstr (env->subject));
   print_address ("From", env->from, indent);
   print_address ("Sender", env->sender, indent);
   print_address ("Reply-to", env->reply_to, indent);
   print_address ("To", env->to, indent);
   print_address ("Cc", env->cc, indent);
   print_address ("Bcc", env->bcc, indent);
-  mu_printf ("%*sIn-Reply-To: %s\n", indent, "", S(env->in_reply_to));
-  mu_printf ("%*sMessage-ID: %s\n", indent, "", S(env->message_id));
+  mu_printf ("%*sIn-Reply-To: %s\n", indent, "", mu_prstr (env->in_reply_to));
+  mu_printf ("%*sMessage-ID: %s\n", indent, "", mu_prstr (env->message_id));
 }
 
 static void
 print_bs (struct mu_bodystructure *bs, int level)
 {
   int indent = level << 2;
-  mu_printf ("%*sbody_type=%s\n", indent, "", S(bs->body_type));
-  mu_printf ("%*sbody_subtype=%s\n", indent, "", S(bs->body_subtype));
+  mu_printf ("%*sbody_type=%s\n", indent, "", mu_prstr (bs->body_type));
+  mu_printf ("%*sbody_subtype=%s\n", indent, "", mu_prstr (bs->body_subtype));
   print_param ("Parameters", bs->body_param, indent);
-  mu_printf ("%*sbody_id=%s\n", indent, "", S(bs->body_id));
-  mu_printf ("%*sbody_descr=%s\n", indent, "", S(bs->body_descr));
-  mu_printf ("%*sbody_encoding=%s\n", indent, "", S(bs->body_encoding));
+  mu_printf ("%*sbody_id=%s\n", indent, "", mu_prstr (bs->body_id));
+  mu_printf ("%*sbody_descr=%s\n", indent, "", mu_prstr (bs->body_descr));
+  mu_printf ("%*sbody_encoding=%s\n", indent, "", mu_prstr (bs->body_encoding));
   mu_printf ("%*sbody_size=%lu\n", indent, "", (unsigned long) bs->body_size);
   /* Optional */
-  mu_printf ("%*sbody_md5=%s\n", indent, "", S(bs->body_md5));
-  mu_printf ("%*sbody_disposition=%s\n", indent, "", S(bs->body_disposition));
+  mu_printf ("%*sbody_md5=%s\n", indent, "", mu_prstr (bs->body_md5));
+  mu_printf ("%*sbody_disposition=%s\n", indent, "",
+	     mu_prstr (bs->body_disposition));
   print_param ("Disposition Parameters", bs->body_disp_param, indent);
-  mu_printf ("%*sbody_language=%s\n", indent, "", S(bs->body_language));
-  mu_printf ("%*sbody_location=%s\n", indent, "", S(bs->body_location));
+  mu_printf ("%*sbody_language=%s\n", indent, "", mu_prstr (bs->body_language));
+  mu_printf ("%*sbody_location=%s\n", indent, "", mu_prstr (bs->body_location));
 
   mu_printf ("%*sType ", indent, "");
   switch (bs->body_message_type)

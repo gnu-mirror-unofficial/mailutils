@@ -962,7 +962,7 @@ mh_set_reply_regex (const char *str)
   if (rc)
     mu_error ("reply_regex: %s%s%s", mu_strerror (rc),
 	      err ? ": " : "",
-	      err ? err : "");
+	      mu_prstr (err));
 }
 
 const char *

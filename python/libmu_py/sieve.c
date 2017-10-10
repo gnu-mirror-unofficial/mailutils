@@ -269,7 +269,7 @@ _sieve_action_printer (mu_sieve_machine_t mach,
 				    PyInt_FromSize_t (msgno));
 	      PyDict_SetItemString (py_dict, "msg", (PyObject *)py_msg);
 	      PyDict_SetItemString (py_dict, "action",
-				    PyString_FromString (action ? action : ""));
+				    PyString_FromString (mu_prstr (action)));
 
 	      if (mu_vasnprintf (&buf, &buflen, fmt, ap))
 		{
@@ -277,7 +277,7 @@ _sieve_action_printer (mu_sieve_machine_t mach,
 		  return;
 		}
 	      PyDict_SetItemString (py_dict, "text",
-				    PyString_FromString (buf ? buf : ""));
+				    PyString_FromString (mu_prstr (buf)));
 	      free (buf);
 
 	      py_args = PyTuple_New (1);

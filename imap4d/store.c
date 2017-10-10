@@ -171,6 +171,6 @@ imap4d_store (struct imap4d_session *session,
   char *err_text = NULL;
   
   rc = imap4d_store0 (tok, 0, &err_text);
-  return io_completion_response (command, rc, "%s", err_text ? err_text : "");
+  return io_completion_response (command, rc, "%s", mu_prstr (err_text));
 }
 

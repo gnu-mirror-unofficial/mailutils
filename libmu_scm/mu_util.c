@@ -60,8 +60,8 @@ SCM_DEFINE_PUBLIC (scm_mu_getpwuid, "mu-getpwuid", 1, 0, 0,
   ve[2] = scm_from_ulong ((unsigned long) entry->uid);
   ve[3] = scm_from_ulong ((unsigned long) entry->gid);
   ve[4] = scm_from_locale_string (entry->gecos);
-  ve[5] = scm_from_locale_string (entry->dir ? entry->dir : "");
-  ve[6] = scm_from_locale_string (entry->shell ? entry->shell : "");
+  ve[5] = scm_from_locale_string (mu_prstr (entry->dir));
+  ve[6] = scm_from_locale_string (mu_prstr (entry->shell));
   ve[7] = scm_from_locale_string (entry->mailbox);
 
   scm_array_handle_release (&handle);

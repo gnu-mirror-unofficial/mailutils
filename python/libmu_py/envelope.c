@@ -112,7 +112,7 @@ api_envelope_get_sender (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_envelope_sget_sender (py_env->env, &sender);
-  return status_object (status, PyString_FromString (sender ? sender : ""));
+  return status_object (status, PyString_FromString (mu_prstr (sender)));
 }
 
 static PyObject *
@@ -126,7 +126,7 @@ api_envelope_get_date (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_envelope_sget_date (py_env->env, &date);
-  return status_object (status, PyString_FromString (date ? date : ""));
+  return status_object (status, PyString_FromString (mu_prstr (date)));
 }
 
 static PyMethodDef methods[] = {

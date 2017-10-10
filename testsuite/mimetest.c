@@ -215,7 +215,7 @@ message_display_parts (mu_message_t msg, int indent)
 		      mu_strerror (status));
 	}
       printf ("%*.*sType of part %d = %s\n", indent, indent, "",
-	      j, type ? type : "");
+	      j, mu_prstr (type));
       print_message_part_sizes (part, indent);
       if (mu_header_sget_value (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
 				&encoding))

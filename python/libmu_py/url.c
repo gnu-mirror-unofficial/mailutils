@@ -127,7 +127,7 @@ api_url_get_scheme (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_url_sget_scheme (py_url->url, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -141,7 +141,7 @@ api_url_get_user (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_url_sget_user (py_url->url, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -171,7 +171,7 @@ api_url_get_auth (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_url_sget_auth (py_url->url, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -185,7 +185,7 @@ api_url_get_host (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_url_sget_host (py_url->url, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -199,7 +199,7 @@ api_url_get_path (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_url_sget_path (py_url->url, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -233,7 +233,7 @@ api_url_to_string (PyObject *self, PyObject *args)
     return NULL;
 
   str = mu_url_to_string (py_url->url);
-  return _ro (PyString_FromString (str ? str : ""));
+  return _ro (PyString_FromString (mu_prstr (str)));
 }
 
 static PyMethodDef methods[] = {

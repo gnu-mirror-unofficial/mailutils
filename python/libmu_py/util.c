@@ -29,7 +29,7 @@ api_util_get_user_email (PyObject *self, PyObject *args)
     return NULL;
 
   email = mu_get_user_email (name);
-  return _ro (PyString_FromString (email ? email : ""));
+  return _ro (PyString_FromString (mu_prstr (email)));
 }
 
 static PyObject *
@@ -52,7 +52,7 @@ api_util_get_user_email_domain (PyObject *self, PyObject *args)
   const char *domain = NULL;
 
   status = mu_get_user_email_domain (&domain);
-  return status_object (status, PyString_FromString (domain ? domain : ""));
+  return status_object (status, PyString_FromString (mu_prstr (domain)));
 }
 
 static PyObject *
@@ -72,12 +72,15 @@ static PyObject *
 api_util_tempname (PyObject *self, PyObject *args)
 {
   char *tmpdir = NULL, *tmpname = NULL;
-
+  PyObject *ret;
+  
   if (!PyArg_ParseTuple (args, "|z", &tmpdir))
     return NULL;
 
   tmpname = mu_tempname (tmpdir);
-  return _ro (PyString_FromString (tmpname ? tmpname : ""));
+  ret = _ro (PyString_FromString (mu_prstr (tmpname)));
+  free (tmpname);
+  return ret;
 }
 
 static PyMethodDef methods[] = {

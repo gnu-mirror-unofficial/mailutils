@@ -1172,7 +1172,7 @@ list_handler (mu_message_t msg, msg_part_t part, char *type, char *encoding,
       get_extbody_params (msg, &content_type, &content_descr);
 	
       printf ("          ");
-      printf ("%-25s", content_type ? content_type : "");
+      printf ("%-25s", mu_prstr (content_type));
       if (content_descr)
 	printf ("       %s", content_descr);
       printf ("\n");

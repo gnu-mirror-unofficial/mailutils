@@ -297,7 +297,7 @@ com_capa (int argc, char **argv)
 	    {
 	      char *capa = NULL;
 	      mu_iterator_current (iterator, (void **) &capa);
-	      mu_printf ("CAPA: %s\n", capa ? capa : "");
+	      mu_printf ("CAPA: %s\n", mu_prstr (capa));
 	    }
 	  mu_iterator_destroy (&iterator);
 	}

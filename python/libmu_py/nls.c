@@ -36,7 +36,7 @@ api_nls_set_locale (PyObject *self, PyObject *args)
     return NULL;
 
   lset = mu_set_locale (locale);
-  return _ro (PyString_FromString (lset ? lset : ""));
+  return _ro (PyString_FromString (mu_prstr (lset)));
 }
 
 static PyObject *

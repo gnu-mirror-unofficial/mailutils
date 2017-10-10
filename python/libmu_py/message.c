@@ -292,7 +292,7 @@ api_message_get_attachment_name (PyObject *self, PyObject *args)
 
   py_ret = PyTuple_New (3);
   PyTuple_SetItem (py_ret, 0, PyInt_FromLong (status));
-  PyTuple_SetItem (py_ret, 1, PyString_FromString (name ? name : ""));
+  PyTuple_SetItem (py_ret, 1, PyString_FromString (mu_prstr (name)));
   PyTuple_SetItem (py_ret, 2, lang ? PyString_FromString (lang) : Py_None);
   return _ro (py_ret);
 }

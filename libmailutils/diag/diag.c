@@ -188,10 +188,10 @@ mu_diag_funcall (mu_log_level_t level, const char *func,
   if (err)
     /* TRANSLATORS: First %s stands for function name, second for its
        arguments, third one for the actual error message. */
-    mu_diag_output (level, _("%s(%s) failed: %s"), func, arg ? arg : "",
+    mu_diag_output (level, _("%s(%s) failed: %s"), func, mu_prstr (arg),
 		    mu_strerror (err));
   else
     /* TRANSLATORS: First %s stands for function name, second for its
        arguments. */
-    mu_diag_output (level, _("%s(%s) failed"), func, arg ? arg : "");
+    mu_diag_output (level, _("%s(%s) failed"), func, mu_prstr (arg));
 }

@@ -116,7 +116,7 @@ api_header_get_value (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_header_sget_value (py_hdr->hdr, name, &value);
-  return status_object (status, PyString_FromString (value ? value : ""));
+  return status_object (status, PyString_FromString (mu_prstr (value)));
 }
 
 static PyObject *
@@ -132,7 +132,7 @@ api_header_get_value_n (PyObject *self, PyObject *args)
     return NULL;
   ASSERT_INDEX_RANGE (n, "header");
   status = mu_header_sget_value_n (py_hdr->hdr, name, n, &value);
-  return status_object (status, PyString_FromString (value ? value : ""));
+  return status_object (status, PyString_FromString (mu_prstr (value)));
 }
 
 static PyObject *
@@ -176,7 +176,7 @@ api_header_get_field_name (PyObject *self, PyObject *args)
     return NULL;
   ASSERT_INDEX_RANGE (idx, "header");
   status = mu_header_sget_field_name (py_hdr->hdr, idx, &name);
-  return status_object (status, PyString_FromString (name ? name : ""));
+  return status_object (status, PyString_FromString (mu_prstr (name)));
 }
 
 static PyObject *
@@ -191,7 +191,7 @@ api_header_get_field_value (PyObject *self, PyObject *args)
     return NULL;
   ASSERT_INDEX_RANGE (idx, "header");
   status = mu_header_sget_field_value (py_hdr->hdr, idx, &value);
-  return status_object (status, PyString_FromString (value ? value : ""));
+  return status_object (status, PyString_FromString (mu_prstr (value)));
 }
 
 static PyMethodDef methods[] = {

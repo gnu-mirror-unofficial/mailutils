@@ -76,7 +76,7 @@ Url :: get_scheme ()
     return "";
   else if (status)
     throw Exception ("Url::get_scheme", status);
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string
@@ -88,7 +88,7 @@ Url :: get_user ()
     return "";
   else if (status)
     throw Exception ("Url::get_user", status);
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 Secret&
@@ -112,7 +112,7 @@ Url :: get_auth ()
     return "";
   else if (status)
     throw Exception ("Url::get_auth", status);
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
  
 std::string
@@ -124,7 +124,7 @@ Url :: get_host ()
     return "";
   else if (status)
     throw Exception ("Url::get_host", status);
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::string
@@ -136,7 +136,7 @@ Url :: get_path ()
     return "";
   else if (status)
     throw Exception ("Url::get_path", status);
-  return std::string (buf ? buf : "");
+  return std::string (mu_prstr (buf));
 }
 
 std::vector<std::string>
@@ -161,7 +161,7 @@ std::string
 Url :: to_string ()
 {
   const char *str = mu_url_to_string (url);
-  return std::string (str ? str : "");
+  return std::string (mu_prstr (str));
 }
 
 namespace mailutils

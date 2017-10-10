@@ -499,7 +499,7 @@ vacation_subject (mu_sieve_machine_t mach,
 			      _("%lu: cannot compile reply prefix regexp: %s: %s"),
 			      (unsigned long) mu_sieve_get_message_num (mach),
 			      mu_strerror (rc),
-			      err ? err : "");
+			      mu_prstr (err));
 	    }
 	}
 	  

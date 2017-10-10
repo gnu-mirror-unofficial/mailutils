@@ -200,7 +200,7 @@ api_rfc2047_decode (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_rfc2047_decode (tocode, text, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyObject *
@@ -214,7 +214,7 @@ api_rfc2047_encode (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_rfc2047_encode (charset, encoding, text, &buf);
-  return status_object (status, PyString_FromString (buf ? buf : ""));
+  return status_object (status, PyString_FromString (mu_prstr (buf)));
 }
 
 static PyMethodDef methods[] = {
