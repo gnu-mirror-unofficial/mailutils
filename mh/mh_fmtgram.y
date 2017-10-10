@@ -894,7 +894,8 @@ yylex_func (void)
   yylval.arg.type = mhtype_str;
   unput (c);
   
-  if (mu_isdigit (yylval.arg.v.str[0]))
+  if (mu_isdigit (yylval.arg.v.str[0])
+      || (yylval.arg.v.str[0] == '-' && mu_isdigit (yylval.arg.v.str[1])))
     {
       long n;
       char *p;
