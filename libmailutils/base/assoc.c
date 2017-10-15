@@ -156,6 +156,7 @@ assoc_free_elem (mu_assoc_t assoc, unsigned idx)
 	assoc->free (assoc->tab[idx]->data);
       if (!(assoc->flags & MU_ASSOC_COPY_KEY))
 	free (assoc->tab[idx]->name);
+      free (assoc->tab[idx]);
       assoc->tab[idx] = NULL;
     }
 }

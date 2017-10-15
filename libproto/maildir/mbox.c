@@ -360,7 +360,8 @@ static void
 maildir_msg_free (struct _amd_message *amsg)
 {
   struct _maildir_message *mp = (struct _maildir_message *) amsg;
-  free (mp->file_name);
+  if (mp)
+    free (mp->file_name);
 }
 
 static int

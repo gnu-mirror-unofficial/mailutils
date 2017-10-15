@@ -442,6 +442,8 @@ amd_destroy (mu_mailbox_t mailbox)
   for (i = 0; i < amd->msg_count; i++)
     {
       mu_message_destroy (&amd->msg_array[i]->message, amd->msg_array[i]);
+      if (amd->msg_free)
+	amd->msg_free (amd->msg_array[i]);
       free (amd->msg_array[i]);
     }
   free (amd->msg_array);
@@ -514,6 +516,8 @@ amd_close (mu_mailbox_t mailbox)
   for (i = 0; i < amd->msg_count; i++)
     {
       mu_message_destroy (&amd->msg_array[i]->message, amd->msg_array[i]);
+      if (amd->msg_free)
+	amd->msg_free (amd->msg_array[i]);
       free (amd->msg_array[i]);
     }
   free (amd->msg_array);
@@ -2210,6 +2214,7 @@ amd_envelope_sender (mu_envelope_t envelope, char *buf, size_t len, size_t *psiz
 
   if (psize)
     *psize = len;
+  free (from);
   return 0;
 }
 
