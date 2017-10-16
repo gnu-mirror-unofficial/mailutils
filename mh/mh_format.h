@@ -85,9 +85,17 @@ enum mh_opcode
   /* Set format specification.
      Format: mhop_fmtspec number */
   mhop_fmtspec,
+
+  /* Push numeric register */
+  mhop_pushn,
+  /* Pop numeric register */
+  mhop_popn,
+  /* Exchange top of stack value and numeric register */
+  mhop_xchgn,
 };    
 
 enum regid { R_REG, R_ARG, R_ACC };
+#define MH_NREG 3
 
 enum mh_type
 {
@@ -158,8 +166,12 @@ struct mh_string
   
 struct mh_fvm
 {
-  long num[2];              /* numeric registers */
-  struct mh_string str[3];  /* string registers */
+  long num[MH_NREG];              /* numeric registers */
+  struct mh_string str[MH_NREG];  /* string registers */
+
+  long *numstack;           /* Stack of numeric value */
+  size_t maxstack;          /* Stack capacity */
+  size_t tos;               /* Top of stack (next free slot) */
   
   size_t pc;                /* Program counter */
   size_t progcnt;           /* Size of allocated program*/

@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include "mbiter.h"
 #include "mbchar.h"
 #include "mbswidth.h"
@@ -480,13 +481,16 @@ mh_fvm_run (mh_fvm_t mach, mu_message_t msg)
 
   reset_fmt_defaults (mach);
   mu_list_clear (mach->addrlist);
-  mh_string_clear (&mach->str[R_REG]);
-  mh_string_clear (&mach->str[R_ARG]);
-  mh_string_clear (&mach->str[R_ACC]);
+  mh_string_init (&mach->str[R_REG]);
+  mh_string_init (&mach->str[R_ARG]);
+  mh_string_init (&mach->str[R_ACC]);
 
   mach->pc = 1;
   mach->stop = 0;
   mach->ind = 0;
+  mach->tos = 0;
+  mach->maxstack = 0;
+  mach->numstack = 0;
   while (!mach->stop)
     {
       mh_opcode_t opcode;
@@ -556,6 +560,27 @@ mh_fvm_run (mh_fvm_t mach, mu_message_t msg)
 	    long src = MHI_NUM (mach->prog[mach->pc++]);
 	    mh_string_copy (mach, dst, src);
 	    /* FIXME: perhaps copy, not move? */
+	  }
+	  break;
+
+	case mhop_pushn:
+	  if (mach->tos == mach->maxstack)
+	    mach->numstack = mu_2nrealloc (mach->numstack, &mach->maxstack,
+					   sizeof (mach->numstack[0]));
+	  mach->numstack[mach->tos++] = mach->num[R_REG];
+	  break;
+
+	case mhop_popn:
+	  assert (mach->tos > 0);
+	  mach->num[R_REG] = mach->numstack[--mach->tos];
+	  break;
+
+	case mhop_xchgn:
+	  assert (mach->tos > 0);
+	  {
+	    long t = mach->numstack[mach->tos-1];
+	    mach->numstack[mach->tos-1] = mach->num[R_REG];
+	    mach->num[R_REG] = t;
 	  }
 	  break;
 	  
@@ -2007,6 +2032,9 @@ extract_labels (mh_format_t fmt)
 	case mhop_itoa:
 	case mhop_printn:
 	case mhop_prints:
+	case mhop_pushn:
+	case mhop_popn:
+	case mhop_xchgn:
 	  break;
 
 	default:
@@ -2159,6 +2187,18 @@ mh_format_dump_disass (mh_format_t fmt, int addr)
 	  }
 	  break;
 
+	case mhop_pushn:
+	  printf ("pushn");
+	  break;
+	  
+	case mhop_popn:
+	  printf ("popn");
+	  break;
+
+	case mhop_xchgn:
+	  printf ("xchgn");
+	  break;
+	  
 	case mhop_ldcomp:
 	  {
 	    long reg = MHI_NUM (prog[pc++]);
@@ -2282,6 +2322,7 @@ mh_fvm_destroy (mh_fvm_t *fvmp)
       mh_fvm_t fvm = *fvmp;
 
       free (fvm->prog);
+      free (fvm->numstack);
       mh_string_free (&fvm->str[R_REG]);
       mh_string_free (&fvm->str[R_ARG]);
       mh_string_free (&fvm->str[R_ACC]);

@@ -86,3 +86,5 @@ m4_include([repl.at])
 m4_include([mhn.at])
 m4_include([send.at])
 m4_include([sortm.at])
+
+m4_include([fmtcnd00.at])

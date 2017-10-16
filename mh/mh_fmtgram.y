@@ -35,17 +35,15 @@ enum context
     ctx_func,   /* after (func */
   };
 
-static enum context ctx_stack[512];
+static enum context *ctx_stack;
 size_t ctx_tos;
-
+size_t ctx_max;
+ 
 static inline void
 ctx_push (enum context ctx)
 {
-  if (ctx_tos == MU_ARRAY_SIZE (ctx_stack))
-    {
-      yyerror ("context nesting level too deep");
-      exit (1);
-    }
+  if (ctx_tos == ctx_max)
+    ctx_stack = mu_2nrealloc (ctx_stack, &ctx_max, sizeof (ctx_stack[0]));
   ctx_stack[ctx_tos++] = ctx;
 }
 
@@ -786,14 +784,21 @@ yylex_initial (void)
 int
 yylex_cond (void)
 {
-  switch (peek ())
+  while (1)
     {
-    case '(':
-      return token_function ();
-    case '{':
-      return token_component ();
-    default:
-      return bogus ("'(' or '{' expected");
+      switch (peek ())
+	{
+	case '(':
+	  return token_function ();
+	case '{':
+	  return token_component ();
+	case '\\':
+	  input ();
+	  if (input () == '\n')
+	    continue;
+	default:
+	  return bogus ("'(' or '{' expected");
+	}
     }
 }
 
@@ -929,7 +934,8 @@ format_parse (mh_format_t *fmtptr, char *format_str,
   start = tok_start = curp = format_str;
   mu_opool_create (&tokpool, MU_OPOOL_ENOMEMABRT);
 
-  ctx_tos = 0;
+  ctx_tos = ctx_max = 0;
+  ctx_stack = NULL;
   ctx_push (ctx_init);
   mu_linetrack_create (&trk, "input", 2);
   if (locus && locus->mu_file)
@@ -944,6 +950,7 @@ format_parse (mh_format_t *fmtptr, char *format_str,
 
   mu_locus_range_deinit (&yylloc);
   mu_linetrack_destroy (&trk);
+  free (ctx_stack);
   
   parse_tree = NULL;
   tokpool = NULL;
@@ -1557,6 +1564,41 @@ codegen_node (struct mh_format *fmt, struct node *node)
       {
 	long pc[2];
 	
+	/* Implementation of control escapes is a bit tricky. According to
+	   the spec:
+	   
+	     "[f]unction escapes write their return value in 'num' for
+	      functions returning integer or boolean values"
+
+	   That means that after "%<(gt 1024)" the value of 'num' would be
+	   1 or 0, depending on its value prior to entering the conditional.
+	   However this would defeat the purpose of the conditional itself,
+	   because then the following construct would be meaningless:
+
+	       %<(gt 1024)...%?(gt 512)...%|...%>
+
+	   Indeed, in MH implementation the value of 'num' propagates into
+	   the conditional expression, because any function escape serving
+	   as condition is evaluated in a separate context.
+
+	   To ensure this behavior, the virtual machine of GNU MH holds the
+	   value of the 'num' register on stack while evaluating the condition
+	   and restores it afterward.
+
+	   On the other hand, the spec says that:
+
+ 	     "[c]ontrol escapes return a boolean value, setting num to 1
+	     if the last explicit condition evaluated by a `%<'  or `%?'
+	     control succeeded, and 0 otherwise."
+
+	   To ensure this, the value on top of stack is exchanged with the
+	   value of the 'num' register upon entering the 'if' branch, and
+	   the tos value is popped into the 'num' upon leaving it. Any
+	   'else if' branches are handled the same way.
+
+	   Before leaving the 'else' branch, the 'num' is set to 0 explicitly.
+	*/
+	emit_opcode (fmt, mhop_pushn);
 	codegen_node (fmt, node->v.cntl.cond);
 	emit_opcode_typed (fmt, node->v.cntl.cond->datatype,
 			   mhop_brzn, mhop_brzs);
@@ -1564,8 +1606,10 @@ codegen_node (struct mh_format *fmt, struct node *node)
 	emit_instr (fmt, (mh_instr_t) NULL);
 	if (node->v.cntl.iftrue)
 	  {
+	    emit_opcode (fmt, mhop_xchgn);
 	    codegen_nodelist (fmt, node->v.cntl.iftrue);
 	  }
+	emit_opcode (fmt, mhop_popn);
 
 	if (node->v.cntl.iffalse)
 	  {
@@ -1574,7 +1618,14 @@ codegen_node (struct mh_format *fmt, struct node *node)
 	    emit_instr (fmt, (mh_instr_t) NULL);
 	
 	    fmt->prog[pc[0]].num = fmt->progcnt - pc[0];
+	    emit_opcode (fmt, mhop_popn);
 	    codegen_nodelist (fmt, node->v.cntl.iffalse);
+	    if (node->v.cntl.iffalse->nodetype != fmtnode_cntl)
+	      {
+		emit_opcode (fmt, mhop_setn);
+		emit_instr (fmt, (mh_instr_t) (long) R_REG);
+		emit_instr (fmt, (mh_instr_t) (long) 0);
+	      }
 	    fmt->prog[pc[1]].num = fmt->progcnt - pc[1];
 	  }
 	else

@@ -51,6 +51,7 @@ TESTSUITE_AT = \
  burst.at\
  comp.at\
  fmtcomp.at\
+ fmtcnd00.at\
  fmtfunc.at\
  folder.at\
  forw.at\

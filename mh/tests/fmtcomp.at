@@ -167,9 +167,12 @@ FMTCOMP([simple conditional],
 [IF (COMPONENT.replied) THEN
   PRINT("-")
 FI
+        pushn
         ldcomp reg, "replied"
         brzs L1
+        xchgn
         printlit "-"
+        popn
 L1:     stop
 ],[],[-format])
 
@@ -180,11 +183,16 @@ FMTCOMP([if-else],
 ELSE
   PRINT("+")
 FI
+        pushn
         ldcomp reg, "replied"
         brzs L1
+        xchgn
         printlit "-"
+        popn
         branch L2
-L1:     printlit "+"
+L1:     popn
+        printlit "+"
+        setn reg, 0
 L2:     stop
 ])
 
@@ -199,15 +207,24 @@ ELSE
     PRINT(" ")
   FI
 FI
+        pushn
         ldcomp reg, "replied"
         brzs L1
+        xchgn
         printlit "-"
+        popn
         branch L3
-L1:     ldcomp reg, "encrypted"
+L1:     popn
+        pushn
+        ldcomp reg, "encrypted"
         brzs L2
+        xchgn
         printlit "E"
+        popn
         branch L3
-L2:     printlit " "
+L2:     popn
+        printlit " "
+        setn reg, 0
 L3:     stop
 ])
 
@@ -219,11 +236,15 @@ FMTCOMP([inline conditional],
 [%(formataddr %<{reply-to}%|%{from}%>)],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE PRINT(COMPONENT.from); FI)
         movs acc, reg
+        pushn
         ldcomp reg, "reply-to"
         brzs L1
+        popn
         branch L2
-L1:     ldcomp reg, "from"
+L1:     popn
+        ldcomp reg, "from"
         prints
+        setn reg, 0
 L2:     movs arg, reg
         call formataddr
         stop
@@ -233,10 +254,14 @@ FMTCOMP([inline conditional (2)],
 [%(formataddr %<{reply-to}%|%(void{from})%>)],
 [formataddr(IF (COMPONENT.reply-to) THEN; ; ELSE COMPONENT.from; FI)
         movs acc, reg
+        pushn
         ldcomp reg, "reply-to"
         brzs L1
+        popn
         branch L2
-L1:     ldcomp reg, "from"
+L1:     popn
+        ldcomp reg, "from"
+        setn reg, 0
 L2:     movs arg, reg
         call formataddr
         stop
@@ -248,10 +273,14 @@ FMTCOMP([statement list],
 width()
 putaddr("To: ")
         movs acc, reg
+        pushn
         ldcomp reg, "reply-to"
         brzs L1
+        popn
         branch L2
-L1:     ldcomp reg, "from"
+L1:     popn
+        ldcomp reg, "from"
+        setn reg, 0
 L2:     movs arg, reg
         call formataddr
         call width
