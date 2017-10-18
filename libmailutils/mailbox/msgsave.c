@@ -41,7 +41,7 @@ mu_message_save_to_mailbox (mu_message_t msg, const char *toname, int perms)
     }
 
   if ((rc = mu_mailbox_open (to,
-			     MU_STREAM_WRITE | MU_STREAM_CREAT
+			     MU_STREAM_APPEND | MU_STREAM_CREAT
 			     | (perms & MU_STREAM_IMASK))))
     {
       mu_debug (MU_DEBCAT_MESSAGE, MU_DEBUG_ERROR, 		 
