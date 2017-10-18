@@ -1,11 +1,11 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-10-10
+GNU mailutils NEWS -- history of user-visible changes. 2017-10-18
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 
-Version 3.2.94 (Git)
+Version 3.3 - 2017-10-18
 
 * TLS configuration
 
@@ -71,16 +71,16 @@ is the same as for the global section described above, e.g.:
   }
 
 If the "tls" section is absent, but "tls-mode" is specified and it's
-value is anything but "no", the settings from the global "tls" section
-will be used.  In this case, it is an error if the global "tls"
-section is not defined.
+value is not "no", the settings from the global "tls" section will be
+used.  In this case, it is an error if the global "tls" section is not
+defined.
 
 * Source location API
 
 Libmailutils provides functions for keeping track of locations in
 source files for diagnostic purposes.
 
-* Improve error reporting
+* Improved error reporting
 
 * AM_GNU_MAILUTILS autoconf macro
 

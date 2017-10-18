@@ -142,19 +142,21 @@ ChangeLog:
 	fi
 
 dist-hook: ChangeLog
-	@PATCHLEV=`echo "$(PACKAGE_VERSION)" | sed -r "s/[0-9]+\.[0-9]+\.?//"`;\
-	if test $${PATCHLEV:-0} -lt 50; then				     \
-	  if head -n 6 ChangeLog | grep -q 'Uncommitted changes' ;	     \
-	  then								     \
-	    echo >&2 "*** Source tree contains uncommitted changes";	     \
-	    echo >&2 "*** Aborting";					     \
-	    exit 1;							     \
-	  fi;								     \
-	  if grep -q FIXME NEWS; then					     \
-	    echo >&2 "*** NEWS file contains FIXMEs";			     \
-	    echo >&2 "*** Aborting";					     \
-	    exit 1;							     \
-	  fi;								     \
+	@if test -f ChangeLog && test -f NEWS; then			\
+	  PATCHLEV=`echo "$(PACKAGE_VERSION)" | sed -r "s/[0-9]+\.[0-9]+\.?//"`;\
+	  if test $${PATCHLEV:-0} -lt 50; then				     \
+	    if head -n 6 ChangeLog | grep -q 'Uncommitted changes' ;	     \
+	    then							     \
+	      echo >&2 "*** Source tree contains uncommitted changes";	     \
+	      echo >&2 "*** Aborting";					     \
+	      exit 1;							     \
+	    fi;								     \
+	    if grep -q FIXME NEWS; then					     \
+	      echo >&2 "*** NEWS file contains FIXMEs";			     \
+	      echo >&2 "*** Aborting";					     \
+	      exit 1;							     \
+	    fi;								     \
+	  fi;                                                                \
 	fi
 
 alpha:
