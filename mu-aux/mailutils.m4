@@ -17,12 +17,13 @@ dnl along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 m4_define([am_mu_vercmp],[
 m4_pushdef([_ver_A_],m4_car($1))dnl
 m4_pushdef([_ver_B_],m4_car($2))dnl
-m4_if(_ver_B_,,,[if test m4_if(_ver_A_,,0,_ver_A_) -lt _ver_B_; then
-  $3
+m4_if(_ver_B_,,:,[if test m4_if(_ver_A_,,0,_ver_A_) -lt _ver_B_; then
+  $3  
+elif test m4_if(_ver_A_,,0,_ver_A_) -eq _ver_B_; then  
+am_mu_vercmp(m4_cdr($1),m4_cdr($2),[$3])
 fi
 m4_popdef([_ver_A_])dnl
-m4_popdef([_ver_B_])dnl
-am_mu_vercmp(m4_cdr($1),m4_cdr($2),[$3])])])
+m4_popdef([_ver_B_])dnl])])
 
 dnl AM_GNU_MAILUTILS(minversion, link-req, [act-if-found], [ac-if-not-found])
 dnl                      $1         $2           $3              $4
