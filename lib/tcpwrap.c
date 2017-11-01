@@ -28,6 +28,7 @@
 #include <mailutils/diag.h>
 #include <mailutils/error.h>
 #include <mailutils/server.h>
+#include <mailutils/sockaddr.h>
 #include "tcpwrap.h"
 
 int mu_tcp_wrapper_enable = 1;
