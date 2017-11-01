@@ -79,6 +79,7 @@ enum mu_buffer_type
 				    */
 #define MU_IOCTL_TLSSTREAM       13 /* TLS stream */
 #define MU_IOCTL_WORDWRAPSTREAM  14 /* Word-wrapper stream */
+#define MU_IOCTL_TCPSTREAM       15 /* TCP stream */
   
   /* Opcodes common for various families */
 #define MU_IOCTL_OP_GET 0
@@ -244,6 +245,14 @@ int mu_ioctl_logstream_set_locus_deprecated (void) MU_DEPRECATED;
 /* Get current column */
 #define MU_IOCTL_WORDWRAP_GET_COLUMN      4
 
+  /* TCP streams */
+
+  /* Get socket name.
+     Arg: struct mu_sockaddr **
+  */
+#define MU_IOCTL_TCP_GETSOCKNAME          0
+  
+  
 struct mu_nullstream_pattern
 {
   char *pattern;

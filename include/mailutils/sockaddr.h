@@ -56,15 +56,27 @@ void mu_sockaddr_free_list (struct mu_sockaddr *addr);
 struct mu_sockaddr *mu_sockaddr_insert (struct mu_sockaddr *anchor,
 					struct mu_sockaddr *addr,
 					int before);
-const char *mu_sockaddr_str (struct mu_sockaddr *addr);
+enum mu_sockaddr_format
+  {
+    mu_sockaddr_format_default,
+    mu_sockaddr_format_ehlo
+  };
 
-int mu_sockaddr_format (char **pbuf, const struct sockaddr *sa,
-			socklen_t salen);
+int mu_sys_sockaddr_format (char **pbuf,
+			    enum mu_sockaddr_format fmt,
+			    const struct sockaddr *sa, socklen_t salen);
+char *mu_sys_sockaddr_to_astr (const struct sockaddr *sa, int salen);
+  
+int mu_sockaddr_format (struct mu_sockaddr *sa, char **pbuf,
+			enum mu_sockaddr_format fmt);
+  
+const char *mu_sockaddr_str (struct mu_sockaddr *addr);
 
 int mu_sockaddr_from_node (struct mu_sockaddr **retval, const char *node,
 			   const char *serv, struct mu_sockaddr_hints *hints); 
 int mu_sockaddr_from_url (struct mu_sockaddr **retval, mu_url_t url,
 			  struct mu_sockaddr_hints *hints);
+int mu_sockaddr_from_socket (struct mu_sockaddr **retval, int fd);
 
 int mu_str_is_ipv4 (const char *addr);
 int mu_str_is_ipv6 (const char *addr);

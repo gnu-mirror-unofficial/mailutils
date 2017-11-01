@@ -22,6 +22,7 @@ libsockaddr_la_SOURCES = \
  create.c\
  free.c\
  fromnode.c\
+ fromsock.c\
  insert.c\
  ipaddr.c\
  str.c\

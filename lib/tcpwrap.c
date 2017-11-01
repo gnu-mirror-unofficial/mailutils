@@ -103,7 +103,7 @@ mu_tcp_wrapper_prefork (int fd, struct sockaddr *sa, int salen,
       && sa->sa_family == AF_INET
       && !mu_tcpwrapper_access (fd))
     {
-      char *p = mu_sockaddr_to_astr (sa, salen);
+      char *p = mu_sys_sockaddr_to_astr (sa, salen);
       mu_error (_("access from %s blocked by TCP wrappers"), p);
       free (p);
       return 1;

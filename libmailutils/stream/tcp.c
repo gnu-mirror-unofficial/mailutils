@@ -177,6 +177,25 @@ _tcp_ioctl (mu_stream_t stream, int code, int opcode, void *ptr)
 	    }
 	}
       break;
+
+    case MU_IOCTL_TCPSTREAM:
+      switch (opcode)
+	{
+	case MU_IOCTL_TCP_GETSOCKNAME:
+	  if (!ptr)
+	    return EINVAL;
+	  if (!tcp->source_addr)
+	    {
+	      int rc = mu_sockaddr_from_socket (&tcp->source_addr, tcp->fd);
+	      if (rc)
+		return rc;
+	    }
+	  return mu_sockaddr_copy ((struct mu_sockaddr **)ptr,
+				   tcp->source_addr);
+	default:
+	  return EINVAL;
+	}
+      break;
       
     default:
       return ENOSYS;

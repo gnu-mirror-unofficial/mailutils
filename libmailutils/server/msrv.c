@@ -679,7 +679,7 @@ mu_m_server_check_acl (mu_m_server_t msrv, struct sockaddr *s, int salen)
       rc = mu_acl_check_sockaddr (msrv->acl, s, salen, &res);
       if (rc)
 	{
-	  char *p = mu_sockaddr_to_astr (s, salen);
+	  char *p = mu_sys_sockaddr_to_astr (s, salen);
 	  mu_error (_("access from %s blocked: cannot check ACLs: %s"),
 		    p, mu_strerror (rc));
 	  free (p);
@@ -689,7 +689,7 @@ mu_m_server_check_acl (mu_m_server_t msrv, struct sockaddr *s, int salen)
 	{
 	case mu_acl_result_undefined:
 	  {
-	    char *p = mu_sockaddr_to_astr (s, salen);
+	    char *p = mu_sys_sockaddr_to_astr (s, salen);
 	    mu_diag_output (MU_DIAG_INFO,
 			    _("%s: undefined ACL result; access allowed"),
 			    p);
@@ -702,7 +702,7 @@ mu_m_server_check_acl (mu_m_server_t msrv, struct sockaddr *s, int salen)
 	      
 	case mu_acl_result_deny:
 	  {
-	    char *p = mu_sockaddr_to_astr (s, salen);
+	    char *p = mu_sys_sockaddr_to_astr (s, salen);
 	    mu_error (_("access from %s blocked"), p);
 	    free (p);
 	    return 1;

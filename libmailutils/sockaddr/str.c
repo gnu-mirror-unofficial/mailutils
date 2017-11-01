@@ -38,7 +38,9 @@ static char *default_sockaddr_text = "[not enogh memory]";
 	  "" : (sa)->sun_path)
 
 int
-mu_sockaddr_format (char **pbuf, const struct sockaddr *sa, socklen_t salen)
+mu_sys_sockaddr_format (char **pbuf,
+			enum mu_sockaddr_format fmt,
+			const struct sockaddr *sa, socklen_t salen)
 {
   int rc = MU_ERR_FAILURE;
   
@@ -54,23 +56,51 @@ mu_sockaddr_format (char **pbuf, const struct sockaddr *sa, socklen_t salen)
 			 host, sizeof (host), srv, sizeof (srv),
 			 NI_NUMERICHOST|NI_NUMERICSERV) == 0)
 	  {
-	    if (sa->sa_family == AF_INET6)
-	      rc = mu_asprintf (pbuf, "inet6://[%s]:%s", host, srv);
-	    else
-	      rc = mu_asprintf (pbuf, "inet://%s:%s", host, srv);
+	    switch (fmt)
+	      {
+	      case mu_sockaddr_format_default:
+		if (sa->sa_family == AF_INET6)
+		  rc = mu_asprintf (pbuf, "inet6://[%s]:%s", host, srv);
+		else
+		  rc = mu_asprintf (pbuf, "inet://%s:%s", host, srv);
+		break;
+
+	      case mu_sockaddr_format_ehlo:
+		rc = mu_asprintf (pbuf, "[%s]", host);
+		break;
+	      }
 	  }
 	else
-	  rc = mu_asprintf (pbuf, "%s://[getnameinfo failed]",
-			    sa->sa_family == AF_INET ?
-			    "inet" : "inet6");
+	  {
+	    switch (fmt)
+	      {
+	      case mu_sockaddr_format_default:
+		rc = mu_asprintf (pbuf, "%s://[getnameinfo failed]",
+				  sa->sa_family == AF_INET ?
+				  "inet" : "inet6");
+		break;
+
+	      case mu_sockaddr_format_ehlo:
+		return MU_ERR_FAILURE;
+	      }
+	  }
 	break;
       }
 #else
     case AF_INET:
       {
 	struct sockaddr_in *s_in = (struct sockaddr_in *)sa;
-	rc = mu_asprintf (pbuf, "inet://%s:%hu",
-			  inet_ntoa (s_in->sin_addr), s_in->sin_port);
+	switch (fmt)
+	  {
+	  case mu_sockaddr_format_default:
+	    rc = mu_asprintf (pbuf, "inet://%s:%hu",
+			      inet_ntoa (s_in->sin_addr), s_in->sin_port);
+	    break;
+	    
+	  case mu_sockaddr_format_ehlo:
+	    rc = mu_asprintf (pbuf, "[%s]", inet_ntoa (s_in->sin_addr));
+	    break;
+	  }
 	break;
       }
 #endif
@@ -78,10 +108,19 @@ mu_sockaddr_format (char **pbuf, const struct sockaddr *sa, socklen_t salen)
     case AF_UNIX:
       {
 	struct sockaddr_un *s_un = (struct sockaddr_un *)sa;
-	if (S_UN_NAME (s_un, salen)[0] == 0)
-	  rc = mu_asprintf (pbuf, "unix://[anonymous socket]");
-	else
-	  rc = mu_asprintf (pbuf, "unix://%s", s_un->sun_path);
+	
+	switch (fmt)
+	  {
+	  case mu_sockaddr_format_default:
+	    if (S_UN_NAME (s_un, salen)[0] == 0)
+	      rc = mu_asprintf (pbuf, "unix://[anonymous socket]");
+	    else
+	      rc = mu_asprintf (pbuf, "unix://%s", s_un->sun_path);
+	    break;
+
+	  case mu_sockaddr_format_ehlo:
+	    rc = mu_asprintf (pbuf, "localhost");
+	  }
 	break;
       }
 
@@ -92,19 +131,27 @@ mu_sockaddr_format (char **pbuf, const struct sockaddr *sa, socklen_t salen)
 }
 
 char *
-mu_sockaddr_to_astr (const struct sockaddr *sa, int salen)
+mu_sys_sockaddr_to_astr (const struct sockaddr *sa, int salen)
 {
   char *buf = NULL;
-  mu_sockaddr_format (&buf, sa, salen);
+  mu_sys_sockaddr_format (&buf, mu_sockaddr_format_default, sa, salen);
   return buf;
+}
+
+int
+mu_sockaddr_format (struct mu_sockaddr *sa, char **pbuf,
+		    enum mu_sockaddr_format fmt)
+{
+  return mu_sys_sockaddr_format (pbuf, fmt, sa->addr, sa->addrlen);
 }
 
 const char *
 mu_sockaddr_str (struct mu_sockaddr *sa)
 {
-	if (!sa->str && mu_sockaddr_format (&sa->str, sa->addr, sa->addrlen))
-	  return default_sockaddr_text;
-	return sa->str;
+  if (!sa->str
+      && mu_sockaddr_format (sa, &sa->str, mu_sockaddr_format_default))
+    return default_sockaddr_text;
+  return sa->str;
 }
 
 

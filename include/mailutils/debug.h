@@ -52,10 +52,6 @@ extern int mu_debug_line_info;
   ((a) == 0 ? MU_DEBUG_LEVEL_UPTO (b) :					\
               MU_DEBUG_LEVEL_UPTO (b) & ~MU_DEBUG_LEVEL_UPTO ((a) - 1))
 
-
-struct sockaddr;
-char *mu_sockaddr_to_astr (const struct sockaddr *sa, int salen);
-
 
 size_t mu_debug_register_category (char *name);
 size_t mu_debug_next_handle (void);

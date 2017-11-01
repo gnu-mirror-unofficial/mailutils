@@ -18,6 +18,7 @@
 #include "comsat.h"
 #include "mailutils/syslog.h"
 #include "mailutils/cli.h"
+#include "mailutils/sockaddr.h"
 
 #ifndef PATH_DEV
 # define PATH_DEV "/dev"
@@ -371,7 +372,7 @@ comsat_connection (int fd, struct sockaddr *sa, int salen,
     return 0;
   if (pconf->transcript)
     {
-      char *p = mu_sockaddr_to_astr (sa, salen);
+      char *p = mu_sys_sockaddr_to_astr (sa, salen);
       mu_diag_output (MU_DIAG_INFO,
 		      ngettext ("received %lu byte from %s",
 				"received %lu bytes from %s",
