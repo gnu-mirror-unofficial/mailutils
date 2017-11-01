@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
 #include <mailutils/sockaddr.h>
 #include <mailutils/url.h>
 #include <mailutils/io.h>
@@ -194,8 +195,10 @@ mu_sockaddr_from_node (struct mu_sockaddr **retval, const char *node,
 		return MU_ERR_SERVICE;
 	      port = sp->s_port;
 	    }
-	  else if (n == 0 || (port = n) != n)
-	    return MU_ERR_PARSE; /* FIXME: need MU_ERR_RANGE? */
+	  else if (n == 0 || n > USHRT_MAX)
+	    return ERANGE;
+	  else 
+	    port = htons (n);
 	}
       else if (mh->port)
 	port = htons (mh->port);
