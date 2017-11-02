@@ -1,8 +1,19 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-10-18
+GNU mailutils NEWS -- history of user-visible changes. 2017-11-02
 Copyright (C) 2002-2017 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+Version 3.4 - 2017-11-02 
+
+* Fix AM_MAILUTILS macro
+
+The macro incorrectly compared three-part version number with a
+two-part argument.
+
+* Fix compilation with --disable-ipv6
+
+* Fix SMTP EHLO command on machines with empty or undefined hostname
 
 
 Version 3.3 - 2017-10-18
