@@ -390,6 +390,9 @@ _tls_ioctl (struct _mu_stream *stream, int code, int opcode, void *arg)
 	}
       break;
       
+    case MU_IOCTL_TCPSTREAM:
+      return mu_stream_ioctl (sp->transport[0], code, opcode, arg);
+			      
     default:
       return ENOSYS;
     }

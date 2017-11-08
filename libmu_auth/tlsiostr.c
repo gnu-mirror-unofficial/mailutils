@@ -174,7 +174,7 @@ _tls_io_ioctl (struct _mu_stream *stream, int code, int opcode, void *arg)
       break;
       
     default:
-      return ENOSYS;
+      return mu_stream_ioctl (sp->transport, code, opcode, arg);
     }
   return 0;
 }

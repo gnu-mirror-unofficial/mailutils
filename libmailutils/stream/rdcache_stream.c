@@ -155,7 +155,7 @@ rdcache_ioctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	}
 
     default:
-      return ENOSYS;
+      return mu_stream_ioctl (sp->transport, code, opcode, arg);
     }
   return 0;
 }

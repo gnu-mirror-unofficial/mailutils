@@ -201,6 +201,9 @@ _iostream_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	  return mu_stream_ioctl (sp->transport[qp->type], code, opcode, arg);
 	}
       
+    case MU_IOCTL_TCPSTREAM:
+      return mu_stream_ioctl (sp->transport[0], code, opcode, arg);
+      
     default:
       return ENOSYS;
     }
