@@ -277,7 +277,7 @@ mimetypes_close ()
 int
 yyerror (char *s)
 {
-  mu_error (s);
+  mu_error ("%s", s);
   return 0;
 }
 
