@@ -58,7 +58,7 @@
 static void
 _wsplt_alloc_die (struct mu_wordsplit *wsp)
 {
-  wsp->ws_error (_("memory exhausted"));
+  wsp->ws_error ("%s", _("memory exhausted"));
   abort ();
 }
 
@@ -238,24 +238,24 @@ mu_wordsplit_init (struct mu_wordsplit *wsp, const char *input, size_t len,
 
   if (wsp->ws_flags & MU_WRDSF_ESCAPE)
     {
-      if (!wsp->ws_escape[0])
-	wsp->ws_escape[0] = "";
-      if (!wsp->ws_escape[1])
-	wsp->ws_escape[1] = "";
+      if (!wsp->ws_escape[MU_WRDSX_WORD])
+	wsp->ws_escape[MU_WRDSX_WORD] = "";
+      if (!wsp->ws_escape[MU_WRDSX_QUOTE])
+	wsp->ws_escape[MU_WRDSX_QUOTE] = "";
     }
   else
     {
       if (wsp->ws_flags & MU_WRDSF_CESCAPES)
 	{
-	  wsp->ws_escape[0] = mu_wordsplit_c_escape_tab;
-	  wsp->ws_escape[1] = mu_wordsplit_c_escape_tab;
+	  wsp->ws_escape[MU_WRDSX_WORD] = mu_wordsplit_c_escape_tab;
+	  wsp->ws_escape[MU_WRDSX_QUOTE] = mu_wordsplit_c_escape_tab;
 	  wsp->ws_options |= MU_WRDSO_OESC_QUOTE | MU_WRDSO_OESC_WORD       
 	                     | MU_WRDSO_XESC_QUOTE | MU_WRDSO_XESC_WORD;
 	}
       else
 	{
-	  wsp->ws_escape[0] = "";
-	  wsp->ws_escape[1] = "\\\\\"\"";
+	  wsp->ws_escape[MU_WRDSX_WORD] = "";
+	  wsp->ws_escape[MU_WRDSX_QUOTE] = "\\\\\"\"";
 	  wsp->ws_options |= MU_WRDSO_BSKEEP_QUOTE;
 	}
     }
@@ -1113,7 +1113,7 @@ expvar (struct mu_wordsplit *wsp, const char *str, size_t len,
 			wsp->ws_error ("%.*s: %s",
 				       (int) i, str, ws.ws_wordv[0]);
 		      else
-			wsp->ws_error (_("%.*s: %.*s"),
+			wsp->ws_error ("%.*s: %.*s",
 				       (int) i, str, (int) size, defstr);
 		      mu_wordsplit_free (&ws);
 		    }

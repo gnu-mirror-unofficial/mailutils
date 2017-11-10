@@ -16,6 +16,23 @@
 
 AT_BANNER(Wordsplit)
 
+m4_pushdef([wspnum],[0])
+m4_pushdef([wspid])
+m4_pushdef([wspgroupnum])
+m4_pushdef([wspgroupname])
+
+m4_pushdef([genkw],[dnl
+m4_define([wspid],m4_format([wordsplit%03d wsp%03d],wspnum))dnl
+m4_if(wspgroupname,,,[m4_define([wspid],wspid[ ]dnl
+m4_format(wspgroupname[ ]wspgroupname[%03d],wspgroupnum))dnl
+m4_define([wspgroupnum],m4_incr(wspgroupnum))])dnl
+m4_define([wspnum],m4_incr(wspnum))dnl
+wspid])
+
+m4_pushdef([WSPGROUP],[
+m4_define([wspgroupname],$1)
+m4_define([wspgroupnum],0)])
+
 dnl ------------------------------------------------------------
 dnl TESTWSP([NAME], [KW = `'], [OPTS], [INPUT], [STDOUT = `'],
 dnl         [STDERR = `'], [ENV])
@@ -24,7 +41,7 @@ m4_pushdef([TESTWSP],[
 m4_pushdef([MU_TEST_GROUP],[Wordsplit])
 m4_pushdef([MU_TEST_KEYWORDS],[wordsplit wsp])
 m4_pushdef([MU_TEST_COMMAND],[$7 wsp $3])
-MU_GENERIC_TEST([$1],[$2],[$4],[],[$5],[$6])
+MU_GENERIC_TEST([$1],[genkw $2],[$4],[],[$5],[$6])
 m4_popdef([MU_TEST_COMMAND])
 m4_popdef([MU_TEST_KEYWORDS])
 m4_popdef([MU_TEST_GROUP])
@@ -55,6 +72,8 @@ TESTWSP([tab character],[],[],
 1: tab\tcharacter
 ])
 
+WSPGROUP(wsp-escape)
+
 TESTWSP([octal and hex escapes],[],[],
 [\157\143\164\141\154\40and\x20\x68\x65\x78],
 [NF: 1
@@ -74,6 +93,8 @@ TESTWSP([escape representation],[],[],
 [NF: 1
 0: A\003-\0048\0039
 ])
+
+WSPGROUP()
 
 dnl ------------------------------------------------------------
 dnl Test worsplit-specific behavior
@@ -109,6 +130,8 @@ TESTWSP([dooffs],[],[dooffs 3 jeden dwa trzy],
 3: cztery
 4: piec
 ])
+
+WSPGROUP(wsp-var)
 
 TESTWSP([variable substitutions: single var],[],[],
 [a $FOO test],
@@ -230,12 +253,159 @@ TESTWSP([nosplit without expansion],[],[nosplit novar],
 [],
 [FOO="variable expansion"])
 
+TESTWSP([default value (defined)],[],[],
+[${FOO:-bar}],
+[NF: 1
+0: qux
+],
+[],
+[FOO=qux])
+
+TESTWSP([default value],[],[],
+[${FOO:-bar}],
+[NF: 1
+0: bar
+])
+
+TESTWSP([default value (defined)],[],[],
+[${FOO:-bar}],
+[NF: 1
+0: qux
+],
+[],
+[FOO=qux])
+
+TESTWSP([default value (:- null)],[],[],
+[${FOO:-bar}],
+[NF: 1
+0: bar
+],
+[],
+[FOO=])
+
+TESTWSP([default value (- null)],[],[],
+[${FOO-bar}],
+[NF: 0
+],
+[],
+[FOO=])
+
+TESTWSP([default value (- null, unset)],[],[],
+[${FOO-bar}],
+[NF: 1
+0: bar
+])
+
+TESTWSP([assign default values],[],[],
+[${FOO=bar}
+$FOO],
+[NF: 1
+0: bar
+NF: 1
+0: bar
+])
+
+TESTWSP([default error message (var defined)],[],[],
+[a ${FOO:?} test],
+[NF: 3
+0: a
+1: bar
+2: test
+],
+[],
+[FOO=bar])
+
+TESTWSP([default error message],[],[],
+[${FOO:?}],
+[NF: 0
+],
+[FOO: variable null or not set
+])
+
+TESTWSP([custom error message (defined)],[wsp-custom-err wsp-custom-err00],[],
+[a ${FOO:?please define it} test],
+[NF: 3
+0: a
+1: bar
+2: test
+],
+[],
+[FOO=bar])
+
+TESTWSP([custom error message],[wsp-custom-err wsp-custom-err01],[],
+[a ${FOO:?please define it} test],
+[NF: 2
+0: a
+1: test
+],
+[FOO: please define it
+])
+
+TESTWSP([alternate value (defined)],[wsp-alt wsp-alt00],[],
+[a ${FOO:+isset} test],
+[NF: 3
+0: a
+1: isset
+2: test
+],
+[],
+[FOO=bar])
+
+TESTWSP([alternate value],[wsp-alt wsp-alt01],[],
+[a ${FOO:+isset} test],
+[NF: 2
+0: a
+1: test
+],
+[],
+[unset FOO;])
+
+TESTWSP([getvar],[wsp-getvar],
+[foo=bar x=quux],
+[begin $foo $x end],
+[NF: 4
+0: begin
+1: bar
+2: quux
+3: end
+],
+[],
+[],
+[unset foo; unset x])
+
+TESTWSP([getvar and env],[wsp-getvar],
+[foo=bar x=quux y=xur],
+[begin $foo $TVAR $x $y end],
+[NF: 6
+0: begin
+1: bar
+2: 12
+3: quux
+4: zwar
+5: end
+],
+[],
+[TVAR=12 y=zwar],
+[unset foo; unset x])
+
+TESTWSP([getvar, alternate value],[wsp-getvar],
+[foo=bar],
+[a ${foo:+isset}],
+[NF: 2
+0: a
+1: isset
+])
+
+WSPGROUP()
+
 TESTWSP([ignore quotes],[],[-quote],
 ["a text"],
 [NF: 2
 0: "\"a"
 1: "text\""
 ])
+
+WSPGROUP(wsp-delim)
 
 TESTWSP([custom delimiters (squeeze)],[],[delim : -ws trimnl],
 [semicolon: separated::list: of :words],
@@ -287,6 +457,8 @@ TESTWSP([custom, with returned & squeezed delimiters],[],[delim : -ws trimnl ret
 9: words
 ])
 
+WSPGROUP(wsp-sed)
+
 TESTWSP([sed expressions],[],[sed],
 [arg1 s/foo/bar/g;s/bar baz/quz quux/ arg2],
 [NF: 3
@@ -294,6 +466,8 @@ TESTWSP([sed expressions],[],[sed],
 1: "s/foo/bar/g;s/bar baz/quz quux/"
 2: arg2
 ])
+
+WSPGROUP()
 
 TESTWSP([C escapes on],[],[cescapes],
 [a\ttab form\ffeed and new\nline],
@@ -355,6 +529,19 @@ TESTWSP([unescape],[],[-default novar nocmd quote escape :+:'\\""'],
 2: "bs \\"
 ])
 
+TESTWSP([unescape: word/quote],
+[wsp-unescape wsp-unescape-word],
+[-default novar nocmd quote escape-word '\\""' escape-quote ':+0x:\\""'],
+[\Seen "quote \"" "bs \\" "3\x31 \101" 3\x31 \101],
+[NF: 6
+0: Seen
+1: "quote \""
+2: "bs \\"
+3: "31 A"
+4: 3x31
+5: 101
+])
+
 TESTWSP([dquote],[],[-default novar nocmd dquote],
 [a "quoted example" isn't it],
 [NF: 4
@@ -372,6 +559,8 @@ TESTWSP([squote],[],[-default novar nocmd squote],
 2: "isn\"t"
 3: it
 ])
+
+WSPGROUP(wsp-incr)
 
 TESTWSP([incremental],[],[incremental],
 [incremental "input test" line
@@ -661,3 +850,9 @@ TESTWSP([append + dooffs + env],[],
 
 
 m4_popdef([TESTWSP])
+m4_popdef([wspnum])
+m4_popdef([wspid])
+m4_popdef([genkw])
+m4_popdef([wspgroupnum])
+m4_popdef([wspgroupname])
+m4_popdef([WSPGROUP])
