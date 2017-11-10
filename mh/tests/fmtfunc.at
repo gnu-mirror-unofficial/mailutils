@@ -212,7 +212,7 @@ AT_DATA([input.fmt],[%(getenv MH_TEST)
 AT_DATA([message],[
 
 ])
-AT_CHECK([MH_TEST=defined fmtcheck -form input.fmt -width 80 message
+AT_CHECK([MH=/dev/null MH_TEST=defined fmtcheck -form input.fmt -width 80 message
 ],
 [0],
 [defined

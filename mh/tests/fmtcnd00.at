@@ -28,7 +28,7 @@ m4_pushdef([FMTCOND],[
 AT_SETUP([$1])
 AT_KEYWORDS([format fmtcond fmtcnd00])
 AT_DATA([msg],[$2])
-AT_CHECK([fmtcheck -format 'FORMAT' msg
+AT_CHECK([MH=/dev/null fmtcheck -format 'FORMAT' msg
 ],
 [0],
 [$3])

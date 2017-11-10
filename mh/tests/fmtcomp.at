@@ -22,7 +22,7 @@ dnl
 m4_pushdef([FMTCOMP],[
 AT_SETUP([$1])
 AT_KEYWORDS([format fmtcomp])
-AT_CHECK([fmtcheck -disass -dump -format '$2'
+AT_CHECK([MH=/dev/null fmtcheck -disass -dump -format '$2'
 ],
 [m4_if([$4],[],[0],[1])],
 [$3],[$4])
@@ -296,7 +296,7 @@ m4_pushdef([FMTCOMP],[
 AT_SETUP([$1])
 AT_KEYWORDS([format fmtdiag])
 AT_DATA([input.fmt],[$2])
-AT_CHECK([fmtcheck -form input.fmt
+AT_CHECK([MH=/dev/null fmtcheck -form input.fmt
 ],
 [1],
 [],
