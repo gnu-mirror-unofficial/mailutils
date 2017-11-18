@@ -55,6 +55,7 @@ mu_sieve_value_create (mu_sieve_machine_t mach, mu_sieve_data_type type,
   val->locus.end.mu_line = locus->end.mu_line;
   val->locus.end.mu_col = locus->end.mu_col;
   
+  mu_locus_range_init (&val->locus);
   mu_locus_range_copy (&val->locus, locus);
   switch (type)
     {

@@ -1134,10 +1134,9 @@ mu_cfg_tree_create_node (struct mu_cfg_tree *tree,
   
   np = mu_alloc (size);
   np->type = type;
+  mu_locus_range_init (&np->locus);
   if (loc)
     mu_locus_range_copy (&np->locus, loc);
-  else
-    memset (&np->locus, 0, sizeof np->locus);
   p = (char*) (np + 1);
   np->tag = p;
   strcpy (p, tag);

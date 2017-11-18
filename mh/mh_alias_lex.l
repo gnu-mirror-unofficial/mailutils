@@ -167,6 +167,7 @@ push_source (const char *name, int fail)
     {
       ctx = mu_alloc (sizeof (*ctx));
       ctx->trk = trk;
+      mu_locus_range_init (&ctx->incl_range);
       mu_locus_range_copy (&ctx->incl_range, &yylloc);
       ctx->exec_p = exec_p;
       ctx->i_node = ali_source_inode;
