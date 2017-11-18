@@ -77,15 +77,7 @@ mu_version_parse() {
                 m4_dquote(m4_bpatsubst($1, [\.],[,])),
       [AC_MSG_ERROR([Mailutils v. $MAILUTILS_VERSION is too old; required is at least ]$1)])
   ])
-  req=""
-  for x in $2
-  do
-    case $x in
-    mailer)   test $MAILUTILS_VERSION_NUMBER -ge 1200 && req="$req $x";;
-    *)        req="$req $x"
-    esac
-  done
-  MAILUTILS_LIBS=`$MAILUTILS_CONFIG --link $req`
+  MAILUTILS_LIBS=`$MAILUTILS_CONFIG --link $2`
   MAILUTILS_INCLUDES=`$MAILUTILS_CONFIG --compile`
   m4_if($3,,[LIBS="$LIBS $MAILUTILS_LIBS"], [$3])
 ])  
