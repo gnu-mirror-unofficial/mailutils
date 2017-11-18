@@ -46,8 +46,8 @@ TESTENC2047([padding 2],[enc03],
 TESTENC2047([padding 3],[enc04],
             [-eB -cUTF-8],
 	    [Wichtige Mitteilung zur Schaltung Ihres Anschlusses],
-	    [=?UTF-8?B?V2ljaHRpZ2UgTWl0dGVpbHVuZyB6dXIgU2NoYWx0dW5nIElocmVzIEFuc2NobHV?=
- =?UTF-8?B?zc2Vz?=])
+	    [=?UTF-8?B?V2ljaHRpZ2UgTWl0dGVpbHVuZyB6dXIgU2NoYWx0dW5nIElocmVzIEFuc2No?=
+ =?UTF-8?B?bHVzc2Vz?=])
 
 TESTENC2047([specials],[enc05],
             [-eQ],

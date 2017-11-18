@@ -323,17 +323,66 @@ mu_rfc2047_encode (const char *charset, const char *encoding,
       rc = mu_memory_stream_create (&output_stream, MU_STREAM_RDWR);
       if (rc == 0)
 	{
+	  /* FIXME: The following implementation does not conform to the
+	     following requirement of RFC 2047:
+	     
+	     Each 'encoded-word' MUST represent an integral number of
+	     characters. A multi-octet character may not be split across
+	     adjacent 'encoded-word's. */
 	  char buf[MAX_ENCODED_WORD];
 	  size_t start, bs, n;
+	  char putback[2];
+	  int pbi = 0;
 
 	  start = snprintf (buf, sizeof buf, "=?%s?%s?", charset, encoding);
 	  bs = sizeof buf - start - 2;
+
+	  /* The 'encoded-text' in an 'encoded-word' must be self-contained;
+	     'encoded-text' MUST NOT be continued from one 'encoded-word' to
+	     another. */
+	  if (encoding[0] == 'B')
+	    {
+	      /* This implies that the 'encoded-text' portion of a "B"
+		 'encoded-word' will be a multiple of 4 characters long; */
+	      bs -= bs % 4;
+	    }
 	  
 	  while (1)
 	    {
-	      rc = mu_stream_read (inter_stream, buf + start, bs, &n);
-	      if (rc || n == 0)
+	      if (pbi)
+		{
+		  int i;
+		  
+		  for (i = 0; i < pbi; i++)
+		    buf[start + i] = putback[pbi - i];
+		}
+	      rc = mu_stream_read (inter_stream, buf + start + pbi, bs - pbi,
+				   &n);
+	      if (rc)
 		break;
+	      n += pbi;
+	      pbi = 0;
+	      if (n == 0)
+		break;
+	      
+	      if (encoding[0] == 'Q')
+		{
+		  /* [...] for a "Q" 'encoded-word', any "=" character that
+		     appears in the 'encoded-text' portion will be followed
+		     by two hexadecimal characters. */
+		  /* This means that two last characters of buf must not
+		     be '=' */
+		  if (buf[n + start - 1] == '=')
+		    {
+		      putback[pbi++] = buf[start + --n];
+		    }
+		  else if (buf[n + start - 2] == '=')
+		    {
+		      putback[pbi++] = buf[start + --n];
+		      putback[pbi++] = buf[start + --n];
+		    }		      
+		}
+	      
 	      rc = mu_stream_write (output_stream, buf, n + start, NULL);
 	      if (rc)
 		break;
@@ -345,7 +394,7 @@ mu_rfc2047_encode (const char *charset, const char *encoding,
 	      else
 		break;
 	    }
-
+	  
 	  if (rc == 0)
 	    {
 	      mu_off_t sz;
