@@ -25,6 +25,7 @@ m4_include([lstuid02.at])
 
 AT_BANNER(mimetest)
 m4_include([mime.at])
+m4_include([mime01.at])
 
 AT_BANNER(Mailbox removal)
 m4_include([mbdel.at])

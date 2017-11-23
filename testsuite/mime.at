@@ -18,16 +18,15 @@ AT_SETUP([mime])
 
 # FIXME: Mimetest should probably be fixed to avoid the use of `tr'
 # and `sed' here.
-AT_CHECK([mimetest -i 0 -p $abs_top_srcdir/testsuite/spool/mbox1 | dnl
-          tr '\t' ' ' | sed 's/  *$//'],
+AT_CHECK([mimetest -i 0 -p $abs_top_srcdir/testsuite/spool/mbox1],
 [0],
-[Message: 1
-From: Foo Bar <foobar@nonexistent.net>
-Subject: Jabberwocky
-Number of parts in message - 1
-Total message size - 1254/44
-Type of part 1 = 
-Message part size - 1254/44: 317/9, 937/35
+[Message:1
+From:Foo Bar <foobar@nonexistent.net>
+Subject:Jabberwocky
+Number of parts in message:1
+Total message size:1254/44
+Type of part 1: 
+Message part size:1254/44: 317/9, 937/35
 Text Message
 Begin
 `Twas brillig, and the slithy toves
@@ -67,13 +66,13 @@ And the mome raths outgrabe.
 
 
 End
-Message: 2
-From: Bar <bar@dontmailme.org>
-Subject: Re: Jabberwocky
-Number of parts in message - 1
-Total message size - 534/13
-Type of part 1 = 
-Message part size - 534/13: 319/9, 215/4
+Message:2
+From:Bar <bar@dontmailme.org>
+Subject:Re: Jabberwocky
+Number of parts in message:1
+Total message size:534/13
+Type of part 1: 
+Message part size:534/13: 319/9, 215/4
 Text Message
 Begin
 It seems very pretty, but it's *rather* hard to understand!'
@@ -82,13 +81,13 @@ exactly know what they are!  However, SOMEBODY killed SOMETHING:
 that's clear, at any rate...
 
 End
-Message: 3
-From: Sergey Poznyakoff <gray@example.net>
-Subject: Simple MIME
-Number of parts in message - 2
-Total message size - 1569/42
-Type of part 1 = text/plain
-Message part size - 364/13: 134/4, 230/9
+Message:3
+From:Sergey Poznyakoff <gray@example.net>
+Subject:Simple MIME
+Number of parts in message:2
+Total message size:1569/42
+Type of part 1:text/plain
+Message part size:364/13: 134/4, 230/9
 Text Message
 Begin
 How doth the little crocodile
@@ -102,8 +101,8 @@ And welcome little fishes in
 With gently smiling jaws!
 
 End
-Type of part 2 = application/octet-stream
-Message part size - 638/11: 176/5, 462/6
+Type of part 2:application/octet-stream
+Message part size:638/11: 176/5, 462/6
 Attachment - saving [[msg.21]]
 Begin
 `You are old, Father William,' the young man said,
@@ -118,13 +117,13 @@ Why, I do it again and again.'
 
 
 End
-Message: 4
-From: Sergey Poznyakoff <gray@example.net>
-Subject: Nested MIME
-Number of parts in message - 2
-Total message size - 3399/84
-Type of part 1 = text/plain
-Message part size - 489/14: 148/4, 341/10
+Message:4
+From:Sergey Poznyakoff <gray@example.net>
+Subject:Nested MIME
+Number of parts in message:2
+Total message size:3399/84
+Type of part 1:text/plain
+Message part size:489/14: 148/4, 341/10
 Text Message
 Begin
 `You are old, Father William,' the young man said,
@@ -139,12 +138,14 @@ Why, I do it again and again.'
 
 
 End
-Type of part 2 = multipart/mixed
-Message part size - 2343/52: 107/3, 2236/49
-Encapsulated message : 	
+Type of part 2:multipart/mixed
+Message part size:2343/52: 107/3, 2236/49
+Encapsulated message:
+From:
+Subject:
 Begin
-Type of part 1 = application/octet-stream
-Message part size - 656/12: 177/5, 479/7
+Type of part 1:application/octet-stream
+Message part size:656/12: 177/5, 479/7
 Attachment - saving [[msg.22]]
 Begin
 `You are old,' said the youth, `as I mentioned before,
@@ -158,12 +159,14 @@ By the use of this ointment--one shilling the box--
 Allow me to sell you a couple?'
 
 End
-Type of part 2 = multipart/mixed
-Message part size - 1510/32: 107/3, 1403/29
-Encapsulated message : 	
+Type of part 2:multipart/mixed
+Message part size:1510/32: 107/3, 1403/29
+Encapsulated message:
+From:
+Subject:
 Begin
-Type of part 1 = application/octet-stream
-Message part size - 661/12: 178/5, 483/7
+Type of part 1:application/octet-stream
+Message part size:661/12: 178/5, 483/7
 Attachment - saving [[msg.23]]
 Begin
 `You are old,' said the youth, `and your jaws are too weak
@@ -177,8 +180,8 @@ And the muscular strength, which it gave to my jaw,
 Has lasted the rest of my life.'
 
 End
-Type of part 2 = application/octet-stream
-Message part size - 672/12: 177/5, 495/7
+Type of part 2:application/octet-stream
+Message part size:672/12: 177/5, 495/7
 Attachment - saving [[msg.24]]
 Begin
 `You are old,' said the youth, `one would hardly suppose
@@ -196,19 +199,19 @@ End
 End
 
 End
-Message: 5
-From: Sergey Poznyakoff <gray@example.net>
-Subject: Empty MIME Parts
-Number of parts in message - 2
-Total message size - 857/27
-Type of part 1 = text/plain
-Message part size - 136/4: 136/4, 0/0
+Message:5
+From:Sergey Poznyakoff <gray@example.net>
+Subject:Empty MIME Parts
+Number of parts in message:2
+Total message size:857/27
+Type of part 1:text/plain
+Message part size:136/4: 136/4, 0/0
 Text Message
 Begin
 
 End
-Type of part 2 = text/plain
-Message part size - 149/5: 148/4, 1/1
+Type of part 2:text/plain
+Message part size:149/5: 148/4, 1/1
 Text Message
 Begin
 

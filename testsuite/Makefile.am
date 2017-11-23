@@ -91,6 +91,7 @@ TESTSUITE_AT = \
  lstuid02.at\
  mbdel.at\
  mime.at\
+ mime01.at\
  smtp-msg.at\
  smtp-str.at\
  ufms.at\

@@ -260,7 +260,7 @@ _mime_append_header_line (mu_mime_t mime)
 static int
 _mime_parse_mpart_message (mu_mime_t mime)
 {
-  char *cp, *cp2;
+  char *cp;
   size_t blength, mb_length, mb_offset, mb_lines;
   int ret;
   size_t nbytes;
@@ -294,9 +294,76 @@ _mime_parse_mpart_message (mu_mime_t mime)
 				&nbytes)) == 0 && nbytes)
     {
       cp = mime->cur_buf;
-      while (nbytes)
+
+      while (1)
 	{
 	  mime->cur_line[mime->line_ndx] = *cp;
+	  if (mime->parser_state == MIME_STATE_SCAN_BOUNDARY
+	      && (nbytes == 0 || *cp == '\n'))
+	    {
+	      char *cp2 = mime->cur_line[0] == '\n'
+		            ? mime->cur_line + 1 : mime->cur_line;
+	      if (mime->line_ndx >= blength
+		  && ((memcmp (cp2, "--", 2) == 0
+		       && memcmp (cp2 + 2, mime->boundary, blength) == 0)
+		      || memcmp (cp2, mime->boundary, blength) == 0))
+		{
+		  mime->parser_state = MIME_STATE_HEADERS;
+		  mime->flags &= ~MIME_PARSER_HAVE_CR;
+		  mb_length = mime->cur_offset 
+			                   - mb_offset
+			                   - mime->line_ndx;
+		  if (mime->header_length)
+		    /* this skips the preamble */
+		    {
+		      /* RFC 1521 [Page 30]:
+			 NOTE: The CRLF preceding the encapsulation
+			 line is conceptually attached to the boundary
+			 so that it is possible to have a part that
+			 does not end with a CRLF (line break). Body
+			 parts that must be considered to end with line
+			 breaks, therefore, must have two CRLFs
+			 preceding the encapsulation line, the first
+			 of which is part of the preceding body part,
+			 and the second of which is part of the
+			 encapsulation boundary. */
+		      
+		      if (mb_lines)
+			/* to prevent negative values in case of a
+			   malformed message */
+			mb_lines--;
+		      
+		      _mime_append_part (mime, NULL,
+					 mb_offset, mb_length,
+					 mb_lines);
+		    }
+		  
+		  if ((&mime->cur_line[mime->line_ndx] - cp2 - 1 > blength
+		       && memcmp (cp2 + blength + 2, "--", 2) == 0)
+		      || (&mime->cur_line[mime->line_ndx] - cp2 - 1 == blength
+			  && memcmp (cp2 + blength, "--", 2) == 0))
+		    {	/* last boundary */
+		      mime->parser_state = MIME_STATE_BEGIN_LINE;
+		      mime->header_length = 0;
+		    }
+		  else
+		    mime->line_ndx = -1; /* headers parsing requires
+					    empty line */
+		}
+	      else if (nbytes)
+		{
+		  if (mime->header_length)
+		    mb_lines++;
+		  
+		  mime->line_ndx = 0;
+		  mime->cur_line[0] = *cp;	/* stay in this state but
+						   leave '\n' at begining */
+		}
+	    }
+
+	  if (nbytes == 0) 
+	    break;
+	  
 	  if (*cp == '\n')
 	    {
 	      switch (mime->parser_state)
@@ -308,68 +375,6 @@ _mime_parse_mpart_message (mu_mime_t mime)
 		  break;
 
 		case MIME_STATE_SCAN_BOUNDARY:
-		  cp2 = mime->cur_line[0] == '\n'
-		        ? mime->cur_line + 1 : mime->cur_line;
-		  if (mime->line_ndx >= blength)
-		    {
-		      if ((!strncmp (cp2, "--", 2)
-			   && !mu_c_strncasecmp (cp2 + 2, mime->boundary,
-				  	         blength))
-			  || !mu_c_strncasecmp (cp2, mime->boundary, blength))
-			{
-			  mime->parser_state = MIME_STATE_HEADERS;
-			  mime->flags &= ~MIME_PARSER_HAVE_CR;
-			  mb_length = mime->cur_offset 
-			                   - mb_offset
-			                   - mime->line_ndx;
-			  if (mime->header_length)
-			    /* this skips the preamble */
-			    {
-			      /* RFC 1521 [Page 30]:
-				 NOTE: The CRLF preceding the encapsulation
-				 line is conceptually attached to the boundary
-				 so that it is possible to have a part that
-				 does not end with a CRLF (line break). Body
-				 parts that must be considered to end with line
-				 breaks, therefore, must have two CRLFs
-				 preceding the encapsulation line, the first
-				 of which is part of the preceding body part,
-				 and the second of which is part of the
-				 encapsulation boundary. */
-			      
-			      if (mb_lines)
-				/* to prevent negative values in case of a
-				   malformed message */
-				mb_lines--;
-				  
-			      _mime_append_part (mime, NULL,
-						 mb_offset, mb_length,
-						 mb_lines);
-			    }
-
-			  if ((&mime->cur_line[mime->line_ndx] - cp2 - 1 >
-			       blength
-			       && !strncmp (cp2 + blength + 2, "--", 2))
-			      || (&mime->cur_line[mime->line_ndx] - cp2 - 1 ==
-				  blength
-				  && !strncmp (cp2 + blength, "--", 2)))
-			    {	/* last boundary */
-			      mime->parser_state = MIME_STATE_BEGIN_LINE;
-			      mime->header_length = 0;
-			    }
-			  else
-			    mime->line_ndx = -1; /* headers parsing requires
-						    empty line */
-			  break;
-			}
-		    }
-
-		  if (mime->header_length)
-		    mb_lines++;
-
-		  mime->line_ndx = 0;
-		  mime->cur_line[0] = *cp;	/* stay in this state but
-						   leave '\n' at begining */
 		  break;
 
 		case MIME_STATE_HEADERS:
@@ -385,6 +390,7 @@ _mime_parse_mpart_message (mu_mime_t mime)
 		  break;
 		}
 	    }
+
 	  mime->line_ndx++;
 	  if (mime->line_ndx >= mime->line_size)
 	    {

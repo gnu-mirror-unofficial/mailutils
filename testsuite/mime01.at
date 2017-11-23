@@ -1,0 +1,130 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2017 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([mime - adjacent closing delimiters])
+AT_DATA([in.msg],
+[From foo@example.com Wed Nov 22 16:55:56 2017
+MIME-Version: 1.0
+From: Foo Bar <foo@example.com>
+Date: Wed, 22 Nov 2017 18:54:55 +0200
+Subject: MIME delimiter test
+To: Gray <gray@example.org>
+Content-Type: multipart/mixed; boundary="94eb2c190d42daa45d055e952d64"
+
+--94eb2c190d42daa45d055e952d64
+Content-Type: multipart/alternative; boundary="94eb2c190d42daa45a055e952d62"
+
+--94eb2c190d42daa45a055e952d62
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+SGllciBsaWVndCBlaW4gTWFubiBnYW56IG9ibmVnbGVpY2g7CkltIExlaWJlIGRpY2ssIGFuIFN1
+ZGVuIHJlaWNoLgpXaXIgaGFiZW4gaWhuIGluIGRhcyBHcmFiIGdlc3RlY2t0LCAgICAgSGVyZSBs
+aWVzIGEgbWFuIHdpdGggc3VuZHJ5IGZsYXdzCldlaWwgZXMgdW5zIGR1bmt0IGVyIHNlaSB2ZXJy
+ZWNrdC4gICAgICBBbmQgbnVtZXJvdXMgU2lucyB1cG9uIGhpcyBoZWFkOwogICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgV2UgYnVyaWVkIGhpbSB0b2RheSBiZWNhdXNlCiAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBBcyBmYXIgYXMgd2UgY2FuIHRl
+bGwsIGhlJ3MgZGVhZC4KCiAgICAgICAgICAgICAgICAtLSBQRFEgQmFjaCdzIGVwaXRhcGgsIGFz
+IHJlcXVlc3RlZCBieSBoaXMgY291c2luIEJldHR5CiAgICAgICAgICAgICAgICAgICBTdWUgQmFj
+aCBhbmQgd3JpdHRlbiBieSB0aGUgbG9jYWwgZG9nZ2VyYWwgY2F0Y2hlcjsKICAgICAgICAgICAg
+ICAgICAgICJUaGUgRGVmaW5pdGl2ZSBCaW9ncmFwaHkgb2YgUERRIEJhY2giLCBQZXRlciBTY2hp
+Y2tlbGUK
+--94eb2c190d42daa45a055e952d62
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+PGh0bWw+Cjxib2R5Pgo8ZGl2Pgo8ZGl2PjxwcmU+SGllciBsaWVndCBlaW4gTWFubiBnYW56IG9i
+bmVnbGVpY2g7CkltIExlaWJlIGRpY2ssIGFuIFN1ZGVuIHJlaWNoLjwvcHJlPgo8L2Rpdj4KPGRp
+dj4KIDxkaXY+CiAgIFdpciBoYWJlbiBpaG4gaW4gZGFzIEdyYWIgZ2VzdGVja3QsCiAgIFdlaWwg
+ZXMgdW5zIGR1bmt0IGVyIHNlaSB2ZXJyZWNrdC4KIDwvZGl2PgogPGRpdj4KICAgSGVyZSBsaWVz
+IGEgbWFuIHdpdGggc3VuZHJ5IGZsYXdzCiAgIEFuZCBudW1lcm91cyBTaW5zIHVwb24gaGlzIGhl
+YWQ7CiA8L2Rpdj4KPC9kaXY+CjxkaXY+CldlIGJ1cmllZCBoaW0gdG9kYXkgYmVjYXVzZQpBcyBm
+YXIgYXMgd2UgY2FuIHRlbGwsIGhlJ3MgZGVhZC4KPC9kaXY+CjxibG9ja3F1b3RlPgotLSBQRFEg
+QmFjaCdzIGVwaXRhcGgsIGFzIHJlcXVlc3RlZCBieSBoaXMgY291c2luIEJldHR5CiAgIFN1ZSBC
+YWNoIGFuZCB3cml0dGVuIGJ5IHRoZSBsb2NhbCBkb2dnZXJhbCBjYXRjaGVyOwogICAiVGhlIERl
+ZmluaXRpdmUgQmlvZ3JhcGh5IG9mIFBEUSBCYWNoIiwgUGV0ZXIgU2NoaWNrZWxlCjwvYmxvY2tx
+dW90ZT4KPC9ib2R5Pgo8L2h0bWw+Cg==
+--94eb2c190d42daa45a055e952d62--
+--94eb2c190d42daa45d055e952d64--
+])
+
+AT_CHECK([mimetest -i 0 in.msg
+],
+[0],
+[Message:1
+From:Foo Bar <foo@example.com>
+Subject:MIME delimiter test
+Number of parts in message:1
+Total message size:2189/42
+Type of part 1:multipart/alternative
+Message part size:1907/32: 78/2, 1829/30
+Encapsulated message:
+From:
+Subject:
+Begin
+Type of part 1:text/plain
+Message part size:855/13: 77/3, 778/10
+Text Message
+Begin
+Hier liegt ein Mann ganz obnegleich;
+Im Leibe dick, an Suden reich.
+Wir haben ihn in das Grab gesteckt,     Here lies a man with sundry flaws
+Weil es uns dunkt er sei verreckt.      And numerous Sins upon his head;
+                                        We buried him today because
+                                        As far as we can tell, he's dead.
+
+                -- PDQ Bach's epitaph, as requested by his cousin Betty
+                   Sue Bach and written by the local doggeral catcher;
+                   "The Definitive Biography of PDQ Bach", Peter Schickele
+
+End
+Type of part 2:text/html
+Message part size:878/13: 76/3, 802/10
+Text Message
+Begin
+<html>
+<body>
+<div>
+<div><pre>Hier liegt ein Mann ganz obnegleich;
+Im Leibe dick, an Suden reich.</pre>
+</div>
+<div>
+ <div>
+   Wir haben ihn in das Grab gesteckt,
+   Weil es uns dunkt er sei verreckt.
+ </div>
+ <div>
+   Here lies a man with sundry flaws
+   And numerous Sins upon his head;
+ </div>
+</div>
+<div>
+We buried him today because
+As far as we can tell, he's dead.
+</div>
+<blockquote>
+-- PDQ Bach's epitaph, as requested by his cousin Betty
+   Sue Bach and written by the local doggeral catcher;
+   "The Definitive Biography of PDQ Bach", Peter Schickele
+</blockquote>
+</body>
+</html>
+
+End
+
+End
+])
+AT_CLEANUP

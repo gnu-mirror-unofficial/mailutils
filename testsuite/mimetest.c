@@ -130,14 +130,14 @@ main (int argc, char **argv)
 	from = "";
       if (mu_header_sget_value (hdr, MU_HEADER_SUBJECT, &subject))
 	subject = "";
-      printf ("Message: %lu\n", (unsigned long) i);
-      printf ("From: %s\n", from);
-      printf ("Subject: %s\n", subject);
+      printf ("Message:%lu\n", (unsigned long) i);
+      printf ("From:%s\n", from);
+      printf ("Subject:%s\n", subject);
 
       MU_ASSERT (mu_message_get_num_parts (msg, &nparts));
-      printf ("Number of parts in message - %lu\n",
+      printf ("Number of parts in message:%lu\n",
 	      (unsigned long) nparts);
-      printf ("Total message size - %lu/%lu\n",
+      printf ("Total message size:%lu/%lu\n",
 	      (unsigned long) msize, (unsigned long) nlines);
       message_display_parts (msg, 0);
     }
@@ -163,7 +163,7 @@ print_message_part_sizes (mu_message_t part, int indent)
   MU_ASSERT (mu_message_get_body (part, &body));
   MU_ASSERT (mu_body_size (body, &bsize));
   MU_ASSERT (mu_body_lines (body, &blines));
-  printf ("%*.*sMessage part size - %lu/%lu: %lu/%lu, %lu/%lu\n",
+  printf ("%*.*sMessage part size:%lu/%lu: %lu/%lu, %lu/%lu\n",
 	  indent, indent, "",
 	  (unsigned long) msize, (unsigned long) mlines,
 	  (unsigned long) hsize, (unsigned long) hlines,
@@ -214,7 +214,7 @@ message_display_parts (mu_message_t msg, int indent)
 	    mu_error ("Cannot extract content type field: %s",
 		      mu_strerror (status));
 	}
-      printf ("%*.*sType of part %d = %s\n", indent, indent, "",
+      printf ("%*.*sType of part %d:%s\n", indent, indent, "",
 	      j, mu_prstr (type));
       print_message_part_sizes (part, indent);
       if (mu_header_sget_value (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
@@ -233,8 +233,10 @@ message_display_parts (mu_message_t msg, int indent)
 	    from = "";
           if (mu_header_sget_value (hdr, MU_HEADER_SUBJECT, &subject))
 	    subject = "";
-          printf ("%*.*sEncapsulated message : %s\t%s\n",
-                  indent, indent, "", from, subject);
+          printf ("%*.*sEncapsulated message:\n",
+                  indent, indent, "");
+	  printf ("%*.*sFrom:%s\n", indent, indent, "", from);
+	  printf ("%*.*sSubject:%s\n", indent, indent, "", subject);
           printf ("%*.*sBegin\n", indent, indent, "");
           message_display_parts (part, indent + indent_level);
           mu_message_destroy (&part, NULL);
