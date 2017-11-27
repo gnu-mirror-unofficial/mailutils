@@ -297,7 +297,9 @@ _mime_parse_mpart_message (mu_mime_t mime)
 
       while (1)
 	{
-	  mime->cur_line[mime->line_ndx] = *cp;
+	  if (nbytes)
+	    mime->cur_line[mime->line_ndx] = *cp;
+
 	  if (mime->parser_state == MIME_STATE_SCAN_BOUNDARY
 	      && (nbytes == 0 || *cp == '\n'))
 	    {
