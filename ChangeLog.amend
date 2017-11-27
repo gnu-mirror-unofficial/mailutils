@@ -1,5 +1,38 @@
 # Spelling corrections for GNU Mailutils ChangeLog
 
+78132d34760448ad268a92908b2a75f6394f6fec
+s/newlie/newline/;
+s/eitherr/either/;
+s/followd/followed/;
+
+4e7bcdbae346a26c1addf266a23c1f6cdc74533f
+s/wherease/whereas/
+
+3360c4365757404cabb34895b3b77851d0266ce4
+s/operaton/operation/;
+s/messagem/message/;
+
+55ce659fd9a9aa49de31d33f7937fb5966fb2e1d
+s/temporarly/temporarily/
+
+a46121cd5547798d2a9ae62a294c2abbd0715d52
+s/functons/functions/
+
+60e4bf01419da5d99a62c3dc69f5d118e6ca992f
+s/contradcicts/contradicts/
+
+8b5715db380634336a231b0c8573c350992c8dce
+s/argyment/argument/
+
+fa5d4812fc4936dd470ded17116c9d966d0d645e
+s/Autmake/Automake/
+
+3a78309aa59c245c14e29d3e7eb953c6a2ea1035
+s/LIkewise/Likewise/
+
+a79ec559859084cfe8a357bf9076d472fefbeeee
+s/mimevief/mimeview/
+
 463bbba90fad80906a347fcd0a13e84d3142f994
 s/afterwards\./afterward/
 
