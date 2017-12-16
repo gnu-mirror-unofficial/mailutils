@@ -45,6 +45,7 @@ noinst_PROGRAMS = \
  conttype\
  debugspec\
  decode2047\
+ dump\
  encode2047\
  exp\
  fltst\
@@ -70,6 +71,7 @@ noinst_PROGRAMS = \
  strtoc\
  tempfile\
  tcli\
+ tocrlf\
  url-comp\
  url-parse\
  vexp\
@@ -92,6 +94,8 @@ TESTSUITE_AT = \
  base64e.at\
  debugspec.at\
  decode2047.at\
+ crlf.at\
+ crlfdot.at\
  encode2047.at\
  exp.at\
  fromflt.at\

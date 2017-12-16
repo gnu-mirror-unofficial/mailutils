@@ -73,6 +73,27 @@ MU_TEST_COMMAND $3],[$4],[$5],[$6],[$7],[$8])
 AT_CLEANUP
 ])
 
+# MU_FILTER_TEST_NIBBLE(NAME,FILTER,MODE,IO,ARGS,IN,OUT)
+m4_define([MU_FILTER_TEST_NIBBLE],
+[AT_SETUP([$1 ($4)])
+AT_KEYWORDS([filter $2 $3 $2-$4])
+AT_CHECK([
+m4_if([$6],[-gen],[($8)>input],[AT_DATA([input],[$6])])
+m4_if([$7],[-gen],[($9)>expout],[AT_DATA([expout],[$7])])
+fltst $2 $3 $4 -- $5 < input | dump
+],
+[0],
+[expout])
+AT_CLEANUP
+])
+
+# MU_FILTER_TEST(NAME,FILTER,MODE,ARGS,IN,OUT)
+m4_define([MU_FILTER_TEST],
+[MU_FILTER_TEST_NIBBLE([$1],[$2],[$3],[read],[$4],[$5],[$6],[$7])
+MU_FILTER_TEST_NIBBLE([$1],[$2],[$3],[write],[$4],[$5],[$6],[$7])
+])
+####
+
 AT_INIT
 
 AT_BANNER([Conversions])
@@ -187,6 +208,8 @@ m4_include([hdrflt.at])
 m4_include([linecon.at])
 m4_include([htmlent.at])
 m4_include([xml.at])
+m4_include([crlf.at])
+m4_include([crlfdot.at])
 
 AT_BANNER(Debug Specification)
 m4_include([debugspec.at])

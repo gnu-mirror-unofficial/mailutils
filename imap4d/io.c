@@ -727,3 +727,11 @@ imap4d_tokbuf_from_string (char *str)
   return tok;
 }
 
+void
+io_enable_crlf (int enable)
+{
+  enable = !enable;
+  mu_stream_ioctl (iostream, MU_IOCTL_FILTER,
+		   MU_IOCTL_FILTER_SET_DISABLED,
+		   &enable);
+}

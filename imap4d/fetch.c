@@ -709,18 +709,11 @@ fetch_send_section_part (struct fetch_function_closure *ffc,
 static int
 fetch_io (mu_stream_t stream, size_t start, size_t size, size_t max)
 {
-  mu_stream_t rfc = NULL;
-  
-  size_t n = 0;
-
-  mu_filter_create (&rfc, stream, "CRLF", MU_FILTER_ENCODE,
-		    MU_STREAM_READ|MU_STREAM_SEEK);
-  
   if (start == 0 && size == (size_t) -1)
     {
       int rc;
       
-      rc = mu_stream_seek (rfc, 0, MU_SEEK_SET, NULL);
+      rc = mu_stream_seek (stream, 0, MU_SEEK_SET, NULL);
       if (rc)
 	{
 	  mu_error ("seek error: %s", mu_stream_strerror (stream, rc));
@@ -729,7 +722,7 @@ fetch_io (mu_stream_t stream, size_t start, size_t size, size_t max)
       if (max)
 	{
 	  io_sendf (" {%lu}\n", (unsigned long) max);
-	  io_copy_out (rfc, max);
+	  io_copy_out (stream, max);
 	  /* FIXME: Make sure exactly max bytes were sent */
 	}
       else
@@ -742,10 +735,12 @@ fetch_io (mu_stream_t stream, size_t start, size_t size, size_t max)
     }
   else
     {
+      mu_stream_t rfc = NULL;
       int rc;
       char *buffer, *p;
       size_t total = 0;
-
+      size_t n = 0;
+      
       if (size > max)
 	size = max;
       if (size + 2 < size) /* Check for integer overflow */
@@ -754,6 +749,9 @@ fetch_io (mu_stream_t stream, size_t start, size_t size, size_t max)
 	  return RESP_BAD;
 	}
       
+      mu_filter_create (&rfc, stream, "CRLF", MU_FILTER_ENCODE,
+			MU_STREAM_READ|MU_STREAM_SEEK);
+  
       p = buffer = mu_alloc (size + 1);
 
       rc = mu_stream_seek (rfc, start, MU_SEEK_SET, NULL);
@@ -766,24 +764,35 @@ fetch_io (mu_stream_t stream, size_t start, size_t size, size_t max)
 	}
 
       while (total < size
-	     && mu_stream_read (rfc, p, size - total, &n) == 0
+	     && (rc = mu_stream_read (rfc, p, size - total, &n)) == 0
 	     && n > 0)
 	{
 	  total += n;
 	  p += n;
 	}
+
+      if (rc)
+	{
+	  mu_error ("read error: %s", mu_stream_strerror (rfc, rc));	  
+	  free (buffer);
+	  mu_stream_destroy (&rfc);
+	  return RESP_BAD;
+	}
+	  
       *p = 0;
       io_sendf ("<%lu>", (unsigned long) start);
       if (total)
 	{
 	  io_sendf (" {%lu}\n", (unsigned long) total);
+	  io_enable_crlf (0);
 	  io_send_bytes (buffer, total);
+	  io_enable_crlf (1);
 	}
       else
 	io_sendf (" \"\"");
       free (buffer);
+      mu_stream_destroy (&rfc);
     }
-  mu_stream_destroy (&rfc);
   return RESP_OK;
 }
 

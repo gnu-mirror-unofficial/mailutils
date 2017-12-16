@@ -17,16 +17,20 @@
    <http://www.gnu.org/licenses/>. */
 
 /* This source implements a CRLFDOT filter, useful for data I/O in
-   such protocols as POP3 and SMTP.  When encoding, this filter
-   replaces each '\n' not following '\r' by "\r\n" and "byte-stuffs"
-   the input by outputting an additional '.' in front of any '.' appearing
-   at the beginning of a line.  Upon closing the filter in this mode, it
-   outputs additional ".\r\n".
+   such protocols as POP3 and SMTP.
+
+   When encoding, this filter translates each '\n' to "\r\n" and
+   "byte-stuffs" the input by outputting an additional '.' in front of
+   any '.' appearing in the beginning of a line. Upon end of input,
+   it outputs additional ".\r\n".
+   
+   If created with the "-n" option, it leaves each "\r\n" input sequence
+   untranslated, thereby "normalizing" the output (hence the option name).
    
    When decoding, the reverse is performed: each "\r\n" is replaced by a
-   '\n', and additional '.' are removed from beginning of lines.  A single
-   dot on a line by itself marks end of the stream.
- */
+   '\n', and any '.' appearing in the beginning of a line is removed.
+   A single dot on a line by itself marks end of the stream.
+*/
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -182,7 +186,7 @@ _crlfdot_decoder (void *xd,
   return mu_filter_ok;
 }
 
-enum crlfdot_encode_state
+enum crlfdot_encode_at
   {
     crlfdot_encode_init,  /* initial state */
     crlfdot_encode_char,  /* Any character excepting [\r\n] */
@@ -190,18 +194,32 @@ enum crlfdot_encode_state
     crlfdot_encode_lf,    /* prev. char was \n */
   };    
 
-static enum crlfdot_encode_state
-new_encode_state (enum crlfdot_encode_state state, int c)
+struct crlfdot_encode_state
 {
+  enum crlfdot_encode_at at;
+  int normalize;
+};
+
+static void
+new_encode_state (struct crlfdot_encode_state *state, int c)
+{
+  enum crlfdot_encode_at at;
+  
   switch (c)
     {
     case '\r':
-      return crlfdot_encode_cr;
-      
+      if (state->normalize)
+	{
+	  at = crlfdot_encode_cr;
+	  break;
+	}
     case '\n':
-      return crlfdot_encode_lf;
+      at = crlfdot_encode_lf;
+      break;
+    default:
+      at = crlfdot_encode_char;
     }
-  return crlfdot_encode_char;
+  state->at = at;
 }
 
 /* Move min(isize,osize) bytes from iptr to optr, replacing each \n
@@ -217,12 +235,12 @@ _crlfdot_encoder (void *xd,
   size_t isize;
   char *optr;
   size_t osize;
-  int *state = xd;
+  struct crlfdot_encode_state *state = xd;
   
   switch (cmd)
     {
     case mu_filter_init:
-      *state = crlfdot_encode_init;
+      state->at = crlfdot_encode_init;
       return mu_filter_ok;
       
     case mu_filter_done:
@@ -240,11 +258,10 @@ _crlfdot_encoder (void *xd,
   for (i = j = 0; i < isize && j < osize; i++, iptr++)
     {
       unsigned char c = *iptr;
-      int curstate = *state;
 
       if (c == '\n')
 	{
-	  if (curstate == crlfdot_encode_cr)
+	  if (state->at == crlfdot_encode_cr)
 	    optr[j++] = c;
  	  else if (j + 1 == osize)
 	    {
@@ -262,8 +279,8 @@ _crlfdot_encoder (void *xd,
 	    }
 	}
       else if (c == '.' &&
-	       (curstate == crlfdot_encode_init ||
-		curstate == crlfdot_encode_lf))
+	       (state->at == crlfdot_encode_init ||
+		state->at == crlfdot_encode_lf))
 	{
  	  if (j + 2 > osize)
 	    {
@@ -280,13 +297,13 @@ _crlfdot_encoder (void *xd,
       else
 	optr[j++] = c;
 
-      *state = new_encode_state (curstate, c);
+      new_encode_state (state, c);
     }
 
   result = mu_filter_ok;
   if (cmd == mu_filter_lastbuf)
     {
-      switch (*state)
+      switch (state->at)
 	{
 	case crlfdot_encode_lf:
 	  if (j + 3 > osize)
@@ -317,12 +334,26 @@ _crlfdot_encoder (void *xd,
 }
 
 static int
-alloc_state (void **pret, int mode MU_ARG_UNUSED,
-	     int argc MU_ARG_UNUSED, const char **argv MU_ARG_UNUSED)
+alloc_state (void **pret, int mode, int argc, const char **argv)
 {
-  *pret = malloc (sizeof (int));
-  if (!*pret)
-    return ENOMEM;
+  switch (mode)
+    {
+    case MU_FILTER_ENCODE:
+      {
+	struct crlfdot_encode_state *state = malloc (sizeof (*state));
+	if (!state)
+	  return ENOMEM;
+	state->at = crlfdot_encode_init;
+	state->normalize = (argc == 2 && strcmp (argv[1], "-n") == 0);
+	*pret = state;
+      }
+      break;
+      
+    case MU_FILTER_DECODE:
+      *pret = malloc (sizeof (int));
+      if (!*pret)
+	return ENOMEM;
+    }
   return 0;
 }
 

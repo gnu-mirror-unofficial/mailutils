@@ -10,6 +10,7 @@ addr
 argcv
 debugspec
 decode2047
+dump
 encode2047
 exp
 fltst
@@ -35,6 +36,7 @@ strout
 strtoc
 tcli
 tempfile
+tocrlf
 url-comp
 url-parse
 vexp

@@ -22,14 +22,30 @@
 #include <mailutils/errno.h>
 #include <mailutils/filter.h>
 
+/* CRLF filter.
+
+   In decode mode, translates each \r\n to \n. Takes no arguments.
+
+   In encode mode, translates each \n to \r\n. If created with the
+   "-n" option, leaves each \r\n input sequence untranslated, thereby
+   "normalizing" the output (hence the option name).
+ */
+
 enum crlf_state
 {
   state_init,
   state_cr
 };
-  
+
+struct crlf_encoder_state
+{
+  enum crlf_state cur;
+  enum crlf_state last;
+};
+
 /* Move min(isize,osize) bytes from iptr to optr, replacing each \n
-   with \r\n.  Any input \r\n sequences remain untouched. */
+   with \r\n.  If state->last is state_cr, any input \r\n sequences
+   remain untouched, otherwise \r is treated as a regular character. */
 static enum mu_filter_result
 _crlf_encoder (void *xd,
 	       enum mu_filter_command cmd,
@@ -40,12 +56,12 @@ _crlf_encoder (void *xd,
   size_t isize;
   char *optr;
   size_t osize;
-  enum crlf_state *state = xd;
+  struct crlf_encoder_state *state = xd;
   
   switch (cmd)
     {
     case mu_filter_init:
-      *state = state_init;
+      state->cur = state_init;
     case mu_filter_done:
       return mu_filter_ok;
     default:
@@ -62,9 +78,9 @@ _crlf_encoder (void *xd,
       unsigned char c = *iptr++;
       if (c == '\n')
 	{
-	  if (*state == state_cr)
+	  if (state->cur == state_cr)
 	    {
-	      *state = state_init;
+	      state->cur = state_init;
 	      optr[j++] = c;
 	    }
 	  else if (j + 1 == osize)
@@ -82,14 +98,14 @@ _crlf_encoder (void *xd,
 	      optr[j++] = '\n';
 	    }
 	}
-      else if (c == '\r')
+      else if (c == '\r' && state->last == state_cr)
 	{
-	  *state = state_cr;
+	  state->cur = state_cr;
 	  optr[j++] = c;
 	}
       else
 	{
-	  *state = state_init;
+	  state->cur = state_init;
 	  optr[j++] = c;
 	}
     }
@@ -143,15 +159,22 @@ _crlf_decoder (void *xd MU_ARG_UNUSED,
 }
 
 static int
-alloc_state (void **pret, int mode,
-	     int argc MU_ARG_UNUSED, const char **argv MU_ARG_UNUSED)
+alloc_state (void **pret, int mode, int argc, const char **argv)
 {
+  struct crlf_encoder_state *st;
+  
   switch (mode)
     {
     case MU_FILTER_ENCODE:
-      *pret = malloc (sizeof (int));
-      if (!*pret)
+      st = malloc (sizeof (*st));
+      if (!st)
 	return ENOMEM;
+      st->cur = state_init;
+      if (argc == 2 && strcmp (argv[1], "-n") == 0)
+	st->last = state_cr;
+      else
+	st->last = state_init;
+      *pret = st;
       break;
 
     case MU_FILTER_DECODE:

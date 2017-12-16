@@ -210,7 +210,12 @@ filter_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
 	      if (rdsize == 0 &&
 		  MFB_rdbytes (&fs->outbuf) == 0 &&
 		  MFB_rdbytes (&fs->inbuf) == 0)
-		break;
+		{
+		  if (cmd == mu_filter_lastbuf)
+		    break;
+		  else
+		    cmd = mu_filter_lastbuf;
+		}
 	      
 	      MFB_advance_level (&fs->inbuf, rdsize);
 	    }
@@ -458,6 +463,7 @@ filter_seek (struct _mu_stream *stream, mu_off_t off, mu_off_t *ppos)
   if (status)
     return status;
   stream->offset = 0;
+  fs->flag_eof = 0;
   return mu_stream_skip_input_bytes (stream, off, ppos);
 }
 

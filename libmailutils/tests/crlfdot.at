@@ -1,0 +1,102 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2017 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_BANNER([crlfdot filter])
+
+MU_FILTER_TEST([normal input],[crlfdot],[encode],[],[one
+two
+three
+],
+[00000000: 6F 6E 65 0D 0A 74 77 6F  0D 0A 74 68 72 65 65 0D  one..two ..three.
+00000010: 0A 2E 0D 0A                                       ....
+])
+
+MU_FILTER_TEST([crlf input],[crlfdot],[encode],[],[-gen],
+[00000000: 6F 6E 65 0D 0D 0A 74 77  6F 0D 0D 0A 74 68 72 65  one...tw o...thre
+00000010: 65 0D 0D 0A 2E 0D 0A                              e......
+],
+[tocrlf <<EOT
+one
+two
+three
+EOT
+])
+
+MU_FILTER_TEST([crlf input - normalize],[crlfdot],[encode],[-n],[-gen],
+[00000000: 6F 6E 65 0D 0A 74 77 6F  0D 0A 74 68 72 65 65 0D  one..two ..three.
+00000010: 0A 2E 0D 0A                                       ....
+],
+[tocrlf <<EOT
+one
+two
+three
+EOT
+])
+
+MU_FILTER_TEST([mixed input],[crlfdot],[encode],[],[-gen],
+[00000000: 6F 6E 65 0D 0A 74 77 6F  0D 0A 74 68 72 65 65 0D  one..two ..three.
+00000010: 0A 66 6F 75 72 0D 0D 0A  66 69 76 65 0D 0D 0A 73  .four... five...s
+00000020: 69 78 0D 0A 73 65 76 65  6E 0D 0A 2E 0D 0A        ix..seve n.....
+],
+[cat <<EOT
+one
+two
+three
+EOT
+tocrlf <<EOT
+four
+five
+EOT
+cat <<EOT
+six
+seven
+EOT
+])
+
+MU_FILTER_TEST([mixed input - normalize],[crlfdot],[encode],[-n],[-gen],
+[00000000: 6F 6E 65 0D 0A 74 77 6F  0D 0A 74 68 72 65 65 0D  one..two ..three.
+00000010: 0A 66 6F 75 72 0D 0A 66  69 76 65 0D 0A 73 69 78  .four..f ive..six
+00000020: 0D 0A 73 65 76 65 6E 0D  0A 2E 0D 0A              ..seven. ....
+],
+[cat <<EOT
+one
+two
+three
+EOT
+tocrlf <<EOT
+four
+five
+EOT
+cat <<EOT
+six
+seven
+EOT
+])
+
+###
+
+MU_FILTER_TEST([decode],[crlfdot],[decode],[],[-gen],
+[00000000: 6F 6E 65 0A 74 77 6F 0A  74 68 72 65 65 0A 66 6F  one.two. three.fo
+00000010: 75 72 0A                                          ur.
+],
+[tocrlf <<EOT
+one
+two
+three
+four
+.
+EOT
+])
