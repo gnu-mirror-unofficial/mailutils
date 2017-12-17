@@ -1,5 +1,8 @@
 # Spelling corrections for GNU Mailutils ChangeLog
 
+bd385c4a2d26215e080d6248435c9efe3bd1d0b1
+s/funcition/function/;
+
 78132d34760448ad268a92908b2a75f6394f6fec
 s/newlie/newline/;
 s/eitherr/either/;
