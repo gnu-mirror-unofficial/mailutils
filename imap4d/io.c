@@ -653,7 +653,7 @@ imap4d_tokbuf_getline (struct imap4d_tokbuf *tok)
     }
   while (tok->level && tok->buffer[tok->level - 1] != '\n');
   tok->buffer[--tok->level] = 0;
-  if (tok->buffer[tok->level - 1] == '\r')
+  if (tok->level > 0 && tok->buffer[tok->level - 1] == '\r')
     tok->buffer[--tok->level] = 0;
   while (tok->level > 0 && mu_isblank (tok->buffer[tok->level-1]))
     tok->buffer[--tok->level] = 0;

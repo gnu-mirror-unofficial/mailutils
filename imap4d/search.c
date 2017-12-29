@@ -696,14 +696,13 @@ parse_simple_key (struct parsebuf *pb)
 	    case 'u': /* UID message set */
 	      arg->v.value.v.msgset = parse_msgset_create (pb, NULL,
 							   MU_MSGSET_NUM);
+	      arg->v.value.type = value_msgset;
 	      if (mu_msgset_parse_imap (arg->v.value.v.msgset, MU_MSGSET_UID,
 					pb->token, NULL)) 
 		{
-		  mu_msgset_free (arg->v.value.v.msgset);
 		  pb->err_mesg = "Bogus number set";
 		  return NULL;
 		}
-	      arg->v.value.type = value_msgset;
 	      break;
 	      
 	    default:
