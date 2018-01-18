@@ -39,6 +39,7 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 ## ------------ ##
 
 TESTSUITE_AT =\
+ align.at\
  cols00.at\
  cols01.at\
  copy00.at\

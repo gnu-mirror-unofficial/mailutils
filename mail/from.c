@@ -402,8 +402,8 @@ compile_headline (const char *str)
   int align;
   size_t width;
   
-#define ALIGN_STRING (align == ALIGN_UNDEF ? ALIGN_LEFT : ALIGN_RIGHT)
-#define ALIGN_NUMBER (align == ALIGN_UNDEF ? ALIGN_RIGHT : ALIGN_LEFT)
+#define ALIGN_STRING (align == ALIGN_UNDEF ? ALIGN_LEFT : align)
+#define ALIGN_NUMBER (align == ALIGN_UNDEF ? ALIGN_RIGHT : align)
 #define ATTACH(p)				\
   do						\
     {						\
