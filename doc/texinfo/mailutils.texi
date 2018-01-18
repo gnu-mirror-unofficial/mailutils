@@ -705,7 +705,7 @@ Protocol}.  Default port number is 143.
 The URL is:
 
 @example
-imap://[@var{user}[:@var{pass}]@var{host}[:@var{port}][;notls]
+imap://[@var{user}[:@var{pass}]@@]@var{host}[:@var{port}][;notls]
 @end example
 
 The @var{host} gives the name or IP address of the host running a IMAP4

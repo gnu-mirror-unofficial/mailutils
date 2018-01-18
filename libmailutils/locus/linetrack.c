@@ -31,13 +31,13 @@
    new current line is assumed.
 
    Each input file is represented by a directory entry keeping its name,
-   number of the first line that is stored in the tracker and the index of
+   the number of the first line that is stored in the tracker and the index of
    that line in the cols stack.  Entries form a doubly-linked list, with
    head pointing to the most recent (current) source.  When a new line is
    being added to the stack which is full, its eldest entry is discarded
-   and is assigned to that line and the directory of the eldest source is
-   updated accordingly.  If the entry represented the only line of the
-   source, the source is discarded.   
+   and re-assigned to that line; at the same time the directory of the
+   eldest source is updated accordingly.  If the entry to be discarded
+   represents the only line of the source, the source is discarded.   
 */
 
 struct source
@@ -59,7 +59,7 @@ struct mu_linetrack
   size_t tos;            /* Index of the most recent element on stack
 			    (< max_lines) */
   unsigned *cols;        /* Cyclic stack or character counts.
-			    Number of characters in line (line + n) is
+			    Number of characters in line (head + n) is
 			    cols[head + n] (0 <= n <= tos). */
 };
 

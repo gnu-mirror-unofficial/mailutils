@@ -183,7 +183,6 @@ rule_line: /* empty */
 	     errors++;
 	     if (arg_list)
 	       mu_list_destroy (&arg_list);
-	     arg_list = NULL;
 	     lex_next_rule ();
 	     yyerrok;
 	     yyclearin;
