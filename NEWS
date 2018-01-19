@@ -1,8 +1,22 @@
-GNU mailutils NEWS -- history of user-visible changes. 2017-11-02
-Copyright (C) 2002-2017 Free Software Foundation, Inc.
+GNU mailutils NEWS -- history of user-visible changes. 2018-01-19
+Copyright (C) 2002-2018 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+Git version
+
+* headline variable in the mail utility
+
+The new %D specifier has been implemented, which allows the user to
+supply arbitrary strftime(3) format string for outputting message
+date/time. E.g.:
+
+  set headline="%4m %20D{%Y-%m-%dT%H:%M:%S} %18f %s"
+
+In simplified form, %D can be followed by a single time format
+specifier. E.g. %DH can be used instead of %D{%H}.
+
 
 Version 3.4 - 2017-11-02 
 
@@ -2076,7 +2090,7 @@ The first release.
 ----------------------------------------------------------------------
 Copyright information:
 
-Copyright (C) 2002-2017, Free Software Foundation, Inc.
+Copyright (C) 2002-2018, Free Software Foundation, Inc.
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the

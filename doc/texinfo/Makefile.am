@@ -24,6 +24,7 @@ mailutils_TEXINFOS = \
  mu-mh.texi\
  programs.texi\
  sieve.texi\
+ strftime.texi\
  usage.texi\
  version.texi
 

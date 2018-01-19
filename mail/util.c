@@ -76,8 +76,9 @@ util_do_command (const char *fmt, ...)
 			 for expansion (see below) */
       if (mu_wordsplit (cmd, &ws, MU_WRDSF_DEFFLAGS|MU_WRDSF_DOOFFS))
 	{
-	  mu_error (_("%s failed: %s"), "mu_wordsplit",
-		    mu_wordsplit_strerror (&ws));
+	  mu_error ("\"%s\": %s", cmd, mu_wordsplit_strerror (&ws));
+	  free (cmd);
+	  return MU_ERR_PARSE;
 	}
       else
 	{
@@ -98,8 +99,8 @@ util_do_command (const char *fmt, ...)
 	    }
 
 	  entry = mail_find_command (argv[0]);
+	  free (cmd);
 	}
-      free (cmd);
     }
   else
     entry = mail_find_command ("quit");

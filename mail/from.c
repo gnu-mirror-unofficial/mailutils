@@ -1,5 +1,5 @@
 /* GNU Mailutils -- a suite of utilities for electronic mail
-   Copyright (C) 1999-2003, 2005, 2007, 2009-2012, 2014-2017 Free
+   Copyright (C) 1999-2003, 2005, 2007, 2009-2012, 2014-2018 Free
    Software Foundation, Inc.
 
    GNU Mailutils is free software; you can redistribute it and/or modify
@@ -182,14 +182,15 @@ hdr_attr (struct header_call_args *args, void *data)
     cflag = ' ';
   return header_buf_string_len (args, &cflag, 1);
 }
-    
-/* %d */
+
+/* %d and %D*/
 static char *
 hdr_date (struct header_call_args *args, void *data)
 {
   char date[80];
   mu_header_t hdr;
-
+  char const *fmt = data ? data : "%a %b %e %H:%M";
+  
   mu_message_get_header (args->msg, &hdr);
   
   date[0] = 0;
@@ -199,7 +200,7 @@ hdr_date (struct header_call_args *args, void *data)
     {
       time_t t;
       if (mu_parse_date (date, &t, NULL) == 0)
-	strftime (date, sizeof(date), "%a %b %e %H:%M", localtime (&t));
+	strftime (date, sizeof(date), fmt, localtime (&t));
       else
 	date[0] = 0;
     }
@@ -214,7 +215,7 @@ hdr_date (struct header_call_args *args, void *data)
       mu_message_get_envelope (args->msg, &env);
       if (mu_envelope_sget_date (env, &p) == 0
           && mu_scan_datetime (p, MU_DATETIME_FROM, &tm, &tz, NULL) == 0)
-	strftime (date, sizeof(date), "%a %b %e %H:%M", &tm);
+	strftime (date, sizeof(date), fmt, &tm);
     }
   return header_buf_string (args, date);
 }
@@ -467,10 +468,10 @@ compile_headline (const char *str)
 
 	  /* FIXME: %c    The score of the message. */
 	  
-	case 'd': /* Message date */
+	case 'd': /* Message date; See also 'D', below. */
 	  seg = new_header_segment (ALIGN_STRING, width, NULL, hdr_date);
 	  break;
-	  
+
 	  /* FIXME: %e    The indenting level in threaded mode. */
 	  
 	case 'f': /* Message sender */
@@ -516,8 +517,63 @@ compile_headline (const char *str)
 	                            hdr_cur);
 	  break;
 
+	case 'D':
+	  {
+	    int i;
+	    /* strftime conversion specifiers */
+	    static char timespec[] =
+	      "aAbBcCdDeFGghHIjklmMnpPrRsStTuUVwWxXyYzZ+%";
+	    /* Specifiers that can follow the E modifier */
+	    static char espec[] =
+	      "cCxXyY";
+	    /* Specifiers that can follow the O modifier */
+	    static char ospec[] =
+	      "deHImMSuUVwWy";
+	    
+	    if (*str == '{')
+	      {
+		for (i = 1; str[i] && str[i] != '}'; i++)
+		  if (str[i] == '\\')
+		    i++;
+		if (str[i])
+		  {
+		    text = mu_alloc (i);
+		    memcpy (text, str + 1, i - 1);
+		    text[i - 1] = 0;
+		    mu_c_str_unescape_inplace (text, "\\{}", NULL);
+		    seg = new_header_segment (ALIGN_STRING, width, text,
+					      hdr_date);
+		    str += i + 1;
+		    break;
+		  }
+	      }
+	    else if (str[1] &&
+		     ((*str == 'E' && strchr (espec, str[1]))
+		       || (*str == 'O' && strchr (ospec, str[1]))))
+	      {
+		text = mu_alloc (4);
+		text[0] = '%';
+		text[1] = *str++;
+		text[2] = *str++;
+		text[3] = 0;
+		seg = new_header_segment (ALIGN_STRING, width, text,
+					  hdr_date);
+		break;
+	      }
+	    else if (strchr (timespec, *str))
+	      {
+		text = mu_alloc (3);
+		text[0] = '%';
+		text[1] = *str++;
+		text[2] = 0;
+		seg = new_header_segment (ALIGN_STRING, width, text,
+					  hdr_date);
+		break;
+	      }
+	  }
+	  
 	default:
-	  mu_error (_("unknown escape: %%%c"), str[-1]);
+	  mu_error (_("unknown format specifier: %%%c"), str[-1]);
 	  len = str - p;
 	  text = mu_alloc (len);
 	  memcpy (text, p, len-1);

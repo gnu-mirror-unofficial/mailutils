@@ -1,5 +1,5 @@
 # This file is part of GNU Mailutils. -*- Autotest -*-
-# Copyright (C) 2007-2012, 2014-2017 Free Software Foundation, Inc.
+# Copyright (C) 2018 Free Software Foundation, Inc.
 #
 # GNU Mailutils is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -14,21 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_include([testsuite.inc])
+# Test the %D headline specifier
 
-m4_define([MUT_MAIL_CMD],[MAILRC=/dev/null mail MUT_DEFAULT_OPTIONS])
+AT_SETUP([date formats])
+AT_KEYWORDS([date format])
 
-AT_INIT
-AT_TESTED([mail])
-
-m4_include([version.at])
-m4_include([nohome.at])
-m4_include([cols00.at])
-m4_include([cols01.at])
-m4_include([copy00.at])
-m4_include([copy01.at])
-m4_include([copy02.at])
-m4_include([copy03.at])
-m4_include([copy04.at])
-m4_include([align.at])
-m4_include([D.at])
+AT_CHECK([
+MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
+MUT_MAIL_CMD --exec='set headline=">%d<"' --headers -f ./mbox
+MUT_MAIL_CMD --exec='set headline=">%DH<"' --headers -f ./mbox
+MUT_MAIL_CMD --exec='set headline=">%D{%Y-%m-%d \{%H:%M:%S\}}<"' --headers -f ./mbox
+],
+[0],
+[>Tue Jul 16 12:11<
+>12<
+>2002-07-16 {12:11:35}<
+])
+AT_CLEANUP

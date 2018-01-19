@@ -1,5 +1,5 @@
 @c This is part of the GNU Mailutils manual.
-@c Copyright (C) 1999-2012, 2014-2017 Free Software Foundation, Inc.
+@c Copyright (C) 1999-2012, 2014-2018 Free Software Foundation, Inc.
 @c See file mailutils.texi for copying conditions.
 @comment *******************************************************************
 
@@ -4972,53 +4972,138 @@ Unsetting this variable tells @command{mail} to obtain it from the
 Whether to run @code{headers} command automatically after entering
 interactive mode.
 
+@anchor{headline}
 @kwindex headline
 @item headline
 @*Type: String
 @*Default: @samp{%>%a%4m %18f %16d %3l/%-5o %s}
 
-A format string to use for the header summary.  The @samp{%} character
-introduces a @dfn{format specifier}.  Valid format specifiers are:
+Format string to use for the header summary.  The @samp{%} character
+introduces a @dfn{format specifier}.  The format specifier consists of
+optional alignment specifier (@samp{+} or @samp{-} sign), optional
+output width and the specifier letter.  Format specifiers are replaced on
+output with the corresponding piece of information from the message
+being described.
 
-@multitable @columnfractions 0.2 0.8
-@headitem Letter @tab Meaning
-@item %a @tab Message attributes.
-@item %d @tab The date when the message was received.
-@item %f @tab The address of the message sender.
-@item %l @tab The number of lines of the message.
-@item %m @tab Message number.
-@item %o @tab The number of octets (bytes) in the message.
-@item %s @tab Message subject (if any).
-@item %S @tab Message subject (if any) in double quotes.
-@item %> @tab A @samp{>} for the current message, otherwise a space.
-@item %< @tab A @samp{<} for the current message, otherwise a space.
-@item %% @tab A `%' character.
-@end multitable
-
-Some additional symbols are allowed between @samp{%} and the specifier
-letter.  The @samp{-} character immediately following @samp{%}
-indicates that this field should be left aligned.  Similarly, the
-@samp{+} character indicates right alignment.  Default alignment
-depends on the type of the specifier: the specifiers that produce
-numeric values (@samp{%l}, @samp{%m}, and @samp{%o}) are aligned to
-the right, whereas the ones producing string values are aligned to the
-left.
+The @samp{-} character immediately following @samp{%} indicates that
+this field should be left aligned.  The @samp{+} character indicates
+right alignment.  Default alignment depends on the type of the
+specifier: the specifiers that produce numeric values (@samp{%l},
+@samp{%m}, and @samp{%o}) are aligned to the right, whereas the ones
+producing string or date/time values are aligned to the left.
 
 A number following @samp{%} or the alignment flag, indicates the
-field width.  Consider, for example, the following specifiers:
+field width.
+
+Consider the @samp{%m} specifier as an example:
 
 @table @asis
 @item %m
 Print current message number.  Take as much screen columns as necessary
-to output it.
+for output.
 
 @item %4m
 @itemx %+4m
-Print current message number.  Occupy 4 screen columns, truncate the
-output if it does not fit that width.  Align the output to the right. 
+Print current message number.  Use exactly 4 screen columns,
+truncating the output if it does not fit that width.  Align the output
+to the right.
 
 @item %-4m
 Same as above, but align to the left.
+@end table
+
+Valid format specifiers are:
+
+@table @asis
+@item %a
+Message attribute.  One of the following letters, or a single
+horizontal space, if none of them applies:
+
+@multitable @columnfractions 0.2 0.6
+@item @samp{M} @tab the message was copied to the mailbox (@samp{mbox} command)
+@item @samp{P} @tab the message was preserved (@samp{hold} command)
+@item @samp{*} @tab the message was saved (@samp{save} or @samp{Save})
+@item @samp{T} @tab the message was tagged (@samp{tag})
+@item @samp{R} @tab the message was read
+@item @samp{N} @tab the message is new (was not seen)
+@item @samp{U} @tab the message was seen, but wasn't read
+@end multitable
+
+@item %d
+The date when the message was received.  It is determined from the
+message header set by the @samp{datefield} variable
+(@pxref{datefield}).  If that variable is not set, or the requested
+header is not present in the message, the date from the envelope is
+used.
+
+The output is formatted according to the following format
+specification (@pxref{Date/time Format String}):
+
+@example
+%a %b %e %H:%M
+@end example
+
+I.e.: abbreviated weekday name, abbreviated month name, day of the
+month as a decimal number, followed by hour and minutes.  All names
+are displayed according to the current locale.
+
+@item %D@{@var{fmt}@}
+Same as @samp{%d}, but the date is formatted according to the
+date/time format @var{fmt}.  It is essentially a C @samp{strftime}
+format string, described in detail in @ref{Date/time Format String}.
+
+For example:
+
+@example
+set headline="%4m %20D@{%Y-%m-%dT%H:%M:%S@}"
+@end example
+
+Note, that the opening @samp{@{} must follow the format letter without
+any intervening whitespace.  If @var{fmt} contains @samp{@{},
+@samp{@}}, or @samp{\}, these characters must be escaped with
+backslash (e.g. @samp{\@{}).
+
+@item %D@var{f}
+A simplified form of the @samp{%D} specifier.  It is equivalent to
+
+@example
+%D@{%@var{f}@}
+@end example
+
+@noindent
+where @var{f} is a single @samp{strftime} specifier letter. It can be
+preceded by @samp{E} or @samp{O}, if the Single UNIX Specification
+allows such usage (@pxref{conversion specs}), e.g. @samp{%DOU}.
+
+Notice, that @samp{%D} not followed by a valid time format in either
+of the above forms is treated as unknown specifier.
+
+@item %f
+The email address of the message sender.
+
+@item %l
+The number of lines of the message.
+
+@item %m
+Message number.
+
+@item %o
+The number of octets (bytes) in the message.
+
+@item %s
+Message subject (if any).
+
+@item %S
+Message subject (if any) in double quotes.
+
+@item %>
+A @samp{>} for the current message, otherwise a space.
+
+@item %<
+A @samp{<} for the current message, otherwise a space.
+
+@item %%
+A @samp{%} character.
 @end table
 
 @kwindex hold
