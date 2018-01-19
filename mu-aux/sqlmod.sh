@@ -1,6 +1,6 @@
 #! /bin/sh
 # This file is part of GNU Mailutils
-# Copyright (C) 2004, 2010-2012, 2014-2017 Free Software Foundation,
+# Copyright (C) 2004, 2010-2012, 2014-2018 Free Software Foundation,
 # Inc.
 #
 # Written by Sergey Poznyakoff

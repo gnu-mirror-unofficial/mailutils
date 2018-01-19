@@ -1,5 +1,5 @@
 /* String-list functions for GNU Mailutils.
-   Copyright (C) 2007-2012, 2014-2017 Free Software Foundation, Inc.
+   Copyright (C) 2007-2012, 2014-2018 Free Software Foundation, Inc.
 
    Based on slist module from GNU Radius.  Written by Sergey Poznyakoff.
    

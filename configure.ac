@@ -1,6 +1,6 @@
 dnl Configuration for GNU Mailutils -- a suite of utilities for electronic mail
 dnl
-dnl Copyright (C) 1999-2012, 2014-2017 Free Software Foundation, Inc.
+dnl Copyright (C) 1999-2012, 2014-2018 Free Software Foundation, Inc.
 dnl
 dnl GNU Mailutils is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@ dnl You should have received a copy of the GNU General Public License along
 dnl with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.63)
-AC_INIT([GNU Mailutils], [3.4], [bug-mailutils@gnu.org], [mailutils],
+AC_INIT([GNU Mailutils], [3.4.90], [bug-mailutils@gnu.org], [mailutils],
         [http://mailutils.org])
 AC_CONFIG_SRCDIR([libmailutils/mailbox/mailbox.c])
 AC_CONFIG_AUX_DIR([build-aux])

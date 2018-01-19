@@ -1,5 +1,5 @@
 # md5.m4 serial 9
-dnl Copyright (C) 2002-2006, 2010-2012, 2014-2017 Free Software
+dnl Copyright (C) 2002-2006, 2010-2012, 2014-2018 Free Software
 dnl Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,

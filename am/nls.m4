@@ -1,5 +1,5 @@
 # nls.m4 serial 3 (gettext-0.15)
-dnl Copyright (C) 1995-2003, 2005-2006, 2010-2012, 2014-2017 Free
+dnl Copyright (C) 1995-2003, 2005-2006, 2010-2012, 2014-2018 Free
 dnl Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
