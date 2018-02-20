@@ -85,9 +85,9 @@ struct mu_wordsplit
                      void *clos);
 	                    /* [Input] (!MU_WRDSF_NOCMD) Returns in the memory
 			       location pointed to by RET the expansion of
-			       the command CMD (LEN bytes nong).  If MU_WRDSF_ARGV
-			       flag is set, ARGV contains CMD split out to
-			       words.  Otherwise ARGV is NULL.
+			       the command CMD (LEN bytes long).  If
+			       MU_WRDSO_ARGV option is set, ARGV contains CMD
+			       split out to words.  Otherwise ARGV is NULL.
 
 			       See ws_getvar for a discussion of possible
 			       return values. */

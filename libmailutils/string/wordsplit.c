@@ -1034,9 +1034,14 @@ expvar (struct mu_wordsplit *wsp, const char *str, size_t len,
       rc = mu_wordsplit_find_env (wsp, str, i, &vptr);
       if (rc == MU_WRDSE_OK)
 	{
-	  value = strdup (vptr);
-	  if (!value)
-	    rc = MU_WRDSE_NOSPACE;
+	  if (vptr)
+	    {
+	      value = strdup (vptr);
+	      if (!value)
+		rc = MU_WRDSE_NOSPACE;
+	    }
+	  else
+	    rc = MU_WRDSE_UNDEF;
 	}
       else if (wsp->ws_flags & MU_WRDSF_GETVAR)
 	rc = wsp->ws_getvar (&value, str, i, wsp->ws_closure);
