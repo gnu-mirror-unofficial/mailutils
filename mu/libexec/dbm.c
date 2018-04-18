@@ -466,7 +466,7 @@ write_quoted_string (mu_stream_t stream, char *str, size_t len)
 	  int c = mu_wordsplit_c_quote_char (*str);
 
 	  mu_stream_write (stream, "\\", 1, NULL);
-	  if (c != -1)
+	  if (c)
 	    mu_stream_write (stream, str, 1, NULL);
 	  else
 	    mu_stream_printf (stream, "%03o", *(unsigned char *) str);
@@ -1397,9 +1397,10 @@ add_records (int mode, int replace)
 
   /* Read directive header */
   ws.ws_delim = ",";
-  while ((rc = input_getline (&input)) == 0 &&
-	 is_dbm_directive (&input) &&
-	 !is_len_directive (&input))
+  while (!input_eof (&input)
+	 && (rc = input_getline (&input)) == 0
+	 && is_dbm_directive (&input)
+	 && !is_len_directive (&input))
     {
       size_t i;
 
@@ -1426,7 +1427,7 @@ add_records (int mode, int replace)
   db = open_db_file (mode);
   
   /* Read and store the actual data */
-  if (rc == 0 && input_length (&input) > 0)
+  if (rc == 0 && !input_eof (&input))
     {
       ignore_flagged_directives (DF_HEADER);
       input_ungetline (&input);
