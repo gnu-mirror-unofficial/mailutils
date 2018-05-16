@@ -313,7 +313,7 @@ util_command_list (void *table, size_t nmemb, size_t size)
   int i;
   char *p;
   int cols = util_screen_columns ();
-  int pos;
+  int pos = 0;
   
   for (p = table, i = 0; i < nmemb; i++, p += size)
     {
