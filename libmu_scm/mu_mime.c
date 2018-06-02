@@ -35,7 +35,7 @@ mu_scm_mime_mark (SCM mime_smob)
   return mum->owner;
 }
 
-static scm_sizet
+static size_t
 mu_scm_mime_free (SCM mime_smob)
 {
   struct mu_mime *mum = (struct mu_mime *) SCM_CDR (mime_smob);

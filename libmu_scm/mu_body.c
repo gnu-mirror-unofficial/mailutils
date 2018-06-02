@@ -40,7 +40,7 @@ mu_scm_body_mark (SCM body_smob)
   return mbp->msg;
 }
 
-static scm_sizet
+static size_t
 mu_scm_body_free (SCM body_smob)
 {
   struct mu_body *mbp = (struct mu_body *) SCM_CDR (body_smob);

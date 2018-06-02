@@ -37,7 +37,7 @@ mu_scm_mailbox_mark (SCM mailbox_smob)
   return SCM_BOOL_F;
 }
 
-static scm_sizet
+static size_t
 mu_scm_mailbox_free (SCM mailbox_smob)
 {
   struct mu_mailbox *mum = (struct mu_mailbox *) SCM_CDR (mailbox_smob);

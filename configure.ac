@@ -1160,7 +1160,7 @@ AC_SUBST([GUILE_BINDIR])
 AC_SUBST([LIBMU_SCM])
 AC_SUBST([LIBMU_SCM_DEPS])
 AC_SUBST([MU_GUILE_SIEVE_MOD_DIR])
-GINT_INIT([gint],[1.8 with-guile],
+GINT_INIT([gint],[2.2.0 with-guile],
 	  [useguile=yes
  	   AC_DEFINE([WITH_GUILE],1,[Enable Guile support])
            GUILE_BINDIR=`guile-config info bindir`

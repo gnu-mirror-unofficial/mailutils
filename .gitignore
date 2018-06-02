@@ -1,3 +1,5 @@
+/ABOUT-NLS
+/build-aux
 /config.rpath
 *.a
 *.cflow

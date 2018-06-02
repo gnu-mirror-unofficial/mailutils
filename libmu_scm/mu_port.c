@@ -29,227 +29,69 @@ struct mu_port
   SCM msg;                 /* Message the port belongs to */		
 };
 
-#define DEFAULT_BUF_SIZE 1024
 #define MU_PORT(x) ((struct mu_port *) SCM_STREAM (x))
 
-static void
-mu_port_alloc_buffer (SCM port, size_t read_size, size_t write_size)
-{
-  scm_port *pt = SCM_PTAB_ENTRY (port);
-  static char *s_mu_port_alloc_buffer = "mu_port_alloc_buffer";
-  
-  if (!read_size)
-    read_size = DEFAULT_BUF_SIZE;
-  if (!write_size)
-    write_size = DEFAULT_BUF_SIZE;
-
-  if (SCM_INPUT_PORT_P (port))
-    {
-      pt->read_buf = malloc (read_size);
-      if (pt->read_buf == NULL)
-	scm_memory_error (s_mu_port_alloc_buffer);
-      pt->read_pos = pt->read_end = pt->read_buf;
-      pt->read_buf_size = read_size;
-    }
-  else
-    {
-      pt->read_pos = pt->read_buf = pt->read_end = &pt->shortbuf;
-      pt->read_buf_size = 1;
-    }
-  
-  if (SCM_OUTPUT_PORT_P (port))
-    {
-      pt->write_buf = malloc (write_size);
-      if (pt->write_buf == NULL)
-	scm_memory_error (s_mu_port_alloc_buffer);
-      pt->write_pos = pt->write_buf;
-      pt->write_buf_size = write_size;
-      pt->write_end = pt->write_buf + pt->write_buf_size;
-    }
-  else
-    {
-      pt->write_buf = pt->write_pos = &pt->shortbuf;
-      pt->write_buf_size = 1;
-    }
-  
-  SCM_SET_CELL_WORD_0 (port, SCM_CELL_WORD_0 (port) & ~SCM_BUF0);
-}
-
-static long scm_tc16_smuport;
+static scm_t_port_type *scm_mu_port_type;
 
 SCM
 mu_port_make_from_stream (SCM msg, mu_stream_t stream, long mode)
 {
   struct mu_port *mp;
-  SCM port;
-  scm_port *pt;
-  int flags;
-  
-  mp = scm_gc_malloc (sizeof (struct mu_port), "mu-port");
+
+  mp = scm_gc_typed_calloc (struct mu_port);
   mp->msg = msg;
   mp->stream = stream;
-
-  port = scm_new_port_table_entry (scm_tc16_smuport | mode);
-  pt = SCM_PTAB_ENTRY (port);
-  mu_stream_get_flags (stream, &flags);
-  pt->rw_random = flags & MU_STREAM_SEEK;
-  SCM_SETSTREAM (port, mp);
-  mu_port_alloc_buffer (port, 0, 0);
-  /* FIXME:
-     SCM_PTAB_ENTRY (port)->file_name = "name";*/
-  return port;
-}
-
-static SCM
-mu_port_mark (SCM port)
-{
-  if (SCM_CELL_WORD_0 (port) & SCM_OPN)
-    {
-      struct mu_port *mp = MU_PORT (port);
-      return mp->msg;
-    }
-  return SCM_BOOL_F;
+  return scm_c_make_port (scm_mu_port_type, mode, (scm_t_bits) mp);
 }
 
 static void
-mu_port_flush (SCM port)
-{
-  struct mu_port *mp = MU_PORT (port);
-  scm_port *pt = SCM_PTAB_ENTRY (port);
-  int wrsize = pt->write_pos - pt->write_buf;
-  
-  if (wrsize)
-    {
-      int status = mu_stream_write (mp->stream, pt->write_buf, wrsize, NULL);
-      if (status)
- 	mu_scm_error ("mu_port_flush", status,
- 		      "Error writing to stream", SCM_BOOL_F);
-    }
-  pt->write_pos = pt->write_buf;
-  pt->rw_active = SCM_PORT_NEITHER;
-}
-
-static int
 mu_port_close (SCM port)
 {
   struct mu_port *mp = MU_PORT (port);
-  scm_port *pt = SCM_PTAB_ENTRY (port);
-
-  mu_port_flush (port);
-  mu_stream_close (mp->stream);
-  SCM_SETSTREAM (port, NULL);
-		
-  if (pt->read_buf != &pt->shortbuf)
-    free (pt->read_buf);
-  if (pt->write_buf != &pt->shortbuf)
-    free (pt->write_buf);
-  free (mp);
-  return 0;
+  mu_stream_destroy (&mp->stream);
 }
 
-static scm_sizet
-mu_port_free (SCM port)
+static size_t
+mu_port_read (SCM port, SCM dst, size_t start, size_t count)
 {
   struct mu_port *mp = MU_PORT (port);
-  mu_stream_unref (mp->stream);
-  mu_port_close (port);
-  return 0;
-}
-
-static int
-mu_port_fill_input (SCM port)
-{
-  struct mu_port *mp = MU_PORT (port);
-  scm_port *pt = SCM_PTAB_ENTRY (port);
-  size_t nread = 0;
   int status;
+  size_t nread;
   
-  status = mu_stream_read (mp->stream, (char*) pt->read_buf, pt->read_buf_size,
+  status = mu_stream_read (mp->stream,
+			   SCM_BYTEVECTOR_CONTENTS (dst) + start,
+			   count,
 			   &nread);
   if (status)
-    mu_scm_error ("mu_port_fill_input", status,
+    mu_scm_error ("mu_port_read", status,
 		  "Error reading from stream", SCM_BOOL_F);
-
-  if (nread == 0)
-    return EOF;
-
-  pt->read_pos = pt->read_buf;
-  pt->read_end = pt->read_buf + nread;
-  return *pt->read_buf;
+  return nread;
 }
-
-static void
-mu_port_write (SCM port, const void *data, size_t size)
-{
-  scm_port *pt = SCM_PTAB_ENTRY (port);
-  size_t remaining = size;
-  char *input = (char*) data;
   
-  while (remaining > 0)
-    {
-      int space = pt->write_end - pt->write_pos;
-      int write_len = (remaining > space) ? space : remaining;
-      
-      memcpy (pt->write_pos, input, write_len);
-      pt->write_pos += write_len;
-      remaining -= write_len;
-      input += write_len;
-      if (write_len == space)
-	mu_port_flush (port);
-    }
-}
-
-/* Perform the synchronisation required for switching from input to
-   output on the port.
-   Clear the read buffer and adjust the file position for unread bytes. */
-static void
-mu_port_end_input (SCM port, int offset)
+static size_t
+mu_port_write (SCM port, SCM src, size_t start, size_t count)
 {
   struct mu_port *mp = MU_PORT (port);
-  scm_port *pt = SCM_PTAB_ENTRY (port);
-  int delta = pt->read_end - pt->read_pos;
-  
-  offset += delta;
+  int status;
+  size_t nwrite;
 
-  if (offset > 0)
-    {
-      pt->read_pos = pt->read_end;
-      mu_stream_seek (mp->stream, - delta, MU_SEEK_CUR, NULL);
-    }
-  pt->rw_active = SCM_PORT_NEITHER;
+  status = mu_stream_write (mp->stream,
+			    SCM_BYTEVECTOR_CONTENTS (src) + start, count,
+			    &nwrite);
+  if (status)
+    mu_scm_error ("mu_port_read", status,
+		  "Error reading from stream", SCM_BOOL_F);
+  return nwrite;
 }
 
 static scm_t_off
 mu_port_seek (SCM port, scm_t_off offset, int whence)
 {
   struct mu_port *mp = MU_PORT (port);
-  scm_port *pt = SCM_PTAB_ENTRY (port);
-  int mwhence;
   mu_off_t pos;
   int status;
-  
-  if (pt->rw_active == SCM_PORT_WRITE)
-    {
-      mu_port_flush (port);
-    }
-  else if (pt->rw_active == SCM_PORT_READ)
-    {
-      scm_end_input (port);
-    }
 
-  switch (whence)
-    {
-    case SEEK_SET:
-      mwhence = MU_SEEK_SET;
-      break;
-    case SEEK_CUR:
-      mwhence = MU_SEEK_CUR;
-      break;
-    case SEEK_END:
-      mwhence = MU_SEEK_END;
-    }
-
-  status = mu_stream_seek (mp->stream, offset, mwhence, &pos);
+  status = mu_stream_seek (mp->stream, offset, whence, &pos);
   if (status)
     pos = -1;
   return (scm_t_off) pos;
@@ -262,7 +104,7 @@ mu_port_truncate (SCM port, mu_off_t length)
   int status;
   status = mu_stream_truncate (mp->stream, length);
   if (status)
-    mu_scm_error ("mu_stream_truncate", status,
+    mu_scm_error ("mu_port_truncate", status,
 		  "Error truncating stream", SCM_BOOL_F);
 }
   
@@ -290,17 +132,13 @@ mu_port_print (SCM exp, SCM port, scm_print_state *pstate)
 }
      
 void
-mu_scm_port_init ()
+mu_scm_port_init (void)
 {
-    scm_tc16_smuport = scm_make_port_type ("mu-port",
-					   mu_port_fill_input, mu_port_write);
-    scm_set_port_mark (scm_tc16_smuport, mu_port_mark);
-    scm_set_port_free (scm_tc16_smuport, mu_port_free);
-    scm_set_port_print (scm_tc16_smuport, mu_port_print);
-    scm_set_port_flush (scm_tc16_smuport, mu_port_flush);
-    scm_set_port_end_input (scm_tc16_smuport, mu_port_end_input);
-    scm_set_port_close (scm_tc16_smuport, mu_port_close);
-    scm_set_port_seek (scm_tc16_smuport, mu_port_seek);
-    scm_set_port_truncate (scm_tc16_smuport, mu_port_truncate);
-    /*    scm_set_port_input_waiting (scm_tc16_smuport, mu_port_input_waiting);*/
+    scm_mu_port_type = scm_make_port_type ("mu-port",
+					   mu_port_read, mu_port_write);
+    scm_set_port_print (scm_mu_port_type, mu_port_print);
+    scm_set_port_close (scm_mu_port_type, mu_port_close);
+    scm_set_port_needs_close_on_gc (scm_mu_port_type, 1);
+    scm_set_port_seek (scm_mu_port_type, mu_port_seek);
+    scm_set_port_truncate (scm_mu_port_type, mu_port_truncate);
 }

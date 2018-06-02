@@ -23,81 +23,45 @@ struct _mu_debug_port
   int level;
 };
 
-static long     scm_tc16_mu_debug_port;
+static scm_t_port_type *scm_mu_debug_port_type;
 
 SCM
 mu_scm_make_debug_port (int level)
 {
   struct _mu_debug_port *dp;
-  SCM             port;
-  scm_port       *pt;
   mu_stream_t str;
   
   if (mu_dbgstream_create (&str, level))
     return SCM_BOOL_F;
-  dp = scm_gc_malloc (sizeof (struct _mu_debug_port), "mu-debug-port");
+
+  dp = scm_gc_typed_calloc (struct _mu_debug_port);
   dp->level = level;
   dp->stream = str;
-  port = scm_cell (scm_tc16_mu_debug_port, 0);
-  pt = scm_add_to_port_table (port);
-  SCM_SETPTAB_ENTRY (port, pt);
-  pt->rw_random = 0;
-  SCM_SET_CELL_TYPE (port,
-		     (scm_tc16_mu_debug_port | SCM_OPN | SCM_WRTNG |
-		      SCM_BUF0));
-  SCM_SETSTREAM (port, dp);
-  return port;
+  return scm_c_make_port (scm_mu_debug_port_type, SCM_WRTNG, (scm_t_bits) dp);
 }
 
 #define MU_DEBUG_PORT(x) ((struct _mu_debug_port *) SCM_STREAM (x))
 
-static SCM
-_mu_debug_port_mark (SCM port)
-{
-  return SCM_BOOL_F;
-}
-
 static void
-_mu_debug_port_flush (SCM port)
-{
-  /* struct _mu_debug_port *dp = MU_DEBUG_PORT (port); */
-
-  /* FIXME: */
-}
-
-static int
 _mu_debug_port_close (SCM port)
 {
   struct _mu_debug_port *dp = MU_DEBUG_PORT (port);
 
-  if (dp)
+  if (dp && dp->stream)
     {
-      _mu_debug_port_flush (port);
-      SCM_SETSTREAM (port, NULL);
-      scm_gc_free (dp, sizeof (struct _mu_debug_port), "mu-debug-port");
+      mu_stream_flush (dp->stream);
+      mu_stream_destroy (&dp->stream);
     }
-  return 0;
 }
 
-static scm_sizet
-_mu_debug_port_free (SCM port)
-{
-  _mu_debug_port_close (port);
-  return 0;
-}
-
-static int
-_mu_debug_port_fill_input (SCM port)
-{
-  return EOF;
-}
-
-static void
-_mu_debug_port_write (SCM port, const void *data, size_t size)
+static size_t
+_mu_debug_port_write (SCM port, SCM src, size_t start, size_t count)
 {
   struct _mu_debug_port *dp = MU_DEBUG_PORT (port);
 
-  mu_stream_write (dp->stream, data, size, NULL);
+  mu_stream_write (dp->stream, SCM_BYTEVECTOR_CONTENTS (src) + start, count,
+		   NULL);
+  return count;
 }
 
 static int
@@ -108,14 +72,12 @@ _mu_debug_port_print (SCM exp, SCM port, scm_print_state * pstate)
 }
 
 void
-mu_scm_debug_port_init ()
+mu_scm_debug_port_init (void)
 {
-  scm_tc16_mu_debug_port = scm_make_port_type ("mu-debug-port",
-					       _mu_debug_port_fill_input,
+  scm_mu_debug_port_type = scm_make_port_type ("mu-debug-port",
+					       NULL,
 					       _mu_debug_port_write);
-  scm_set_port_mark (scm_tc16_mu_debug_port, _mu_debug_port_mark);
-  scm_set_port_free (scm_tc16_mu_debug_port, _mu_debug_port_free);
-  scm_set_port_print (scm_tc16_mu_debug_port, _mu_debug_port_print);
-  scm_set_port_flush (scm_tc16_mu_debug_port, _mu_debug_port_flush);
-  scm_set_port_close (scm_tc16_mu_debug_port, _mu_debug_port_close);
+  scm_set_port_print (scm_mu_debug_port_type, _mu_debug_port_print);
+  scm_set_port_close (scm_mu_debug_port_type, _mu_debug_port_close);
+  scm_set_port_needs_close_on_gc (scm_mu_debug_port_type, 1);
 }

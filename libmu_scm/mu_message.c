@@ -39,7 +39,7 @@ mu_scm_message_mark (SCM message_smob)
   return mum->mbox;
 }
 
-static scm_sizet
+static size_t
 mu_scm_message_free (SCM message_smob)
 {
   struct mu_message *mum = (struct mu_message *) SCM_CDR (message_smob);
