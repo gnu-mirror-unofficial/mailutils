@@ -1,0 +1,17 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([mu-mailbox-messages-count])
+AT_KEYWORDS([mailbox])
+WITH_MAILBOX([spool/mbox1],
+ [MU_GUILE_CHECK([
+(display (mu-mailbox-messages-count (mu-mailbox-open "mbox" "r")))
+(newline)
+],
+[0],
+[5
+])])
+AT_CLEANUP

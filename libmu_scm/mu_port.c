@@ -41,7 +41,7 @@ mu_port_make_from_stream (SCM msg, mu_stream_t stream, long mode)
   mp = scm_gc_typed_calloc (struct mu_port);
   mp->msg = msg;
   mp->stream = stream;
-  return scm_c_make_port (scm_mu_port_type, mode, (scm_t_bits) mp);
+  return scm_c_make_port (scm_mu_port_type, mode | SCM_BUF0, (scm_t_bits) mp);
 }
 
 static void

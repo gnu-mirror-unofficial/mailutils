@@ -393,7 +393,7 @@ if test "${with_db2+set}" = set; then
 fi
 
 AC_ARG_WITH([berkeley-db],
-            AC_HELP_STRING([--with-berkeley-db],
+            AC_HELP_STRING([--with-berkeley-db@<:@=LIBDB@:>@],
                            [use Berkeley DB]),
             [
 case "${withval}" in
@@ -1342,6 +1342,7 @@ MU_CONFIG_TESTSUITE(mh)
 MU_CONFIG_TESTSUITE(comsat)
 MU_CONFIG_TESTSUITE(imap4d)
 MU_CONFIG_TESTSUITE(mimeview)
+MU_CONFIG_TESTSUITE(libmu_scm)
 
 AM_MISSING_PROG([AUTOM4TE], [autom4te])
 

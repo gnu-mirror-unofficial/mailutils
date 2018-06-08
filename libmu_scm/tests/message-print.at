@@ -1,0 +1,21 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([message print])
+AT_KEYWORDS([message])
+MU_GUILE_CHECK([
+(use-modules ((ice-9 regex)))
+	     
+(let ((msg (mu-message-create)))
+  (let ((s (with-output-to-string (lambda () (display msg)))))
+    (cond
+     ((string-match "^#<message \".+@.+\" \"(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [ 0123][0-9] [[:digit:]]{2}:[[:digit:]]{2}\" 1 1>$" s)
+      (exit 0))
+     (else
+      (display s)
+      (newline)
+      (exit 1)))))])
+AT_CLEANUP

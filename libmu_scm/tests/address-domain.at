@@ -1,0 +1,18 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+AT_SETUP([mu-address-get-domain])
+AT_KEYWORDS([address])
+MU_GUILE_CHECK([(display (mu-address-get-domain "user@example.org,user@example.com"))],
+0,
+[example.org])
+AT_CLEANUP
+
+AT_SETUP([mu-address-get-domain with arg])
+AT_KEYWORDS([address])
+MU_GUILE_CHECK([(display (mu-address-get-domain "user@example.org,user@example.com" 2))],
+0,
+[example.com])
+AT_CLEANUP

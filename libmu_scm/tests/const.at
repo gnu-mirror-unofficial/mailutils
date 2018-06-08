@@ -1,0 +1,25 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([Constants])
+AT_KEYWORDS([constants])
+AT_DATA([expout],
+[AT_PACKAGE_TARNAME
+AT_PACKAGE_VERSION
+AT_PACKAGE_STRING
+AT_PACKAGE_BUGREPORT
+0
+])
+
+MU_GUILE_CHECK([
+(display mu-package)(newline)
+(display mu-version)(newline)
+(display mu-package-string)(newline)
+(display mu-bugreport)(newline)
+(display mu-debug)(newline)
+],
+[0],[expout])
+AT_CLEANUP

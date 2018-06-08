@@ -37,7 +37,8 @@ mu_scm_make_debug_port (int level)
   dp = scm_gc_typed_calloc (struct _mu_debug_port);
   dp->level = level;
   dp->stream = str;
-  return scm_c_make_port (scm_mu_debug_port_type, SCM_WRTNG, (scm_t_bits) dp);
+  return scm_c_make_port (scm_mu_debug_port_type, SCM_BUF0|SCM_WRTNG,
+			  (scm_t_bits) dp);
 }
 
 #define MU_DEBUG_PORT(x) ((struct _mu_debug_port *) SCM_STREAM (x))

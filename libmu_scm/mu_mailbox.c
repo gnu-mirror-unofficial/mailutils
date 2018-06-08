@@ -30,13 +30,6 @@ struct mu_mailbox
   int noclose;
 };
 
-/* SMOB functions: */
-static SCM
-mu_scm_mailbox_mark (SCM mailbox_smob)
-{
-  return SCM_BOOL_F;
-}
-
 static size_t
 mu_scm_mailbox_free (SCM mailbox_smob)
 {
@@ -49,10 +42,7 @@ mu_scm_mailbox_free (SCM mailbox_smob)
       mu_mailbox_close (mum->mbox);
       mu_mailbox_destroy (&mum->mbox);
     }
-  free (mum);
-  /* NOTE: Currently there is no way for this function to return the
-     amount of memory *actually freed* by mu_mailbox_destroy */
-  return sizeof (struct mu_mailbox);
+  return sizeof 0;
 }
 
 static int
@@ -144,18 +134,6 @@ SCM_DEFINE_PUBLIC (scm_mu_mailbox_p, "mu-mailbox?", 1, 0, 0,
   return scm_from_bool (mu_scm_is_mailbox (scm));
 }
 #undef FUNC_NAME
-
-SCM_DEFINE_PUBLIC (scm_mu_mail_directory, "mu-mail-directory", 0, 1, 0,
-		   (SCM url), 
-"Do not use this function. Use mu-user-mailbox-url instead.")
-#define FUNC_NAME s_scm_mu_mail_directory
-{
-  mu_scm_error (FUNC_NAME, ENOSYS,
-		"This function is deprecated. Use mu-user-mailbox-url instead.",
-		  scm_list_1 (url));
-  return SCM_EOL;
-}
-#undef FUNC_NAME 
 
 SCM_DEFINE_PUBLIC (scm_mu_user_mailbox_url, "mu-user-mailbox-url", 1, 0, 0, 
 		   (SCM user),
@@ -529,7 +507,7 @@ SCM_DEFINE_PUBLIC (scm_mu_mailbox_more_messages_p, "mu-mailbox-more-messages?", 
 "Returns @samp{#t} if there are more messages in the mailbox @var{mbox}\n"
 "ahead of current iterator position.  Usually this function is used after\n"
 "a call to @samp{mu-mailbox-first-message} or @samp{mu-mailbox-next-message}.\n"
-"If not, it initializes the iterator and points it to the first message inn"
+"If not, it initializes the iterator and points it to the first message in"
 "the mailbox.")
 #define FUNC_NAME s_scm_mu_mailbox_more_messages_p
 {
@@ -555,7 +533,7 @@ SCM_DEFINE_PUBLIC (scm_mu_mailbox_more_messages_p, "mu-mailbox-more-messages?", 
 		      scm_list_2 (mbox,
 				  scm_from_locale_string (mu_strerror (status))));
     }
-  return scm_from_bool (!!mu_iterator_is_done (mum->itr));
+  return scm_from_bool (!mu_iterator_is_done (mum->itr));
 }
 #undef FUNC_NAME
 
@@ -584,7 +562,6 @@ void
 mu_scm_mailbox_init ()
 {
   mailbox_tag = scm_make_smob_type ("mailbox", sizeof (struct mu_mailbox));
-  scm_set_smob_mark (mailbox_tag, mu_scm_mailbox_mark);
   scm_set_smob_free (mailbox_tag, mu_scm_mailbox_free);
   scm_set_smob_print (mailbox_tag, mu_scm_mailbox_print);
 

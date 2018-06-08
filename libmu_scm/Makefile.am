@@ -15,7 +15,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-SUBDIRS = . mailutils
+SUBDIRS = . mailutils tests
 
 AM_CPPFLAGS = -I. @MU_LIB_COMMON_INCLUDES@ @GUILE_INCLUDES@
 

@@ -178,14 +178,14 @@ mailutils-specific configuration options:
 
 	Do not build Guile interface library.
 
-    --with-guiledir[=DIR]
+    --with-guile-site-dir[=DIR]
 
         Specify the directory to install guile modules to. By default
         they are installed in
 
 	  $(prefix)/share/mailutils/$(VERSION)/guile.
 
-	The option --with-guiledir used without argument instructs
+	The option --with-guile-site-dir used without argument instructs
 	configure script to install modules to the site-wide Guile
 	directory, where it is easier to find them. This directory is
 	defined as $(guile_pkgdatadir)/site where guile_pkgdatadir is
@@ -235,18 +235,9 @@ mailutils-specific configuration options:
 
 	Enable logging to the given syslog facility. Default is `mail'.
 
-    --without-included-regex
-
-	Don't compile regex; this is the default on systems with version
-	2 of the GNU C library (use with caution on other systems)
-
     --disable-nls
 
         Do not use Native Language Support
-
-    --with-included-gettext
-
-       Use the GNU gettext library included in the Mailutils distribution.
 
 The following options enable DBM support in Mailutils. DBM support is
 necessary if you wish to use APOP authentication in POP3 daemon or to

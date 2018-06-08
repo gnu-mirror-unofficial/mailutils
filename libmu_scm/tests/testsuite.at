@@ -1,0 +1,54 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+m4_include([testsuite.inc])
+
+m4_pushdef([MU_TEST_MAILBOX])
+
+# MU_GUILE_CHECK([CODE],
+#                     [STATUS=0],[STDOUT],[STDERR],[RUN-IF-FAIL],[RUN-IF-PASS])
+m4_define([MU_GUILE_CHECK],
+[AT_DATA([input.scm],[(use-modules ((mailutils mailutils)))
+$1
+])
+m4_if(MU_TEST_MAILBOX,,,[MUT_MBCOPY($abs_top_srcdir/testsuite/MU_TEST_MAILBOX,mbox)])
+AT_CHECK([guile -q --no-auto-compile -L $LIBMU_SCM_ROOT -s input.scm 2>err
+rc=$?
+grep -v '^;;;' err>&2
+exit $rc],m4_shift($@))])
+
+m4_define([WITH_MAILBOX],
+[m4_pushdef([MU_TEST_MAILBOX],$1)
+m4_shift($*)
+m4_popdef([MU_TEST_MAILBOX])])
+
+AT_INIT
+
+AT_TESTED
+m4_include([const.at])
+
+AT_BANNER([mu-address functions])
+m4_include([address-count.at])
+m4_include([address-domain.at])
+m4_include([address-local.at])
+m4_include([address-email.at])
+m4_include([address-personal.at])
+
+AT_BANNER([mu-message functions])
+m4_include([message-create.at])
+m4_include([message-print.at])
+
+AT_BANNER([mu-mailbox functions])
+m4_include([mailbox-open.at])
+m4_include([mailbox-open-exc.at])
+m4_include([mailbox-print.at])
+m4_include([mailbox-get-url.at])
+m4_include([mailbox-get-size.at])
+m4_include([mailbox-messages-count.at])
+m4_include([mailbox-get-message.at])
+m4_include([mailbox-iterate.at])
+#
+m4_popdef([MU_TEST_MAILBOX])

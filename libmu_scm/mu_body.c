@@ -33,13 +33,6 @@ struct mu_body
 #define BUF_SIZE 64
 
 /* SMOB functions: */
-static SCM
-mu_scm_body_mark (SCM body_smob)
-{
-  struct mu_body *mbp = (struct mu_body *) SCM_CDR (body_smob);
-  return mbp->msg;
-}
-
 static size_t
 mu_scm_body_free (SCM body_smob)
 {
@@ -47,7 +40,6 @@ mu_scm_body_free (SCM body_smob)
   if (mbp->buffer)
     free (mbp->buffer);
   mu_stream_unref (mbp->stream);
-  free (mbp);
   return 0;
 }
 
@@ -184,7 +176,6 @@ void
 mu_scm_body_init ()
 {
   body_tag = scm_make_smob_type ("body", sizeof (struct mu_body));
-  scm_set_smob_mark (body_tag, mu_scm_body_mark);
   scm_set_smob_free (body_tag, mu_scm_body_free);
   scm_set_smob_print (body_tag, mu_scm_body_print);
 

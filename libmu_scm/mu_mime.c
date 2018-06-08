@@ -27,21 +27,12 @@ struct mu_mime
 };
 
 /* SMOB functions: */
-
-static SCM
-mu_scm_mime_mark (SCM mime_smob)
-{
-  struct mu_mime *mum = (struct mu_mime *) SCM_CDR (mime_smob);
-  return mum->owner;
-}
-
 static size_t
 mu_scm_mime_free (SCM mime_smob)
 {
   struct mu_mime *mum = (struct mu_mime *) SCM_CDR (mime_smob);
   mu_mime_destroy (&mum->mime);
-  free (mum);
-  return sizeof (struct mu_mime);
+  return 0;
 }
 
 static int
@@ -241,7 +232,6 @@ void
 mu_scm_mime_init ()
 {
   mime_tag = scm_make_smob_type ("mime", sizeof (struct mu_mime));
-  scm_set_smob_mark (mime_tag, mu_scm_mime_mark);
   scm_set_smob_free (mime_tag, mu_scm_mime_free);
   scm_set_smob_print (mime_tag, mu_scm_mime_print);
 

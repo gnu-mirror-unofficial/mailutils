@@ -24,28 +24,15 @@ struct mu_message
 {
   mu_message_t msg;       /* Message itself */
   SCM mbox;               /* Mailbox it belongs to */
-  int needs_destroy;      /* Set during mark phase if the message needs
-			     explicit destroying */
 };
 
 /* SMOB functions: */
-
-static SCM
-mu_scm_message_mark (SCM message_smob)
-{
-  struct mu_message *mum = (struct mu_message *) SCM_CDR (message_smob);
-  if (mu_message_get_owner (mum->msg) == NULL)
-    mum->needs_destroy = 1;
-  return mum->mbox;
-}
-
 static size_t
 mu_scm_message_free (SCM message_smob)
 {
   struct mu_message *mum = (struct mu_message *) SCM_CDR (message_smob);
-  if (mum->needs_destroy)
+  if (mu_message_get_owner (mum->msg) == NULL)
     mu_message_destroy (&mum->msg, NULL);
-  free (mum);
   return 0;
 }
 
@@ -120,7 +107,7 @@ mu_scm_message_print (SCM message_smob, SCM port, scm_print_state * pstate)
       mu_message_size (mum->msg, &m_size);
       mu_message_lines (mum->msg, &m_lines);
       
-      snprintf (datebuf, sizeof (datebuf), "%3lu %-5lu",
+      snprintf (datebuf, sizeof (datebuf), "%lu %lu",
 		(unsigned long) m_lines, (unsigned long) m_size);
       scm_puts (datebuf, port);
     }
@@ -138,7 +125,6 @@ mu_scm_message_create (SCM owner, mu_message_t msg)
   mum = scm_gc_malloc (sizeof (struct mu_message), "message");
   mum->msg = msg;
   mum->mbox = owner;
-  mum->needs_destroy = 0;
   SCM_RETURN_NEWSMOB (message_tag, mum);
 }
 
@@ -1128,7 +1114,6 @@ void
 mu_scm_message_init ()
 {
   message_tag = scm_make_smob_type ("message", sizeof (struct mu_message));
-  scm_set_smob_mark (message_tag, mu_scm_message_mark);
   scm_set_smob_free (message_tag, mu_scm_message_free);
   scm_set_smob_print (message_tag, mu_scm_message_print);
 

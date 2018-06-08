@@ -1,0 +1,23 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([mu-mailbox-get-url])
+AT_KEYWORDS([mailbox])
+WITH_MAILBOX([spool/mbox1],
+[MU_GUILE_CHECK([
+(use-modules ((ice-9 regex)))
+	     
+(let ((s (mu-mailbox-get-url (mu-mailbox-open "mbox" "r"))))
+  (cond
+   ((string-match "^(.*/)?mbox$" s)
+    (exit 0))
+   (else
+    (display s)
+    (newline)
+    (exit 1))))])])
+
+AT_CLEANUP
+ 
