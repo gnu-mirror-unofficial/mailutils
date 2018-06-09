@@ -352,7 +352,8 @@ filltime (struct tm *bd_time, int zoff, const char *zname)
 
 SCM_DEFINE_PUBLIC (scm_mu_message_get_envelope, "mu-message-get-envelope", 1, 0, 0,
 		   (SCM mesg),
-		   "Returns envelope date of the message @var{mesg}.\n")
+"Returns envelope of the message @var{mesg}.\n"
+"The value returned is the envelope line without the \"From \" prefix.\n")
 #define FUNC_NAME s_scm_mu_message_get_envelope
 {
   mu_message_t msg;
@@ -489,6 +490,25 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_header, "mu-message-get-header", 2, 0, 0,
 }
 #undef FUNC_NAME
 
+static int
+string_is_member (char const *needle, SCM array)
+{
+  int found = 0;
+  
+  while (!(found || scm_is_null (array)))
+    {
+      SCM car = scm_car (array);
+      if (scm_is_string (car))
+	{
+	  char *s = scm_to_locale_string (car);
+	  found = mu_c_strcasecmp (needle, s) == 0;
+	  free (s);
+	}
+      array = scm_cdr (array);
+    }
+  return found;
+}
+
 SCM_DEFINE_PUBLIC (scm_mu_message_get_header_fields, "mu-message-get-header-fields", 1, 1, 0,
 		   (SCM mesg, SCM headers),
 "Returns list of headers in the message @var{mesg}. optional argument\n" 
@@ -528,8 +548,7 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_header_fields, "mu-message-get-header-fiel
 		      "Cannot get header field ~A, message ~A",
 		      scm_list_2 (scm_from_size_t (i), mesg));
 
-      if (!scm_is_null (headers) &&
-	  scm_member (headers, scm_from_locale_string (name)) == SCM_BOOL_F)
+      if (!scm_is_null (headers) && !string_is_member (name, headers))
 	continue;
       status = mu_header_aget_field_value (hdr, i, &value);
       if (status)
@@ -869,10 +888,9 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_port, "mu-message-get-port", 2, 1, 0,
 "Returns a port associated with the message @var{mesg}. The @var{mode} is a\n"
 "string defining operation mode of the stream. It may contain any of the\n"
 "two characters: @samp{r} for reading, @samp{w} for writing.\n"
-"If optional argument @var{full} is specified, it should be a boolean value.\n"
-"If it is @samp{#t} then the returned port will allow access to any\n"
-"part of the message (including headers). If it is @code{#f} then the port\n"
-"accesses only the message body (the default).\n")
+"If optional boolean argument @var{full} is @samp{#t} then the returned port\n"
+"will allow access to any part of the message (including headers). Otherwise\n"
+"the port accesses only the message body (the default).\n")
 #define FUNC_NAME s_scm_mu_message_get_port
 {
   mu_message_t msg;
@@ -1105,6 +1123,31 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_uid, "mu-message-get-uid", 1, 0, 0,
   if (status)
     mu_scm_error (FUNC_NAME, status, "Cannot get message uid", SCM_BOOL_F);
   return scm_from_size_t (uid);
+}
+#undef FUNC_NAME
+
+SCM_DEFINE_PUBLIC (scm_mu_message_from_port, "mu-message-from-port", 1, 0, 0,
+		   (SCM port),
+"Reads one message from @var{port} and returns it.\n")
+#define FUNC_NAME s_scm_mu_message_from_port
+{
+  mu_stream_t str;
+  int rc;
+  mu_message_t msg;
+  
+  SCM_ASSERT (SCM_PORTP (port), port, SCM_ARG1, FUNC_NAME);
+  rc = mu_scm_port_stream_create (&str, port);
+  if (rc)
+    mu_scm_error (FUNC_NAME, rc,
+		  "Cannot create mu_stream_t from ~A",
+		  scm_list_1 (port));
+  rc = mu_stream_to_message (str, &msg);
+  mu_stream_destroy (&str);
+  if (rc)
+    mu_scm_error (FUNC_NAME, rc,
+		  "Failed to get message from ~A",
+		  scm_list_1 (port));
+  return mu_scm_message_create (NULL, msg);
 }
 #undef FUNC_NAME
 

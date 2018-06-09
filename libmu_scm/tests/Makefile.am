@@ -55,7 +55,22 @@ TESTSUITE_AT = \
  address-domain.at\
  address-local.at\
  address-email.at\
- address-personal.at
+ address-personal.at\
+ message-port-1.at\
+ message-port-2.at\
+ message-body.at\
+ bodyp.at\
+ message-get-size.at\
+ message-get-lines.at\
+ message-get-envelope.at\
+ message-get-envelope-date.at\
+ message-get-sender.at\
+ message-get-header-fields.at\
+ message-get-header.at\
+ message-port-read-1.at\
+ message-port-read-2.at\
+ message-set-header.at\
+ message-set-header-fields.at
 
 TESTSUITE = $(srcdir)/testsuite
 M4=m4

@@ -52,3 +52,8 @@
 
 #include <mailutils/guile.h>
 
+#ifndef HAVE_SCM_T_OFF
+typedef off_t scm_t_off;
+#endif
+
+int mu_scm_port_stream_create (mu_stream_t *pstream, SCM port);

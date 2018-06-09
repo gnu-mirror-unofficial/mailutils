@@ -11,11 +11,13 @@ m4_pushdef([MU_TEST_MAILBOX])
 # MU_GUILE_CHECK([CODE],
 #                     [STATUS=0],[STDOUT],[STDERR],[RUN-IF-FAIL],[RUN-IF-PASS])
 m4_define([MU_GUILE_CHECK],
-[AT_DATA([input.scm],[(use-modules ((mailutils mailutils)))
+[AT_DATA([input.scm],[dnl
+(use-modules ((mailutils mailutils))
+             ((mailutils ancilla)))
 $1
 ])
 m4_if(MU_TEST_MAILBOX,,,[MUT_MBCOPY($abs_top_srcdir/testsuite/MU_TEST_MAILBOX,mbox)])
-AT_CHECK([guile -q --no-auto-compile -L $LIBMU_SCM_ROOT -s input.scm 2>err
+AT_CHECK([TZ=0 guile -q --no-auto-compile -L $LIBMU_SCM_ROOT -L $LIBMU_SCM_SRCDIR -s input.scm 2>err
 rc=$?
 grep -v '^;;;' err>&2
 exit $rc],m4_shift($@))])
@@ -38,8 +40,25 @@ m4_include([address-email.at])
 m4_include([address-personal.at])
 
 AT_BANNER([mu-message functions])
-m4_include([message-create.at])
 m4_include([message-print.at])
+m4_include([message-get-size.at])
+m4_include([message-get-lines.at])
+m4_include([message-get-envelope.at])
+m4_include([message-get-sender.at])
+m4_include([message-get-envelope-date.at])
+m4_include([message-get-header.at])
+m4_include([message-get-header-fields.at])
+m4_include([message-port-read-1.at])
+m4_include([message-port-read-2.at])
+
+m4_include([message-set-header.at])
+m4_include([message-set-header-fields.at])
+
+m4_include([message-create.at])
+m4_include([message-port-1.at])
+m4_include([message-port-2.at])
+m4_include([message-body.at])
+m4_include([bodyp.at])
 
 AT_BANNER([mu-mailbox functions])
 m4_include([mailbox-open.at])

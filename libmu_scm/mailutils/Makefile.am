@@ -15,7 +15,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-EXTRA_DIST=mailutils.scm.in
+EXTRA_DIST=mailutils.scm.in ancilla.scm
 
 CLEANFILES=\
  mailutils.scm
@@ -51,4 +51,5 @@ endif
 
 mailutils.scm: mailutils.scm.in
 	$(AM_V_GEN)m4 $(MU_FEATURES) $(srcdir)/mailutils.scm.in > $@
+
 

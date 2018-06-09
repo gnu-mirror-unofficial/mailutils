@@ -1,0 +1,13 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+AT_SETUP([mu-message-get-header-fields])
+AT_KEYWORDS([message])
+MU_GUILE_CHECK([(display (sort-headers (mu-message-get-header-fields (test-message))))],0,
+[((From . user@example.org) (Subject . De omnibus rebus et quibusdam aliis) (To . someone@example.com))])
+MU_GUILE_CHECK([
+(display (sort-headers (mu-message-get-header-fields (test-message) '("from" "sender"))))],0,
+[((From . user@example.org))])
+AT_CLEANUP

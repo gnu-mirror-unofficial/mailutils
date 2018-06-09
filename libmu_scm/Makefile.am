@@ -33,7 +33,8 @@ C_SRCS=\
  mu_logger.c\
  mu_port.c\
  mu_scm.c\
- mu_util.c
+ mu_util.c\
+ portstream.c
 
 libmu_scm_la_SOURCES=\
  $(C_SRCS) \

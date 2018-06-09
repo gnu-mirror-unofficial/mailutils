@@ -4,8 +4,11 @@
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-AT_SETUP([message print])
-AT_KEYWORDS([message])
-MU_GUILE_CHECK([(display (test-message))],0,
-[#<message "user@example.org" "Fri Jun  8 14:30" 10 539>])
+AT_SETUP([mu-body?])
+AT_KEYWORDS([body])
+MU_GUILE_CHECK([
+(let ((msg (mu-message-create)))
+  (if (mu-body? msg) (exit 1))
+  (if (mu-body? (mu-message-get-body msg)) (exit 0))
+  (exit 2))])
 AT_CLEANUP

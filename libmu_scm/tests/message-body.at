@@ -1,0 +1,42 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([message body])
+AT_KEYWORDS([message body])
+MU_GUILE_CHECK([
+(use-modules ((ice-9 binary-ports)))
+
+(let ((msg (mu-message-create)))
+  (display "writing\n")
+  (mu-message-set-header msg "From" "user@example.org")
+  (mu-message-set-header msg "Subject" "test")
+  (let ((port (mu-message-get-port msg "w")))
+    (with-output-to-port
+	port
+      (lambda ()
+	(display "Test message\n")))
+    (close-port port))
+
+  (message-format #t msg)
+  (newline)
+
+  (display "body\n")
+  (let ((b (mu-message-get-body msg)))
+    (display b)
+    (newline)
+    (do ((ln (mu-body-read-line b) (mu-body-read-line b)))
+        ((eof-object? ln))
+      (display ln))))],
+  0,
+  [writing
+#<message "X@Y" "Dow Mon Day HH:MM" 4 51>
+body
+#<body 1 13>
+Test message
+])
+AT_CLEANUP
+
+

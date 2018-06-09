@@ -1,0 +1,19 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+AT_SETUP([message-set-header])
+AT_KEYWORDS([message])
+MU_GUILE_CHECK([
+(let ((msg (test-message)))
+  (mu-message-set-header msg "Sender" "gray@example.org")
+  (display (sort-headers (mu-message-get-header-fields msg)))
+  (newline)
+  (mu-message-set-header msg "Sender" "root@example.org")
+  (mu-message-set-header msg "From" "bin@example.com" #t)
+  (display (sort-headers (mu-message-get-header-fields msg))))],
+0,
+[((From . user@example.org) (Sender . gray@example.org) (Subject . De omnibus rebus et quibusdam aliis) (To . someone@example.com))
+((From . bin@example.com) (Sender . gray@example.org) (Sender . root@example.org) (Subject . De omnibus rebus et quibusdam aliis) (To . someone@example.com))])
+AT_CLEANUP

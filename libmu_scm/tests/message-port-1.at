@@ -1,0 +1,38 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([message port (body)])
+AT_KEYWORDS([message])
+MU_GUILE_CHECK([
+(use-modules ((ice-9 binary-ports)))
+
+(let ((msg (mu-message-create)))
+  (display "writing\n")
+  (let ((port (mu-message-get-port msg "w")))
+    (with-output-to-port
+	port
+      (lambda ()
+	(display "Test message\n")))
+    (close-port port))
+
+  (message-format #t msg)
+  (newline)
+
+  (display "reading\n")
+  (let ((port (mu-message-get-port msg "r")))
+    (do ((c (get-u8 port) (get-u8 port)))
+	((eof-object? c))
+      (put-u8 (current-output-port) c))
+    (close port)))],
+  0,
+  [writing
+#<message "X@Y" "Dow Mon Day HH:MM" 2 14>
+reading
+Test message
+])
+AT_CLEANUP
+
+

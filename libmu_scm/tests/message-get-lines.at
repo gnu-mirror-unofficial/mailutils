@@ -4,8 +4,8 @@
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-AT_SETUP([message print])
+AT_SETUP([mu-message-get-lines])
 AT_KEYWORDS([message])
-MU_GUILE_CHECK([(display (test-message))],0,
-[#<message "user@example.org" "Fri Jun  8 14:30" 10 539>])
+MU_GUILE_CHECK([(display (mu-message-get-lines (test-message)))],0,[10])
 AT_CLEANUP
+

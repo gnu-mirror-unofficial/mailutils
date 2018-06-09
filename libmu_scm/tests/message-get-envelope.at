@@ -3,9 +3,10 @@
 # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
-
-AT_SETUP([message print])
+AT_SETUP([message-get-envelope])
 AT_KEYWORDS([message])
-MU_GUILE_CHECK([(display (test-message))],0,
-[#<message "user@example.org" "Fri Jun  8 14:30" 10 539>])
+MU_GUILE_CHECK([
+(display (mu-message-get-envelope (test-message)))],
+0,
+  [user@example.org Fri Jun  8 14:30:40 2018])
 AT_CLEANUP

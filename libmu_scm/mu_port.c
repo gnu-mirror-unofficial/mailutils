@@ -19,10 +19,6 @@
 #include "mu_scm.h"
 #include <mailutils/io.h>
 
-#ifndef HAVE_SCM_T_OFF
-typedef off_t scm_t_off;
-#endif
-
 struct mu_port
 {
   mu_stream_t stream;      /* Associated stream */
