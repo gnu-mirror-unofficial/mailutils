@@ -48,16 +48,14 @@ mu_scm_body_print (SCM body_smob, SCM port, scm_print_state * pstate)
 {
   struct mu_body *mbp = (struct mu_body *) SCM_CDR (body_smob);
   size_t b_size = 0, b_lines = 0;
-  char buffer[512];
 
   mu_body_size (mbp->body, &b_size);
   mu_body_lines (mbp->body, &b_lines);
 
   scm_puts ("#<body ", port);
-  snprintf (buffer, sizeof (buffer), "%lu %lu",
-	    (unsigned long) b_lines, (unsigned long) b_size);
-  scm_puts (buffer, port);
-
+  scm_intprint (b_lines, 10, port);
+  scm_putc (' ', port);
+  scm_intprint (b_size, 10, port);
   scm_puts (">", port);
   return 1;
 }

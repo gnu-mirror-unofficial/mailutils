@@ -11,8 +11,7 @@ WITH_MAILBOX([spool/mbox1],
 (let ((mbox (mu-mailbox-open "mbox" "r")))
   (do ((msg (mu-mailbox-first-message mbox) (mu-mailbox-next-message mbox)))
       ((not (mu-mailbox-more-messages? mbox)))
-    (display msg)(newline)))],
- 
+    (display msg)(newline)))], 
  0,
 [#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 44 1254>
 #<message "bar@dontmailme.org" "Fri Dec 28 23:28" 13 534>

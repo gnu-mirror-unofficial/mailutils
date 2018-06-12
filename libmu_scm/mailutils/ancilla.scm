@@ -20,6 +20,7 @@
 (use-modules ((mailutils mailutils))
 	     ((ice-9 regex)))
 
+
 (define-public (message-format dest msg)
   "Formats a message hiding all mutable information (email and date)."
   "The @samp{dest} argument has the same meaning as in @samp{format}."
@@ -29,11 +30,14 @@
       (lambda (m)
 	(format dest "~a\"X@Y\" \"Dow Mon Day HH:MM\" ~a ~a>"
 		(match:substring m 1)
-		(match:substring m 4)
-		(match:substring m 5)))))))
+	        (match:substring m 4)
+	        (match:substring m 5)))))))
 
 (define-public (string->message str)
-  (call-with-input-string str (lambda (port) (mu-message-from-port port))))
+  (mu-message-from-port (open-input-string str)))
+
+(define-public (file->message file)
+  (mu-message-from-port (open-file file "r")))
 
 (define-public (test-message)
   (string->message

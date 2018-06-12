@@ -14,7 +14,7 @@ m4_define([MU_GUILE_CHECK],
 [AT_DATA([input.scm],[dnl
 (use-modules ((mailutils mailutils))
              ((mailutils ancilla)))
-$1
+[$1]
 ])
 m4_if(MU_TEST_MAILBOX,,,[MUT_MBCOPY($abs_top_srcdir/testsuite/MU_TEST_MAILBOX,mbox)])
 AT_CHECK([TZ=0 guile -q --no-auto-compile -L $LIBMU_SCM_ROOT -L $LIBMU_SCM_SRCDIR -s input.scm 2>err
@@ -51,6 +51,10 @@ m4_include([message-get-header-fields.at])
 m4_include([message-port-read-1.at])
 m4_include([message-port-read-2.at])
 
+m4_include([message-multipart.at])
+m4_include([message-get-num-parts.at])
+m4_include([message-get-part.at])
+
 m4_include([message-set-header.at])
 m4_include([message-set-header-fields.at])
 
@@ -59,6 +63,7 @@ m4_include([message-port-1.at])
 m4_include([message-port-2.at])
 m4_include([message-body.at])
 m4_include([bodyp.at])
+m4_include([message-delete.at])
 
 AT_BANNER([mu-mailbox functions])
 m4_include([mailbox-open.at])
@@ -69,5 +74,9 @@ m4_include([mailbox-get-size.at])
 m4_include([mailbox-messages-count.at])
 m4_include([mailbox-get-message.at])
 m4_include([mailbox-iterate.at])
+m4_include([mailbox-append-message.at])
+m4_include([mailbox-expunge.at])
+m4_include([message-get-flag.at])
+
 #
 m4_popdef([MU_TEST_MAILBOX])

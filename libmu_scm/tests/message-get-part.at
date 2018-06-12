@@ -4,11 +4,11 @@
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-AT_SETUP([mu-message-get-num-parts])
+AT_SETUP([mu-message-get-part])
 AT_KEYWORDS([message])
 WITH_MAILBOX([spool/mime.msg],
  [MU_GUILE_CHECK([(let ((msg (mu-message-get-part (file->message "mbox") 1)))
- (message-format [#t] msg)
+ (message-format #t msg)
  (display (mu-message-get-header-fields msg)))],
   0,
   [#<message "X@Y" "Dow Mon Day HH:MM" 14 489>((Content-Type . text/plain; name="msg.21"; charset="us-ascii") (Content-ID . <5122.1026510654.2@example.net>) (Content-Description . Father William Part I))])])

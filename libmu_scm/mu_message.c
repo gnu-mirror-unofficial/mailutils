@@ -31,8 +31,8 @@ static size_t
 mu_scm_message_free (SCM message_smob)
 {
   struct mu_message *mum = (struct mu_message *) SCM_CDR (message_smob);
-  if (mu_message_get_owner (mum->msg) == NULL)
-    mu_message_destroy (&mum->msg, NULL);
+  if (mum->mbox == NULL)
+    mu_message_destroy (&mum->msg, mu_message_get_owner (mum->msg));
   return 0;
 }
 
@@ -81,6 +81,7 @@ mu_scm_message_print (SCM message_smob, SCM port, scm_print_state * pstate)
     {
       char *p;
       char const *s;
+      mu_attribute_t attr;
       
       p = _get_envelope_sender (env);
       scm_puts ("\"", port);
@@ -106,10 +107,25 @@ mu_scm_message_print (SCM message_smob, SCM port, scm_print_state * pstate)
       
       mu_message_size (mum->msg, &m_size);
       mu_message_lines (mum->msg, &m_lines);
-      
-      snprintf (datebuf, sizeof (datebuf), "%lu %lu",
-		(unsigned long) m_lines, (unsigned long) m_size);
-      scm_puts (datebuf, port);
+
+      scm_intprint (m_lines, 10, port);
+      scm_putc (' ', port);
+      scm_intprint (m_size, 10, port);
+
+      if (mu_message_get_attribute (mum->msg, &attr) == 0)
+	{
+	  char abuf[MU_STATUS_BUF_SIZE];
+	  if (mu_attribute_to_string (attr, abuf, sizeof(abuf), NULL) == 0)
+	    {
+	      if (abuf[0])
+		{
+	      	  scm_putc (' ', port);
+		  scm_puts (abuf, port);
+		}
+	    }
+	  else
+	    scm_puts (" E", port);	    
+	}
     }
   scm_puts (">", port);
   return 1;

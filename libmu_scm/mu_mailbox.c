@@ -52,7 +52,6 @@ mu_scm_mailbox_print (SCM mailbox_smob, SCM port, scm_print_state * pstate)
   size_t count = 0;
   mu_url_t url = NULL;
 
-  mu_mailbox_messages_count (mum->mbox, &count);
   mu_mailbox_get_url (mum->mbox, &url);
 
   scm_puts ("#<mailbox ", port);
@@ -67,12 +66,11 @@ mu_scm_mailbox_print (SCM mailbox_smob, SCM port, scm_print_state * pstate)
       const char *p = mu_url_to_string (url);
       if (p)
 	{
-	  char buf[64];
-	  
+	  mu_mailbox_messages_count (mum->mbox, &count);
 	  scm_puts (p, port);
-	  
-	  snprintf (buf, sizeof (buf), " (%lu)", (unsigned long) count);
-	  scm_puts (buf, port);
+	  scm_puts (" (", port);
+	  scm_intprint (count, 10, port);
+	  scm_putc (')', port);
 	}
       else
 	scm_puts ("uninitialized", port);

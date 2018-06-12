@@ -1,0 +1,21 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([mu-message-delete])
+AT_KEYWORDS([message])
+MU_GUILE_CHECK([
+(let ((msg (test-message)))
+  (display msg)(newline)
+  (mu-message-delete msg)
+  (display msg)(newline)
+  (mu-message-delete msg #f)
+  (display msg)(newline))],
+ 0,
+[#<message "user@example.org" "Fri Jun  8 14:30" 10 539>
+#<message "user@example.org" "Fri Jun  8 14:30" 10 539 D>
+#<message "user@example.org" "Fri Jun  8 14:30" 10 539>
+])
+AT_CLEANUP

@@ -1,0 +1,43 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([mailbox-expunge])
+AT_KEYWORDS([mailbox])
+WITH_MAILBOX([spool/mbox2],
+ [MU_GUILE_CHECK([
+(use-modules ((ice-9 binary-ports)))
+(define (mailbox-list mbox)
+  (do ((msg (mu-mailbox-first-message mbox) (mu-mailbox-next-message mbox)))
+      ((not (mu-mailbox-more-messages? mbox)))
+  (display msg)(newline)))
+(let ((mbox (mu-mailbox-open "mbox" "rw")))
+  (mu-message-delete (mu-mailbox-get-message mbox 3))
+  (mu-mailbox-expunge mbox)
+  (mailbox-list mbox)
+  (mu-mailbox-close mbox))
+(let ((mbox (mu-mailbox-open "mbox" "r")))
+  (display "; Revisited\n")
+  (mailbox-list mbox))],
+0,
+[#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 47 1297>
+#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 15 552>
+#<message "gray@example.net" "Sat Jul 13 00:50" 86 3417>
+#<message "gray@example.net" "Sat Jul 13 00:43" 29 875>
+; Revisited
+#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 47 1297>
+#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 15 552>
+#<message "gray@example.net" "Sat Jul 13 00:50" 86 3417>
+#<message "gray@example.net" "Sat Jul 13 00:43" 29 875>
+])])
+AT_CLEANUP
+
+dnl depends on:
+dnl message-print.at
+dnl message-port-read-2.at
+dnl mailbox-open.at
+dnl mailbox-iterate.at
+dnl message-delete.at
+dnl 

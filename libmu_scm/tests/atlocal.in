@@ -2,7 +2,7 @@
 # Configurable variable values for Mailutils test suite.
 # Copyright (C) 2018 Free Software Foundation, Inc.
 
-PATH=@abs_builddir@:@abs_top_builddir@/frm:$top_srcdir:$srcdir:$PATH
+PATH=@abs_builddir@:$top_srcdir:$srcdir:$PATH
 MAILUTILS_SCM_LIBRARY_ROOT=@abs_top_builddir@
 export MAILUTILS_SCM_LIBRARY_ROOT
 LIBMU_SCM_ROOT=@abs_builddir@/..

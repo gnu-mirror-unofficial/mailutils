@@ -70,7 +70,14 @@ TESTSUITE_AT = \
  message-port-read-1.at\
  message-port-read-2.at\
  message-set-header.at\
- message-set-header-fields.at
+ message-set-header-fields.at\
+ message-multipart.at\
+ message-get-num-parts.at\
+ message-get-part.at\
+ mailbox-append-message.at\
+ message-delete.at\
+ message-get-flag.at\
+ mailbox-expunge.at
 
 TESTSUITE = $(srcdir)/testsuite
 M4=m4

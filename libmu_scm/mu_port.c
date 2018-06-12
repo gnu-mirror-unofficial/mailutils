@@ -115,13 +115,8 @@ mu_port_print (SCM exp, SCM port, scm_print_state *pstate)
   scm_puts ("mu-port", port);
   if (mu_stream_size (mp->stream, &size) == 0)
     {
-      char *buf;
-      if (mu_asprintf (&buf, " %5lu", (unsigned long) size) == 0)
-	{
-	  scm_puts (buf, port);
-	  scm_puts (" chars", port);
-	  free (buf);
-	}
+      scm_intprint (size, 10, port);
+      scm_puts (" octets", port);
     }
   scm_putc ('>', port);
   return 1;

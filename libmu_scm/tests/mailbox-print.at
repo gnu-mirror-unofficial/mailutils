@@ -15,7 +15,7 @@ WITH_MAILBOX([spool/mbox1],
 	     (display (mu-mailbox-open "mbox" "r"))))))
   (cond
    ((string-match
-       ["^(#<mailbox[[:space:]]+).*/(mbox[[:space:]]+\\(5\\)>)$"] s)
+       "^(#<mailbox[[:space:]]+).*/(mbox[[:space:]]+\\(5\\)>)$" s)
     (exit 0))
    (else
     (display s)(newline)
