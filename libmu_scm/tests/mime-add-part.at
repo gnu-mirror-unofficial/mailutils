@@ -1,0 +1,64 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([mu-mime-add-part and mu-mime-get-message])
+AT_KEYWORDS([mime])
+WITH_MAILBOX([spool/mime.msg],
+ [MU_GUILE_CHECK([
+(use-modules ((ice-9 regex))
+	     ((ice-9 binary-ports)))
+
+(let ((mime (mu-mime-create)))
+  (mu-mime-add-part mime (test-message))
+  (mu-mime-add-part mime (test-message))
+  (let ((msg (mu-mime-get-message mime)))
+    (let* ((hdr (mu-message-get-header msg "Content-Type"))
+	   (m (string-match "^multipart/mixed; boundary=\"(.*)\"" hdr))
+	   (bnd (match:substring m 1)))
+      (let ((s (with-output-to-string
+		 (lambda ()
+		   (let ((port (mu-message-get-port msg "r" #t)))
+		     (do ((c (get-u8 port) (get-u8 port)))
+			 ((eof-object? c))
+		       (put-u8 (current-output-port) c))
+		     (close port))))))
+	(regexp-substitute/global
+	 (current-output-port)
+	 (make-regexp (regexp-quote bnd))
+	 s
+	 'pre "BOUNDARY" 'post)))))],
+ 0,
+ [MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+--BOUNDARY
+From: user@example.org
+To: someone@example.com
+Subject: De omnibus rebus et quibusdam aliis
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat
+non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+--BOUNDARY
+From: user@example.org
+To: someone@example.com
+Subject: De omnibus rebus et quibusdam aliis
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat
+non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+--BOUNDARY--
+])])
+AT_CLEANUP
+

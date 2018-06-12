@@ -1,0 +1,30 @@
+# This file is part of GNU Mailutils                    -*- Autotest -*-
+# Copyright (C) 2018 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+AT_SETUP([mu-mime-get-part])
+AT_KEYWORDS([mime])
+WITH_MAILBOX([spool/mime.msg],
+ [MU_GUILE_CHECK([
+(let ((msg (file->message "mbox")))
+  (let* ((mime (mu-mime-create 0 msg))
+         (part-1 (mu-mime-get-part mime 1))
+	 (part-2 (mu-mime-get-part mime 2)))
+    (message-format #t part-1)
+    (newline)
+    (display (mu-message-get-header part-1 "Content-ID"))
+    (newline)
+    (message-format #t part-2)
+    (newline)
+    (display (mu-message-get-header part-2 "Content-ID"))
+    (newline)))],
+ 0,
+ [#<message "X@Y" "Dow Mon Day HH:MM" 14 489>
+<5122.1026510654.2@example.net>
+#<message "X@Y" "Dow Mon Day HH:MM" 52 2343>
+<5122.1026510654.3@example.net>
+])])
+AT_CLEANUP
+

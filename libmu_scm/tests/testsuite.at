@@ -78,5 +78,13 @@ m4_include([mailbox-append-message.at])
 m4_include([mailbox-expunge.at])
 m4_include([message-get-flag.at])
 
+AT_BANNER([mu-mime functions])
+m4_include([mime-create.at])
+m4_include([mime-p.at])
+m4_include([mime-multipart-p.at])
+m4_include([mime-get-num-parts.at])
+m4_include([mime-get-part.at])
+m4_include([mime-add-part.at])
+
 #
 m4_popdef([MU_TEST_MAILBOX])

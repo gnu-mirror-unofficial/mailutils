@@ -77,7 +77,13 @@ TESTSUITE_AT = \
  mailbox-append-message.at\
  message-delete.at\
  message-get-flag.at\
- mailbox-expunge.at
+ mailbox-expunge.at\
+ mime-create.at\
+ mime-p.at\
+ mime-multipart-p.at\
+ mime-get-num-parts.at\
+ mime-get-part.at\
+ mime-add-part.at
 
 TESTSUITE = $(srcdir)/testsuite
 M4=m4

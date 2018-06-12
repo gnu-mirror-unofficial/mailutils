@@ -150,17 +150,13 @@ mu_scm_message_add_owner (SCM MESG, SCM owner)
   struct mu_message *mum = (struct mu_message *) SCM_CDR (MESG);
   SCM cell;
 
-  if (scm_is_bool (mum->mbox))
-    {
-      mum->mbox = owner;
-      return;
-    }
-  
-  if (scm_is_pair (mum->mbox))
-    cell = scm_cons (owner, mum->mbox);
+  if (mum->mbox == NULL)
+    mum->mbox = scm_cons (owner, SCM_EOL);
   else
-    cell = scm_cons (owner, scm_cons (mum->mbox, SCM_EOL));
-  mum->mbox = cell;
+    {
+      cell = scm_cons (owner, mum->mbox);
+      mum->mbox = cell;
+    }
 }
 
 mu_message_t

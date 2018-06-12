@@ -101,7 +101,7 @@ SCM_DEFINE_PUBLIC (scm_mu_mime_create, "mu-mime-create", 0, 2, 0,
   int fl;
   int status;
   
-  if (scm_is_bool (flags))
+  if (SCM_UNBNDP (flags) || scm_is_bool (flags))
     {
       /*if (flags == SCM_BOOL_F)*/
       fl = 0;
