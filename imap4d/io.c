@@ -289,6 +289,21 @@ io_untagged_response (int rc, const char *format, ...)
   int status;
   va_list ap;
 
+  if (iostream == NULL)
+    {
+      if (rc == RESP_BYE)
+	/* RESP_BYE can be emitted when iostream has not been initialized,
+	   e.g. when a recently started child receives termination signal
+	   during initialization. */
+	return 0;
+      mu_diag_output (MU_DIAG_ERROR,
+		      /* TANSLATORS: %s is replaced with the untagged response
+			 name, followed by a space character. */
+		      _("iostream is NULL while trying to send the %suntagged response"),
+		      sc2string (rc));
+      exit (EX_SOFTWARE);
+    }
+  
   mu_stream_printf (iostream, "* %s", sc2string (rc));
   va_start (ap, format);
   status = mu_stream_vprintf (iostream, format, ap);
@@ -386,12 +401,6 @@ void
 io_flush ()
 {
   mu_stream_flush (iostream);
-}
-
-int
-util_is_master ()
-{
-  return iostream == NULL;
 }
 
 void

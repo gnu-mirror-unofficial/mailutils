@@ -252,7 +252,8 @@ void io_getline (char **pbuf, size_t *psize, size_t *pnbytes);
 void io_setio (int, int, struct mu_tls_config *);
 void io_flush (void);
 int io_wait_input (int);
-  
+void io_enable_crlf (int);
+
 imap4d_tokbuf_t imap4d_tokbuf_init (void);
 void imap4d_tokbuf_destroy (imap4d_tokbuf_t *tok);
 int imap4d_tokbuf_argc (imap4d_tokbuf_t tok);
@@ -392,7 +393,7 @@ extern void imap4d_set_observer (mu_mailbox_t mbox);
 extern RETSIGTYPE imap4d_master_signal (int);
 extern RETSIGTYPE imap4d_child_signal (int);
 extern int imap4d_bye (int);
-extern int imap4d_bye0 (int reason, struct imap4d_command *command);
+extern int imap4d_bye_command (int, struct imap4d_command *);
 void imap4d_enter_critical (void);
 void imap4d_leave_critical (void);
 
@@ -462,7 +463,6 @@ int util_attribute_matches_flag (mu_attribute_t attr, const char *item);
 int util_uidvalidity (mu_mailbox_t smbox, unsigned long *uidvp);
 
   
-int util_is_master (void);
 void util_bye (void);  
 void util_chdir (const char *homedir);
 int is_atom (const char *s);

@@ -34,6 +34,6 @@ imap4d_logout (struct imap4d_session *session,
 {
   if (imap4d_tokbuf_argc (tok) != 2)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
-  imap4d_bye0 (OK, command);
+  imap4d_bye_command (OK, command);
   return 0;
 }

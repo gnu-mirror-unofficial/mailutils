@@ -20,7 +20,7 @@
 int
 imap4d_bye (int reason)
 {
-  return imap4d_bye0 (reason, NULL);
+  return imap4d_bye_command (reason, NULL);
 }
 
 static jmp_buf pipejmp;
@@ -32,7 +32,7 @@ sigpipe (int sig)
 }
 
 int
-imap4d_bye0 (int reason, struct imap4d_command *command)
+imap4d_bye_command (int reason, struct imap4d_command *command)
 {
   int status = EX_SOFTWARE;
 
