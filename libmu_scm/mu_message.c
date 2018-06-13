@@ -307,7 +307,7 @@ SCM_DEFINE_PUBLIC (scm_mu_message_set_header, "mu-message-set-header", 3, 1, 0,
 
 SCM_DEFINE_PUBLIC (scm_mu_message_get_size, "mu-message-get-size", 1, 0, 0,
 		   (SCM mesg),
-		   "Returns size of the message @var{mesg}\n.")
+		   "Returns size of the message @var{mesg}.\n")
 #define FUNC_NAME s_scm_mu_message_get_size
 {
   mu_message_t msg;
@@ -1039,7 +1039,7 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_part, "mu-message-get-part", 2, 0, 0,
 SCM_DEFINE_PUBLIC (scm_mu_message_send, "mu-message-send", 1, 3, 0,
 		   (SCM mesg, SCM mailer, SCM from, SCM to),
 "Sends message @var{mesg}. Optional @var{mailer} overrides default mailer\n"
-"settings. Optional @var{from} and @var{to} give sender and recever\n"
+"settings. Optional @var{from} and @var{to} give sender and receiver\n"
 "addresses, respectively.\n")
 #define FUNC_NAME s_scm_mu_message_send
 {

@@ -138,7 +138,8 @@ SCM_DEFINE_PUBLIC (scm_mu_body_read_line, "mu-body-read-line", 1, 0, 0,
 
 SCM_DEFINE_PUBLIC (scm_mu_body_write, "mu-body-write", 2, 0, 0,
 	    (SCM body, SCM text),
-	    "Append @var{text} to message @var{body}.")
+"Append @var{text} to message @var{body}. The use of this function is not\n"
+"recommended. Please, use message ports instead (@pxref{mu-message-get-port}).\n")
 #define FUNC_NAME s_scm_mu_body_write
 {
   char *ptr;
@@ -155,16 +156,20 @@ SCM_DEFINE_PUBLIC (scm_mu_body_write, "mu-body-write", 2, 0, 0,
       status = mu_body_get_streamref (mbp->body, &mbp->stream);
       if (status)
 	mu_scm_error (FUNC_NAME, status,
-		      "Cannot get body stream", SCM_BOOL_F);
+		      "mu_body_get_streamref", SCM_BOOL_F);
+      status = mu_stream_seek (mbp->stream, 0, SEEK_END, NULL);
+      if (status)
+	mu_scm_error (FUNC_NAME, status,
+		      "mu_stream_seek", SCM_BOOL_F);
     }
-
+  
   ptr = scm_to_locale_string (text);
   len = strlen (ptr);
   status = mu_stream_write (mbp->stream, ptr, len, NULL);
   free (ptr);
   if (status)
     mu_scm_error (FUNC_NAME, status,
-		  "Error writing to stream", SCM_BOOL_F);
+		  "mu_stream_write", SCM_BOOL_F);
   return SCM_BOOL_T;
 }
 #undef FUNC_NAME

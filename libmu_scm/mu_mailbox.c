@@ -177,8 +177,9 @@ SCM_DEFINE_PUBLIC (scm_mu_folder_directory, "mu-folder-directory", 0, 1, 0,
 
 SCM_DEFINE_PUBLIC (scm_mu_mailbox_open, "mu-mailbox-open", 2, 0, 0,
 	    (SCM url, SCM mode), 
-"Opens the mailbox specified by @var{url}. @var{mode} is a string, consisting of\n"
-"the characters described below, giving the access mode for the mailbox\n"
+"Opens the mailbox specified by @var{url}. The @var{mode} argument defines\n"
+"access mode for the mailbox. It is a string, consisting of one or more of the\n"
+"following characters:\n"
 "\n"
 "@multitable @columnfractions 0.20 0.70\n"
 "@headitem @var{mode} @tab Meaning\n"

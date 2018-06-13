@@ -80,7 +80,9 @@ SCM_DEFINE_PUBLIC (scm_mu_address_get_personal, "mu-address-get-personal", 1, 1,
 
 SCM_DEFINE_PUBLIC (scm_mu_address_get_comments, "mu-address-get-comments", 1, 1, 0,
 	    (SCM address, SCM num),
-	    "Return comment part of the @var{num}th email address from @var{address}.\n")
+"Return comment part of the @var{num}th email address from @var{address}.\n"
+"@emph{Note}: this function is a placeholder. The required functionality\n"
+"is not yet provided by the @command{libmailutils} library.\n")
 #define FUNC_NAME s_scm_mu_address_get_comments
 {
   return _get_address_part (FUNC_NAME, 
@@ -90,7 +92,7 @@ SCM_DEFINE_PUBLIC (scm_mu_address_get_comments, "mu-address-get-comments", 1, 1,
 
 SCM_DEFINE_PUBLIC (scm_mu_address_get_email, "mu-address-get-email", 1, 1, 0,
 	    (SCM address, SCM num),
-	    "Return email part of the @var{num}th email address from @var{address}.\n")
+"Return email part of the @var{num}th email address from @var{address}.\n")
 #define FUNC_NAME s_scm_mu_address_get_email
 {
   return _get_address_part (FUNC_NAME, 

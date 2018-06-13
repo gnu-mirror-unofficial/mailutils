@@ -1,19 +1,29 @@
-@c snarfed from "mu_mailbox.c":110
-@deffn {Scheme procedure} mu-mail-directory url
-If @var{url} is given, sets it as a name of the user's mail directory.
-Returns the current value of the mail directory.
+mu-mailbox?
+@c snarfed from mu_mailbox.c:129
+@deffn {Scheme Procedure} mu-mailbox? scm
+Return @code{true} if @var{scm} is a Mailutils mailbox.
+
 @end deffn
 
-@c snarfed from "mu_mailbox.c":125
-@deffn {Scheme procedure} mu-folder-directory url
+mu-user-mailbox-url
+@c snarfed from mu_mailbox.c:138
+@deffn {Scheme Procedure} mu-user-mailbox-url user
+Return URL of the default mailbox for user @var{user}.
+@end deffn
+
+mu-folder-directory
+@c snarfed from mu_mailbox.c:162
+@deffn {Scheme Procedure} mu-folder-directory [url]
 If @var{url} is given, sets it as a name of the user's folder directory.
 Returns the current value of the folder directory.
 @end deffn
 
-@c snarfed from "mu_mailbox.c":149
-@deffn {Scheme procedure} mu-mailbox-open url mode
-Opens the mailbox specified by @var{url}. @var{mode} is a string, consisting of
-the characters described below, giving the access mode for the mailbox
+mu-mailbox-open
+@c snarfed from mu_mailbox.c:191
+@deffn {Scheme Procedure} mu-mailbox-open url mode
+Opens the mailbox specified by @var{url}. The @var{mode} argument defines
+access mode for the mailbox. It is a string, consisting of one or more of the
+following characters:
 
 @multitable @columnfractions 0.20 0.70
 @headitem @var{mode} @tab Meaning
@@ -25,42 +35,65 @@ the characters described below, giving the access mode for the mailbox
 
 @end deffn
 
-@c snarfed from "mu_mailbox.c":201
-@deffn {Scheme procedure} mu-mailbox-close mbox
+@c snarfed from mu_mailbox.c:265
+@deffn {Scheme Procedure} mu-mailbox-close mbox
 Closes mailbox @var{mbox}.
 @end deffn
 
-@c snarfed from "mu_mailbox.c":216
-@deffn {Scheme procedure} mu-mailbox-get-url mbox
-Returns url of the mailbox @var{mbox}.
+@c snarfed from mu_mailbox.c:280
+@deffn {Scheme Procedure} mu-mailbox-get-url mbox
+Returns URL of the mailbox @var{MBOX}.
 @end deffn
 
-@c snarfed from "mu_mailbox.c":240
-@deffn {Scheme procedure} mu-mailbox-get-port mbox mode
-Returns a port associated with the contents of the @var{mbox}.
-@var{mode} is a string defining operation mode of the stream. It may
-contain any of the two characters: @samp{r} for reading, @samp{w} for
-writing.
-
-@end deffn
-
-@c snarfed from "mu_mailbox.c":262
-@deffn {Scheme procedure} mu-mailbox-get-message mbox msgno
+@c snarfed from mu_mailbox.c:301
+@deffn {Scheme Procedure} mu-mailbox-get-message mbox msgno
 Retrieve from message #@var{msgno} from the mailbox @var{mbox}.
 @end deffn
 
-@c snarfed from "mu_mailbox.c":288
-@deffn {Scheme procedure} mu-mailbox-messages-count mbox
+@c snarfed from mu_mailbox.c:327
+@deffn {Scheme Procedure} mu-mailbox-messages-count mbox
 Returns number of messages in the mailbox @var{mbox}.
 @end deffn
 
-@c snarfed from "mu_mailbox.c":309
-@deffn {Scheme procedure} mu-mailbox-expunge mbox
+@c snarfed from mu_mailbox.c:348
+@deffn {Scheme Procedure} mu-mailbox-expunge mbox
 Expunges deleted messages from the mailbox @var{mbox}.
 @end deffn
 
-@c snarfed from "mu_mailbox.c":328
-@deffn {Scheme procedure} mu-mailbox-append-message mbox mesg
+@c snarfed from mu_mailbox.c:367
+@deffn {Scheme Procedure} mu-mailbox-sync mbox
+Synchronize changes to @var{mbox} with its storage.
+@end deffn
+
+@c snarfed from mu_mailbox.c:388
+@deffn {Scheme Procedure} mu-mailbox-flush mbox [expunge]
+Mark all messages in @var{mbox} as seen and synchronize all changes with its storage.  If @var{expunge} is @samp{#t}, expunge deleted messages as well.
+@end deffn
+
+@c snarfed from mu_mailbox.c:412
+@deffn {Scheme Procedure} mu-mailbox-append-message mbox mesg
 Appends message @var{mesg} to the mailbox @var{mbox}.
 @end deffn
 
+@c snarfed from mu_mailbox.c:449
+@deffn {Scheme Procedure} mu-mailbox-first-message mbox
+Returns first message from the mailbox @var{mbox}.
+@end deffn
+
+@c snarfed from mu_mailbox.c:476
+@deffn {Scheme Procedure} mu-mailbox-next-message mbox
+Returns next message from the mailbox @var{mbox}.
+@end deffn
+
+@c snarfed from mu_mailbox.c:510
+@deffn {Scheme Procedure} mu-mailbox-more-messages? mbox
+Returns @samp{#t} if there are more messages in the mailbox @var{mbox}
+ahead of current iterator position.  Usually this function is used after
+a call to @samp{mu-mailbox-first-message} or @samp{mu-mailbox-next-message}.
+If not, it initializes the iterator and points it to the first message inthe mailbox.
+@end deffn
+
+@c snarfed from mu_mailbox.c:541
+@deffn {Scheme Procedure} mu-mailbox-get-size mbox
+Return size of the mailbox @var{mbox}.
+@end deffn

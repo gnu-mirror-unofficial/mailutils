@@ -1,6 +1,6 @@
-@c snarfed from "mu_scm.c":130
-@deffn {Scheme procedure} mu-register-format rest
-Registers desired mailutils formats. Any number of arguments can be given.
+@c snarfed from mu_scm.c:109
+@deffn {Scheme Procedure} mu-register-format . rest
+Registers desired mailutils formats.  Any number of arguments can be given.
 Each argument must be one of the following strings:
 
 @multitable @columnfractions 0.3 0.6
@@ -15,13 +15,39 @@ Each argument must be one of the following strings:
 @end multitable
 
 If called without arguments, the function registers all available formats
-
 @end deffn
 
-@c snarfed from "mu_scm.c":163
-@deffn {Scheme procedure} mu-strerror err
+@c snarfed from mu_scm.c:146
+@deffn {Scheme Procedure} mu-strerror err
 Return the error message corresponding to @var{err}, which must be
 an integer value.
+@end deffn
 
+@c snarfed from mu_util.c:28
+@deffn {Scheme Procedure} mu-getpwuid user
+Look up an entry in the user database. @var{User} can be an integer,
+or a string, giving the behaviour of @code{mu_get_auth_by_uid} or
+@code{mu_get_auth_by_name} respectively.
+
+Returns a vector with fields corresponding to those of the @code{mu_auth_data}
+entry in question. If no matching entry was found, returns @code{#f}.
+@end deffn
+
+@c snarfed from mu_debug.c:24
+@deffn {Scheme Procedure} mu-debug-parse spec
+Parses @var{spec} and sets MU debugging level according to it.
+@end deffn
+
+@c snarfed from mu_debug.c:46
+@deffn {Scheme Procedure} mu-debug-set catlist
+Sets MU debug level according to @var{catlist}, which is a list of
+conses: (cons category level)
+@end deffn
+
+@c snarfed from mu_debug.c:78
+@deffn {Scheme Procedure} mu-debug-get [catlist [skipunset]]
+Returns a list of MU debugging categories with corresponding levels.
+If @var{catlist} is supplied, it is a list of category names.  In this case
+only categories from this list are returned
 @end deffn
 
