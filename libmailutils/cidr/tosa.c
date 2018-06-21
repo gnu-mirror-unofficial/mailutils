@@ -42,19 +42,14 @@ mu_cidr_to_sockaddr (struct mu_cidr *cidr, struct sockaddr **psa)
   } addr;
   struct sockaddr *sa;
   int socklen;
-  int i;
-  
+
   memset (&addr, 0, sizeof (addr));
   addr.sa.sa_family = cidr->family;
   switch (cidr->family)
     {
     case AF_INET:
       socklen = sizeof (addr.s_in);
-      for (i = 0; i < cidr->len; i++)
-	{
-	  addr.s_in.sin_addr.s_addr <<= 8;
-	  addr.s_in.sin_addr.s_addr |= cidr->address[i];
-	}
+      memcpy (&addr.s_in.sin_addr.s_addr, cidr->address, 4);
       break;
 
 #ifdef MAILUTILS_IPV6

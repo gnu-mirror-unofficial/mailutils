@@ -29,55 +29,50 @@
 #include <mailutils/cidr.h>
 #include <mailutils/errno.h>
 
-static void
-uint32_to_bytes (unsigned char *bytes, uint32_t u)
-{
-  int i;
-  
-  for (i = 0; i < 4; i++)
-    {
-      bytes[i] = u & 0xff;
-      u >>= 8;
-    }
-}
-
 int
 _mu_inaddr_to_bytes (int af, void *buf, unsigned char *bytes)
 {
-  uint32_t u;
+  size_t len;
   
   switch (af)
     {
     case AF_INET:
-      memcpy (&u, buf, sizeof u);
-      uint32_to_bytes (bytes, u);
-      return 4;
-
+      len = 4;
+      break;
+      
 #ifdef MAILUTILS_IPV6
     case AF_INET6:
-      memcpy (bytes, buf, 16);
-      return 16;
+      len = 16;
+      break;
 #endif
+
+    default:
+      len = 0;
     }
-  return 0;
+  memcpy (bytes, buf, len);
+  return len;
 }
 
 int
 _mu_sockaddr_to_bytes (unsigned char *bytes, struct sockaddr const *sa)
 {
+  void *buf;
   switch (sa->sa_family)
     {
     case AF_INET:
-      uint32_to_bytes (bytes, ((struct sockaddr_in*)sa)->sin_addr.s_addr);
-      return 4;
+      buf = &(((struct sockaddr_in*)sa)->sin_addr.s_addr);
+      break;
 
 #ifdef MAILUTILS_IPV6
     case AF_INET6:
-      memcpy (bytes, &((struct sockaddr_in6*)sa)->sin6_addr, 16);
-      return 16;
+      buf = &(((struct sockaddr_in6*)sa)->sin6_addr);
+      break;
 #endif
+      
+    default:
+      return 0;
     }
-  return 0;
+  return _mu_inaddr_to_bytes (sa->sa_family, buf, bytes);
 }
 
 int
