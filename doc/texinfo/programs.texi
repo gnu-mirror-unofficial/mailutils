@@ -5112,10 +5112,11 @@ A @samp{%} character.
 @*Default: False.
 @vrindex hold, mail variable
 
-When set to @code{True}, the read or saved messages will be stored in
-user's mailbox (@file{$HOME/mbox}).  Otherwise, they will be held in
-system mailbox also.  This option is in effect only when operating
-upon user's system mailbox.
+When set, all messages marked as read will be retained in the system
+mailbox.
+
+When not set (the default), such messages will be stored in the
+user's secondary mailbox (@file{$HOME/mbox}).
 
 @kwindex ignore 
 @item ignore
