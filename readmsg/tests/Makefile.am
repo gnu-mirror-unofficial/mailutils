@@ -40,6 +40,10 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 
 TESTSUITE_AT = \
  all.at\
+ twomsg.at\
+ hdr.at\
+ nohdr.at\
+ weed.at\
  testsuite.at
 
 TESTSUITE = $(srcdir)/testsuite
