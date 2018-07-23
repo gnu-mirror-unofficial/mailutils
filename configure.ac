@@ -383,15 +383,6 @@ case "${withval}" in
   *)   AC_MSG_ERROR(bad value ${withval} for --with-gdbm) ;;
 esac])
 
-## Support --with-db2 for backward compatibility
-if test "${with_db2+set}" = set; then
-  case "${with_db2}" in
-  yes) enable_dbm="$enable_dbm BDB2";;
-  no)  disable_dbm="$disable_dbm BDB2";;
-  *)   AC_MSG_ERROR(bad value ${with_db2} for --with-db2) ;;
-  esac
-fi
-
 AC_ARG_WITH([berkeley-db],
             AC_HELP_STRING([--with-berkeley-db@<:@=LIBDB@:>@],
                            [use Berkeley DB]),
@@ -510,13 +501,10 @@ check_dbm_impl() {
                      DBMLIBS="$DBMLIBS -lgdbm"
                      status_dbm="$status_dbm,GDBM"]);;
 
-  BDB2)   check_bdb 2 db db_open
-          test -n "$status_bdb" && status_dbm="$status_dbm,Berkeley DB v. $status_bdb";;
-
-  BDB)    for version in 4 3 2
+  BDB)    for version in 6 5 4 3 2
 	  do
 		case $version in
-		4|3) func=db_create;;
+		6|5|4|3) func=db_create;;
 		2)   func=db_open;;
 		esac
 		check_bdb $version db $func
@@ -530,10 +518,10 @@ check_dbm_impl() {
 	  name=`expr $1 : 'BDB=\(.*\)'`
   	  case $name in
 	  [[0-9]]*)  check_slackware_bdb $name;;
-	  *)	     for version in 4 3 2
+	  *)	     for version in 6 5 4 3 2
 	             do
 			case $version in
-			4|3) func=db_create;;
+			6|5|4|3) func=db_create;;
 			2)   func=db_open;;
 			esac
 			check_bdb $version $name $func
