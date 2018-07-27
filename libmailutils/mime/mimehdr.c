@@ -292,6 +292,7 @@ _mime_header_parse (const char *text, char **pvalue,
 
   ws.ws_delim = " \t\r\n;";
   ws.ws_escape[0] = ws.ws_escape[1] = "\\\\\"\"";
+  ws.ws_options = 0;
   MU_WRDSO_ESC_SET (&ws, 0, MU_WRDSO_BSKEEP);
   MU_WRDSO_ESC_SET (&ws, 1, MU_WRDSO_BSKEEP);
   if (mu_wordsplit (text, &ws,
