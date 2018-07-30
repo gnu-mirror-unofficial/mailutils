@@ -18,8 +18,6 @@
 #ifndef _MAILUTILS_PYTHON_H
 #define _MAILUTILS_PYTHON_H
 
-#include <Python.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

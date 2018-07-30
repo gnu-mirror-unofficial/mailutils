@@ -16,10 +16,6 @@
 
 ACLOCAL_AMFLAGS = -I m4 -I am -I gint -I doc/imprimatur
 
-if MU_COND_PYTHON
-  PYTHON_DIR = python
-endif
-
 if MU_COND_MH
   MH_DIR = mh
 endif
@@ -101,7 +97,7 @@ SUBDIRS = . \
  $(LIBMU_SCM_DIR)\
  $(LIBMU_DBM_DIR)\
  libmu_sieve\
- $(PYTHON_DIR)\
+ python\
  doc\
  examples\
  mu\

@@ -17,10 +17,11 @@
 #if defined(HAVE_CONFIG_H)
 # include <config.h>
 #endif
+#include <Python.h>
 #include "muscript.h"
 #include "muscript_priv.h"
-#include <mailutils/python.h>
 #include <string.h>
+#include <mailutils/python.h>
 
 static int
 python_init (const char *prog, const char **env, mu_script_descr_t *pdescr)

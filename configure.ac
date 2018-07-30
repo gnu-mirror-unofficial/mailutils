@@ -1188,12 +1188,21 @@ esac],[status_python=yes])
 AC_SUBST(PYTHON_LIBS)
 AC_SUBST(PYTHON_INCLUDES)
 
+AC_SUBST(PYTHON_MAJOR)
+
 if test "$status_python" = yes; then
   AM_PATH_PYTHON(2.5.0,, [status_python=no])
   if test "$status_python" = yes; then
     AC_ARG_VAR([PYTHON_CONFIG], [The name of python-config binary])
     AC_PATH_PROG([PYTHON_CONFIG], python-config)
     if test -n "$PYTHON_CONFIG"; then
+      case $PYTHON_VERSION in
+      2.*) PYTHON_MAJOR=2;;
+      3.*) PYTHON_MAJOR=3;;
+      *)   AC_MSG_WARN([unsupported Python version $PYTHON_VERSION])
+           status_python=no
+      esac
+      
       PYTHON_LIBS=`python-config --libs`
       PYTHON_INCLUDES=`python-config --includes`
     else
@@ -1202,7 +1211,7 @@ if test "$status_python" = yes; then
 
     if test "$status_python" = yes; then
       AC_DEFINE(WITH_PYTHON,1,[Enable Python support])
-      MU_LIB_PY='${top_builddir}/python/libmu_py/libmu_py.la'
+      MU_LIB_PY='${top_builddir}/python/$(PYTHON_MAJOR)/libmu_py/libmu_py.la'
       AC_SUBST([PYTHON_SITE_DIR])
       AC_SUBST([PYTHON_EXEC_DIR])
       AC_ARG_WITH([pythondir],
@@ -1218,7 +1227,13 @@ if test "$status_python" = yes; then
     fi
   fi
 fi
-AM_CONDITIONAL([MU_COND_PYTHON], [test "$status_python" = yes])
+
+AM_CONDITIONAL([MU_COND_PYTHON],
+  [test "$status_python" = yes])
+AM_CONDITIONAL([MU_COND_PYTHON2],
+  [test "$status_python" = yes && test "$PYTHON_MAJOR" = "2"])
+AM_CONDITIONAL([MU_COND_PYTHON3],
+  [test "$status_python" = yes && test "$PYTHON_MAJOR" = "3"])
 
 AC_SUBST(MU_CXX_EXAMPLES_BUILD)
 MU_ENABLE_SUPPORT(cxx,
@@ -1411,7 +1426,11 @@ status_gnutls=$status_gnutls
 status_gsasl=$status_gsasl
 status_gssapi=$status_gssapi
 status_guile=$useguile
-status_python=$status_python
+if test $status_python = yes; then
+  status_python="$status_python (v. $PYTHON_MAJOR)"
+else
+  status_python=$status_python
+fi
 status_cxx=$mu_cv_enable_cxx
 status_tcpwrap=$status_tcpwrap
 status_pthread=$usepthread
@@ -1445,6 +1464,8 @@ AC_CONFIG_FILES([
  examples/config/Makefile
  examples/cpp/Makefile
  examples/python/Makefile
+ examples/python/2/Makefile
+ examples/python/3/Makefile
  examples/scheme/Makefile
  gint/Makefile
  frm/Makefile
@@ -1509,8 +1530,12 @@ AC_CONFIG_FILES([
  pop3d/Makefile
  pop3d/testsuite/Makefile
  python/Makefile
- python/libmu_py/Makefile
- python/mailutils/Makefile
+ python/2/Makefile
+ python/2/libmu_py/Makefile
+ python/2/mailutils/Makefile
+ python/3/Makefile
+ python/3/libmu_py/Makefile
+ python/3/mailutils/Makefile
  readmsg/Makefile
  mu-aux/Makefile
  mu-aux/mailutils.spec

@@ -19,6 +19,8 @@
 # include <config.h>
 #endif
 
+#include <Python.h>
+
 #include <mailutils/address.h>
 #include <mailutils/attribute.h>
 #include <mailutils/auth.h>
