@@ -1203,8 +1203,8 @@ if test "$status_python" = yes; then
            status_python=no
       esac
       
-      PYTHON_LIBS=`python-config --libs`
-      PYTHON_INCLUDES=`python-config --includes`
+      PYTHON_LIBS=`$PYTHON_CONFIG --libs`
+      PYTHON_INCLUDES=`$PYTHON_CONFIG --includes`
     else
       status_python=no     
     fi
