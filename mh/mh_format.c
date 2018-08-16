@@ -726,6 +726,7 @@ mh_format_str (mh_format_t fmt, char *str, size_t width, char **pstr)
   buf = mu_alloc (size + 1);
   MU_ASSERT (mu_stream_seek (outstr, 0, MU_SEEK_SET, NULL));
   MU_ASSERT (mu_stream_read (outstr, buf, size, NULL));
+  buf[size] = 0;
 
   *pstr = buf;
   
