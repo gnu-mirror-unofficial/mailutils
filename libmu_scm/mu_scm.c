@@ -214,6 +214,7 @@ mu_scm_init ()
   mu_scm_mime_init ();
   mu_scm_debug_port_init ();
   mu_scm_debug_init ();
+  mu_scm_filter_init ();
   
 #include "mu_scm.x"
   

@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2018-07-30
+GNU mailutils NEWS -- history of user-visible changes. 2018-08-26
 Copyright (C) 2002-2018 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -7,6 +7,42 @@ Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 Version 3.4.91 (Git)
 
 * Dropped support for Guile version prior to 2.2.0
+
+* New scheme functions
+
+** mu-encoder-port port name . args
+
+Create encoding port using Mailutils filter <name> with optional arguments
+<args>. The <port> argument must be a port opened either for writing
+or for reading, but not both. The returned port will have the same
+mode as <port>.
+
+If <port> is open for reading, data will be read from it, passed through the
+filter and returned. If it is open for writing, data written to the returned
+port will be passed through filter and its output will be written to <port>.
+
+** mu-decoder-port port name . args
+
+Create decoding port using Mailutils filter <name> with optional arguments
+<args>. The <port> argument must be a port opened either for writing
+or for reading, but not both. The returned port will have the same
+mode as <port>.
+
+If <port> is open for reading, data will be read from it, passed through the
+filter and returned. If it is open for writing, data written to the returned
+port will be passed through filter and its output will be written to <port>.
+
+** mu-header-decode hdr [charset]
+
+Decode the header value hdr, encoded as per RFC 2047.
+Optional charset defaults to "utf-8".
+
+** mu-header-encode hdr [encoding [charset]]
+
+Encode the string hdr as per RFC 2047.
+Allowed values for encoding are "base64 and "quoted-printable".
+Default is selected depending on number of printable characters in "hdr".
+Optional charset defaults to "utf-8".
 
 * Introduced support for Python 3.x
 

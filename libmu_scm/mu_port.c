@@ -22,7 +22,6 @@
 struct mu_port
 {
   mu_stream_t stream;      /* Associated stream */
-  SCM msg;                 /* Message the port belongs to */		
 };
 
 #define MU_PORT(x) ((struct mu_port *) SCM_STREAM (x))
@@ -30,12 +29,11 @@ struct mu_port
 static scm_t_port_type *scm_mu_port_type;
 
 SCM
-mu_port_make_from_stream (SCM msg, mu_stream_t stream, long mode)
+mu_port_make_from_stream (mu_stream_t stream, long mode)
 {
   struct mu_port *mp;
 
   mp = scm_gc_typed_calloc (struct mu_port);
-  mp->msg = msg;
   mp->stream = stream;
   return scm_c_make_port (scm_mu_port_type, mode | SCM_BUF0, (scm_t_bits) mp);
 }
@@ -53,7 +51,7 @@ mu_port_read (SCM port, SCM dst, size_t start, size_t count)
   struct mu_port *mp = MU_PORT (port);
   int status;
   size_t nread;
-  
+
   status = mu_stream_read (mp->stream,
 			   SCM_BYTEVECTOR_CONTENTS (dst) + start,
 			   count,

@@ -897,6 +897,7 @@ SCM_DEFINE_PUBLIC (scm_mu_message_set_user_flag, "mu-message-set-user-flag", 2, 
 
 SCM_DEFINE_PUBLIC (scm_mu_message_get_port, "mu-message-get-port", 2, 1, 0,
 		   (SCM mesg, SCM mode, SCM full),
+"@anchor{mu-message-get-port}\n"		   
 "Returns a port associated with the message @var{mesg}. The @var{mode} is a\n"
 "string defining operation mode of the stream. It may contain any of the\n"
 "two characters: @samp{r} for reading, @samp{w} for writing.\n"
@@ -943,7 +944,7 @@ SCM_DEFINE_PUBLIC (scm_mu_message_get_port, "mu-message-get-port", 2, 1, 0,
     }
 
   str = scm_to_locale_string (mode);
-  ret = mu_port_make_from_stream (mesg, stream, scm_mode_bits (str));
+  ret = mu_port_make_from_stream (stream, scm_mode_bits (str));
   free (str);
   return ret;
 }

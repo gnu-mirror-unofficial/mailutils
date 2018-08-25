@@ -26,6 +26,7 @@ C_SRCS=\
  mu_body.c\
  mu_debug.c\
  mu_dbgport.c\
+ mu_filter.c\
  mu_guile.c\
  mu_mailbox.c\
  mu_message.c\
@@ -56,6 +57,7 @@ DOT_X_FILES=\
  mu_address.x\
  mu_body.x\
  mu_debug.x\
+ mu_filter.x\
  mu_mailbox.x\
  mu_message.x\
  mu_mime.x\
@@ -68,13 +70,14 @@ DOT_DOC_FILES=\
  mu_address.doc\
  mu_body.doc\
  mu_debug.doc\
+ mu_filter.doc\
  mu_mailbox.doc\
  mu_message.doc\
  mu_mime.doc\
  mu_logger.doc\
  mu_port.doc\
  mu_scm.doc\
- mu_util.doc 
+ mu_util.doc
 
 EXTRA_DIST=
 CLEANFILES=

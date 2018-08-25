@@ -62,7 +62,7 @@ extern void mu_scm_address_init (void);
 extern void mu_scm_logger_init (void);
 
 extern void mu_scm_port_init (void);
-extern SCM mu_port_make_from_stream (SCM msg, mu_stream_t stream, long mode);
+extern SCM mu_port_make_from_stream (mu_stream_t stream, long mode);
 
 extern void mu_scm_mime_init (void);
 extern void mu_scm_message_add_owner (SCM MESG, SCM owner);
