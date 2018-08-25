@@ -233,14 +233,19 @@ _base64_encoder (void *xd,
       break;
     }
 
+  if (iobuf->osize < 4)
+    {
+      iobuf->osize = 4;
+      return mu_filter_moreoutput;
+    }
+
   if (iobuf->isize == 0)
     {
-      iobuf->osize = 0;
       iobuf->eof = 1;
-      return mu_filter_ok;
+      /* continue to the loop; this is necessary if the encoder is in
+	 base64_newline or base64_rollback state */
     }
-  
-  if (iobuf->isize <= 3)
+  else if (iobuf->isize <= 3)
     {
       if (cmd == mu_filter_lastbuf)
 	pad = 1;
@@ -249,11 +254,6 @@ _base64_encoder (void *xd,
 	  iobuf->isize = 4;
 	  return mu_filter_moreinput;
 	}
-    }
-  if (iobuf->osize < 4)
-    {
-      iobuf->osize = 4;
-      return mu_filter_moreoutput;
     }
       
   ptr = (const unsigned char*) iobuf->input;
