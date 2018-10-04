@@ -272,7 +272,6 @@ struct _mu_imap_message
 struct _mu_imap_mailbox
 {
   int flags;
-  mu_off_t total_size;        /* Total mailbox size. */
   struct mu_imap_stat stats;     /* Mailbox statistics */ 
   struct _mu_imap_message *msgs; /* Array of messages */
   size_t msgs_cnt;               /* Number of used slots in msgs */

@@ -1205,7 +1205,7 @@ _imap_fetch_callback (void *data, int code, size_t sdat, void *pdat)
   int rc;
   struct _mu_imap_message *imsg;
   
-  rc = _imap_realloc_messages (imbx, sdat - 1);
+  rc = _imap_realloc_messages (imbx, sdat);
   if (rc)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
@@ -1240,43 +1240,51 @@ _imap_mbx_scan (mu_mailbox_t mbox, size_t msgno, size_t *pcount)
   
   mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
 	    (_("scanning mailbox %s"), mu_url_to_string (mbox->url)));
-  rc = mu_msgset_create (&msgset, NULL, MU_MSGSET_NUM);
-  if (rc)
-    return rc;
-  rc = mu_msgset_add_range (msgset, msgno, MU_MSGNO_LAST, MU_MSGSET_NUM);
-  if (rc)
+  if (imbx->stats.message_count > 0)
     {
-      mu_msgset_free (msgset);
-      return rc;
-    }
-  
-  _imap_mbx_clrerr (imbx);
-  rc = _imap_fetch_with_callback (imap, msgset, _imap_scan_items,
-				  _imap_fetch_callback, imbx);
-  mu_msgset_free (msgset);
-  if (rc == 0)
-    rc = _imap_mbx_errno (imbx);
-  if (rc == 0)
-    {
-      size_t i;
-      mu_off_t total = 0;
-
-      imbx->flags |= _MU_IMAP_MBX_UPTODATE;
-
-      for (i = 1; i <= imbx->msgs_cnt; i++)
+      rc = mu_msgset_create (&msgset, NULL, MU_MSGSET_NUM);
+      if (rc)
+	return rc;
+      rc = mu_msgset_add_range (msgset, msgno, MU_MSGNO_LAST, MU_MSGSET_NUM);
+      if (rc)
 	{
-	  total += imbx->msgs[i-1].message_size;
-	  /* MU_EVT_MESSAGE_ADD must be delivered only when it is already
-	     possible to retrieve the message in question.  It could not be
-	     done in the fetch handler for obvious reasons.  Hence the extra
-	     loop. */
-	  if (mbox->observable)
-	    mu_observable_notify (mbox->observable, MU_EVT_MESSAGE_ADD, &i);
+	  mu_msgset_free (msgset);
+	  return rc;
 	}
-      imbx->total_size = total;
-      
+  
+      _imap_mbx_clrerr (imbx);
+      rc = _imap_fetch_with_callback (imap, msgset, _imap_scan_items,
+				      _imap_fetch_callback, imbx);
+      mu_msgset_free (msgset);
+      if (rc == 0)
+	rc = _imap_mbx_errno (imbx);
+      if (rc == 0)
+	{
+	  size_t i;
+	  mu_off_t total = 0;
+	  
+	  imbx->flags |= _MU_IMAP_MBX_UPTODATE;
+
+	  for (i = 1; i <= imbx->msgs_cnt; i++)
+	    {
+	      total += imbx->msgs[i-1].message_size;
+	      /* MU_EVT_MESSAGE_ADD must be delivered only when it is already
+		 possible to retrieve the message in question.  It could not be
+		 done in the fetch handler for obvious reasons.  Hence the extra
+		 loop. */
+	      if (mbox->observable)
+		mu_observable_notify (mbox->observable, MU_EVT_MESSAGE_ADD, &i);
+	    }
+	  if (pcount)
+	    *pcount = imbx->msgs_cnt;
+	}
+    }
+  else
+    {
+      rc = 0;
+      imbx->flags |= _MU_IMAP_MBX_UPTODATE;
       if (pcount)
-	*pcount = imbx->msgs_cnt;
+	*pcount = 0;
     }
   return rc;
 }
@@ -1296,7 +1304,7 @@ _imap_mbx_is_updated (mu_mailbox_t mbox)
 		(_("mu_imap_noop: %s"), mu_strerror (rc)));
       imbx->last_error = rc;
     }
-  return imbx->flags & _MU_IMAP_MBX_UPTODATE;
+  return _imap_mbx_uptodate(imbx);
 }
 
 static int
