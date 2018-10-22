@@ -90,7 +90,7 @@ _mu_full_month_string (const char *str, char **endp)
   return -1;
 }
 
-int
+static int
 get_num (const char *str, char **endp, int ndig, int minval, int maxval,
 	 int *pn)
 {

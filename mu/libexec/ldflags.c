@@ -133,7 +133,7 @@ main (int argc, char **argv)
   
   add_entry (-100, LINK_FLAGS);
   add_entry (100, LINK_POSTFLAGS);
-  add_entry (1, "-lmailutils");
+  add_entry (8, "-lmailutils");
 #ifdef ENABLE_NLS
   if (sizeof (I18NLIBS) > 1)
     add_entry (10, I18NLIBS);
