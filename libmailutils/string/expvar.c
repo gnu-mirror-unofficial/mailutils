@@ -288,11 +288,9 @@ mu_str_expand (char **output, char const *input, mu_assoc_t assoc)
   ws.ws_getvar = exp_getvar;
   ws.ws_command = exp_runcmd;
   ws.ws_closure = assoc;
-  ws.ws_options = MU_WRDSO_ARGV;
 
   if (mu_wordsplit (input, &ws,
-		    MU_WRDSF_NOSPLIT | MU_WRDSF_GETVAR | MU_WRDSF_CLOSURE
-		    | MU_WRDSF_OPTIONS))
+		    MU_WRDSF_NOSPLIT | MU_WRDSF_GETVAR | MU_WRDSF_CLOSURE))
     {
       if (ws.ws_errno == MU_WRDSE_NOSPACE)
 	rc = ENOMEM;

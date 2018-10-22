@@ -183,70 +183,96 @@ wsp_getvar (char **ret, const char *vptr, size_t vlen, void *data)
     }
   return MU_WRDSE_UNDEF;
 }
+
+static int
+cmd_quote (char **ret, const char *str, size_t len, char **argv)
+{
+  int alen;
+  for (alen = 0; alen < len && !(str[alen] == ' ' || str[alen] == '\t'); alen++)
+    ;
+  for (; alen < len && (str[alen] == ' ' || str[alen] == '\t'); alen++)
+    ;
+  len -= alen;
+  *ret = malloc (len + 1);
+  if (!*ret)
+    return MU_WRDSE_NOSPACE;
+  memcpy (*ret, str + alen, len);
+  (*ret)[len] = 0;
+  return MU_WRDSE_OK;
+}
+  
+static int
+cmd_words (char **ret, const char *str, size_t len, char **argv)
+{
+  char *p;
+  int i;
+  
+  p = malloc (len + 1);
+  if (!p)
+    return MU_WRDSE_NOSPACE;
+  *ret = p;
+  for (i = 1; argv[i]; i++)
+    {
+      size_t s = strlen (argv[i]);
+      if (i > 1)
+	*p++ = ' ';
+      memcpy (p, argv[i], s);
+      p += s;
+    }
+  *p = 0;
+  return MU_WRDSE_OK;
+}
+
+static int
+cmd_lines (char **ret, const char *str, size_t len, char **argv)
+{
+  char *p;
+  int i;
+  
+  p = malloc (len + 1);
+  if (!p)
+    return MU_WRDSE_NOSPACE;
+  *ret = p;
+  for (i = 1; argv[i]; i++)
+    {
+      size_t s = strlen (argv[i]);
+      if (i > 1)
+	*p++ = '\n';
+      memcpy (p, argv[i], s);
+      p += s;
+    }
+  *p = 0;
+  return MU_WRDSE_OK;
+}
+
+static struct command
+{
+  char const *name;
+  int (*cmd)(char **ret, const char *str, size_t len, char **argv);
+} comtab[] = {
+  { "quote", cmd_quote },
+  { "words", cmd_words },
+  { "lines", cmd_lines }
+};
 
 static int
 wsp_runcmd (char **ret, const char *str, size_t len, char **argv, void *closure)
 {
-  FILE *fp;
-  char *cmd;
-  int c, lastc;
-  char *buffer = NULL;
-  size_t bufsize = 0;
-  size_t buflen = 0;
-  
-  cmd = malloc (len + 1);
-  if (!cmd)
+  int i;
+
+  for (i = 0; ; i++)
+    {
+      if (i == sizeof (comtab) / sizeof (comtab[0]))
+	break;
+      if (strcmp (comtab[i].name, argv[0]) == 0)
+	return comtab[i].cmd (ret, str, len, argv);
+    }
+
+  *ret = NULL;
+  if (mu_asprintf (ret, "unknown command: %s", argv[0]))
     return MU_WRDSE_NOSPACE;
-  memcpy (cmd, str, len);
-  cmd[len] = 0;
-
-  fp = popen (cmd, "r");
-  if (!fp)
-    {
-      ret = NULL;
-      if (mu_asprintf (ret, "can't run %s: %s", cmd, mu_strerror (errno)))
-	return MU_WRDSE_NOSPACE;
-      else
-	return MU_WRDSE_USERERR;
-    }
-
-  while ((c = fgetc (fp)) != EOF)
-    {
-      lastc = c;
-      if (c == '\n')
-	c = ' ';
-      if (buflen == bufsize)
-	{
-	  char *p;
-	  
-	  if (bufsize == 0)
-	    bufsize = 80;
-	  else
-	    bufsize *= 2;
-	  p = realloc (buffer, bufsize);
-	  if (!p)
-	    {
-	      free (buffer);
-	      free (cmd);
-	      return MU_WRDSE_NOSPACE;
-	    }
-	  buffer = p;
-	}
-      buffer[buflen++] = c;
-    }
-
-  if (buffer)
-    {
-      if (lastc == '\n')
-	--buflen;
-      buffer[buflen] = 0;
-    }
-  
-  pclose (fp);
-  free (cmd);
-
-  *ret = buffer;
-  return MU_WRDSE_OK;
+  else
+    return MU_WRDSE_USERERR;
 }
 
 enum env_type
@@ -552,7 +578,7 @@ main (int argc, char **argv)
   
   if (wsflags & MU_WRDSF_INCREMENTAL)
     trimnl_option = 1;
-  
+
   next_call = 0;
   while ((ptr = fgets (buf, sizeof (buf), stdin)))
     {

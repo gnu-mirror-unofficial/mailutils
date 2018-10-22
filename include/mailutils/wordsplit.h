@@ -1,5 +1,5 @@
 /* wordsplit - a word splitter
-   Copyright (C) 2009-2015 Sergey Poznyakoff
+   Copyright (C) 2009-2018 Sergey Poznyakoff
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -85,9 +85,8 @@ struct mu_wordsplit
                      void *clos);
 	                    /* [Input] (!MU_WRDSF_NOCMD) Returns in the memory
 			       location pointed to by RET the expansion of
-			       the command CMD (LEN bytes long).  If
-			       MU_WRDSO_ARGV option is set, ARGV contains CMD
-			       split out to words.  Otherwise ARGV is NULL.
+			       the command CMD (LEN bytes long).  On input,
+			       ARGV contains CMD split out to words.
 
 			       See ws_getvar for a discussion of possible
 			       return values. */
@@ -193,8 +192,10 @@ struct mu_wordsplit
 #define MU_WRDSO_FAILGLOB        0x00000002
 /* Allow a leading period to be matched by metacharacters. */
 #define MU_WRDSO_DOTGLOB         0x00000004
-/* ws_command needs argv parameter */
+#if 0
+/* Unused */
 #define MU_WRDSO_ARGV            0x00000008
+#endif
 /* Keep backslash in unrecognized escape sequences in words */
 #define MU_WRDSO_BSKEEP_WORD     0x00000010
 /* Handle octal escapes in words */

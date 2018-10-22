@@ -1351,6 +1351,7 @@ expcmd (struct mu_wordsplit *wsp, const char *str, size_t len,
   size_t j;
   char *value;
   struct mu_wordsplit_node *newnode;
+  struct mu_wordsplit ws;
   
   str++;
   len--;
@@ -1362,23 +1363,16 @@ expcmd (struct mu_wordsplit *wsp, const char *str, size_t len,
     }
 
   *pend = str + j;
-  if (wsp->ws_options & MU_WRDSO_ARGV)
-    {
-      struct mu_wordsplit ws;
 
-      rc = _wsplt_subsplit (wsp, &ws, str, j,
-			    MU_WRDSF_WS | MU_WRDSF_QUOTE);
-      if (rc)
-	{
-	  _wsplt_seterr_sub (wsp, &ws);
-	  mu_wordsplit_free (&ws);
-	  return 1;
-	}
-      rc = wsp->ws_command (&value, str, j, ws.ws_wordv, wsp->ws_closure);
+  rc = _wsplt_subsplit (wsp, &ws, str, j, MU_WRDSF_WS | MU_WRDSF_QUOTE);
+  if (rc)
+    {
+      _wsplt_seterr_sub (wsp, &ws);
       mu_wordsplit_free (&ws);
+      return 1;
     }
-  else
-    rc = wsp->ws_command (&value, str, j, NULL, wsp->ws_closure);
+  rc = wsp->ws_command (&value, str, j, ws.ws_wordv, wsp->ws_closure);
+  mu_wordsplit_free (&ws);
   
   if (rc == MU_WRDSE_NOSPACE)
     return _wsplt_nomem (wsp);
