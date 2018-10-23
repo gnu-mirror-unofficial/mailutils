@@ -208,6 +208,8 @@ int mu_sieve_require_relational (mu_sieve_machine_t mach, const char *name);
   
 int mu_sieve_require_variables (mu_sieve_machine_t mach);
 int mu_sieve_has_variables (mu_sieve_machine_t mach);
+int mu_sieve_variable_initialize (mu_sieve_machine_t mach,
+				  char const *name, char const *value);
 
 int mu_sieve_require_environment (mu_sieve_machine_t mach);
 

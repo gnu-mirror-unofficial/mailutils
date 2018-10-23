@@ -51,6 +51,9 @@ FILEINTO on msg uid 3: delivering into INBOX
 ])
 
 MUT_TESTCASE([set modifiers],[variables action set],
+
+
+
 [require [["variables", "fileinto"]];
 set "name" :upperfirst :lower "VALUE";
 fileinto "INBOX.${name}";
@@ -97,3 +100,16 @@ if address "To" :matches "*@*.*.*"
 DISCARD on msg uid 2: marking as deleted
 IMPLICIT KEEP on msg uid 3
 ])
+
+m4_pushdef([MUT_SIEVE_OPTIONS],[--variable=mailbox=output])
+MUT_TESTCASE([the --variable option],[variables],
+[require "fileinto";
+fileinto "${mailbox}";
+],
+[],[0],[],
+[FILEINTO on msg uid 1: delivering into output
+FILEINTO on msg uid 2: delivering into output
+FILEINTO on msg uid 3: delivering into output
+])
+m4_popdef([MUT_SIEVE_OPTIONS])
+

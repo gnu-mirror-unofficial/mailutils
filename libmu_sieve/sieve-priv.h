@@ -95,7 +95,8 @@ struct mu_sieve_machine
   regmatch_t *match_buf;     /* Offsets of parenthesized groups */
   size_t match_count;        /* Actual number of elements used in match_buf */
   size_t match_max;          /* Total number of elements available in match_buf */
-
+  mu_list_t init_var;        /* List of variable initializers */
+  
   /* Call environment */
   const char *identifier;    /* Name of action or test being executed */
   size_t argstart;           /* Index of the first argument in valspace */
@@ -175,6 +176,12 @@ struct mu_sieve_node_list
   struct mu_sieve_node *head, *tail;
 };
 
+struct mu_sieve_variable_initializer
+{
+  char *name;
+  char *value;
+};
+
 int mu_sieve_yyerror (const char *s);
 int mu_sieve_yylex (void);
 
@@ -249,4 +256,7 @@ void mu_i_sv_copy_variables (mu_sieve_machine_t child,
 			     mu_sieve_machine_t parent);
 int mu_i_sv_expand_variables (char const *input, size_t len,
 			      char **exp, void *data);
+void mu_i_sv_init_variables (mu_sieve_machine_t mach);
+
+
 

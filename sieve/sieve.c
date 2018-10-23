@@ -62,6 +62,7 @@ static int sieve_print_locus = 1; /* Should the log messages include the
 static int no_program_name;
 
 static mu_list_t env_list;
+static mu_list_t var_list;
 
 static int
 sieve_setenv (void *item, void *data)
@@ -75,6 +76,14 @@ sieve_setenv (void *item, void *data)
   return 0;
 }
 
+static int
+sieve_setvar (void *item, void *data)
+{
+  char *str = item;
+  mu_sieve_machine_t mach = data;
+  mu_sieve_variable_initialize (mach, str, str + strlen (str) + 1);
+  return 0;
+}
 
 static void
 modify_debug_flags (mu_debug_level_t set, mu_debug_level_t clr)
@@ -141,24 +150,37 @@ cli_email (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
 }
 
 static void
-cli_env (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+assign (struct mu_parseopt *po, struct mu_option *opt, char const *arg,
+	mu_list_t *plist, char const *what)
 {
   char *p = strchr (arg, '=');
   if (p == NULL)
-    mu_parseopt_error (po, _("malformed environment setting: %s"), arg);
+    mu_parseopt_error (po, _("malformed %s: %s"), what, arg);
   else
     {
       char *str;
 
       str = mu_strdup (arg);
       str[p - arg] = 0;
-      if (!env_list)
+      if (!*plist)
 	{
-	  mu_list_create (&env_list);
-	  mu_list_set_destroy_item (env_list, mu_list_free_item);
+	  mu_list_create (plist);
+	  mu_list_set_destroy_item (*plist, mu_list_free_item);
 	}
-      mu_list_append (env_list, str);
+      mu_list_append (*plist, str);
     }
+}
+
+static void
+cli_env (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  assign (po, opt, arg, &env_list, _("environment setting"));
+}
+
+static void
+cli_var (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  assign (po, opt, arg, &var_list, _("variable assignment"));
 }
 
 static struct mu_option sieve_options[] = {
@@ -202,6 +224,9 @@ static struct mu_option sieve_options[] = {
   { "environment", 0, N_("NAME=VALUE"), MU_OPTION_DEFAULT,
     N_("set sieve environment value"),
     mu_c_string, NULL, cli_env },
+  { "variable", 0, N_("NAME=VALUE"), MU_OPTION_DEFAULT,
+    N_("set sieve variable"),
+    mu_c_string, NULL, cli_var },
   MU_OPTION_END
 }, *options[] = { sieve_options, NULL };
 
@@ -469,7 +494,46 @@ main (int argc, char *argv[])
     }
   else if (argc == 1)
     {
-      script = mu_tilde_expansion (argv[0], MU_HIERARCHY_DELIMITER, NULL);
+      if (expression_option)
+	script = mu_strdup (argv[0]);
+      else if (strcmp (argv[0], "-") == 0)
+	{
+	  mu_stream_t mstr;
+	  mu_off_t size;
+	  int rc;
+	  
+	  rc = mu_memory_stream_create (&mstr, MU_STREAM_RDWR);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_memory_stream_create",
+			       NULL, rc);
+	      exit (EX_SOFTWARE);
+	    }
+	  rc = mu_stream_copy (mstr, mu_strin, 0, &size);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy", NULL, rc);
+	      exit (EX_SOFTWARE);
+	    }
+	  rc = mu_stream_seek (mstr, 0, MU_SEEK_SET, NULL);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
+	      exit (EX_SOFTWARE);
+	    }
+	  script = mu_alloc (size + 1);
+	  rc = mu_stream_read (mstr, script, size, NULL);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
+	      exit (EX_SOFTWARE);
+	    }
+	  script[size] = 0;
+	  mu_stream_destroy (&mstr);
+	  expression_option = 1;
+	}
+      else
+	script = mu_tilde_expansion (argv[0], MU_HIERARCHY_DELIMITER, NULL);
     }
   else
     {
@@ -490,7 +554,14 @@ main (int argc, char *argv[])
 
   mu_list_foreach (env_list, sieve_setenv, mach);
   mu_list_destroy (&env_list);
-    
+
+  if (var_list)
+    {
+      mu_sieve_require_variables (mach);
+      mu_list_foreach (var_list, sieve_setvar, mach);
+      mu_list_destroy (&var_list);
+    }
+  
   if (verbose)
     mu_sieve_set_logger (mach, _sieve_action_log);
 

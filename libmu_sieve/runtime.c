@@ -233,8 +233,7 @@ sieve_run (mu_sieve_machine_t mach)
     {
       mach->action_count = 0;
 
-      if (mu_sieve_has_variables (mach))
-	mu_assoc_clear (mach->vartab);
+      mu_i_sv_init_variables (mach);
       
       for (mach->pc = 1; mach->prog[mach->pc].handler; )
 	(*mach->prog[mach->pc++].instr) (mach);

@@ -1232,7 +1232,9 @@ mu_sieve_machine_dup (mu_sieve_machine_t const in, mu_sieve_machine_t *out)
       mu_locus_range_copy (&mach->dbg_locus, &in->dbg_locus);  
       
       copy_stream_state (mach, in);
-  
+
+      mu_i_sv_copy_variables (mach, in);
+      
       mach->data = in->data;
       mach->logger = in->logger;
       mach->daemon_email = in->daemon_email;
@@ -1412,6 +1414,9 @@ mu_sieve_machine_destroy (mu_sieve_machine_t *pmach)
   mu_sieve_free (mach, mach->idspace);
   mu_opool_destroy (&mach->string_pool);
   mu_list_destroy (&mach->memory_pool);
+  mu_assoc_destroy (&mach->vartab);
+  mu_list_destroy (&mach->init_var);
+
   free (mach);
   *pmach = NULL;
 }

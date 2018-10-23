@@ -6089,7 +6089,7 @@ stand-alone @dfn{sieve interpreter}, which is described in detail below.
 @node sieve interpreter
 @subsection A Sieve Interpreter
 
-Sieve interpreter @command{sieve} allows to apply Sieve scripts to an
+The sieve interpreter @command{sieve} allows you to apply Sieve scripts to
 arbitrary number of mailboxes.  GNU @command{sieve} implements a superset
 of the Sieve language as described in RFC 3028.  @xref{Sieve Language},
 for a description of the Sieve language.  @xref{GNU Extensions}, for a
@@ -6111,6 +6111,11 @@ The @command{sieve} invocation syntax is:
 @example
 sieve [@var{options}] @var{script}
 @end example
+
+Normally, @var{script} is the name of the disk file with the Sieve
+script. If @var{script} is a single dash, the script is read from the
+standard input. If the @option{-E} (@option{--expression}) option is
+given, @var{script} is taken to be the sieve script text. 
 
 @noindent
 where @var{script} denotes the filename of the sieve program to parse,
@@ -6147,6 +6152,9 @@ more of the following letters:
 @itemx --dump
 Compile the script, dump disassembled code on standard output and exit.
 
+@item --environment=@var{name}=@var{value}
+Set sieve environment variable @var{name} to the @var{value}.
+
 @item -e @var{address}
 @itemx --email @var{address}
 Override the user email address.  This is useful for @code{reject} and
@@ -6154,6 +6162,10 @@ Override the user email address.  This is useful for @code{reject} and
 from the user name and the full name of the machine where
 @command{sieve} is executed.  See also @ref{Sieve Configuration,
 email}. 
+
+@item -E,
+@itemx --expression
+Treat the @var{script} argument as Sieve program text.
 
 @item -I @var{dir}
 @itemx --includedir=@var{dir}
@@ -6179,6 +6191,9 @@ library files.  See also @ref{Sieve Configuration, library-path}.
 Add @var{dir} to the beginning of the list of directories searched for
 library files.
 
+@item --line-info=@var{bool}
+Print source location along with action logs (default).
+
 @item -M @var{url}
 @itemx --mailer=@var{url}
 Define the URL of the default mailer.
@@ -6195,6 +6210,10 @@ Do not prefix diagnostic messages with the program name.
 @itemx --ticket=@var{ticket}
 Ticket file for mailbox authentication.  See also
 @ref{Sieve Configuration, ticket}.
+
+@item --variable=@var{name}=@var{value}
+Set Sieve variable @var{name}. This option automatically inserts
+@samp{require "variables"} at the top of the script.
 
 @item -v
 @itemx --verbose

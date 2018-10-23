@@ -160,14 +160,43 @@ findprec (char const *name)
   abort ();
 }
 
+static void
+variable_set (mu_sieve_machine_t mach, char const *name, char *value)
+{
+  struct sieve_variable *var, **vptr;
+  int rc;
+
+  rc = mu_assoc_install_ref (mach->vartab, name, &vptr);
+  switch (rc)
+    {
+    case 0:
+      var = malloc (sizeof (*var));
+      if (!var)
+	{
+	  mu_sieve_error (mach, "variable_set: %s", mu_strerror (rc));
+	  mu_sieve_abort (mach);
+	}
+      *vptr = var;
+      break;
+
+    case MU_ERR_EXISTS:
+      var = *vptr;
+      mu_sieve_free (mach, var->value);
+      break;
+
+    default:
+      mu_sieve_error (mach, "variable_set: %s", mu_strerror (rc));
+      mu_sieve_abort (mach);
+    }
+  var->value = value;
+}
+
 static int
 sieve_action_set (mu_sieve_machine_t mach)
 {
   size_t i;
   char *name;
   char *value;
-  struct sieve_variable *var, **vptr;
-  int rc;
   
   mu_sieve_get_arg (mach, 0, SVT_STRING, &name);
   mu_sieve_get_arg (mach, 1, SVT_STRING, &value);
@@ -181,31 +210,62 @@ sieve_action_set (mu_sieve_machine_t mach)
       value = str;
     }
 
-  rc = mu_assoc_install_ref (mach->vartab, name, &vptr);
-  switch (rc)
-    {
-    case 0:
-      var = malloc (sizeof (*var));
-      if (!var)
-	{
-	  mu_sieve_error (mach, "%s", mu_strerror (errno));
-	  mu_sieve_abort (mach);
-	}
-      *vptr = var;
-      break;
-
-    case MU_ERR_EXISTS:
-      var = *vptr;
-      mu_sieve_free (mach, var->value);
-      break;
-
-    default:
-      mu_sieve_error (mach, "mu_assoc_ref_install: %s", mu_strerror (rc));
-      mu_sieve_abort (mach);
-    }
-  var->value = value;
+  variable_set (mach, name, value);
   return 0;
-}  
+}
+
+static int
+varini_append (mu_sieve_machine_t mach,
+	       struct mu_sieve_variable_initializer *vini)
+{
+  if (!mu_sieve_has_variables (mach))
+    return EINVAL;
+  if (!mach->init_var)
+    {
+      mu_list_create (&mach->init_var);
+      mu_list_set_destroy_item (mach->init_var, mu_list_free_item);
+    }
+  return mu_list_append (mach->init_var, vini);
+}
+
+static struct mu_sieve_variable_initializer *
+varini_alloc (const char *name, const char *value)
+{
+  struct mu_sieve_variable_initializer *vini;
+  size_t namelen;
+  
+  namelen = strlen (name);
+  vini = malloc (sizeof (*vini) + namelen + strlen (value) + 2);
+  if (vini)
+    {
+      char *p = (char*) (vini + 1);
+      vini->name = p;
+      vini->value = p + namelen + 1;
+      strcpy (vini->name, name);
+      strcpy (vini->value, value);
+    }
+  return vini;
+}
+
+int
+mu_sieve_variable_initialize (mu_sieve_machine_t mach, char const *name,
+			      char const *value)
+{
+  struct mu_sieve_variable_initializer *vini;
+  int rc;
+  
+  if (!name || !value)
+    return EINVAL;
+  if (!mu_sieve_has_variables (mach))
+    return EINVAL;
+  vini = varini_alloc (name, value);
+  if (!vini)
+    return ENOMEM;
+  rc = varini_append (mach, vini);
+  if (rc)
+    free (vini);
+  return rc;
+}
 
 static int
 set_tag_checker (mu_sieve_machine_t mach)
@@ -414,15 +474,32 @@ mu_sieve_has_variables (mu_sieve_machine_t mach)
   return mach->vartab != NULL;
 }
 
+static int
+copy_init_var (void *item, void *data)
+{
+  struct mu_sieve_variable_initializer *vini = item, *vini_new;
+  mu_sieve_machine_t mach = data;
+  vini_new = varini_alloc (vini->name, vini->value);
+  if (!vini_new)
+    return ENOMEM;
+  return varini_append (mach, vini_new);
+}
+
 void
 mu_i_sv_copy_variables (mu_sieve_machine_t child, mu_sieve_machine_t parent)
 {
   mu_iterator_t itr;
-  
+  int rc;
+    
   mu_sieve_require_variables (child);
 	  
-  mu_assoc_get_iterator (parent->vartab, &itr);
-
+  rc = mu_assoc_get_iterator (parent->vartab, &itr);
+  if (rc)
+    {
+      mu_sieve_error (child, "mu_assoc_get_iterator: %s", mu_strerror (rc));
+      mu_sieve_abort (child);
+    }
+      
   for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
        mu_iterator_next (itr))
     {
@@ -438,7 +515,33 @@ mu_i_sv_copy_variables (mu_sieve_machine_t child, mu_sieve_machine_t parent)
       mu_assoc_install (child->vartab, name, newval);
     }
 
-  mu_iterator_destroy (&itr);	  
+  mu_iterator_destroy (&itr);
+
+  rc = mu_list_foreach (parent->init_var, copy_init_var, child);
+  if (rc)
+    {
+      mu_sieve_error (child, "copy_init_var: %s", mu_strerror (rc));
+      mu_sieve_abort (child);
+    }
+}
+
+static int
+sieve_setvar (void *item, void *data)
+{
+  struct mu_sieve_variable_initializer *vini = item;
+  mu_sieve_machine_t mach = data;
+  variable_set (mach, vini->name, mu_sieve_strdup (mach, vini->value));
+  return 0;
+}
+
+void
+mu_i_sv_init_variables (mu_sieve_machine_t mach)
+{
+  if (mu_sieve_has_variables (mach))
+    {
+      mu_assoc_clear (mach->vartab);
+      mu_list_foreach (mach->init_var, sieve_setvar, mach);
+    }
 }
 
  
