@@ -84,6 +84,8 @@ extern int mu_guile_safe_exec (SCM (*handler) (void *data), void *data,
 			       SCM *result);
 extern int mu_guile_safe_proc_call (SCM proc, SCM arglist, SCM *presult);
 
+extern void mu_scm_filter_init (void);
+	
 #ifdef __cplusplus
 }
 #endif
