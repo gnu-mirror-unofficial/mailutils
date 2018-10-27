@@ -37,4 +37,5 @@ mailutils*.tar.*
 pathdefs.h
 stamp-h1
 tmp/
+/patch/
 .gdbinit

@@ -1,12 +1,14 @@
-GNU mailutils NEWS -- history of user-visible changes. 2018-10-24
+GNU mailutils NEWS -- history of user-visible changes. 2018-10-27
 Copyright (C) 2002-2018 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.4.91 (Git)
+Version 3.5 - 2018-10-27
 
-* Dropped support for Guile version prior to 2.2.0
+* Support for Guile version 2.2.0 and later
+
+Support for prior versions has been withdrawn.
 
 * New scheme functions
 
@@ -39,9 +41,9 @@ Optional charset defaults to "utf-8".
 
 ** mu-header-encode hdr [encoding [charset]]
 
-Encode the string hdr as per RFC 2047.
-Allowed values for encoding are "base64 and "quoted-printable".
-Default is selected depending on number of printable characters in "hdr".
+Encode the string <hdr> as per RFC 2047.
+Allowed values for <encoding> are "base64" and "quoted-printable".
+Default is selected depending on number of printable characters in <hdr>.
 Optional charset defaults to "utf-8".
 
 * Introduced support for Python 3.x
@@ -69,6 +71,16 @@ specifier. E.g. %DH can be used instead of %D{%H}.
 * Bugfixes
 
 ** Fix alignment specifiers in the headline variable (mail utility)
+** Fix eventual segmentation violation in imap4d
+
+It occurred when a recently started subprocess received a termination
+signal before initializing its I/O subsystem. Most often this happens
+when the master process is being shut down.
+
+** Fix endianness bug in string to IP conversion
+** Force terminating null character in the output of mh_format
+** Fix bug in base64 encoder - don't return immediately upon receiving eof
+** Fix command expansion in wordsplit
 
 
 Version 3.4 - 2017-11-02 
