@@ -183,9 +183,11 @@ cb_debug_level (void *data, mu_config_value_t *val)
 
 static struct mu_cfg_param debug_cfg[] = {
   { "level", mu_cfg_callback, NULL, 0, &cb_debug_level,
-    N_("Set Mailutils debugging level.  Argument is a colon-separated list "
-       "of debugging specifications in the form:\n"
-       "   <object: string>[[:]=<level: number>]."),
+    N_("Set Mailutils debugging level. Argument is a semicolon-separated list "
+       "of debugging specifications. A simplified specification syntax is:\n"
+       "   [!]<category: string>[.<level: string>,<level: string>...]\n"
+       "For details, please see the section 3.3 \"Debugging\" of the GNU Mailutils\n"
+       "manual, or visit <http://mailutils.org/wiki/Debug_level>."),
     N_("arg: string") },
   { "line-info", mu_c_bool, &mu_debug_line_info, 0, NULL,
     N_("Prefix debug messages with Mailutils source locations.") },
