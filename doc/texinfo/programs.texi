@@ -3221,11 +3221,10 @@ The @dfn{header match} is a string in the form:
 @end example
 @noindent
 
-It selects all messages that contain header field @var{header}
-matching given @var{regexp}.  If the variable @code{regexp} is set,
-the @var{string} is assumed to be a POSIX regexp.  Otherwise, a
-header is considered to match @var{string} if the latter constitutes
-a substring of the former (comparison is case-insensitive).
+It selects all messages that contain header field @var{header} matching
+given @var{string}.  If the variable @code{regex} is set, the
+@var{string} is assumed to be a POSIX regexp. (All comparison is
+case-insensitive in either case).
 
 If @var{header}: part is omitted, it is assumed to be @samp{Subject:}.
 @item Message body match
@@ -4191,7 +4190,7 @@ Clear delete mark from the specified messages.
 @itemx dt [@var{msglist}]
 Deletes the current message and prints the next message.  If
 @var{msglist} is specified, deletes all messages from the list and
-prints the message, immediately following last deleted one.
+prints the message immediately following last deleted one.
 @end table
 
 @node Saving Messages
