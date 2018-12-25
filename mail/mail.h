@@ -240,7 +240,8 @@ int mail_z (int argc, char **argv);
 int mail_eq (int argc, char **argv);	/* command = */
 int mail_setenv (int argc, char **argv);
 int mail_envelope (int argc, char **argv);
-int print_envelope (msgset_t *mspec, mu_message_t msg, void *data);
+int print_stream_envelope (mu_stream_t str, msgset_t *mspec, mu_message_t msg,
+			   char const *pfx);
 int mail_struct (int argc, char **argv);
 
 int if_cond (void);

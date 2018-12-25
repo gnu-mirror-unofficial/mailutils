@@ -58,7 +58,7 @@ mail_print_msg (msgset_t *mspec, mu_message_t mesg, void *data)
   out = open_pager (lines);
 
   if (mailvar_is_true ("showenvelope"))
-    print_envelope (mspec, mesg, "From");
+    print_stream_envelope (out, mspec, mesg, "From");
   
   if (*(int *) data) /* print was called with a lowercase 'p' */
     {

@@ -21,7 +21,8 @@
  */
 
 int
-print_envelope (msgset_t *mspec, mu_message_t msg, void *data)
+print_stream_envelope (mu_stream_t str, msgset_t *mspec, mu_message_t msg,
+		       char const *pfx)
 {
   int status;
   mu_envelope_t env = NULL;
@@ -37,11 +38,17 @@ print_envelope (msgset_t *mspec, mu_message_t msg, void *data)
     {
       mu_envelope_sget_sender (env, &sender);
       mu_envelope_sget_date (env, &date);
-      if (data)
-	mu_printf ("%s ", (char*) data);
-      mu_printf ("%s %s", sender, date);
+      if (pfx)
+	mu_stream_printf (str, "%s ", pfx);
+      mu_stream_printf (str, "%s %s\n", sender, date);
     }
   return 0;
+}
+
+static int
+print_envelope (msgset_t *mspec, mu_message_t msg, void *data)
+{
+  return print_stream_envelope (mu_strout, mspec, msg, data);
 }
 
 int
