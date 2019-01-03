@@ -1,6 +1,6 @@
 %{
 /* cfg_parser.y -- general-purpose configuration file parser
-   Copyright (C) 2007-2012, 2014-2018 Free Software Foundation, Inc.
+   Copyright (C) 2007-2019 Free Software Foundation, Inc.
 
    GNU Mailutils is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -507,6 +507,12 @@ do_include (const char *name, struct mu_cfg_parse_hints *hints,
 	      rc = mu_cfg_parse_file (&tree, file, hints->flags);
 	      free (file);
 	    }
+	  else
+	    {
+	      mu_diag_at_locus_range (MU_LOG_WARNING, loc,
+				      _("ignoring `include': directory argument is allowed only from the top-level configuration file"));
+
+	    }
 	}
       else
 	rc = mu_cfg_parse_file (&tree, name, hints->flags);
@@ -556,30 +562,37 @@ mu_cfg_tree_postprocess (mu_cfg_tree_t *tree, struct mu_cfg_parse_hints *hints)
       
       if (node->type == mu_cfg_node_statement)
 	{
-	  if ((hints->flags & MU_CFHINT_PROGRAM) &&
-	      strcmp (node->tag, "program") == 0)
+	  if (strcmp (node->tag, "program") == 0)
 	    {
-	      if (node->label->type == MU_CFG_STRING)
+	      if (hints->flags & MU_CFHINT_PROGRAM)
 		{
-		  if (strcmp (node->label->v.string, hints->program) == 0)
+		  if (node->label->type == MU_CFG_STRING)
 		    {
-		      /* Reset the parent node */
-		      mu_list_foreach (node->nodes, _node_set_parent,
-				       node->parent);
-		      /* Move all nodes from this block to the topmost
-			 level */
-		      mu_iterator_ctl (itr, mu_itrctl_insert_list,
-				       node->nodes);
+		      if (strcmp (node->label->v.string, hints->program) == 0)
+			{
+			  /* Reset the parent node */
+			  mu_list_foreach (node->nodes, _node_set_parent,
+					   node->parent);
+			  /* Move all nodes from this block to the topmost
+			     level */
+			  mu_iterator_ctl (itr, mu_itrctl_insert_list,
+					   node->nodes);
+			  mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
+			  /*FIXME:mu_cfg_free_node (node);*/
+			}
+		    }
+		  else
+		    {
+		      mu_diag_at_locus_range (MU_LOG_ERROR, &node->locus,
+					      _("argument to `program' is not a string"));
+		      mu_cfg_error_count++;
 		      mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
-		      /*FIXME:mu_cfg_free_node (node);*/
 		    }
 		}
 	      else
 		{
-		  mu_diag_at_locus_range (MU_LOG_ERROR, &node->locus,
-				    _("argument to `program' is not a string"));
-		  mu_cfg_error_count++;
-		  mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
+		  mu_diag_at_locus_range (MU_LOG_WARNING, &node->locus,
+					  _("ignoring `program' block: not located in top-level configuration file"));
 		}
 	    }
 	}

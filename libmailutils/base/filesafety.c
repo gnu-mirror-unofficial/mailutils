@@ -1,6 +1,5 @@
 /* File safety checks.
-   Copyright (C) 1999-2001, 2003-2006, 2010-2012, 2014-2018 Free
-   Software Foundation, Inc.
+   Copyright (C) 1999-2019 Free Software Foundation, Inc.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
