@@ -55,7 +55,7 @@ const char mu_version_copyright[] =
   /* Do *not* mark this string for translation.  %s is a copyright
      symbol suitable for this locale, and %d is the copyright
      year.  */
-  "Copyright %s 2007-2017 Free Software Foundation, inc.";
+  "Copyright %s 2007-2019 Free Software Foundation, inc.";
 
 void
 mu_version_hook (struct mu_parseopt *po, mu_stream_t stream)
