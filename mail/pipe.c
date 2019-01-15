@@ -29,7 +29,7 @@ mail_pipe (int argc, char **argv)
   char *cmd;
   msgset_t *list, *mp;
 
-  if (argc > 2)
+  if (argc > 1)
     cmd = argv[--argc];
   else if (mailvar_get (&cmd, "cmd", mailvar_type_string, 1))
     return 1;
