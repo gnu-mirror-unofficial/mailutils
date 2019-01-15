@@ -3201,7 +3201,7 @@ specifiers:
 Selects all deleted messages.
 @item :n
 Selects all recent messages, i.e. the messages that have not been
-neither read not seen so far.
+neither read nor seen so far.
 @item :o
 Selects all messages that have been seen.
 @item :r
@@ -3896,86 +3896,87 @@ commands the user enters.
 
 Following commands quit the program:
 
-@table @samp
-@item quit
+@deffn {Mail command} quit
 Terminates the session.  If @command{mail} was operating upon user's system
 mailbox, then all undeleted and unsaved messages that have been read and
 are not marked with hold flag are saved to the user's mbox file
 (@file{$HOME/mbox}).  The messages, marked with @code{delete} are removed.
 The program exits to the Shell, unless saving the mailbox fails, in
 which case user can escape with the exit command.
+@end deffn
 
-@item exit
-@itemx ex
-@itemx xit
+@deffn {Mail command} exit
+@deffnx {Mail command} ex
+@deffnx {Mail command} xit
 Program exits to the Shell without modifying the mailbox it operates
 upon.
-@end table
+@end deffn
 
 Typing EOF (@samp{C-D}) alone is equivalent to @samp{quit}.
 
 @node Obtaining Online Help
 @subsubsection Obtaining Online Help
-@kyindex help, mail command
-@kyindex ?, mail command
-@kyindex list, mail command
-@kyindex version, mail command
-@kyindex warranty, mail command
 
 Following commands can be used during the session to request online
 help:
 
-@table @samp
-@item help [@var{command}]
-@itemx hel [@var{command}]
-@itemx ? [@var{command}]
+@deffn {Mail command} help [@var{command}]
+@deffnx {Mail command} hel [@var{command}]
+@deffnx {Mail command} ? [@var{command}]
 Display detailed command synopsis.  If no @var{command} is given, help for
 all available commands is displayed.
-@item list
-@itemx *
+@end deffn
+
+@deffn {Mail command} list
+@deffnx {Mail command} *
 Print a list of available commands.
-@item version
-@itemx ve
+@end deffn
+
+@deffn {Mail command} version
+@deffnx {Mail command} ve
 Display program version.
-@item warranty
-@itemx wa
+@end deffn
+
+@deffn {Mail command} warranty
+@deffnx {Mail command} wa
 Display program warranty statement.
-@end table
+@end deffn
 
 @node Moving Within a Mailbox
 @subsubsection Moving Within a Mailbox
-@kyindex next, mail command
-@kyindex prev, mail command
 
-@table @samp
-@item ^
+@deffn {Mail command} ^
 Move to the first undeleted message.
-@item $
+@end deffn
+
+@deffn {Mail command} $
 Move to the last undeleted message.
-@item next
-@itemx n
+@end deffn
+
+@deffn {Mail command} next
+@deffnx {Mail command} n
 Move to the next message.
-@item previous
-@itemx prev
+@end deffn
+
+@deffn {Mail command} previous
+@deffnx {Mail command} prev
 Move to the previous message.
-@end table
+@end deffn
 
 @node Changing mailbox/directory
 @subsubsection Changing Mailbox/Directory
-@kyindex chdir, mail command
-@kyindex file, mail command
-@kyindex folder, mail command
 
-@table @samp
-@item cd [@var{dir}]
-@itemx chdir [@var{dir}]
-@itemx ch [@var{dir}]
+@deffn {Mail command} cd [@var{dir}]
+@deffnx {Mail command} chdir [@var{dir}]
+@deffnx {Mail command} ch [@var{dir}]
 Change to the specified directory.  If @var{dir} is omitted, @env{$HOME} is
 assumed.
-@item file [@var{mailbox}]
-@itemx fi [@var{mailbox}]
-@itemx folder [@var{mailbox}]
-@itemx fold [@var{mailbox}]
+@end deffn
+
+@deffn {Mail command} file [@var{mailbox}]
+@deffnx {Mail command} fi [@var{mailbox}]
+@deffnx {Mail command} folder [@var{mailbox}]
+@deffnx {Mail command} fold [@var{mailbox}]
 Read in the contents of the specified @var{mailbox}.  The current mailbox
 is updated as if @code{quit} command has been issued.
 If @var{mailbox} is omitted, the command prints the current mailbox
@@ -3987,13 +3988,10 @@ name followed by the summary information regarding it, e.g.:
 "/var/spool/mail/gray": 23 messages 22 unread
 @end cartouche
 @end example
-@end table
+@end deffn
 
 @node Controlling Header Display
 @subsubsection Controlling Header Display
-@kyindex discard, mail command
-@kyindex ignore, mail command
-@kyindex retain, mail command
 
 To control which headers in the message should be displayed, @command{mail}
 keeps two lists: a @dfn{retained} header list and an @dfn{ignored}
@@ -4005,39 +4003,41 @@ of message-displaying commands can be used to print all the headers.
 
 The following commands modify and display the contents of both lists.
 
-@table @samp
-@item discard [@var{header-field-list}]
-@itemx di [@var{header-field-list}]
-@itemx ignore [@var{header-field-list}]
-@itemx ig [@var{header-field-list}]
+@deffn {Mail command} discard [@var{header-field-list}]
+@deffnx {Mail command} di [@var{header-field-list}]
+@deffnx {Mail command} ignore [@var{header-field-list}]
+@deffnx {Mail command} ig [@var{header-field-list}]
 Add @var{header-field-list} to the ignored list.  When used without
 arguments, this command prints the contents of ignored list.
-@item retain [@var{header-field-list}]
-@itemx ret [@var{header-field-list}]
+@end deffn
+
+@deffn {Mail command} retain [@var{header-field-list}]
+@deffnx {Mail command} ret [@var{header-field-list}]
 Add @var{header-field-list} to the retained list.  When used without
 arguments, this command prints the contents of retained list.
-@end table
+@end deffn
 
 @node Displaying Information
 @subsubsection Displaying Information
-@kyindex =, mail command
-@kyindex headers, mail command
-@kyindex from, mail command
-@kyindex z, mail command
-@kyindex size, mail command
-@kyindex folders, mail command
-@kyindex summary, mail command
 
-@table @samp
-@item =
+In the discussion below, @var{msglist} stands for message list, as
+described in @ref{Specifying Messages}.
+
+@deffn {Mail command} =
 Displays the current message number.
-@item headers [@var{msglist}]
-@itemx h [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} headers [@var{msglist}]
+@deffnx {Mail command} h [@var{msglist}]
 Lists the current pageful of headers.
-@item from [@var{msglist}]
-@itemx f [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} from [@var{msglist}]
+@deffnx {Mail command} f [@var{msglist}]
 Lists the contents of @samp{From} headers for a given set of messages.
-@item z [@var{arg}]
+@end deffn
+
+@deffn {Mail command} z [@var{arg}]
 Presents message headers in pagefuls as described for @code{headers}
 command.  When @var{arg} is @samp{.}, it is generally equivalent to
 @code{headers}.  When @var{arg} is omitted or is @samp{+}, the next
@@ -4052,14 +4052,20 @@ example:
 @end example
 @noindent
 will skip two pages of messages before displaying the header summary.
-@item size [@var{msglist}]
-@itemx si [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} size [@var{msglist}]
+@deffnx {Mail command} si [@var{msglist}]
 Lists the message number and message size in bytes for each message in
 @var{msglist}.
-@item folders
+@end deffn
+
+@deffn {Mail command} folders
 Displays the value of @code{folder} variable.
-@item summary
-@itemx su
+@end deffn
+
+@deffn {Mail command} summary
+@deffnx {Mail command} su
 Displays current mailbox summary.  E.g.:
 
 @example
@@ -4068,25 +4074,14 @@ Displays current mailbox summary.  E.g.:
 "/var/spool/mail/gray": 23 messages 22 unread
 @end cartouche
 @end example
-@end table
+@end deffn
 
 @node Displaying Messages
 @subsubsection Displaying Messages
-@kyindex print, mail command
-@kyindex type, mail command
-@kyindex Print, mail command
-@kyindex Type, mail command
-@kyindex decode, mail command
-@kyindex struct, mail command
-@kyindex top, mail command
-@kyindex pipe, mail command
-@kyindex |, mail command
-
-@table @samp
-@item print [@var{msglist}]
-@itemx p [@var{msglist}]
-@item type [@var{msglist}]
-@itemx t [@var{msglist}]
+@deffn {Mail command} print [@var{msglist}]
+@deffnx {Mail command} p [@var{msglist}]
+@deffnx {Mail command} type [@var{msglist}]
+@deffnx {Mail command} t [@var{msglist}]
 Prints out the messages from @var{msglist}.  The variable @code{crt}
 determines the minimum number of lines the body of the message must
 contain in order to be piped through pager command specified
@@ -4095,13 +4090,17 @@ value, this value is taken as the minimum number of lines.  Otherwise,
 if @code{crt} is set without a value then the height of the terminal
  screen is used to compute the threshold.  The number of lines on
 screen is controlled by @code{screen} variable.
-@item Print [@var{msglist}]
-@itemx P [@var{msglist}]
-@itemx Type [@var{msglist}]
-@itemx T [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} Print [@var{msglist}]
+@deffnx {Mail command} P [@var{msglist}]
+@deffnx {Mail command} Type [@var{msglist}]
+@deffnx {Mail command} T [@var{msglist}]
 Like print but also prints out ignored header fields.
-@item decode [@var{msglist}]
-@itemx dec [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} decode [@var{msglist}]
+@deffnx {Mail command} dec [@var{msglist}]
 Print a multipart message.  The @code{decode} command decodes and prints
 out specified message parts.  E.g.
 @example
@@ -4116,17 +4115,23 @@ Content-Type: message/delivery-status
 ...
 @end cartouche
 @end example
-@item top [@var{msglist}]
-@itemx to [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} top [@var{msglist}]
+@deffnx {Mail command} to [@var{msglist}]
 Prints the top few lines of each message in @var{msglist}.  The number
 of lines printed is controlled by the variable @code{toplines} and
 defaults to five.
-@item pipe [@var{msglist}] [@var{shell-command}]
-@itemx | [@var{msglist}] [@var{shell-command}]
-Pipe the contents of specified messages through @var{shell-command}.  If
-@var{shell-command} is empty but the string variable @code{cmd} is set,
-the value of this variable is used as a command name.
-@item struct [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} pipe [[@var{msglist}] @var{shell-command}]
+@deffnx {Mail command} | [[@var{msglist}] @var{shell-command}]
+Pipe the contents of specified messages through @var{shell-command}.
+Without arguments, pipe the current message through the command given
+by the @samp{cmd} variable (which must be set).
+@end deffn
+
+@deffn {Mail command} struct [@var{msglist}]
 Prints the @acronym{MIME} structure of each message from
 @var{msglist}.  Empty @var{msglist} means current message.
 
@@ -4141,72 +4146,62 @@ Example:
 2[3]   text/x-diff                31k
 @end cartouche
 @end example
-@end table
+@end deffn
 
 @node Marking Messages
 @subsubsection Marking Messages
-@kyindex tag, mail command
-@kyindex hold, mail command
-@kyindex preserve, mail command
 
-@table @samp
-@item tag [@var{msglist}]
-@itemx ta [@var{msglist}]
+@deffn {Mail command} tag [@var{msglist}]
+@deffnx {Mail command} ta [@var{msglist}]
 Tag messages.  The tagged messages can be referred to in message list
 using @samp{:t} notation.
-@item untag [@var{msglist}]
-@itemx unt [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} untag [@var{msglist}]
+@deffnx {Mail command} unt [@var{msglist}]
 Clear tags from specified messages.  To untag all messages tagged so far
 type
 @example
 & untag :t
 @end example
-@item hold [@var{msglist}]
-@itemx ho [@var{msglist}]
-@itemx preserve [@var{msglist}]
-@itemx pre [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} hold [@var{msglist}]
+@deffnx {Mail command} ho [@var{msglist}]
+@deffnx {Mail command} preserve [@var{msglist}]
+@deffnx {Mail command} pre [@var{msglist}]
 Marks each message to be held in user's system mailbox.  This command
 does not override the effect of @code{delete} command.
-@end table
+@end deffn
 
 @node Disposing of Messages
 @subsubsection Disposing of Messages
-@kyindex delete, mail command
-@kyindex undelete, mail command
-@kyindex dt, mail command
-@kyindex dp, mail command
 
-@table @samp
-@item delete [@var{msglist}]
-@itemx d [@var{msglist}]
+@deffn {Mail command} delete [@var{msglist}]
+@deffnx {Mail command} d [@var{msglist}]
 Mark messages as deleted.  Upon exiting with @code{quit} command these
 messages will be deleted from the mailbox.  Until the end of current
 session the deleted messages can be referred to in message lists using
 :d notation.
-@item undelete [@var{msglist}]
-@itemx u [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} undelete [@var{msglist}]
+@deffnx {Mail command} u [@var{msglist}]
 Clear delete mark from the specified messages.
-@item dp [@var{msglist}]
-@itemx dt [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} dp [@var{msglist}]
+@deffnx {Mail command} dt [@var{msglist}]
 Deletes the current message and prints the next message.  If
 @var{msglist} is specified, deletes all messages from the list and
 prints the message immediately following last deleted one.
-@end table
+@end deffn
 
 @node Saving Messages
 @subsubsection Saving Messages
-@kyindex save, mail command
-@kyindex Save, mail command
-@kyindex write, mail command
-@kyindex Write, mail command
-@kyindex mbox, mail command
-@kyindex touch, mail command
-@kyindex copy, mail command
-@kyindex Copy, mail command
 
-@table @samp
-@item save [[@var{msglist}] @var{file}]
-@itemx s [[@var{msglist}] @var{file}]
+@deffn {Mail command} save [[@var{msglist}] @var{file}]
+@deffnx {Mail command} s [[@var{msglist}] @var{file}]
 Takes a message list and a file name or mailbox URL and appends each
 message in turn to the end of that file or mailbox.  Mailbox URLs
 begin with mailbox type specifier, such as @samp{mbox://},
@@ -4219,8 +4214,10 @@ represent message envelope for that specific mailbox type.
 
 Each saved message is marked for deletion as if with @code{delete}
 command, unless the variable @code{keepsave} is set.
-@item Save [@var{msglist}]
-@itemx S [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} Save [@var{msglist}]
+@deffnx {Mail command} S [@var{msglist}]
 Like @code{save}, but the file to append messages to is named after the
 sender of the first message in @var{msglist}.  For example:
 
@@ -4239,110 +4236,109 @@ sender of the first message in @var{msglist}.  For example:
 
 i.e., 22 lines (603 characters) have been appended to the file ``smith''.
 If the file does not exist, it is created.
+@end deffn
 
-@item write [[@var{msglist}] @var{file}]
-@itemx w [[@var{msglist}] @var{file}]
+@deffn {Mail command} write [[@var{msglist}] @var{file}]
+@deffnx {Mail command} w [[@var{msglist}] @var{file}]
 Similar to @code{save}, except that only message body (without the
 header) is saved.
-@item Write [@var{msglist}]
-@itemx W [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} Write [@var{msglist}]
+@deffnx {Mail command} W [@var{msglist}]
 Similar to @code{Save}, except that only message body (without the
 header) is saved.
-@item mbox [@var{msglist}]
-@itemx mb [@var{msglist}]
-@itemx touch [@var{msglist}]
-@itemx tou [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} mbox [@var{msglist}]
+@deffnx {Mail command} mb [@var{msglist}]
+@deffnx {Mail command} touch [@var{msglist}]
+@deffnx {Mail command} tou [@var{msglist}]
 Mark list of messages to be saved in the user's mailbox (@file{$HOME/mbox})
 upon exiting via @code{quit} command.  This is the default action for
 all read messages, unless you have variable @code{hold} set.
-@item copy [[@var{msglist}] @var{file}]
-@itemx c [[@var{msglist}] @var{file}]
+@end deffn
+
+@deffn {Mail command} copy [[@var{msglist}] @var{file}]
+@deffnx {Mail command} c [[@var{msglist}] @var{file}]
 Similar to @code{save}, except that saved messages are not marked for
 deletion.
-@item Copy [@var{msglist}]
-@itemx C [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} Copy [@var{msglist}]
+@deffnx {Mail command} C [@var{msglist}]
 Similar to @code{Save}, except that saved messages are not marked for
 deletion.
-@end table
+@end deffn
 
 @node Editing Messages
 @subsubsection Editing Messages
-@kyindex edit, mail command
-@kyindex visual, mail command
 
 These command allow to edit messages in a mailbox.  @emph{Please note},
 that modified messages currently do not replace original ones. i.e.
 you have to save them explicitly using your editor's @code{save}
 command if you do not want the effects of your editing to be lost.
 
-@table @samp
-@item edit [@var{msglist}]
-@itemx e [@var{msglist}]
+@deffn {Mail command} edit [@var{msglist}]
+@deffnx {Mail command} e [@var{msglist}]
 Edits each message in @var{msglist} with the editor, specified in
 @code{EDITOR} environment variable.
-@item visual [@var{msglist}]
-@itemx v [@var{msglist}]
+@end deffn
+
+@deffn {Mail command} visual [@var{msglist}]
+@deffnx {Mail command} v [@var{msglist}]
 Edits each message in @var{msglist} with the editor, specified in
 @code{VISUAL} environment variable.
-@end table
+@end deffn
 
 @node Aliasing
 @subsubsection Aliasing
-@kyindex alias, mail command
-@kyindex group, mail command
-@kyindex unalias, mail command
-@kyindex alternates, mail command
 
-@table @samp
-@item alias [alias [@var{address}...]]
-@itemx a [alias [@var{address}...]]
-@itemx group [alias [@var{address}...]]
-@itemx g [alias [@var{address}...]]
+@deffn {Mail command} alias [alias [@var{address}...]]
+@deffnx {Mail command} a [alias [@var{address}...]]
+@deffnx {Mail command} group [alias [@var{address}...]]
+@deffnx {Mail command} g [alias [@var{address}...]]
 With no arguments, prints out all currently-defined aliases.
 With one argument, prints out that alias.
 With more than one argument, creates a new alias or changes an old one.
-@item unalias [@var{alias}...]
-@itemx una [@var{alias}...]
+@end deffn
+
+@deffn {Mail command} unalias [@var{alias}...]
+@deffnx {Mail command} una [@var{alias}...]
 Takes a list of names defined by alias commands and discards the
 remembered groups of users.  The alias names no longer have any
 significance.
-@item alternates @var{name}...
-@itemx alt @var{name}...
+@end deffn
+
+@deffn {Mail command} alternates @var{name}...
+@deffnx {Mail command} alt @var{name}...
 The alternates command is useful if you have accounts on several
 machines.  It can be used to inform mail that the listed addresses are
 really you.  When you reply to messages, mail will not send a copy of
 the message to any of the addresses listed on the alternates list.
 If the alternates command is given with no argument, the current set of
 alternate names is displayed.
-@end table
+@end deffn
 
 @node Replying
 @subsubsection Replying
-@kyindex mail, mail command
-@kyindex reply, mail command
-@kyindex Reply, mail command
-@kyindex respond, mail command
-@kyindex Respond, mail command
-@kyindex followup, mail command
-@kyindex Followup, mail command
 
-@table @samp
-@item mail [@var{address}...]
-@itemx m [@var{address}...]
+@deffn {Mail command} mail [@var{address}...]
+@deffnx {Mail command} m [@var{address}...]
 Switches to compose mode.  After composing the message, sends messages to
 the specified addresses.
+@end deffn
 
-@item reply [@var{msglist}]
-@itemx respond [@var{msglist}]
-@itemx r [@var{msglist}]
-
+@deffn {Mail command} reply [@var{msglist}]
+@deffnx {Mail command} respond [@var{msglist}]
+@deffnx {Mail command} r [@var{msglist}]
 For each message in @var{msglist}, switches to compose mode and sends
 the composed message to the sender and all recipients of the message.
+@end deffn
 
-@item Reply [@var{msglist}]
-@itemx Respond [@var{msglist}]
-@itemx R [@var{msglist}]
-
+@deffn {Mail command} Reply [@var{msglist}]
+@deffnx {Mail command} Respond [@var{msglist}]
+@deffnx {Mail command} R [@var{msglist}]
 Like @code{reply}, except that the composed message is sent only to
 originators of the specified messages.
 
@@ -4351,19 +4347,19 @@ Variables}) swaps the meanings of the two above commands,
 so that @code{reply} sends the message to the sender and all
 recipients of the message, whereas @code{Reply} sends it to
 originators only.
+@end deffn
 
-@item followup [@var{msglist}]
-@itemx fo [@var{msglist}]
-
+@deffn {Mail command} followup [@var{msglist}]
+@deffnx {Mail command} fo [@var{msglist}]
 Switches to compose mode.  After composing, sends the message to the
 originators and recipients of all messages in @var{msglist}.
+@end deffn
 
-@item Followup [@var{msglist}]
-@itemx F [@var{msglist}]
-
+@deffn {Mail command} Followup [@var{msglist}]
+@deffnx {Mail command} F [@var{msglist}]
 Similar to @code{followup}, but reply message is sent only to
 originators of messages in @var{msglist}.
-@end table
+@end deffn
 
 To determine the sender of the message @command{mail} uses the
 list of sender fields (@pxref{Controlling Sender Fields}).  The first field
