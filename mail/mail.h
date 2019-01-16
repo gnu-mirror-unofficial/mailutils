@@ -318,6 +318,7 @@ int is_current_message (size_t n);
 void msgset_free (msgset_t *msg_set);
 msgset_t *msgset_make_1 (size_t number);
 msgset_t *msgset_append (msgset_t *one, msgset_t *two);
+void msgset_remove (msgset_t **pset, size_t n);
 msgset_t *msgset_range (int low, int high);
 msgset_t *msgset_expand (msgset_t *set, msgset_t *expand_by);
 msgset_t *msgset_dup (const msgset_t *set);

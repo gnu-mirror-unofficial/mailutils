@@ -257,7 +257,7 @@ yyerror (const char *s)
 }
 
 int
-yylex()
+yylex (void)
 {
   if (cur_ind == xargc)
     return 0;
@@ -303,7 +303,8 @@ yylex()
       while (*cur_p && *cur_p != '/')
 	cur_p++;
       len = cur_p - p + 1;
-      cur_p++;
+      if (*cur_p)
+	cur_p++;
       yylval.string = mu_alloc (len);
       memcpy (yylval.string, p, len-1);
       yylval.string[len-1] = 0;
@@ -321,12 +322,15 @@ yylex()
 	  while (*cur_p && *cur_p != '/')
 	    cur_p++;
 	  len = cur_p - p + 1;
-	  cur_p++;
+	  if (*cur_p)
+	    cur_p++;
 	  yylval.string = mu_alloc (len);
 	  memcpy (yylval.string, p, len-1);
 	  yylval.string[len-1] = 0;
 	  return BODY;
 	}
+      if (*cur_p == 0)
+	return 0;
       yylval.type = *cur_p++;
       return TYPE;
     }
@@ -412,6 +416,13 @@ msgset_dup (const msgset_t *set)
   return mp;
 }
 
+/* Append message set TWO to the end of message set ONE. Take care to
+   eliminate duplicates. Preserve the ordering of both lists. Return
+   the resulting set.
+
+   The function is destructive: the set TWO is attached to ONE and
+   eventually modified to avoid duplicates.
+*/
 msgset_t *
 msgset_append (msgset_t *one, msgset_t *two)
 {
@@ -420,7 +431,9 @@ msgset_append (msgset_t *one, msgset_t *two)
   if (!one)
     return two;
   for (last = one; last->next; last = last->next)
-    ;
+    {
+      msgset_remove (&two, last->msg_part[0]);
+    }
   last->next = two;
   return one;
 }
@@ -432,6 +445,24 @@ msgset_member (msgset_t *set, size_t n)
     if (set->msg_part[0] == n)
       return 1;
   return 0;
+}
+
+void
+msgset_remove (msgset_t **pset, size_t n)
+{
+  msgset_t *cur = *pset, **pnext = pset;
+
+  while (1)
+    {
+      if (cur == NULL)
+	return;
+      if (cur->msg_part[0] == n)
+	break;
+      pnext = &cur->next;
+      cur = cur->next;
+    }
+  *pnext = cur->next;
+  free (cur);
 }
 
 msgset_t *
@@ -609,35 +640,45 @@ select_body (mu_message_t msg, void *closure)
   char *expr = closure;
   int noregex = mailvar_get (NULL, "regex", mailvar_type_boolean, 0);
   regex_t re;
-  int status;
+  int status = 0;
   mu_body_t body = NULL;
   mu_stream_t stream = NULL;
-  size_t size = 0, lines = 0;
-  char buffer[128];
-  size_t n = 0;
-
+  int rc;
+  
   if (noregex)
     mu_strupper (expr);
   else if (regcomp (&re, expr, REG_EXTENDED | REG_ICASE) != 0)
     return 0;
 
   mu_message_get_body (msg, &body);
-  mu_body_size (body, &size);
-  mu_body_lines (body, &lines);
-  status = mu_body_get_streamref (body, &stream);
-  while (status == 0
-	 && mu_stream_readline (stream, buffer, sizeof(buffer)-1, &n) == 0
-	 && n > 0)
+  rc = mu_body_get_streamref (body, &stream);
+  if (rc == 0)
     {
-      if (noregex)
+      char *buffer = NULL;
+      size_t size = 0;
+      size_t n = 0;
+      
+      while (status == 0
+	     && (rc = mu_stream_getline (stream, &buffer, &size, &n)) == 0
+	     && n > 0)
 	{
-	  mu_strupper (buffer);
-	  status = strstr (buffer, expr) != NULL;
+	  if (noregex)
+	    {
+	      /* FIXME: charset */
+	      mu_strupper (buffer);
+	      status = strstr (buffer, expr) != NULL;
+	    }
+	  else
+	    status = regexec (&re, buffer, 0, NULL, 0) == 0;
 	}
-      else
-	status = regexec (&re, buffer, 0, NULL, 0);
+      mu_stream_destroy (&stream);
+      free (buffer);
+      if (rc)
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_getline", NULL, rc);
     }
-  mu_stream_destroy (&stream);
+  else
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_body_get_streamref", NULL, rc);
+  
   if (!noregex)
     regfree (&re);
 
