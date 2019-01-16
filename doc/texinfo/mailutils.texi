@@ -179,6 +179,7 @@ Mailutils Configuration File
 * sql statement::
 * ldap statement::
 * tls statement::
+* tls-file-checks statement::
 * gsasl statement::
 
 Configuration File Syntax
@@ -201,8 +202,8 @@ Debugging
 @command{mail} --- Send and Receive Mail
 
 * Invoking Mail::            Command Line Options.
-* Specifying Messages::      How to Specify Message Sets.
 * Composing Mail::           Composing Mail.
+* MIME::                     How to Attach Files.
 * Reading Mail::             Reading Mail.
 * Scripting::                Scripting.
 * Mail Variables::           How to Alter the Behavior of @command{mail}.
@@ -226,6 +227,7 @@ Composing Mail
 
 Reading Mail
 
+* Command Syntax::           Syntax of mail internal commands.
 * Quitting the Program::
 * Obtaining Online Help::
 * Moving Within a Mailbox::
@@ -343,6 +345,7 @@ mailutils
 * mailutils info::                Show Mailutils configuration.
 * mailutils cflags::              Show compiler options.
 * mailutils ldflags::             List libraries required to link.
+* mailutils stat::                Show mailbox status.
 * mailutils query::               Query configuration values.
 * mailutils 2047::                Decode/encode email message headers.
 * mailutils filter::              Apply a chain of filters to the input.
@@ -374,6 +377,7 @@ Sieve Language
 * Comparators::
 * Tests::
 * Actions::
+* Extensions::
 * GNU Extensions::
 
 Syntax
@@ -397,6 +401,21 @@ Actions
 
 * Built-in Actions::
 * External Actions::
+
+Extensions
+
+* encoded-character::
+* relational::
+* variables::
+* environment::
+* numaddr::
+* editheader::
+* list::
+* moderator::
+* pipe::
+* spamd::
+* timestamp::
+* vacation::
 
 Date Input Formats
 
