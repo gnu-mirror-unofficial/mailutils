@@ -1,0 +1,668 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex maidag
+@UNREVISED
+
+The name @samp{maidag} stands for @i{Mai}l @i{d}elivery @i{ag}ent.  It
+is a general-purpose @acronym{MDA} offering a rich set of
+features.  It can operate both in traditional mode, reading the message
+from its standard input, and in @acronym{LMTP} mode.  @command{Maidag}
+is able to deliver mail to any mailbox format, supported by GNU
+Mailutils.  These formats, among others, include @samp{smtp://},
+@samp{prog://} and @samp{sendmail://} which are
+equivalent to forwarding a message over @acronym{SMTP} to a remote
+node.  Thus, @command{maidag} supersedes both @command{mail.local} and
+@command{mail.remote} utilities from GNU Mailutils versions prior to
+2.0.
+
+@command{Maidag} is also able to process incoming messages using
+Sieve, Scheme or Python scripts and, based on results of this
+processing, to take a decision on whether to actually deliver and
+where to deliver them.  Due to its extensive scripting facilities,
+@command{maidag} offers much more flexibility than other popular
+@acronym{MDA}s, such as @command{procmail}.
+
+@menu
+* Sendmail-maidag::         Using @command{maidag} with Sendmail.
+* Exim-maidag::             Using @command{maidag} with Exim.
+* MeTA1-maidag::            Using @command{maidag} with MeTA1.
+* Mailbox Quotas::
+* Maidag Scripting::
+* Forwarding::
+* Url-mode::                Delivering Messages to a URL.
+* Remote Mailbox Delivery::
+* Conf-maidag::             Maidag Configuration File Summary
+@end menu
+
+@node Sendmail-maidag
+@subsection Using @command{maidag} with Sendmail.
+@cindex Sendmail
+When used as a @acronym{MDA} with Sendmail, @command{maidag} must be
+invoked from the local mailer definition in the @file{sendmail.cf}
+file.  It must have the following flags set: @samp{lswS}.  These mean:
+the mailer is local, quote characters should be stripped off the
+address before invoking the mailer, the user must have a valid account
+on this machine and the userid should not be reset before calling the 
+mailer.  Additionally, the flags @samp{fn} may be specified to allow
+@command{maidag} to generate the usual @samp{From } envelope instead
+of the one supplied by @command{sendmail}. 
+
+If you wish to use @command{maidag} with non-local authentication,
+such as @acronym{SQL} or @acronym{LDAP}, you also need to remove the
+@samp{w} flag, since in that case the user is not required to have a
+valid account on the machine that runs @command{sendmail}.
+
+Here is an example of mailer definition in @file{sendmail.cf}
+
+@example 
+Mlocal, P=/usr/local/sbin/maidag,
+        F=lsDFMAw5:/|@@qSPfhn9,
+        S=EnvFromL/HdrFromL, R=EnvToL/HdrToL,
+        T=DNS/RFC822/X-Unix,
+        A=mail $u
+@end example
+
+To define local mailer in @samp{mc} source file, it will suffice to
+set:
+
+@example
+define(`LOCAL_MAILER_PATH', `/usr/local/sbin/maidag')
+define(`LOCAL_MAILER_ARGS', `mail $u')
+@end example
+
+@node Exim-maidag
+@subsection Using @command{maidag} with Exim.
+@cindex Exim
+
+Using @command{maidag} with Exim is quite straightforward.  The
+following example illustrates the definition of the appropriate transport
+and director in @file{exim.conf}:
+
+@example
+# transport
+maidag_pipe:
+  driver = pipe
+  command = /usr/local/sbin/maidag $local_part
+  return_path_add
+  delivery_date_add
+  envelope_to_add
+  
+# director
+maidag:
+  driver = localuser
+  transport = maidag_pipe
+@end example
+
+@node MeTA1-maidag
+@subsection Using @command{maidag} with MeTA1.
+@cindex LMTP
+@cindex MeTA1
+MeTA1 (@uref{http://meta1.org}) communicates with the delivery agent
+using @acronym{LMTP}.
+
+LMTP mode is enabled in @command{maidag} by the @samp{lmtp yes}
+statement.  The socket to listen on must be specified using
+@code{server} statement (@pxref{Server Settings}).  For the purposes of
+this section, let's suppose @command{maidag} will listen on a
+@acronym{UNIX} socket @file{/var/spool/meta1/lmtpsock}.  Then, the
+following (minimal) @command{maidag} configuration will do the job:
+
+@example
+# @r{Start in LMTP mode.}
+lmtp yes;
+# @r{Run as daemon.}
+mode daemon;
+# @r{Switch to this group after startup.}
+group meta1c;
+# @r{Configure server:}
+server unix:///var/spool/meta1/lmtpsock @{
+  transcript no;
+@};
+@end example
+  
+To configure MeTA1 to use this socket, add the following statement to
+the @samp{smtpc} section in @file{/etc/meta1/meta1.conf}:
+
+@example
+  LMTP_socket="lmtpsock";
+@end example
+
+@node Mailbox Quotas
+@subsection Mailbox Quotas
+
+@dfn{Mailbox quota} is a limit on the size of the mailbox.  When a
+mailbox size reaches this limit, @command{maidag} stops accepting
+messages for this recipient and returns an error condition to the
+sender.  The error code is accompanied by the following error message:
+
+@example
+@var{user}: mailbox quota exceeded for this recipient
+@end example
+
+Furthermore, if accepting the incoming message would make the
+mailbox size exceed the quota, such a message will be rejected as
+well.  In this case, the error message is:
+
+@example
+@var{user}: message would exceed maximum mailbox size for this recipient
+@end example
+
+In both cases, the default return code will be @samp{service
+unavailable} (corresponding to the @acronym{SMTP} return code
+@samp{550}), unless the following statement is present in the
+@command{maidag} configuration file:
+
+@example
+exit-quota-tempfail yes;
+@end example
+
+@noindent
+in which case a temporary error will be returned.
+
+The mailbox quota can be retrieved from the following sources:
+
+@enumerate 1
+@item Authentication method.
+@item @acronym{DBM} file.
+@item @acronym{SQL} database.
+@end enumerate
+
+@menu
+* DBM Quotas::          Keeping Quotas in DBM File.
+* SQL Quotas::          Keeping Quotas in SQL Database.
+@end menu
+
+@node DBM Quotas
+@subsubsection Keeping Quotas in DBM File
+
+To use @acronym{DBM} quota database, GNU Mailutils must
+be compiled with one of the following command line options:
+@option{--with-gdbm}, @option{--with-berkeley-db}, @option{--with-ndbm},
+@option{--with-tokyocabinet}, or @option{--with-kyotocabinet}.
+Examine the output of @command{maidag --show-config-options}, if not sure. 
+
+The quota database should have the following structure:
+
+@table @asis
+@item Key
+Key represents the user name.  Special key @samp{DEFAULT} means default
+quota value, i.e. the one to be used if the user is not explicitly
+listed in the database.
+
+@item Value
+Mailbox quota for this user.  If it is a number, it represents the
+maximum mailbox size in bytes.  A number may optionally be followed by
+@samp{kb} or @samp{mb}, meaning kilobytes and megabytes, respectively.
+
+A special value @samp{NONE} means no mailbox size limit for this user.
+@end table
+
+Here is an example of a valid quota database
+
+@example
+# Default quota value:
+DEFAULT         5mb
+
+# Following users have unlimited mailbox size
+root            NONE
+smith           NONE
+
+# Rest of users
+plog            26214400
+karin           10mB
+@end example
+
+To use the @acronym{DBM} quota database, specify its absolute name using
+@code{quota-db} configuration statement, e.g.:
+
+@example
+quota-db /etc/mail/quota.db;
+@end example
+
+@node SQL Quotas
+@subsubsection Keeping Quotas in SQL Database
+
+Configuration statement @code{quota-query} allows to specify a special
+query to retrieve the quota from the database.  Currently (as of mailutils
+version @value{VERSION}) it is assumed that this table can be accessed
+using the credentials set in @samp{sql} configuration statement
+(@pxref{SQL Statement}).
+
+For example, suppose you have the following quota table:
+
+@example
+create table mailbox_quota (
+  user_name varchar(32) binary not null,
+  quota int,
+  unique (user_name)
+);
+@end example
+
+@noindent
+
+To retrieve user quota the following query can be used:
+
+@example
+SELECT quota FROM mailbox_quota WHERE user_name='$@{user@}'
+@end example
+
+There are no special provisions for specifying group quotas, similar to
+@samp{DEFAULT} in @acronym{DBM} databases.  This is because group quotas can
+easily be implemented using @acronym{SQL} language.  @command{Maidag}
+always uses the first tuple from the set returned by mailbox quota
+query.  So, you may add a special entry to the @code{mailbox_quota}
+table that would keep the group quota.  In the discussion below we assume
+that the @code{user_name} column for this entry is lexicographically
+less than any other user name in the table.  Let's suppose the group
+quota name is @samp{00DEFAULT}.  Then the following query:
+
+@example
+SELECT quota
+FROM mailbox_quota
+WHERE user_name IN ('$@{user@}','00DEFAULT')
+ORDER BY user_name DESC
+@end example
+
+@noindent
+will return two tuples if the user is found in
+@code{mailbox_quota}.  Due to @code{ORDER} statement, the first tuple
+will contain the quota for the user, which will be used by
+@command{maidag}.  On the other hand, if the requested user name is not
+present in the table, the above query will return a single tuple
+containing the group quota.
+
+The following configuration statement instructs @command{maidag} to
+use this query for retrieving the user quota:
+
+@example
+quota-query "SELECT quota "
+            "FROM mailbox_quota "
+            "WHERE user_name IN ('$@{user@}','00DEFAULT') "
+            "ORDER BY user_name DESC";
+@end example
+
+@node Maidag Scripting
+@subsection Maidag Scripting
+@command{Maidag} can use global or per-user @dfn{mail filters} to
+decide whether to deliver the message, and where to deliver it.  As of
+Mailutils version @value{VERSION}, such mail filters may be written in
+the following languages:
+
+@itemize @bullet
+@item Sieve
+@xref{Sieve Language}.
+
+@item Scheme
+@item Python
+@end itemize
+
+Mail filters to use are specified using @samp{script} configuration
+statement.  The following meta-symbols can be used in its argument:
+
+@table @asis
+@item ~
+@itemx %h
+Expands to the recipient home directory.
+
+@item %u
+Expands to the recipient user name.
+@end table
+
+By default, the filename extension decides which scripting language will
+be used.  User can alter the choice using @samp{language} configuration
+statement.  For example:
+
+@example
+language "python"
+script "~/.maidag-py-filter"
+@end example
+
+@menu
+* Sieve Maidag Filters::
+* Scheme Maidag Filters::
+* Python Maidag Filters::
+@end menu
+
+@node Sieve Maidag Filters
+@subsubsection Sieve Maidag Filters
+@kwindex script
+The file name of the Sieve filter to use is specified using
+@samp{script} configuration statement.  For example, the following
+configuration statement:
+
+@example
+script "~/.maidag.sv"
+@end example
+
+@noindent
+instructs @command{maidag} to use file @file{.maidag.sv} in the
+recipient home directory as a Sieve filter.
+
+Normal message delivery is attempted if execution of the Sieve code
+ended with @code{keep} action (either implicit or explicit).
+
+Other Sieve actions are executed as described in @ref{Actions}.  For
+example, to deliver message to another mailbox, use the
+@code{fileinto} action. 
+
+Any modifications to headers or body of the message performed by the
+Sieve code will be visible in the delivered message.
+
+@node Scheme Maidag Filters
+@subsubsection Scheme Maidag Filters
+@kwindex script
+The file name of the Scheme mail filter is specified using
+@samp{script} configuration statement.  For example, the following
+configuration statement:
+
+@example
+script "~/.maidag.scm"
+@end example
+
+@noindent
+instructs `maidag' to use file `.maidag.scm' in the recipient home
+directory as a Scheme filter.
+
+@node Python Maidag Filters
+@subsubsection Python Maidag Filters
+@kwindex script
+
+The file name of the Python mail filter is specified using
+@samp{script} configuration statement.  For example, the following
+configuration statement:
+
+@example
+script "~/.maidag.py"
+@end example
+
+@noindent
+instructs `maidag' to use file `.maidag.py' in the recipient home
+directory as a Python filter.
+
+@noindent
+A simple example of a mail filter written in Python:
+
+@example
+from mailutils import *
+import maidag
+import re
+
+msg = message.Message (maidag.message)
+hdr = msg.header
+
+try:
+    if 'List-Post' in hdr and 'Received' in hdr \
+       and hdr['Received'].find ('fencepost.gnu.org') != -1:
+
+        # check envelope's sender address
+        m = re.search (r'([\w\-]+)-bounces\+([\w]+)=.*',
+                       msg.envelope.get_sender ())
+        if m:
+            lbox = m.group (1)
+            user = m.group (2)
+            # open destination mailbox and append message
+            dst = mailbox.MailboxDefault ('~/Mail/%s' % lbox)
+            dst.open ('ac')
+            dst.append_message (msg)
+            dst.close ()
+            # set deleted flag so maidag will not deliver msg elsewhere
+            msg.attribute.set_deleted ()
+except Exception:
+    pass
+@end example
+
+@node Forwarding
+@subsection Forwarding
+@cindex forward
+@dfn{Forward file} is a special file in the user's home directory that
+contains the email address of the mailbox where the user wants to
+forward his mail.  Normally, forward files are processed by
+@acronym{MTA}.  However, there are some @acronym{MTA} that lack this
+feature.  One of them is MeTA1.
+
+@command{Maidag} provides a forwarding feature that is useful to
+compensate the lack of it.
+
+@kwindex forward-file
+Name of the forward file is given using @code{forward-file}
+configuration statement.  A common usage is:
+
+@example
+forward-file .forward;
+@end example
+
+The forward file is always searched in the recipient home directory.
+
+@kwindex forward-file-checks
+Before actually using the file, a number of safety checks are
+performed on it.  If the file fails to pass one of these checks, no
+forwarding is performed and the message is delivered as usual.  These
+checks can be configured using @code{forward-file-checks} statement.
+Its argument is a list of the following keywords:
+
+@table @asis
+@item groupwritablefile
+@itemx file_iwgrp
+The file must not be group writable.
+
+@item worldwritablefile
+@itemx file_iwoth
+The file must not be world writable.
+
+@item linkedfileinwritabledir
+@itemx link
+The file cannot be a symlink in a writable directory.
+
+@item fileingroupwritabledir
+@itemx dir_iwgrp
+The file cannot reside in a group writable directory.
+
+@item fileinworldwritabledir
+@itemx dir_iwoth
+The file cannot reside in a world writable directory.
+
+@item all
+All of the above checks.
+@end table
+
+The default is @samp{forward-file-checks all}.
+
+Each of these keywords may be prefixed by @samp{no} to disable this
+particular check.  For example:
+
+@example
+forward-file-checks (nodir_iwoth, nodir_iwgrp);
+@end example
+
+@node Url-mode 
+@subsection Delivering Messages to a URL.
+When invoked with the @option{--url} command line option,
+@command{maidag} treats its arguments as a list of mailbox
+@acronym{URL}s and attempts to deliver the message to each of them.
+
+For example:
+
+@example
+$ maidag --url maildir:///home/smith/Mail
+@end example
+
+@node Remote Mailbox Delivery
+@subsection Remote Mailbox Delivery
+@command{Maidag} can be used to deliver mail to remote mailboxes, such
+as @samp{imap} or @samp{smtp}.  If the mailbox @acronym{URL}
+is @samp{smtp} or @samp{sendmail}, the message is
+actually forwarded over @acronym{SMTP} to the remote node, so
+@command{maidag} acts as a message transfer agent.  For example:
+
+@example
+$ maidag --url smtp://10.10.1.100:24
+@end example
+
+This command line will send the message to the machine
+@samp{10.10.1.100} using port @samp{24} (private mail system).
+
+The @samp{prog} mailbox may be of special use.  Delivering to
+this mailbox results in invoking the specified command with the given
+arguments and passing the message to its standard input.  There are two
+ways to specify a @samp{prog} mailbox:
+
+@table @asis
+@item prog://@var{program}?@var{args}
+Here, @var{program} is the absolute pathname of the program binary,
+and @var{args} are its arguments, separated by @samp{&} signs.
+
+@item |@var{program} @var{args}
+In this notation, @var{args} are command line arguments separated by
+white space.
+@end table
+
+In both cases, @var{args} do not include @code{argv[0]}.
+
+The @samp{prog} mailbox may be used, in particular, to implement
+mailing lists with MeTA1.
+
+For example, suppose that the @command{maidag} configuration contains:
+
+@example
+auth @{
+  authorization sql:system;
+  authentication generic:system;
+@}
+
+sql @{
+  interface mysql;
+  db mail;
+  getpwnam "SELECT user as name, mailbox, "
+           "'x' as passwd, 500 as uid, 2 as gid, "
+           "'/nonexistent' as dir, '/sbin/nologin' as shell "
+           "FROM userdb "
+           "WHERE user='$@{user@}'";
+@}
+@end example
+
+Then, the following entries in the @samp{userdb} table implement
+@email{mailman@@yourdomain} mailing list:
+
+@example
+mysql> select * from userdb;
++---------------------+---------------------------------------+
+| user                | mailbox                               |
++---------------------+---------------------------------------+
+| mailman             | |/usr/bin/mailman post mailman        |
+| mailman-admin       | |/usr/bin/mailman admin mailman       |
+| mailman-bounces     | |/usr/bin/mailman bounces mailman     |
+| mailman-confirm     | |/usr/bin/mailman confirm mailman     |
+| mailman-join        | |/usr/bin/mailman join mailman        |
+| mailman-leave       | |/usr/bin/mailman leave mailman       |
+| mailman-owner       | |/usr/bin/mailman owner mailman       |
+| mailman-request     | |/usr/bin/mailman request mailman     |
+| mailman-subscribe   | |/usr/bin/mailman subscribe mailman   |
+| mailman-unsubscribe | |/usr/bin/mailman unsubscribe mailman |
++---------------------+---------------------------------------+
+@end example
+
+@node Conf-maidag
+@subsection Maidag Configuration File Summary
+
+The behavior of @command{maidag} is affected by the following configuration
+statements:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug         @tab @xref{debug statement}.
+@item mailbox       @tab @xref{mailbox statement}.
+@item locking       @tab @xref{locking statement}.
+@item pam           @tab @xref{pam statement}.
+@item sql           @tab @xref{sql statement}.
+@item virtdomain    @tab @xref{virtdomain statement}.
+@item radius        @tab @xref{radius statement}.
+@item ldap          @tab @xref{ldap statement}.
+@item auth          @tab @xref{auth statement}.
+@item mailer        @tab @xref{mailer statement}.
+@item server        @tab @xref{Server Settings}.  Used only in
+@acronym{LMTP} mode.
+@item acl           @tab @xref{acl statement}.
+@item tcp-wrappers  @tab @xref{tcp-wrappers statement}.
+@end multitable
+
+@deffn {Maidag Config} ex-multiple-delivery-success @var{bool}
+In case of multiple delivery, exit with code 0 if at least one
+delivery has succeeded.
+@end deffn
+
+@deffn {Maidag Config} ex-quota-tempfail @var{bool}
+Indicate temporary failure if the recipient is over his mail quota.
+By default, permanent failure is returned.  @xref{Mailbox Quotas}.
+@end deffn
+
+@deffn {Maidag Config} quota-db @var{file}
+Set the name of DBM quota database file.  @xref{DBM Quotas}.
+@end deffn
+
+@deffn {Maidag Config} sieve-filter @var{pattern}
+Set file name or name pattern of the Sieve filter file.
+@xref{Sieve Maidag Filters}.
+@end deffn
+
+@deffn {Maidag Config} message-id-header @var{name}
+When logging Sieve actions, identify messages by the value of this
+header.
+@end deffn
+
+@deffn {Maidag Config} guile-filter @var{pattern}
+File name or name pattern for Guile filter file.
+@xref{Scheme Maidag Filters}.
+@end deffn
+
+@deffn {Maidag Config} debug @var{flags}
+Set additional debugging flags.  Valid flags are:
+
+@table @asis
+@item g
+Print @command{guimb} stack traces.
+
+@item t
+Enable @command{sieve} trace (@code{MU_SIEVE_DEBUG_TRACE}).
+
+@item i
+Enable @command{sieve} instructions trace
+(@code{MU_SIEVE_DEBUG_INSTR}).
+
+@item l
+Log executed Sieve actions.
+@end table
+@end deffn
+
+@deffn {Maidag Config} stderr @var{bool}
+Log to stderr instead of syslog.
+@end deffn
+
+@deffn {Maidag Config} forward-file @var{file}
+Process forward file @var{file}.  @xref{Forwarding}.
+@end deffn
+
+@deffn {Maidag Config} forward-file-checks @var{list}
+Configure safety checks for the forward file.
+@xref{Forwarding, forward-file-checks}.
+@end deffn
+
+@deffn {Maidag Config} lmtp @var{bool}
+Run in @acronym{LMTP} mode.
+@end deffn
+
+@deffn {Maidag Config} group @var{list}
+In @acronym{LMTP} mode, retain supplementary groups from @var{list}.
+@end deffn
+
+@deffn {Maidag Config} listen @var{url}
+In @acronym{LMTP} mode, listen on @var{url}.  Valid @acronym{URL}s are:
+@samp{tcp://@var{host}:@var{port}} (note that port is mandatory),
+@samp{file://@var{socket-file-name}} or
+@samp{socket://@var{socket-file-name}}.
+@end deffn
+
+@deffn {Maidag Config} reuse-address @var{bool}
+Reuse existing address (@acronym{LMTP} mode).  Default is @samp{yes}.
+@end deffn

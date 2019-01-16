@@ -1,0 +1,178 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex mimeview
+
+  For each file given in its command line, @command{mimeview} attempts
+to autodetect its type and invoke an appropriate file viewer.
+
+  To detect the file type, @command{mimeview} uses @file{mime.types}
+file.  This file is a part of Common UNIX Printing System,
+@ref{mime.types,,,mime.types(5), mime.types man page}.  By default
+@command{mimeview} searches for @file{mime.types} in
+@file{$prefix/etc/cups/}@footnote{The exact location is determined at
+configuration time by setting environment variable
+@env{DEFAULT_CUPS_CONFDIR}.  On most sites running 
+
+@example
+./configure DEFAULT_CUPS_CONFDIR=/etc/cups
+@end example
+
+@noindent
+should be recommended.}, however its exact location can be specified
+at runtime as well (see @option{--mimetypes} below).
+
+  Once file MIME type is successfully determined, @command{mimeview}
+consults @file{mailcap} files in order to determine how to display
+the file.  It does so essentially in the same manner as
+@command{metamail} utility, i.e., it scans all files specified
+in @code{METAMAIL} environment variable until it finds an entry
+describing the desired file format or until the list of files is
+exhausted.  If @code{METAMAIL} variable is not set, @command{mimeview}
+uses the following default path instead:
+
+@example
+$HOME/.mailcap:/usr/local/etc/mailcap:\
+ /usr/etc/mailcap:/etc/mailcap:\
+ /etc/mail/mailcap:/usr/public/lib/mailcap
+@end example
+
+@menu
+* Mimeview Invocation::
+* Mimeview Config::
+@end menu
+
+@node Mimeview Invocation
+@subsection Mimeview Invocation
+
+  The following table summarizes options specific for @command{mimeview}:
+
+@table @option
+@item -a[@var{type-list}]
+@itemx --no-ask[=@var{type-list}]
+By default @command{mimeview} asks for confirmation before running
+interpreter to view a message.  If this option is used without
+argument, it disables the default behavior for all message
+types.  Otherwise, if argument @var{type-list} is given, it specifies
+a comma-separated list of MIME types for which no questions should be
+asked.  Elements of this list may include shell-style globbing
+patterns, e.g. setting
+
+@example
+--no-ask='text/*,image/jpeg'
+@end example
+
+@noindent
+will disable prompting before displaying any textual files, no
+matter what their subtype is, and before displaying files with
+type @samp{image/jpeg}.
+
+  Notice, that when the long form is used, its argument
+must be separated from the option by a single equal sign, as shown
+in the example above.  When the short form (@option{-a}) is used, its argument
+must follow the option immediately, without any intervening whitespace,
+e.g.  @option{-a'text/*'}). 
+
+@item -d[@var{flags}]
+@itemx --debug[=@var{flags}]
+Enables debugging output.  @var{Flags} is a sequence of characters
+specifying the desired debugging level.  Following characters are
+meaningful in @var{flags}:
+
+@table @asis
+@item g
+Enables debugging of @file{mime.types} parser
+
+@item l
+Enables debugging of @file{mime.types} lexical analyzer (warning:
+produces @emph{very} copious output)
+
+@item 0
+Prints basic information about actions to be executed and reports
+about exit status of executed commands.
+
+@item 1
+Additionally displays each file name along with its MIME type
+
+@item 2
+Additionally traces the process of looking up the matching entry
+in @code{mailcap} files.
+
+@item 3
+Additionally, enables debugging of @file{mime.types} parser (@samp{g}).
+
+@item 4
+Additionally, enables debugging of @file{mime.types} lexer (@samp{l}).
+
+@item digits from 5 to 9
+The same as 4, currently.
+@end table
+
+If @var{flags} are not given, the default @samp{2} is assumed.
+
+@item --metamail[=@var{file}]
+Run @command{metamail} to display files, instead of using the internal
+mechanisms.  If @var{file} is specified, it is taken as
+@command{metamail} command line.
+
+@item -h
+@itemx --no-interactive
+@itemx --print
+This options tells @command{mimeview} that it should run in
+non-interactive mode.  In this mode prompting is disabled, and
+the normal mailcap @code{command} field is not executed.  Instead
+@command{mimeview} will execute the command specified in
+the @code{print} field.  If there is nothing in the print field,
+the mailcap entry is ignored and the search continues for a matching
+mailcap entry that does have a @code{print} field.
+
+Notice, that unlike in @command{metamail -h}, this option does
+not force @command{mimeview} to send the output to the printer
+daemon.
+
+When used with @option{--metamail} option, this option passes
+@option{-h} flag to the invocation of @command{metamail}.
+
+By default @command{mimeview} behaves as if given
+@option{--no-interactive} option whenever its standard input is not
+a @asis{tty} device.
+
+@item -i
+@itemx --identify
+Identifies and prints the MIME type for each input file.
+
+@item -n
+@itemx --dry-run
+Do not do anything, just print what would be done.  Implies
+@option{--debug=1}, unless the debugging level is set up explicitly.
+
+@item -f @var{file}
+@itemx --mimetypes @var{file}
+Use @var{file} as @file{mime.types} file.  If @var{file} is a
+directory, use @file{@var{file}/mime.types}
+
+@item -t
+@itemx --lint
+Check syntax of the @file{mime.types} file and exit.  Command line
+arguments are ignored.
+@end table
+
+@node Mimeview Config
+@subsection Mimeview Config
+
+The following configuration statements affect the behavior of
+@command{mimeview}:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug @tab @xref{Debug Statement}.
+@end multitable
+
+@deffn {Mimeview Config} mimetypes @var{file}
+Read @var{file} instead of the default @file{mime.types}. 
+@end deffn
+
+@deffn {Mimeview Config} metamail @var{program}
+Use @var{program} to display files.
+@end deffn

@@ -1,0 +1,210 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex comsatd
+
+Comsatd is the server which receives reports of incoming mail and
+notifies users, wishing to get this service.  It can be started
+either from @file{inetd.conf} or as a standalone daemon.
+
+@menu
+* Starting comsatd::       Invocation.
+* Configuring comsatd::    Configuration of @command{comsatd}.
+* dot.biffrc::             A per-user configuration file.
+@end menu
+
+@node Starting comsatd
+@subsection Starting @command{comsatd}
+
+@table @option
+@item -d
+@itemx --daemon
+Run as a standalone daemon.
+
+@item -i
+@itemx --inetd
+The server is started from @file{/etc/inetd.conf} file:
+
+@example
+comsat dgram  udp wait  root  /usr/sbin/comsatd \
+comsatd -c /etc/comsat.conf
+@end example
+
+This is the default operation mode.
+
+@item -t
+@itemx --test
+Test mode.  In this mode, @command{comsatd} takes two arguments:
+@acronym{URL} of a mailbox and @acronym{QID} of the message from that
+mailbox, e.g.:
+
+@example
+$ comsatd --test /var/mail/root 34589
+@end example
+
+@item --foreground
+Don't detach from the controlling terminal, remain in foreground.
+@end table
+
+See also @ref{Common Options}.
+
+@node Configuring comsatd
+@subsection Configuring @command{comsatd}
+
+Following configuration statements affect the behavior of
+@command{comsatd}:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug   @tab @xref{debug statement}.
+@item logging @tab @xref{logging statement}.
+@item mailbox @tab @xref{mailbox statement}.
+@item locking @tab @xref{locking statement}.
+@item acl     @tab @xref{acl statement}.
+@end multitable
+
+@menu
+* General Settings::
+* Security Settings::
+@end menu
+
+@node General Settings
+@subsubsection General Settings
+
+These statements control the general behavior of the comsat daemon:
+
+@deffn {Comsatd Conf} max-lines @var{number}
+Set maximum number of message body lines to be output.
+@end deffn
+
+@deffn {Comsatd Conf} allow-biffrc @var{bool}
+Enable or disable processing of user's @file{.biffrc} file.  By default,
+it is enabled.
+@end deffn
+
+@node Security Settings
+@subsubsection Security Settings
+
+These statements control the way @command{comsatd} fights possible
+flooding attacks.
+
+@deffn {Comsatd Conf} max-requests @var{number}
+Set maximum number of incoming requests per
+@samp{request-control-interval}.
+@end deffn
+
+@deffn {Comsatd Conf} request-control-interval @var{duration}
+Set the request control interval.
+@end deffn
+
+@deffn {Comsatd Conf} overflow-delay-time @var{duration}
+Set initial amount of time to sleep, after the first overflow occurs.
+@end deffn
+
+@deffn {Comsatd Conf} overflow-control-interval @var{duration}
+Set overflow control interval.  If two consecutive overflows happen
+within that interval, the overflow-delay-time is doubled.
+@end deffn
+
+@node dot.biffrc
+@subsection A per-user Configuration File
+
+By default, when a notification arrives, @command{comsatd} prints subject,
+from headers and the first five lines from the new message to the user's
+tty.  The user is allowed to change this behavior by using his own
+configuration file.  This file should be located in the user's home
+directory and should be named @file{.biffrc}.  It must be owned by the
+user and have its permissions bits set to 0600. (@emph{Please note},
+that the use of per-user configuration files may be disabled, by
+specifying @samp{allow-biffrc no} in the main configuration file, see
+@pxref{Configuring comsatd}).
+
+The @file{.biffrc} file consists of a series of statements.  Each
+statement occupies one line and defines an action to be taken upon
+arrival of a new mail.  Very long lines may be split using @samp{\} as
+the last character on the line.  As usual, comments may be introduced with
+@samp{#} character.
+
+The actions specified in @file{.biffrc} file are executed in turn.
+The following actions are defined:
+
+@table @asis
+@item beep
+Produce an audible signal.
+@item echo [-n] @var{string} [@var{string}...]
+Output the arguments to the user's terminal device.  If several
+arguments are given they will be output separated by single
+spaces.  The newline character will be printed at the end of the
+output, unless the @option{-n} option is used.
+@item exec @var{prog} @var{arglist}
+Execute program @var{prog} with arguments from @var{arglist}.  @var{prog}
+must be specified with absolute pathname.  It may not be a setuid or
+setgid program.
+@end table
+
+In the description above, @var{string} denotes any sequence of
+characters.  This sequence must be enclosed in a pair of double-quotes,
+if it contains whitespace characters.  The @samp{\} character inside a
+string starts a C escape sequence.  Following meta-characters may be
+used in strings:
+
+@table @asis
+@item $u
+Expands to username
+@item $h
+Expands to hostname
+@item $H@{name@}
+Expands to value of message header @samp{name}.
+@item $B(@var{c},@var{l})
+Expands to message body.  @var{c} and @var{l} give maximum number of
+characters and lines in the expansion.  When omitted, they default to 400, 5.
+@end table
+
+@subsubheading Example I
+
+Dump to the user's terminal the contents of @samp{From} and
+@samp{Subject} headers followed by at most 5 lines of message body.
+@example
+@group
+echo "Mail to \a$u@@$h\a\n---\n\
+From: $H@{from@}\n\
+Subject: $H@{Subject@}\n\
+---\n\
+$B(,5)\
+---\n"
+@end group
+@end example
+
+@noindent
+The above example can also be written as:
+@example
+@group
+echo Mail to \a$u@@$h\a
+echo ---
+echo From: $H@{From@}
+echo Subject: $H@{Subject@}
+echo ---
+echo $B(,5)
+echo ---
+@end group
+@end example
+
+@subsubheading Example II
+
+Produce a bell, then pop up the xmessage window on display :0.0 with
+the text formatted in the same manner as in the previous example.
+
+@example
+@group
+beep
+exec /usr/X11R6/bin/xmessage \
+-display :0.0 -timeout 10 "Mail to $u@@$h \n---\n\
+From: $H@{from@}\n\
+Subject: $H@{Subject@}\n\
+---\n\
+$B(,5)\
+---\n"
+@end group
+@end example
+

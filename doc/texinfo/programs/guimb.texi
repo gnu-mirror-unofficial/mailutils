@@ -1,0 +1,214 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex guimb
+
+@command{Guimb} is an experimental tool that iterates over messages in
+a mailbox (or several mailboxes), applying a Scheme function to each
+of them.
+
+A user-defined @dfn{scheme module} that supplies the function to apply
+is specified using the @option{--source} or @option{--file} option.
+The module must define at least the following function:
+
+@deffn {User function} guimb-message @var{msg}
+Processes message @var{msg}.  This function can alter the message
+using Guile primitives supplied by mailutils.
+@end deffn
+
+The following function definitions are optional:
+
+@deffn {User function} guimb-getopt @var{args}
+If defined, this function is called after @command{guimb} has finished
+processing the command line.  @var{args} is a list of unconsumed
+command line arguments.
+
+The function is intended to provide a way of configuring the module
+from the command line.
+@end deffn
+
+@deffn {User function} guimb-end
+If defined, this function is called after all mailboxes have been processed.
+@end deffn
+
+In the following example we define a module that prints
+information about each message is the input mailbox, in a way similar
+to @code{frm} utility:
+
+@example
+@group
+(define-module (frm)
+  :export (guimb-message))
+
+(use-modules (mailutils mailutils))
+             
+(define (guimb-message msg)
+  (display (mu-message-get-sender msg))
+  (display " ")
+  (display (mu-message-get-header msg "subject"))
+  (newline))
+@end group
+@end example
+
+The modules are looked up in directories listed in the global variable
+@code{%load-path}.  New directories can be added to that variable on
+the fly using the @option{-L} (@option{--load-path}) option.  For
+example, if the sample module above was saved in a file
+@file{frm.scm} somewhere in the load path, it can be applied to the
+current user inbox by running the following command:
+
+@example
+guimb --file frm
+@end example
+
+@menu
+* Specifying Scheme Program to Execute::
+* Specifying Mailboxes to Operate Upon::
+* Passing Options to Scheme::
+* Command Line Option Summary::
+@end menu
+
+@node Specifying Scheme Program to Execute
+@subheading Specifying Scheme Program to Execute
+
+The Scheme module that defines message processing functions is given
+via the following options:
+
+@table @option
+@item -s @var{module}
+@itemx --source @var{module}
+Load Scheme code from @var{module}.
+
+This option stops further argument processing, and passes all
+remaining arguments as the value of @var{args} argument to the
+@code{guimb-getopt} function, if it is defined.
+
+@item -f @var{module}
+@itemx --file @var{module}
+Load Scheme source code from @var{module}.  The remaining arguments
+are processed in the usual way.  When using this option, you can pass
+additional options and or arguments to the module by enclosing them in
+@option{-@{} and @option{-@}} options (@pxref{Passing Options to Scheme}).
+@end table
+
+An experimental option is provided, that evaluates a supplied
+Scheme expression right after loading the module:
+
+@table @option
+@item -e @var{expr}
+@itemx --expression @var{expr}
+Evaluate scheme expression.
+@end table
+
+@node Specifying Mailboxes to Operate Upon
+@subheading Specifying Mailboxes to Operate Upon
+
+There are four basic ways of passing mailboxes to @command{guimb}.
+
+@table @code
+@item guimb [@var{options}] [@var{mailbox}...]
+The resulting mailbox is not saved, unless the user-supplied
+scheme program saves it.
+@item guimb [@var{options}] --mailbox @var{defmbox}
+The contents of @var{defmbox} is processed and is replaced with the resulting
+mailbox contents.  Useful for applying filters to user's mailbox.
+@item guimb [@var{options}] --mailbox @var{defmbox} @var{mailbox} [@var{mailbox}...]
+The contents of specified mailboxes is processed, and the resulting
+mailbox contents is appended to @var{defmbox}.
+@item guimb [@var{options}] --user @var{username} [@var{mailbox}...]
+The contents of specified mailboxes is processed, and the resulting
+mailbox contents is appended to the user's system mailbox.  This makes
+it possible to use @command{guimb} as a mail delivery agent.
+@end table
+
+If no mailboxes are specified in the command line, @command{guimb} reads
+and processes the system mailbox of the current user.
+
+@node Passing Options to Scheme
+@subheading Passing Options to Scheme
+
+Sometimes it is necessary to pass some command line options to the
+scheme procedure.  There are three ways of doing so.
+
+When using @option{--source} (@option{-s}) option, the rest of the
+command line following the option's argument is passed as the
+@var{args} argument to the @code{guimb-getopt} function, if such
+function is defined.  This allows for making guimb scripts executable
+by the shell.  If your system supports @samp{#!} magic at the start of
+scripts, add the following two lines to the beginning of your script
+to allow for its immediate execution: 
+
+@example
+#! /usr/local/bin/guimb -s
+!#
+@end example
+
+@noindent
+(replace @samp{/usr/local/bin/} with the actual path to the @command{guimb}).
+
+Otherwise, if you use the @option{--file} option, the additional
+arguments can be passed to the Scheme program @option{-g} 
+(@option{--guile-arg}) command line option.  For example:
+
+@example
+guimb --guile-arg -opt --guile-arg 24 --file @var{progfile}
+@end example
+
+In this example, the @code{guimb-getopt} function will get the
+following argument
+
+@example
+( '-opt' 24 )
+@end example
+
+Finally, if there are many arguments to be passed to Scheme, it is more
+convenient to enclose them in @option{-@{} and @option{-@}} escapes:
+
+@example
+guimb -@{ -opt 24 -@} --file @var{progfile}
+@end example
+
+@node Command Line Option Summary
+@subheading Command Line Option Summary
+
+This is a short summary of the command line options available to
+@command{guimb}.
+
+@table @option
+@item -d
+@itemx --debug
+Start with debugging evaluator and backtraces.
+@item -e @var{expr}
+@itemx --expression @var{expr}
+Execute given Scheme expression.
+@item -L @var{dir}
+@item --load-path @var{dir}
+Insert @var{dir} at the beginning of the @code{%load-path} list.  The
+argument is either a single directory name, or a list of such names,
+delimited by @samp{:} characters.
+@item -m @var{path}
+@itemx --mail-spool=@var{path}
+Set path to the mailspool directory
+@item -f @var{progfile}
+@itemx --file @var{progfile}
+Read Scheme program from @var{progfile}.
+@item -g @var{arg}
+@itemx --guile-command @var{arg}
+Append @var{arg} to the command line passed to Scheme program.
+@item -@{ ... -@}
+Pass all command line options enclosed between @option{-@{} and @option{-@}}
+to Scheme program.
+@item -m
+@itemx --mailbox @var{mbox}
+Set default mailbox name.
+@item -u
+@itemx --user @var{name}
+Act as local MDA for user @var{name}.
+@item -h
+@itemx --help
+Display help message.
+@item  -v
+@itemx --version
+Display program version.
+@end table

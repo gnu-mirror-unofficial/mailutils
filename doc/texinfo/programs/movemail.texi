@@ -1,0 +1,280 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex movemail
+The purpose of @command{movemail}, as its name implies, is to move mail
+from one location to another.  For example, the following invocation:
+
+@example
+movemail /var/mail/smith INBOX
+@end example
+
+@noindent
+moves messages from file @file{/var/mail/smith} to file @file{INBOX}.
+
+The program was initially intended as a replacement for
+@command{movemail} from GNU Emacs.  The @command{movemail} program is
+run by Emacs @code{Rmail} module.  @xref{Rmail,,,emacs,Reading Mail
+with Rmail}, for detailed description of @code{Rmail} interface.
+
+Mailutils version of @command{movemail} is fully
+backward-compatible with its Emacs predecessor, so it should run
+flawlessly with older versions of Emacs.  Emacs versions
+starting from 22.1 contain improved @code{Rmail} interface and
+are able to take advantage of all new features mailutils
+@command{movemail} provides.
+
+Apart from that use, @command{movemail} proved to be a useful tool for
+incorporating mail from remote mailboxes into the local one.  See
+@uref{http://mailutils.org/wiki/Fetching_Mail_with_Movemail, Fetching
+Mail with Movemail}, for a detailed discussion with usage recipes.
+
+@menu
+* Movemail Configuration::
+* Ownership::            Setting Destination Mailbox Ownership
+* Summary::              Short Movemail Invocation Summary
+@end menu
+
+@node Movemail Configuration
+@subsection Movemail Configuration
+@cindex movemail, configuration
+The following configuration file statements affect the behavior of
+@command{movemail}:
+
+@deffn {Movemail Config} preserve @var{bool}
+If @var{bool} is @samp{true}, do not remove messages from the source mailbox.
+@end deffn
+
+@deffn {Movemail Config} reverse @var{bool}
+If @var{bool} is @samp{true}, reverse message sorting order.
+@end deffn
+
+@deffn {Movemail Config} emacs @var{bool}
+If @var{bool} is @samp{true}, output information used by Emacs rmail interface.
+@end deffn
+
+@deffn {Movemail Config} ignore-errors @var{bool}
+Continue moving messages after errors.  By default,
+@command{mailfromd} exits immediately if it cannot copy a message.
+@end deffn
+
+@deffn {Movemail Config} program-id @var{fmt}
+Set program identifier, i.e. a string which will prefix all
+diagnostic messages issued by the program.  By default, program
+name is used.
+
+@anchor{movemail-program-id}
+The @var{fmt} is a format string that may contain references to the
+following variables (@pxref{Variables}):
+
+@table @code
+@item progname
+The program name.
+
+@item source
+URL of the source mailbox.
+
+@item source_user
+User part of the source mailbox URL.
+
+@item source_host
+Host part of the source mailbox URL.
+
+@item source_path
+Path part of the source mailbox URL.
+
+@item dest
+URL of the destination mailbox
+
+@item dest_user
+User part of the destination mailbox URL.
+
+@item dest_host
+Host part of the destination mailbox URL.
+
+@item dest_path
+Path part of the destination mailbox URL.
+@end table
+
+Setting @code{program-id} may be necessary if several @code{movemail}
+instances are run simultaneously (e.g. invoked from a script) to
+discern between the instances.  For example:
+
+@example
+program-id "$@{progname@}: $@{source@} => $@{dest@}"
+@end example
+@end deffn
+
+@deffn {Movemail Config} uidl @var{bool}
+Avoid copying the message if a message with the same UIDL already
+exists in the destination mailbox.
+@end deffn
+
+@deffn {Movemail Config} verbose @var{level}
+Set verbosity level.
+@end deffn
+
+@deffn {Movemail Config} mailbox-ownership @var{method-list}
+Define list of methods for setting ownership of the destination
+mailbox.  The @var{method-list} argument can contain the following
+elements:
+
+@anchor{mailbox-ownership-methods}
+@table @asis
+@item copy-id
+Copy owner UID and GID from the source mailbox.  This method works only
+with local mailboxes, i.e.: @samp{mbox} (UNIX mailbox), @samp{maildir}
+and @samp{mh}.
+
+@item copy-name
+Get owner name from the source mailbox URL and obtain UID and GID for
+this user using mailutils authorization methods.
+
+@item set-id=@var{uid}[:@var{gid}]
+Set supplied @var{uid} and @var{gid}.  If @var{gid} is not supplied,
+it is read from the @file{/etc/passwd} record for this UID.
+
+@item set-name=@var{user}
+Make destination mailbox owned by @var{user}.
+@end table
+@end deffn
+
+@deffn {Movemail Config} max-messages @var{count}
+Defines upper limit on the number of moved messages.  Movemail will
+stop after transferring @var{count} messages.
+
+By default, the number of messages is not limited.
+@end deffn
+
+@anchor{movemail-onerror}
+@deffn {Movemail Config} onerror @var{actions}
+Defines what to do if an error occurs when transferring a message.
+@var{actions} is a list of one or more of the following keywords:
+
+@table @asis
+@item abort
+Abort the transfer and terminate the program.  This is the default
+action.
+
+@item skip
+Skip to the next message.
+
+@item delete
+Delete the affected message.
+
+@item count
+Count this message as processed.
+@end table
+
+Each keyword can be prefixed with @samp{no} to reverse its meaning.
+@end deffn
+
+The following standard Mailutils statements are supported:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug         @tab @xref{debug statement}.
+@item tls           @tab @xref{tls statement}.
+@item mailbox       @tab @xref{mailbox statement}.
+@item locking       @tab @xref{locking statement}.
+@item pam           @tab @xref{pam statement}.
+@item sql           @tab @xref{sql statement}.
+@item virtdomain    @tab @xref{virtdomain statement}.
+@item radius        @tab @xref{radius statement}.
+@item ldap          @tab @xref{ldap statement}.
+@item auth          @tab @xref{auth statement}.
+@end multitable
+
+@node Ownership
+@subsection Setting Destination Mailbox Ownership
+@UNREVISED
+
+@node Summary
+@subsection Movemail Usage Summary
+
+@example
+movemail [@var{option}...] @var{inbox} @var{destfile} [@var{password}]
+@end example
+
+The first argument, @var{inbox}, is the @acronym{url} (@pxref{Mailbox}) of
+the source mailbox.  The second argument, @var{destfile}, traditionally
+means destination file, i.e. the UNIX mailbox to copy messages
+to.  However, mailutils @command{movemail} extends the meaning of this
+parameter.  You may actually specify any valid @acronym{url} as
+@var{destfile} parameter.@footnote{Rmail does not use this
+feature}.
+
+For compatibility with older implementations of @command{movemail},
+the @var{source} argument can also have the form:
+
+@example
+po:@var{username}[:@var{pop-server}]
+@end example
+
+@noindent
+where @var{pop-server} is the IP address or hostname of a POP3 server
+to connect to and @var{username} is the name of the user on that
+server.  The password is then supplied by the third argument.
+
+It is equivalent to the following URL:
+
+@example
+pop://@var{username}[:@var{password}]@@@var{pop-server}
+@end example
+
+In fact, whenever @var{source} refers to a remote mailbox, the
+@var{password} argument can be used to pass the password.  However,
+the safer @dfn{ticket} method is of course preferred.
+
+Options are one or more of the following:
+
+@table @option
+@item --emacs
+Output information used by Emacs @code{rmail} interface.
+
+@item --ignore-errors
+Try to continue after errors.
+
+@item --max-messages=@var{count}
+Process at most @var{count} messages.
+
+@item --notify
+Enable biff notification.
+
+@item --onerror=@var{kw}[,@var{kw}...]
+What to do on errors.  @xref{movemail-onerror, onerror statement}, for
+a description of @var{kw}.
+
+@item -P @var{modelist}
+@itemx --owner=@var{modelist}
+Control mailbox ownership.  @var{modelist} is a comma-separated list
+of one or more ownership change methods.
+@xref{mailbox-ownership-methods}, for a description of available
+methods.
+
+This option is useful only when running @command{movemail} as root.
+
+@item -p
+@itemx --preserve
+@itemx --keep-messages
+Don't remove transferred messages from the source mailbox.
+
+@item --program-id=@var{fmt}
+Set program identifier for diagnostics (default: the program name).
+@xref{movemail-program-id}, for a description of its argument.
+
+@item -r
+@itemx --reverse
+Reverse the order of retrieved messages.
+
+@item -u
+@itemx --uidl
+Use UIDLs to avoid downloading the same message twice.
+
+@item -v
+@itemx --verbose
+Increase verbosity level.
+@end table
+
+The common options are also understood (@pxref{Common Options}).

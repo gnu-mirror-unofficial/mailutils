@@ -1,0 +1,41 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex messages
+
+@command{Messages} prints on standard output the number of messages
+contained in each folder specified in command line.  If no folders
+are specified, it operates upon user's system mailbox.  For each
+folder, the following output line is produced:
+
+@example
+Number of messages in @var{folder}: @var{number}
+@end example
+
+@noindent
+where @var{folder} represents the folder name, @var{number} represents
+the number of messages.
+
+The following configuration file statements affect the behaviour of 
+@command{messages}:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug         @tab @xref{debug statement}.
+@item tls           @tab @xref{tls statement}.
+@item mailbox       @tab @xref{mailbox statement}.
+@item locking       @tab @xref{locking statement}.
+@end multitable
+
+In addition to the common mailutils options (@pxref{Common Options}),
+the program accepts the following command line options:
+
+@table @option
+@item -q
+@itemx --quiet
+@itemx -s
+@itemx --silent
+Be quiet.  Display only number of messages per mailbox, without leading text.
+@end table
+

@@ -1,0 +1,106 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@UNREVISED
+
+GNU mailutils provides two commands for listing messages in a mailbox.
+These are @command{from} and @command{frm}.
+
+The behavior of both programs is affected by the following
+configuration file statements:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug   @tab @xref{debug statement}.
+@item tls     @tab @xref{tls statement}.
+@item mailbox @tab @xref{mailbox statement}.
+@item locking @tab @xref{locking statement}.
+@end multitable
+
+@subheading @command{frm}
+@pindex frm
+
+The @command{frm} utility outputs a header information of
+the selected messages in a mailbox.  By default, @command{frm} reads 
+user's system mailbox and outputs the contents of @code{From} and
+@code{Subject} headers for each message.  If a folder is specified in
+the command line, the program reads that folder rather than the default
+mailbox.
+
+The following command line options alter the behavior of the program:
+
+@table @option
+@item -d
+@itemx --debug
+Enable debugging output.
+@item -f @var{string}
+@itemx --field @var{string}
+Display the header named by @var{string} instead of @code{From}
+@code{Subject} pair.
+@item -l
+@itemx --to
+Include the contents of @code{To} header to the output.  The output field
+order is then: @code{To} @code{From} @code{Subject}.
+@item -n
+@itemx --number
+Prefix each line with corresponding message number.
+@item -Q
+@itemx --Quiet
+Be very quiet.  Nothing is output except error messages.  This is useful
+in shell scripts where only the return status of the program is
+important.
+@item -q
+@itemx --query
+Print a message only if there are unread messages in the mailbox.
+@item -S
+@itemx --summary
+Print a summary line.
+@item -s @var{attr}
+@itemx --status @var{attr}
+Only display headers from messages with the given status.
+@var{Attr} may be one of the following: @samp{new}, @samp{read},
+@samp{unread}.  It is sufficient to specify only first letter of
+an @var{attr}.  Multiple @option{-s} options are allowed.
+@item -t
+@itemx --align
+Tidy mode.  In this mode @command{frm} tries to preserve the alignment of
+the output fields.  It also enables the use of BIDI algorithm for
+displaying subject lines that contain text in right-to-left
+orientation (such as Arabic or Hebrew).
+@end table
+
+@subheading @command{from}
+@pindex from
+
+The @command{from} utility displays sender and subject of each message
+in a mailbox.  By default, it reads the user's system mailbox.  If the
+program is given a single argument, it is interpreted as a name of the
+user whose mailbox is to be read.  Obviously, permissions are required
+to access that user's mailbox, so such invocations may be used only
+by superuser.
+
+The option @option{-f} (@option{--file}) instructs @command{from} to read
+the given mailbox.
+
+The full list of options, supported by @command{from} follows:
+
+@table @option
+@item -c
+@itemx --count
+Prints only a count of messages in the mailbox and exit.
+
+@item -d
+@itemx --debug
+Prints additional debugging output.
+
+@item -s @var{string}
+@itemx --sender=@var{string}
+Prints only mail with @samp{From:} header containing the supplied string.
+@FIXME{Probably, this should test envelopes as well.}
+
+@item -f @var{url}
+@itemx --file=@var{url}
+Examine mailbox from the given @var{url}.
+@end table
+

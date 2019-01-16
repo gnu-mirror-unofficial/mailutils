@@ -1,0 +1,124 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex readmsg
+
+The @command{readmsg} utility extracts messages from a mailbox
+according to the criteria specified in the command line.  These
+criteria are:
+
+@enumerate
+@item A lone @samp{*} means ``select all messages in the mailbox''.
+
+@item
+A list of message numbers may be specified.  Values
+of  @samp{0}  and @samp{$} in the list both mean the last
+message in the mailbox.  For example:
+@example
+readmsg 1 3 0
+@end example
+extracts three messages from the folder: the first, the third, and the last.
+
+@item
+Finally, the selection may be some text to match.  This will select a mail
+message which exactly matches the specified text.  For example,
+@example
+readmsg staff meeting
+@end example
+extracts the message which contains the words @samp{staff meeting}.
+Note that it will not match a message containing @samp{Staff Meeting}
+-- the matching is case sensitive.  Normally only the first message
+which matches the pattern is printed.
+@end enumerate
+
+Unless one of the informational options is used, at least one command
+line argument must be present.  Informational options are:
+@option{--help} (@option{-?}), @option{--usage}, and
+@option{--version} (@option{-V}).
+
+@menu
+* Opt-readmsg::   Invocation of @command{readmsg}.
+* Conf-readmsg::  Configuration of @command{readmsg}.
+@end menu
+
+@node Opt-readmsg
+@subsection Invocation of @command{readmsg}.
+
+@table @option
+@item -a
+@itemx --show-all
+If a pattern is use for selection show all messages that match pattern
+by default only the first one is presented.
+
+@item -d
+@itemx --debug
+Display mailbox debugging information.
+
+@item -f @var{mailbox}
+@itemx --folder=@var{mailbox}
+Specified the default mailbox.
+
+@item -h
+@itemx --header
+Show the entire header and ignore the weedlist.
+
+@item -n
+@itemx --no-header
+Do not print the message header.
+
+@item -p
+@itemx --form-feed
+Put form-feed (Control-L) between messages instead of newline.
+
+@anchor{weedlist option}
+@item  -w @var{weedlist}
+@itemx --weedlist=@var{weedlist}
+A whitespace or coma separated list of header names to show per message.
+Default is @option{--weedlist="From Subject Date To CC Apparently-"}.
+@end table
+
+See also @ref{Common Options}.
+
+@node Conf-readmsg
+@subsection Configuration of @command{readmsg}.
+
+Following configuration statements affect the behavior of
+@command{readmsg}:
+
+@deffn {Readmsg Conf} header @var{bool}
+If @var{bool} is @samp{true}, display entire headers.
+@end deffn
+
+@deffn {Readmsg Conf} weedlist @var{str}
+Set the weedlist.  The @var{str} argument is
+a string, containing a list of header names, separated by whitespace,
+commands or colons.  This corresponds to the @option{--weedlist} command
+line option (@pxref{Opt-readmsg, --weedlist}).
+@end deffn
+
+@deffn {Readmsg Conf} no-header @var{bool}
+If @var{bool} is @samp{true}, exclude all headers.
+@end deffn
+
+@deffn {Readmsg Conf} form-feeds @var{bool}
+If @var{bool} is @samp{true}, output formfeed character between
+messages.
+@end deffn
+
+@deffn {Readmsg Conf} folder @var{url}
+Set the @acronym{URL} of the mailbox folder to read.
+@end deffn
+
+@deffn {Readmsg Conf} show-all-match @var{bool}
+If @var{bool} is @samp{true}, print all messages matching pattern, not
+only the first.
+@end deffn
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug         @tab @xref{Debug Statement}.
+@item tls           @tab @xref{TLS Statement}.
+@item mailbox       @tab @xref{Mailbox Statement}.
+@item locking       @tab @xref{Locking Statement}.
+@end multitable

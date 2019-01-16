@@ -25,7 +25,23 @@ mailutils_TEXINFOS = \
  sieve.texi\
  strftime.texi\
  usage.texi\
- version.texi
+ version.texi\
+ $(programs_TEXINFOS)
+
+programs_TEXINFOS = \
+ programs/frm.texi\
+ programs/mail.texi\
+ programs/messages.texi\
+ programs/movemail.texi\
+ programs/readmsg.texi\
+ programs/sieve.texi\
+ programs/guimb.texi\
+ programs/maidag.texi\
+ programs/mimeview.texi\
+ programs/pop3d.texi\
+ programs/imap4d.texi\
+ programs/comsatd.texi\
+ programs/mailutils.texi
 
 clean-local:
 	rm -rf manual
