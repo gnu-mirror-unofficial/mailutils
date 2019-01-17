@@ -95,7 +95,7 @@ static const struct mail_command_entry mail_command_table[] = {
   { "P",	"Print",	"P[rint] [msglist]",		0,
     mail_print, msglist_compl },
   { "pi",	"pipe",		"pi[pe] [[msglist] command]",	0,
-    mail_pipe, no_compl }, /* FIXME: exec_compl */
+    mail_pipe, exec_compl }, 
   { "pre",	"preserve",	"pre[serve] [msglist]",		0,
     mail_hold, msglist_compl },
   { "prev",	"previous",	"prev[ious] [message]",		0,
@@ -129,7 +129,7 @@ static const struct mail_command_entry mail_command_table[] = {
   { "sete",     "setenv",       "sete[nv] [name[=value]]",      0,
     mail_setenv, no_compl },
   { "sh",	"shell",	"sh[ell] [command]",		0,
-    mail_shell, no_compl }, /* FIXME: exec_compl */
+    mail_shell, shell_compl },
   { "si",	"size",		"si[ze] [msglist]",		0,
     mail_size, msglist_compl },
   { "so",	"source",	"so[urce] file",		0,
@@ -177,7 +177,7 @@ static const struct mail_command_entry mail_command_table[] = {
   { "?",	"?",		"? [command...]",		0,
     mail_help, command_compl },
   { "!",	"",		"![command]",			0,
-    mail_shell, exec_compl },
+    mail_shell, shell_compl },
   { "=",	"=",		"=",				0,
     mail_eq, no_compl },
   { "#",	"#",		"# comment",			0,
@@ -187,7 +187,7 @@ static const struct mail_command_entry mail_command_table[] = {
   { "+",	"+",		"+ [message]",			0,
     mail_next, msglist_compl },
   { "|",	"|",		"| [[msglist] command]",	0,
-    mail_pipe, msglist_compl }, /* FIXME: msglist_exec_compl */
+    mail_pipe, exec_compl },
   { "-",	"-",		"- [message]",			0,
     mail_previous, msglist_compl },
 };

@@ -50,13 +50,13 @@ sig_handler (int signo)
 }
 
 void
-ml_clear_interrupt ()
+ml_clear_interrupt (void)
 {
   _interrupted = 0;
 }
 
 int
-ml_got_interrupt ()
+ml_got_interrupt (void)
 {
   int rc = _interrupted;
   _interrupted = 0;
@@ -85,7 +85,7 @@ ml_getc (FILE *stream)
 }
 
 void
-ml_readline_init ()
+ml_readline_init (void)
 {
   if (!interactive)
     return;
@@ -116,7 +116,7 @@ ml_readline_init ()
 }
 
 char *
-ml_readline_internal ()
+ml_readline_internal (void)
 {
   char *buf = NULL;
   size_t size = 0, n;
@@ -157,6 +157,15 @@ ml_readline_with_intr (const char *prompt)
 }
 
 #ifdef WITH_READLINE
+
+/* Flags for per-command completion functions */
+enum
+  {
+    COMPL_DFL     = 0x0, /* Nothing special */
+    COMPL_WS      = 0x1, /* Cursor pointing to a whitespace character
+			    at the start of input or past another whitespace */
+    COMPL_LASTARG = 0x2  /* Cursor pointing at or past the last argument */
+  };
 
 static char *insert_text;
 
@@ -200,7 +209,7 @@ ml_command_completion (char *cmd, int start, int end)
   char **ret;
   char *p;
   struct mu_wordsplit ws;
-
+  
   for (p = rl_line_buffer; p < rl_line_buffer + start && mu_isblank (*p); p++)
     ;
 
@@ -223,8 +232,16 @@ ml_command_completion (char *cmd, int start, int end)
       const struct mail_command_entry *entry =
 	mail_find_command (ws.ws_wordv[0]);
       if (entry && entry->command_completion)
-	ret = entry->command_completion (ws.ws_wordc, ws.ws_wordv,
-					 start == end);
+	{
+	  int point = COMPL_DFL;
+
+	  if (start == end)
+	    point |= COMPL_WS;
+	  if (mu_str_skip_class (p + end, MU_CTYPE_SPACE)[0] == 0)
+	    point |= COMPL_LASTARG;
+	  
+	  ret = entry->command_completion (ws.ws_wordc, ws.ws_wordv, point);
+	}
       else
 	ret = NULL;
     }
@@ -268,7 +285,7 @@ ml_set_completion_append_character (int c)
 }
 
 void
-ml_attempted_completion_over ()
+ml_attempted_completion_over (void)
 {
   rl_attempted_completion_over = 1;
 }
@@ -276,14 +293,15 @@ ml_attempted_completion_over ()
 
 /* Completion functions */
 char **
-no_compl (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED, int ws MU_ARG_UNUSED)
+no_compl (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED,
+	  int flags MU_ARG_UNUSED)
 {
   ml_attempted_completion_over ();
   return NULL;
 }
 
 char **
-msglist_compl (int argc, char **argv, int ws)
+msglist_compl (int argc, char **argv, int point)
 {
   /* FIXME */
   ml_attempted_completion_over ();
@@ -291,10 +309,10 @@ msglist_compl (int argc, char **argv, int ws)
 }
 
 char **
-command_compl (int argc, char **argv, int ws)
+command_compl (int argc, char **argv, int point)
 {
   ml_set_completion_append_character (0);
-  if (ws)
+  if (point & COMPL_WS)
     return NULL;
   return rl_completion_matches (argv[argc-1], ml_command_generator);
 }
@@ -408,25 +426,29 @@ folder_generator (const char *text, int state)
 static char *
 msgtype_generator (const char *text, int state)
 {
-  static char types[] = "dnorTtu";
+  /* Allowed message types, plus '/'. The latter can folow a colon,
+     meaning body lookup */
+  static char types[] = "dnorTtu/"; 
   static int i;
-  char *s;
+  char c;
 
   if (!state)
     {
-      if (text[1])
-	return NULL;
       i = 0;
     }
-  if (!types[i])
-    return NULL;
-  s = malloc (2);
-  if (s)
+  while ((c = types[i]))
     {
-      s[0] = types[i++];
-      s[1] = 0;
+      i++;
+      if (!text[1] || text[1] == c)
+	{
+	  char *s = mu_alloc (3);
+	  s[0] = ':';
+	  s[1] = c;
+	  s[2] = 0;
+	  return s;
+	}
     }
-  return s;
+  return NULL;
 }
 
 static char *
@@ -493,18 +515,106 @@ header_generator (const char *text, int state)
     {
       i++;
       if (mu_c_strncasecmp (hdr, text, len) == 0)
-	return mu_strdup (hdr);
+	return strcat (strcpy (mu_alloc (strlen (hdr) + 3), hdr), ":/");
     }
 
   return NULL;
 }
 
+/* Concatenate results of two completions. Both A and B are expected to
+   be returned by rl_completion_matches, i.e. their first entry is the
+   longest common prefix of the remaining entries, which are sorted
+   lexicographically. Array B is treated as case-insensitive.
+   
+   If either of the arrays is NULL, the other one is returned unchanged.
+
+   Otherwise, if A[0] begins with a lowercase letter, all items from B
+   will be converted to lowercase.
+
+   Both A and B (but not their elements) are freed prior to returning.
+
+   Note: This function assumes that no string from A is present in B and
+   vice versa.
+ */
 static char **
-file_compl_internal (int argc, char **argv, int ws, int msglist)
+compl_concat (char **a, char **b)
+{
+  size_t i, j, k, n = 0, an, bn;
+  char **ret;
+  int lwr = 0;
+  
+  if (a)
+    {
+      lwr = mu_islower (a[0][0]);
+      for (an = 0; a[an]; an++)
+	;
+    }
+  else
+    return b;
+  
+  if (b)
+    {
+      for (bn = 0; b[bn]; bn++)
+	{
+	  if (lwr)
+	    mu_strlower (b[bn]);
+	}	  
+    }
+  else
+    return a;
+
+  i = an == 1 ? 0 : 1;
+  j = bn == 1 ? 0 : 1;
+  
+  n = (an - i) + (bn - j) + 1;
+  ret = mu_calloc (n + 1, sizeof (ret[0]));
+
+  if (an == bn && an == 1)
+    {
+      /* Compute LCP of both entries */
+      for (i = 0; a[i] && b[i] && a[i] == b[i]; i++)
+	;
+      ret[0] = mu_alloc (i + 1);
+      memcpy (ret[0], a[0], i);
+      ret[0][i] = 0;
+    }
+  else
+    /* The first entry is the LCP of the rest. Select the shortest one. */
+    ret[0] = mu_strdup ((strlen (a[0]) < strlen (b[0])) ? a[0] : b[0]);
+
+  if (i)
+    free (a[0]);
+  if (j)
+    free (b[0]);
+  
+  k = 1;
+  while (k < n)
+    {
+      if (!a[i])
+	{
+	  memcpy (ret + k, b + j, sizeof (b[0]) * (bn - j));
+	  break;
+	}
+      else if (!b[j])
+	{
+	  memcpy (ret + k, a + i, sizeof (a[0]) * (an - i));
+	  break;
+	}
+      else
+	ret[k++] = (strcmp (a[i], b[j]) < 0) ? a[i++] : b[j++];
+    }
+  ret[n] = NULL;
+  free (a);
+  free (b);
+  return ret;
+} 
+
+char **
+file_compl (int argc, char **argv, int point)
 {
   char *text;
-
-  if (ws)
+  
+  if (point & COMPL_WS)
     {
       ml_set_completion_append_character (0);
       ml_attempted_completion_over ();
@@ -513,54 +623,85 @@ file_compl_internal (int argc, char **argv, int ws, int msglist)
 
   text = argv[argc-1];
 
-  if (msglist)
-    {
-      if (text[0] == ':')
-	{
-	  ml_set_completion_append_character (' ');
-	  return rl_completion_matches (text, msgtype_generator);
-	}
-      else if (mu_isalpha (text[0]))
-	{
-	  ml_set_completion_append_character (':');
-	  return rl_completion_matches (text, header_generator);
-	}
-      else if (mu_isdigit (text[0]))
-	{
-	  ml_attempted_completion_over ();
-	  return NULL;
-	}
-    }
-
   switch (text[0])
     {
     case '+':
-      text++;
-      break;
+      return rl_completion_matches (text + 1, folder_generator);
 
     case '%':
     case '#':
     case '&':
       ml_attempted_completion_over ();
-      return NULL;
-
+      break;
+      
     default:
-      return NULL; /* Will be expanded by readline itself */
+      /* Suppose it is a file name */
+      return rl_completion_matches (text, rl_filename_completion_function);
     }
+  
+  return NULL;
+}
 
-  return rl_completion_matches (text, folder_generator);
+/* Internal completion generator for commands that take a message list
+   followed by a separate object as their arguments (e.g. write, where
+   the last object is a mailbox or pipe, where it is a command).
+   The MATCHES function generates expansions for the last argument.
+   CLOSURE supplies its argument.
+*/
+static char **
+msglist_closure_compl (int argc, char **argv, int point,
+		       char **(*matches) (void*),
+		       void *closure)
+{
+  char *text = (point & COMPL_WS) ? "" : argv[argc-1];
+  size_t len = strlen (text);
+  
+  if (text[0] == ':')
+    {
+      if (text[1] && (text[1] == '/' || text[2]))
+	{
+	  ml_set_completion_append_character (0);
+	  ml_attempted_completion_over ();
+	  return NULL;
+	}
+      ml_set_completion_append_character (' ');
+      return rl_completion_matches (text, msgtype_generator);
+    }
+  
+  ml_set_completion_append_character (0);
+  if (len && text[len-1] == ':')
+    {
+      char **ret = mu_calloc(2, sizeof (ret[0]));
+      ret[0] = strcat (strcpy (mu_alloc (len + 2), text), "/");
+      return ret;
+    }
+    
+  if (point & COMPL_LASTARG)
+    return compl_concat (matches (closure),
+			 rl_completion_matches (text, header_generator));
+  else
+    return rl_completion_matches (text, header_generator);
+}
+
+struct compl_closure
+{
+  int argc;
+  char **argv;
+  int point;
+};
+
+static char **
+file_compl_matches (void *closure)
+{
+  struct compl_closure *cp = closure;
+  return file_compl (cp->argc, cp->argv, cp->point);
 }
 
 char **
-file_compl (int argc, char **argv, int ws)
+msglist_file_compl (int argc, char **argv, int point)
 {
-  return file_compl_internal (argc, argv, ws, 0);
-}
-
-char **
-msglist_file_compl (int argc, char **argv, int ws)
-{
-  return file_compl_internal (argc, argv, ws, 1);
+  struct compl_closure clos = { argc, argv, point };
+  return msglist_closure_compl (argc, argv, point, file_compl_matches, &clos);
 }
 
 static char *
@@ -616,10 +757,10 @@ dir_generator (const char *text, int state)
 }
 
 char **
-dir_compl (int argc, char **argv, int ws)
+dir_compl (int argc, char **argv, int point)
 {
   ml_attempted_completion_over ();
-  if (ws)
+  if (point & COMPL_WS)
     {
       ml_set_completion_append_character (0);
       return NULL;
@@ -647,10 +788,11 @@ alias_generator (const char *text, int state)
 }
 
 char **
-alias_compl (int argc, char **argv, int ws)
+alias_compl (int argc, char **argv, int point)
 {
   ml_attempted_completion_over ();
-  return rl_completion_matches (ws ? "" : argv[argc-1], alias_generator);
+  return rl_completion_matches ((point & COMPL_WS) ? "" : argv[argc-1],
+				alias_generator);
 }
 
 static char *
@@ -756,10 +898,26 @@ exec_generator (const char *text, int state)
   return NULL;
 }
 
-char **
-exec_compl (int argc, char **argv, int ws)
+static char **
+exec_matches (void *closure)
 {
-  return rl_completion_matches (ws ? "" : argv[argc-1], exec_generator);
+  return rl_completion_matches ((char *)closure, exec_generator);
+}
+
+char **
+exec_compl (int argc, char **argv, int point)
+{
+  return msglist_closure_compl (argc, argv, point,
+				exec_matches,
+				(point & COMPL_WS) ? "" : argv[argc-1]);
+}
+
+char **
+shell_compl (int argc, char **argv, int point)
+{
+  if (argc == 2)
+    return rl_completion_matches (argv[1], exec_generator);
+  return no_compl (argc, argv, point);
 }
 
 #else
@@ -779,7 +937,7 @@ static int ch_kill;
 static struct termios term_settings;
 
 int
-set_tty ()
+set_tty (void)
 {
   struct termios new_settings;
 
@@ -803,7 +961,7 @@ set_tty ()
 }
 
 void
-restore_tty ()
+restore_tty (void)
 {
   tcsetattr (STDOUT, TCSADRAIN, &term_settings);
 }
@@ -814,7 +972,7 @@ restore_tty ()
 static struct termio term_settings;
 
 int
-set_tty ()
+set_tty (void)
 {
   struct termio new_settings;
 
@@ -834,7 +992,7 @@ set_tty ()
 }
 
 void
-restore_tty ()
+restore_tty (void)
 {
   ioctl(STDOUT, TCSETA, &term_settings);
 }
@@ -845,7 +1003,7 @@ restore_tty ()
 static struct sgttyb term_settings;
 
 int
-set_tty ()
+set_tty (void)
 {
   struct sgttyb new_settings;
 
@@ -863,7 +1021,7 @@ set_tty ()
 }
 
 void
-restore_tty ()
+restore_tty (void)
 {
   ioctl(STDOUT, TIOCSETP, &term_settings);
 }

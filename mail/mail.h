@@ -492,6 +492,7 @@ char **command_compl (int argc, char **argv, int ws);
 char **alias_compl (int argc, char **argv, int ws);
 char **mailvar_set_compl (int argc, char **argv, int ws);
 char **exec_compl (int argc, char **argv, int ws);
+char **shell_compl (int argc, char **argv, int ws);
 #else
 # define file_compl NULL
 # define no_compl NULL
@@ -502,6 +503,7 @@ char **exec_compl (int argc, char **argv, int ws);
 # define alias_compl NULL
 # define var_compl NULL
 # define exec_compl NULL     
+# define shell_compl NULL
 # define mailvar_set_compl NULL
 #endif
 
