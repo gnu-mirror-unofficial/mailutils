@@ -74,6 +74,7 @@ static void
 _imap_msg_free (struct _mu_imap_message *msg)
 {
   mu_message_imapenvelope_free (msg->env);
+  mu_stream_destroy (&msg->header_stream);
   mu_message_destroy (&msg->message, msg);
 }
 
@@ -140,7 +141,7 @@ _save_message_parser (void *item, void *data)
 }
 
 static void
-_save_message (void *data, int code, size_t sdat, void *pdat)
+_save_message_callback (void *data, int code, size_t sdat, void *pdat)
 {
   mu_list_t list = pdat;
   mu_list_foreach (list, _save_message_parser, data);
@@ -188,7 +189,7 @@ __imap_msg_get_stream (struct _mu_imap_message *imsg, size_t msgno,
 	    {
 	      _imap_mbx_clrerr (imbx);
 	      rc = _imap_fetch_with_callback (imap, msgset, "BODY[]",
-					      _save_message, &clos);
+					      _save_message_callback, &clos);
 	    }
 	  mu_msgset_free (msgset);
 	  if (rc == 0 && !_imap_mbx_errno (imbx))
@@ -366,56 +367,30 @@ static int
 _imap_hdr_fill (void *data, char **pbuf, size_t *plen)
 {
   struct _mu_imap_message *imsg = data;
-  struct _mu_imap_mailbox *imbx = imsg->imbx;
-  mu_imap_t imap = imbx->mbox->folder->data;
-  struct save_closure clos;
-  mu_msgset_t msgset;
-  unsigned long msgno = _imap_msg_no (imsg);
-  int rc;
-
-  rc = mu_msgset_create (&msgset, NULL, MU_MSGSET_NUM);
-  if (rc == 0)
+  mu_stream_t str = imsg->header_stream;
+  char *buf;
+  mu_off_t size;
+  int rc = 0;
+  
+  mu_stream_size (str, &size);
+  buf = malloc (size + 1);
+  if (!buf)
+    rc = ENOMEM;
+  else
     {
-      rc = mu_msgset_add_range (msgset, msgno, msgno, MU_MSGSET_NUM);
+      mu_stream_seek (str, 0, MU_SEEK_SET, NULL);
+      rc = mu_stream_read (str, buf, size, NULL);
       if (rc == 0)
 	{
-	  clos.imsg = imsg;
-	  rc = mu_memory_stream_create (&clos.save_stream, MU_STREAM_RDWR);
-	  if (rc == 0)
-	    {
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
-			(_("message %lu: reading headers"),
-			 (unsigned long) msgno));
-	      _imap_mbx_clrerr (imbx);
-	      rc = _imap_fetch_with_callback (imap, msgset,
-					      "BODY.PEEK[HEADER]",
-					      _save_message, &clos);
-	      if (rc == 0)
-		{
-		  char *buf;
-		  mu_off_t size;
-	  
-		  mu_stream_size (clos.save_stream, &size);
-		  buf = malloc (size + 1);
-		  if (!buf)
-		    rc = ENOMEM;
-		  else
-		    {
-		      mu_stream_seek (clos.save_stream, 0, MU_SEEK_SET, NULL);
-		      rc = mu_stream_read (clos.save_stream, buf, size, NULL);
-		      if (rc == 0)
-			{
-			  *pbuf = buf;
-			  *plen = size;
-			}
-		      else
-			free (buf);
-		    }
-		}
-	      mu_stream_destroy (&clos.save_stream);
-	    }
+	  *pbuf = buf;
+	  *plen = size;
 	}
-      mu_msgset_free (msgset);
+      else
+	{
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("mu_stream_read: %s", mu_strerror (rc)));
+	  free (buf);
+	}
     }
   return rc;
 }
@@ -1186,7 +1161,28 @@ fetch_response_parser (void *item, void *data)
 	  }
       }
       break;
-      
+
+    case MU_IMAP_FETCH_BODY:
+      {
+	int rc;
+	struct save_closure clos;
+	clos.imsg = imsg;
+	rc = mu_memory_stream_create (&clos.save_stream, MU_STREAM_RDWR);
+	if (rc == 0)
+	  {
+	    rc = _save_message_parser (resp, &clos);
+	    if (rc == 0)
+	      imsg->header_stream = clos.save_stream;
+	    else
+	      mu_stream_destroy (&clos.save_stream);
+	  }
+	else
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("mu_static_memory_stream_create: %s",
+		     mu_strerror (rc)));
+      }
+      break;
+	    
     default:
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE0,
 		(_("fetch returned a not requested item %d"),
@@ -1236,7 +1232,7 @@ _imap_mbx_scan (mu_mailbox_t mbox, size_t msgno, size_t *pcount)
   mu_imap_t imap = folder->data;
   mu_msgset_t msgset;
   int rc;
-  static char _imap_scan_items[] = "(UID FLAGS ENVELOPE RFC822.SIZE BODY)";
+  static char _imap_scan_items[] = "(UID FLAGS ENVELOPE RFC822.SIZE BODY BODY.PEEK[HEADER])";
   
   mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
 	    (_("scanning mailbox %s"), mu_url_to_string (mbox->url)));

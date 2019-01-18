@@ -263,6 +263,7 @@ struct _mu_imap_message
   size_t message_size;      /* Message size */
   size_t message_lines;     /* Number of lines in the message */
   struct mu_imapenvelope *env; /* IMAP envelope */
+  mu_stream_t header_stream;   /* Memory stream with message headers */
   mu_message_t message;     /* Pointer to the message structure */ 
   struct _mu_imap_mailbox *imbx; /* Back pointer.  */
 };
