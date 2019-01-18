@@ -54,7 +54,7 @@ proc default_mail_start {args} {
     
     mu_version
     
-    set sw $args
+    set sw [join $args " "]
     append sw " "
     if [info exists MU_TOOL_FLAGS] {
 	append sw $MU_TOOL_FLAGS
