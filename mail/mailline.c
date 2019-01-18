@@ -291,6 +291,142 @@ ml_attempted_completion_over (void)
 }
 
 
+/* Concatenate results of two completions. Both A and B are expected to
+   be returned by rl_completion_matches, i.e. their first entry is the
+   longest common prefix of the remaining entries, which are sorted
+   lexicographically. Array B is treated as case-insensitive.
+   
+   If either of the arrays is NULL, the other one is returned unchanged.
+
+   Otherwise, if A[0] begins with a lowercase letter, all items from B
+   will be converted to lowercase.
+
+   Both A and B (but not their elements) are freed prior to returning.
+
+   Note: This function assumes that no string from A is present in B and
+   vice versa.
+ */
+static char **
+compl_concat (char **a, char **b)
+{
+  size_t i, j, k, n = 0, an, bn;
+  char **ret;
+  int lwr = 0;
+  
+  if (a)
+    {
+      lwr = mu_islower (a[0][0]);
+      for (an = 0; a[an]; an++)
+	;
+    }
+  else
+    return b;
+  
+  if (b)
+    {
+      for (bn = 0; b[bn]; bn++)
+	{
+	  if (lwr)
+	    mu_strlower (b[bn]);
+	}	  
+    }
+  else
+    return a;
+
+  i = an == 1 ? 0 : 1;
+  j = bn == 1 ? 0 : 1;
+  
+  n = (an - i) + (bn - j) + 1;
+  ret = mu_calloc (n + 1, sizeof (ret[0]));
+
+  if (an == bn && an == 1)
+    {
+      /* Compute LCP of both entries */
+      for (i = 0; a[i] && b[i] && a[i] == b[i]; i++)
+	;
+      ret[0] = mu_alloc (i + 1);
+      memcpy (ret[0], a[0], i);
+      ret[0][i] = 0;
+    }
+  else
+    /* The first entry is the LCP of the rest. Select the shortest one. */
+    ret[0] = mu_strdup ((strlen (a[0]) < strlen (b[0])) ? a[0] : b[0]);
+
+  if (i)
+    free (a[0]);
+  if (j)
+    free (b[0]);
+  
+  k = 1;
+  while (k < n)
+    {
+      if (!a[i])
+	{
+	  memcpy (ret + k, b + j, sizeof (b[0]) * (bn - j));
+	  break;
+	}
+      else if (!b[j])
+	{
+	  memcpy (ret + k, a + i, sizeof (a[0]) * (an - i));
+	  break;
+	}
+      else
+	ret[k++] = (strcmp (a[i], b[j]) < 0) ? a[i++] : b[j++];
+    }
+  ret[n] = NULL;
+  free (a);
+  free (b);
+  return ret;
+} 
+
+static char *msgtype_generator (const char *text, int state);
+static char *header_generator (const char *text, int state);
+
+/* Internal completion generator for commands that take a message list
+   (if MATCHES is NULL), or a messages list followed by another argument
+   (if MATCHES is not NULL).
+
+   In the latter case the MATCHES function generates expansions for the
+   last argument. It is used for such commands as write, where the last
+   object is a mailbox or pipe, where it is a command).
+   
+   CLOSURE supplies argument for MATCHES. It is ignored if MATCHES is NULL.
+*/
+static char **
+msglist_closure_compl (int argc, char **argv, int point,
+		       char **(*matches) (void*),
+		       void *closure)
+{
+  char *text = (point & COMPL_WS) ? "" : argv[argc-1];
+  size_t len = strlen (text);
+  
+  if (text[0] == ':')
+    {
+      if (text[1] && (text[1] == '/' || text[2]))
+	{
+	  ml_set_completion_append_character (0);
+	  ml_attempted_completion_over ();
+	  return NULL;
+	}
+      ml_set_completion_append_character (' ');
+      return rl_completion_matches (text, msgtype_generator);
+    }
+  
+  ml_set_completion_append_character (0);
+  if (len && text[len-1] == ':')
+    {
+      char **ret = mu_calloc(2, sizeof (ret[0]));
+      ret[0] = strcat (strcpy (mu_alloc (len + 2), text), "/");
+      return ret;
+    }
+
+  if (matches && (point & COMPL_LASTARG))
+    return compl_concat (matches (closure),
+			 rl_completion_matches (text, header_generator));
+  else
+    return rl_completion_matches (text, header_generator);
+}
+
 /* Completion functions */
 char **
 no_compl (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED,
@@ -303,9 +439,7 @@ no_compl (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED,
 char **
 msglist_compl (int argc, char **argv, int point)
 {
-  /* FIXME */
-  ml_attempted_completion_over ();
-  return NULL;
+  return msglist_closure_compl (argc, argv, point, NULL, NULL);
 }
 
 char **
@@ -521,94 +655,6 @@ header_generator (const char *text, int state)
   return NULL;
 }
 
-/* Concatenate results of two completions. Both A and B are expected to
-   be returned by rl_completion_matches, i.e. their first entry is the
-   longest common prefix of the remaining entries, which are sorted
-   lexicographically. Array B is treated as case-insensitive.
-   
-   If either of the arrays is NULL, the other one is returned unchanged.
-
-   Otherwise, if A[0] begins with a lowercase letter, all items from B
-   will be converted to lowercase.
-
-   Both A and B (but not their elements) are freed prior to returning.
-
-   Note: This function assumes that no string from A is present in B and
-   vice versa.
- */
-static char **
-compl_concat (char **a, char **b)
-{
-  size_t i, j, k, n = 0, an, bn;
-  char **ret;
-  int lwr = 0;
-  
-  if (a)
-    {
-      lwr = mu_islower (a[0][0]);
-      for (an = 0; a[an]; an++)
-	;
-    }
-  else
-    return b;
-  
-  if (b)
-    {
-      for (bn = 0; b[bn]; bn++)
-	{
-	  if (lwr)
-	    mu_strlower (b[bn]);
-	}	  
-    }
-  else
-    return a;
-
-  i = an == 1 ? 0 : 1;
-  j = bn == 1 ? 0 : 1;
-  
-  n = (an - i) + (bn - j) + 1;
-  ret = mu_calloc (n + 1, sizeof (ret[0]));
-
-  if (an == bn && an == 1)
-    {
-      /* Compute LCP of both entries */
-      for (i = 0; a[i] && b[i] && a[i] == b[i]; i++)
-	;
-      ret[0] = mu_alloc (i + 1);
-      memcpy (ret[0], a[0], i);
-      ret[0][i] = 0;
-    }
-  else
-    /* The first entry is the LCP of the rest. Select the shortest one. */
-    ret[0] = mu_strdup ((strlen (a[0]) < strlen (b[0])) ? a[0] : b[0]);
-
-  if (i)
-    free (a[0]);
-  if (j)
-    free (b[0]);
-  
-  k = 1;
-  while (k < n)
-    {
-      if (!a[i])
-	{
-	  memcpy (ret + k, b + j, sizeof (b[0]) * (bn - j));
-	  break;
-	}
-      else if (!b[j])
-	{
-	  memcpy (ret + k, a + i, sizeof (a[0]) * (an - i));
-	  break;
-	}
-      else
-	ret[k++] = (strcmp (a[i], b[j]) < 0) ? a[i++] : b[j++];
-    }
-  ret[n] = NULL;
-  free (a);
-  free (b);
-  return ret;
-} 
-
 char **
 file_compl (int argc, char **argv, int point)
 {
@@ -640,47 +686,6 @@ file_compl (int argc, char **argv, int point)
     }
   
   return NULL;
-}
-
-/* Internal completion generator for commands that take a message list
-   followed by a separate object as their arguments (e.g. write, where
-   the last object is a mailbox or pipe, where it is a command).
-   The MATCHES function generates expansions for the last argument.
-   CLOSURE supplies its argument.
-*/
-static char **
-msglist_closure_compl (int argc, char **argv, int point,
-		       char **(*matches) (void*),
-		       void *closure)
-{
-  char *text = (point & COMPL_WS) ? "" : argv[argc-1];
-  size_t len = strlen (text);
-  
-  if (text[0] == ':')
-    {
-      if (text[1] && (text[1] == '/' || text[2]))
-	{
-	  ml_set_completion_append_character (0);
-	  ml_attempted_completion_over ();
-	  return NULL;
-	}
-      ml_set_completion_append_character (' ');
-      return rl_completion_matches (text, msgtype_generator);
-    }
-  
-  ml_set_completion_append_character (0);
-  if (len && text[len-1] == ':')
-    {
-      char **ret = mu_calloc(2, sizeof (ret[0]));
-      ret[0] = strcat (strcpy (mu_alloc (len + 2), text), "/");
-      return ret;
-    }
-    
-  if (point & COMPL_LASTARG)
-    return compl_concat (matches (closure),
-			 rl_completion_matches (text, header_generator));
-  else
-    return rl_completion_matches (text, header_generator);
 }
 
 struct compl_closure
