@@ -520,12 +520,12 @@ main (int argc, char **argv)
 	      mu_error (_("-f requires at most one command line argument"));
 	      exit (1);
 	    }
-	  file = argv[0];
+	  file = mu_strdup (argv[0]);
 	}
       else if (user)
 	mu_asprintf (&file, "~/%s/mbox", user);
       else
-	file = "~/mbox";
+	file = mu_strdup ("~/mbox");
     }
   else if (argc || (hint & HINT_SEND_MODE))
     util_cache_command (&command_list, "setq mode=send");
@@ -595,6 +595,16 @@ main (int argc, char **argv)
 	  exit (EXIT_FAILURE);
 	}
 
+      if (file)
+	{
+	  /* Destroy the content of file prior to freeing it: it can contain
+	     password, although such usage is discouraged */
+	  memset (file, 0, strlen (file));
+	  free (file);
+	  /* Note: the *value* of this variable will be used later to determine
+	     what kind of message to display if the mailbox is empty */
+	}
+
       if ((rc = mu_mailbox_open (mbox, MU_STREAM_RDWR|MU_STREAM_CREAT)) != 0)
 	{
 	  mu_url_t url = NULL;
@@ -637,8 +647,8 @@ main (int argc, char **argv)
       if (total == 0
 	  && (strcmp (mode, "read") || !mailvar_is_true ("emptystart")))
         {
-	  if (file)
-	    mu_printf (_("%s: 0 messages\n"), file);
+	  if (file) /* See the comment above */
+	    mail_summary (0, NULL);
 	  else
 	    mu_printf (_("No mail for %s\n"), user ? user : mail_whoami ());
           return 1;
