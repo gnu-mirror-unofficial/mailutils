@@ -344,44 +344,15 @@ percent_expand (const char *file, char **mbox)
   return status;
 }
 
-static void
-attach_auth_ticket (mu_mailbox_t mbox)
+int
+mu_mailbox_attach_ticket (mu_mailbox_t mbox)
 {
+  int rc;
   mu_folder_t folder = NULL;
-  mu_authority_t auth = NULL;
 
-  if (mu_mailbox_get_folder (mbox, &folder) == 0
-      && mu_folder_get_authority (folder, &auth) == 0
-      && auth)
-    {
-      char *filename = mu_tilde_expansion (mu_ticket_file,
-					   MU_HIERARCHY_DELIMITER, NULL);
-      mu_wicket_t wicket;
-      int rc;
-  
-      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
-		("Reading user ticket file %s", filename));
-      if ((rc = mu_file_wicket_create (&wicket, filename)) == 0)
-	{
-	  mu_ticket_t ticket;
-      
-	  if ((rc = mu_wicket_get_ticket (wicket, NULL, &ticket)) == 0)
-	    {
-	      rc = mu_authority_set_ticket (auth, ticket);
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
-			("Retrieved and set ticket: %d", rc));
-	    }
-	  else
-	    mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		      ("Error retrieving ticket: %s\n",
-		       mu_strerror (rc)));
-	  mu_wicket_destroy (&wicket);
-	}
-      else
-        mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		  ("Error creating wicket: %s\n", mu_strerror (rc)));
-      free (filename);
-    }
+  if ((rc = mu_mailbox_get_folder (mbox, &folder)) == 0)
+    rc = mu_folder_attach_ticket (folder);
+  return rc;
 }
 
 /* Expand mailbox name according to the following rules:
@@ -490,7 +461,7 @@ mu_mailbox_create_default (mu_mailbox_t *pmbox, const char *mail)
   status = mu_mailbox_create (pmbox, mboxname);
   free (mboxname);
   if (status == 0)
-    attach_auth_ticket (*pmbox);
+    mu_mailbox_attach_ticket (*pmbox);
       
   return status;
 }

@@ -183,7 +183,8 @@ __imap_msg_get_stream (struct _mu_imap_message *imsg, size_t msgno,
 
 	  clos.imsg = imsg;
 	  clos.save_stream = imbx->cache;
-
+	  clos.size = 0;
+  
 	  rc = mu_msgset_add_range (msgset, msgno, msgno, MU_MSGSET_NUM);
 	  if (rc == 0)
 	    {
@@ -757,7 +758,9 @@ _imap_mbx_open (mu_mailbox_t mbox, int flags)
 
   if (imbx->stats.flags & MU_IMAP_STAT_MESSAGE_COUNT)
     rc = _imap_realloc_messages (imbx, imbx->stats.message_count);
-  
+
+  _imap_mbx_scan (mbox, 1, NULL);
+
   return rc;
 }
 

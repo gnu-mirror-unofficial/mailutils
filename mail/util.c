@@ -42,7 +42,7 @@ util_do_command (const char *fmt, ...)
   char *cmd = NULL;
   size_t size = 0;
   va_list ap;
-  
+
   va_start (ap, fmt);
   status = mu_vasnprintf (&cmd, &size, fmt, ap);
   va_end (ap);
@@ -61,7 +61,7 @@ util_do_command (const char *fmt, ...)
       if (cmd[0] == '\0')
 	{
 	  free (cmd);
-	  
+
 	  /* Hitting return i.e. no command, is equivalent to next
 	     according to the POSIX spec. Note, that this applies
 	     to interactive state only. */
@@ -85,7 +85,7 @@ util_do_command (const char *fmt, ...)
 
 	  argc = ws.ws_wordc;
 	  argv = ws.ws_wordv + 1;
-	  
+
 	  /* Special case: a number alone implies "print" */
 	  if (argc == 1
 	      && ((strtoul (argv[0], &p, 10) > 0 && *p == 0)
@@ -108,16 +108,16 @@ util_do_command (const char *fmt, ...)
     {
       /* argv[0] might be a traditional /bin/mail contracted form, e.g.
 	 `d*' or `p4'. */
-	 
+
       char *p;
-      
+
       for (p = argv[0] + strlen (argv[0]) - 1;
 	   p > argv[0] && !mu_isalpha (*p);
 	   p--)
 	;
 
       p++;
-      
+
       if (strlen (p))
 	{
 	  /* Expand contracted form.  That's what we have kept an extra
@@ -131,10 +131,10 @@ util_do_command (const char *fmt, ...)
 	  ws.ws_wordc++;
 	  ws.ws_offs = 0;
 	}
-      
+
       entry = mail_find_command (argv[0]);
     }
-  
+
   if (entry)
     {
       /* Make sure we are not in any if/else */
@@ -183,12 +183,12 @@ util_foreach_msg (int argc, char **argv, int flags,
 }
 
 size_t
-util_range_msg (size_t low, size_t high, int flags, 
+util_range_msg (size_t low, size_t high, int flags,
 		msg_handler_t func, void *data)
 {
   msgset_t msgspec = { 0 };
   size_t count, expect_count;
-  
+
   msgspec.next = NULL;
   msgspec.npart = 0;
   msgspec.msg_part = &low;
@@ -217,7 +217,7 @@ util_range_msg (size_t low, size_t high, int flags,
 		       (unsigned long) low);
 	 continue;
        }
-     
+
      if (util_get_message (mbox, low, &mesg) == 0)
        {
 	 count ++;
@@ -250,13 +250,13 @@ util_find_entry (void *table, size_t nmemb, size_t size, const char *cmd)
   int i;
   int len = strlen (cmd);
   char *p;
-  
+
   for (p = table, i = 0; i < nmemb; i++, p += size)
     {
       struct mail_command *cp = (struct mail_command *)p;
       int ll = strlen (cp->longname);
       int sl = strlen (cp->shortname);
-      
+
       if (sl > ll && !strncmp (cp->shortname, cmd, sl))
 	return p;
       else if (sl == len && !strcmp (cp->shortname, cmd))
@@ -285,7 +285,7 @@ util_help (void *table, size_t nmemb, size_t size, const char *word)
 	    continue;
 	  mu_stream_printf (out, "%s\n", cp->synopsis);
 	}
-      
+
       mu_stream_unref (out);
 
       return 0;
@@ -313,7 +313,7 @@ util_command_list (void *table, size_t nmemb, size_t size)
   char *p;
   int cols = util_screen_columns ();
   int pos = 0;
-  
+
   for (p = table, i = 0; i < nmemb; i++, p += size)
     {
       const char *cmd;
@@ -335,7 +335,7 @@ util_command_list (void *table, size_t nmemb, size_t size)
 	  mu_printf ("\n%s ", cmd);
 	}
       else
-        mu_printf ("%s ", cmd);
+	mu_printf ("%s ", cmd);
     }
   mu_printf ("\n");
   return 0;
@@ -467,35 +467,21 @@ char *
 util_folder_path (const char *name)
 {
   char *folder;
-  char *tmp;
-  char *p;
-  
+  int rc;
+
   if (mailvar_get (&folder, "folder", mailvar_type_string, 1))
     return NULL;
-      
+
   if (!name)
     return NULL;
-  if (name[0] == '+')
-    name++;
-  
-  if (folder[0] != '/' && folder[0] != '~')
+
+  rc = mu_mailbox_expand_name (name, &folder);
+  if (rc)
     {
-      char *home = mu_get_homedir ();
-      tmp  = mu_alloc (strlen (home) + 1 +
-		       strlen (folder) + 1 +
-		       strlen (name) + 1);
-      sprintf (tmp, "%s/%s/%s", home, folder, name);
+      mu_diag_funcall (MU_DIAG_ERROR, "mailbox_expand_name", name, rc);
+      return NULL;
     }
-  else
-    {
-      tmp  = mu_alloc (strlen (folder) + 1 +
-		       strlen (name) + 1);
-      sprintf (tmp, "%s/%s", folder, name);
-    }
-  p = util_fullpath (tmp);
-  free (tmp);
-  
-  return p;
+  return folder;
 }
 
 char *
@@ -504,7 +490,7 @@ util_get_sender (int msgno, int strip)
   mu_message_t msg = NULL;
   mu_address_t addr = NULL;
   char *buf = NULL, *p;
-  
+
   mu_mailbox_get_message (mbox, msgno, &msg);
   addr = get_sender_address (msg);
   if (!addr)
@@ -659,34 +645,43 @@ char *
 util_outfolder_name (char *str)
 {
   char *outfolder;
+  char *exp;
+  int rc;
 
   if (!str)
     return NULL;
-  
+
   switch (*str)
     {
     case '/':
     case '~':
-      str = util_fullpath (str);
-      break;
-      
     case '+':
-      str = util_folder_path (str);
+      rc = mu_mailbox_expand_name (str, &exp);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_expand_name", str, rc);
+	  return NULL;
+	}
       break;
 
     default:
       if (mailvar_get (&outfolder, "outfolder", mailvar_type_string, 0) == 0)
 	{
-	  char *ns = NULL;
-	  mu_asprintf (&ns, "%s/%s", outfolder, str);
-	  str = util_fullpath (ns);
-	  free (ns);
+	  char *s = mu_make_file_name (outfolder, str);
+	  rc = mu_mailbox_expand_name (s, &exp);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_expand_name", s, rc);
+	      free (s);
+	      return NULL;
+	    }
+	  free (s);
 	}
       break;
 
     }
 
-  return mu_strdup (str);
+  return exp;
 }
 
 /* Save an outgoing message. The SAVEFILE argument overrides the setting
@@ -695,7 +690,7 @@ void
 util_save_outgoing (mu_message_t msg, char *savefile)
 {
   char *record;
-  
+
   if (mailvar_get (&record, "record", mailvar_type_string, 0) == 0)
     {
       int rc;
@@ -725,7 +720,7 @@ util_save_outgoing (mu_message_t msg, char *savefile)
 
       mu_mailbox_close (outbox);
       mu_mailbox_destroy (&outbox);
-      
+
       free (filename);
     }
 }
@@ -836,7 +831,7 @@ util_merge_addresses (char **addr_str, const char *value)
 
   if ((rc = mu_address_create (&new_addr, value)) != 0)
     return rc;
-      
+
   if ((rc = mu_address_create (&addr, *addr_str)) != 0)
     {
       mu_address_destroy (&new_addr);
@@ -847,7 +842,7 @@ util_merge_addresses (char **addr_str, const char *value)
   if (rc == 0)
     {
       char *val;
-      
+
       rc = mu_address_aget_printable (addr, &val);
       if (rc == 0)
 	{
@@ -873,7 +868,7 @@ is_address_field (const char *name)
     0
   };
   char **p;
-  
+
   for (p = address_fields; *p; p++)
     if (mu_c_strcasecmp (*p, name) == 0)
       return 1;
@@ -886,32 +881,32 @@ util_header_expand (mu_header_t *phdr)
   size_t i, nfields = 0;
   mu_header_t hdr;
   int errcnt = 0, rc;
-  
+
   rc = mu_header_create (&hdr, "", 0);
   if (rc)
     {
       mu_error (_("Cannot create temporary header: %s"), mu_strerror (rc));
       return 1;
     }
-      
+
   mu_header_get_field_count (*phdr, &nfields);
   for (i = 1; i <= nfields; i++)
     {
       const char *name, *value;
-      
+
       if (mu_header_sget_field_name (*phdr, i, &name))
 	continue;
 
       if (mu_header_sget_field_value (*phdr, i, &value))
 	continue;
-      
+
       if (is_address_field (name))
 	{
 	  const char *s;
 	  mu_address_t addr = NULL;
 	  struct mu_wordsplit ws;
 	  size_t j;
-	  
+
 	  if (mu_header_sget_value (hdr, name, &s) == 0)
 	    mu_address_create (&addr, s);
 
@@ -932,9 +927,9 @@ util_header_expand (mu_header_t *phdr)
 	      const char *exp;
 	      mu_address_t new_addr;
 	      char *p = ws.ws_wordv[j];
-	      
+
 	      if (mailvar_is_true ("inplacealiases"))
-	        /* If inplacealiases was set, the value was already expanded */
+		/* If inplacealiases was set, the value was already expanded */
 		exp = p;
 	      else
 		exp = alias_expand (p);
@@ -949,15 +944,15 @@ util_header_expand (mu_header_t *phdr)
 		    mu_error (_("Cannot parse address `%s': %s"),
 				p, mu_strerror (rc));
 		}
-	      
+
 	      mu_address_union (&addr, new_addr);
 	      mu_address_destroy (&new_addr);
 	    }
-	  
+
 	  if (addr)
 	    {
 	      const char *newvalue;
-	      
+
 	      rc = mu_address_sget_printable (addr, &newvalue);
 	      if (rc == 0 && newvalue)
 		mu_header_set_value (hdr, name, newvalue, 1);
@@ -989,7 +984,7 @@ util_get_message (mu_mailbox_t mbox, size_t msgno, mu_message_t *msg)
       util_error_range (msgno);
       return MU_ERR_NOENT;
     }
-  
+
   status = mu_mailbox_get_message (mbox, msgno, msg);
   if (status)
     {
@@ -1060,7 +1055,7 @@ util_get_charset (void)
       char *tmp = getenv ("LC_ALL");
       if (!tmp)
 	tmp = getenv ("LANG");
-      
+
       if (tmp && mu_parse_lc_all (tmp, &lc_all, MU_LC_CSET) == 0)
 	{
 	  charset = mu_strdup (lc_all.charset);
@@ -1089,7 +1084,7 @@ util_rfc2047_decode (char **value)
 
   rc = mu_rfc2047_decode (charset, *value, &tmp);
   free (charset);
-  
+
   if (rc)
     {
       if (mailvar_is_true ("verbose"))
@@ -1124,7 +1119,7 @@ open_pager (size_t lines)
   const char *pager;
   unsigned pagelines = util_get_crt ();
   mu_stream_t str;
-  
+
   if (pagelines && lines > pagelines && (pager = getenv ("PAGER")))
     {
       int rc = mu_command_stream_create (&str, pager, MU_STREAM_WRITE);

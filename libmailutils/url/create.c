@@ -269,7 +269,16 @@ _mu_url_ctx_parse_host (struct mu_url_ctx *ctx, int has_host)
   if (*ctx->cur == '/')
     {
       if (has_host)
-	ctx->cur++;
+	{
+	  ctx->cur++;
+	  if (*ctx->cur == 0)
+	    {
+	      rc = str_assign (&url->path, "");
+	      if (rc == 0)
+		url->flags |= MU_URL_PATH;
+	      return rc;
+	    }
+	}
       return _mu_url_ctx_parse_path (ctx);
     }
   

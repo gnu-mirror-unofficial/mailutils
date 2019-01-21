@@ -30,7 +30,7 @@ mail_expand_name (const char *name)
 {
   int status = 0;
   char *exp = NULL;
-    
+
   if (strcmp (name, "#") == 0)
     {
       if (!prev_name)
@@ -84,9 +84,18 @@ mail_file (int argc, char **argv)
 
       if (!name)
 	return 1;
-      
-      if ((status = mu_mailbox_create (&newbox, name)) != 0 
-	  || (status = mu_mailbox_open (newbox, MU_STREAM_RDWR)) != 0)
+
+      status = mu_mailbox_create (&newbox, name);
+      if (status)
+	{
+	  mu_error(_("Cannot create mailbox %s: %s"), name,
+		   mu_strerror (status));
+	  free (name);
+	  return 1;
+	}
+      mu_mailbox_attach_ticket (newbox);
+
+      if ((status = mu_mailbox_open (newbox, MU_STREAM_RDWR)) != 0)
 	{
 	  mu_mailbox_destroy (&newbox);
 	  mu_error(_("Cannot open mailbox %s: %s"), name, mu_strerror (status));
@@ -96,7 +105,7 @@ mail_file (int argc, char **argv)
 
       free (name); /* won't need it any more */
       page_invalidate (1); /* Invalidate current page map */
-      
+
       mu_mailbox_get_url (mbox, &url);
       pname = mu_strdup (mu_url_to_string (url));
       if (mail_mbox_close ())
@@ -107,11 +116,11 @@ mail_file (int argc, char **argv)
 	  mu_mailbox_destroy (&newbox);
 	  return 1;
 	}
-      
+
       if (prev_name)
 	free (prev_name);
       prev_name = pname;
-      
+
       mbox = newbox;
       mu_mailbox_messages_count (mbox, &total);
       set_cursor (1);
@@ -128,4 +137,3 @@ mail_file (int argc, char **argv)
     }
   return 1;
 }
-

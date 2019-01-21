@@ -74,6 +74,9 @@ void *mu_wicket_get_data (mu_wicket_t wicket);
 int mu_wicket_set_get_ticket (mu_wicket_t wicket,
 			      int (*_get_ticket) (mu_wicket_t, void *,
 						 const char *, mu_ticket_t *));
+
+int mu_noauth_ticket_create (mu_ticket_t *pticket);
+int mu_noauth_wicket_create (mu_wicket_t *pwicket);
 int mu_file_wicket_create (mu_wicket_t *pwicket, const char *filename);
 
 struct mu_debug_locus;  

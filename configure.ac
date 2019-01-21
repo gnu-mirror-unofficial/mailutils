@@ -1520,6 +1520,7 @@ AC_CONFIG_FILES([
  libmailutils/stream/Makefile
  libmailutils/stdstream/Makefile
  libmailutils/url/Makefile
+ libmailutils/wicket/Makefile
  libmailutils/Makefile
  messages/Makefile
  mh/Makefile

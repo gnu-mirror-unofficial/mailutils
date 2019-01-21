@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <mailutils/folder.h>
+#include <mailutils/auth.h>
 
 #ifdef WITH_READLINE
 static char **ml_command_completion (char *cmd, int start, int end);
@@ -209,7 +210,7 @@ ml_command_completion (char *cmd, int start, int end)
   char **ret;
   char *p;
   struct mu_wordsplit ws;
-  
+
   for (p = rl_line_buffer; p < rl_line_buffer + start && mu_isblank (*p); p++)
     ;
 
@@ -239,7 +240,7 @@ ml_command_completion (char *cmd, int start, int end)
 	    point |= COMPL_WS;
 	  if (mu_str_skip_class (p + end, MU_CTYPE_SPACE)[0] == 0)
 	    point |= COMPL_LASTARG;
-	  
+
 	  ret = entry->command_completion (ws.ws_wordc, ws.ws_wordv, point);
 	}
       else
@@ -295,7 +296,7 @@ ml_attempted_completion_over (void)
    be returned by rl_completion_matches, i.e. their first entry is the
    longest common prefix of the remaining entries, which are sorted
    lexicographically. Array B is treated as case-insensitive.
-   
+
    If either of the arrays is NULL, the other one is returned unchanged.
 
    Otherwise, if A[0] begins with a lowercase letter, all items from B
@@ -312,7 +313,7 @@ compl_concat (char **a, char **b)
   size_t i, j, k, n = 0, an, bn;
   char **ret;
   int lwr = 0;
-  
+
   if (a)
     {
       lwr = mu_islower (a[0][0]);
@@ -321,21 +322,21 @@ compl_concat (char **a, char **b)
     }
   else
     return b;
-  
+
   if (b)
     {
       for (bn = 0; b[bn]; bn++)
 	{
 	  if (lwr)
 	    mu_strlower (b[bn]);
-	}	  
+	}
     }
   else
     return a;
 
   i = an == 1 ? 0 : 1;
   j = bn == 1 ? 0 : 1;
-  
+
   n = (an - i) + (bn - j) + 1;
   ret = mu_calloc (n + 1, sizeof (ret[0]));
 
@@ -356,7 +357,7 @@ compl_concat (char **a, char **b)
     free (a[0]);
   if (j)
     free (b[0]);
-  
+
   k = 1;
   while (k < n)
     {
@@ -377,7 +378,7 @@ compl_concat (char **a, char **b)
   free (a);
   free (b);
   return ret;
-} 
+}
 
 static char *msgtype_generator (const char *text, int state);
 static char *header_generator (const char *text, int state);
@@ -389,7 +390,7 @@ static char *header_generator (const char *text, int state);
    In the latter case the MATCHES function generates expansions for the
    last argument. It is used for such commands as write, where the last
    object is a mailbox or pipe, where it is a command).
-   
+
    CLOSURE supplies argument for MATCHES. It is ignored if MATCHES is NULL.
 */
 static char **
@@ -399,7 +400,7 @@ msglist_closure_compl (int argc, char **argv, int point,
 {
   char *text = (point & COMPL_WS) ? "" : argv[argc-1];
   size_t len = strlen (text);
-  
+
   if (text[0] == ':')
     {
       if (text[1] && (text[1] == '/' || text[2]))
@@ -411,7 +412,7 @@ msglist_closure_compl (int argc, char **argv, int point,
       ml_set_completion_append_character (' ');
       return rl_completion_matches (text, msgtype_generator);
     }
-  
+
   ml_set_completion_append_character (0);
   if (len && text[len-1] == ':')
     {
@@ -450,111 +451,211 @@ command_compl (int argc, char **argv, int point)
     return NULL;
   return rl_completion_matches (argv[argc-1], ml_command_generator);
 }
-
-/* Generate file list based on reference prefix TEXT, relative to PATH.
-   Remove PATHLEN leading characters from the returned names. Replace
-   them with REPL unless it is 0.
-
-   Select only those files that match given FLAGS (MU_FOLDER_ATTRIBUTE_*
-   constants).
-
-   STATE is 0 for the first call, 1 otherwise.
- */
-static char *
-file_generator (const char *text, int state,
-		char *path, size_t pathlen,
-		char repl,
-		int flags)
+
+struct filegen
 {
-  static mu_list_t list;
-  static mu_iterator_t itr;
+  mu_list_t list;
+  mu_iterator_t itr;
+  size_t pathlen;
+  char repl;
+  int flags;
+};
 
-  if (!state)
+static void
+filegen_free (struct filegen *fg)
+{
+  mu_iterator_destroy (&fg->itr);
+  mu_list_destroy (&fg->list);
+}
+
+enum
+  {
+    any_folder,
+    local_folder
+  };
+
+#define PATHLEN_AUTO ((size_t)-1)
+
+static int
+filegen_init (struct filegen *fg,
+	      const char *text,
+	      const char *folder_path,
+	      int type,
+	      size_t pathlen,
+	      int repl,
+	      int flags)
+{
+  char *pathref;
+  char *wcard;
+  mu_folder_t folder;
+  size_t count, i, len;
+  mu_url_t url;
+  int rc;
+
+  pathref = mu_strdup (text);
+  len = strlen (pathref);
+  for (i = len; i > 0; i--)
+    if (pathref[i-1] == '/')
+      break;
+  wcard = mu_alloc (len - i + 2);
+  strcpy (wcard, pathref + i);
+  strcat (wcard, "%");
+  pathref[i] = 0;
+
+  rc = mu_folder_create (&folder, folder_path);
+  if (rc)
     {
-      char *wcard;
-      mu_folder_t folder;
-      size_t count;
-
-      wcard = mu_alloc (strlen (text) + 2);
-      strcat (strcpy (wcard, text), "*");
-
-      if (mu_folder_create (&folder, path))
-	{
-	  free (wcard);
-	  return NULL;
-	}
-
-      mu_folder_list (folder, path, wcard, 1, &list);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_create", folder_path, rc);
       free (wcard);
-      mu_folder_destroy (&folder);
-
-      if (mu_list_count (list, &count) || count == 0)
-	{
-	  mu_list_destroy (&list);
-	  return NULL;
-	}
-      else if (count == 1)
-	ml_set_completion_append_character (0);
-
-      if (mu_list_get_iterator (list, &itr))
-	{
-	  mu_list_destroy (&list);
-	  return NULL;
-	}
-      mu_iterator_first (itr);
+      free (pathref);
+      return -1;
     }
 
-  while (!mu_iterator_is_done (itr))
+  if (!mu_folder_is_local (folder))
+    {
+      if (type == local_folder)
+	{
+	  mu_error ("%s", _("folder must be set to a local folder"));
+	  free (wcard);
+	  free (pathref);
+	  return -1;
+	}
+
+      /* Set ticket for a remote folder */
+      rc = mu_folder_attach_ticket (folder);
+      if (rc)
+	{
+	  mu_authority_t auth = NULL;
+
+	  if (mu_folder_get_authority (folder, &auth) == 0 && auth)
+	    {
+	      mu_ticket_t tct;
+	      mu_noauth_ticket_create (&tct);
+	      rc = mu_authority_set_ticket (auth, tct);
+	      if (rc)
+		mu_diag_funcall (MU_DIAG_ERROR, "mu_authority_set_ticket",
+				 NULL, rc);
+	    }
+	}
+    }
+
+  rc = mu_folder_open (folder, MU_STREAM_READ);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_open", folder_path, rc);
+      free (wcard);
+      free (pathref);
+      return -1;
+    }
+
+  if (mu_folder_get_url (folder, &url))
+    {
+      free (wcard);
+      free (pathref);
+      mu_folder_destroy (&folder);
+    }
+
+  if (pathlen == PATHLEN_AUTO)
+    {
+      char const *urlpath;
+
+      mu_url_sget_path (url, &urlpath);
+      fg->pathlen = strlen (urlpath);
+      while (fg->pathlen > 0 && urlpath[fg->pathlen-1] == '/')
+	fg->pathlen--;
+      if (fg->pathlen == 1 && urlpath[0] == '/')
+	fg->pathlen = 0;
+    }
+  else
+    fg->pathlen = pathlen;
+
+  mu_folder_list (folder, pathref, wcard, 1, &fg->list);
+  free (wcard);
+  free (pathref);
+  mu_folder_destroy (&folder);
+
+  if (mu_list_count (fg->list, &count) || count == 0)
+    {
+      mu_list_destroy (&fg->list);
+      return -1;
+    }
+  else if (count == 1)
+    {
+      if (flags & MU_FOLDER_ATTRIBUTE_DIRECTORY)
+	{
+	  struct mu_list_response *resp;
+	  mu_list_head (fg->list, (void**)&resp);
+	  if (resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
+	    {
+	      size_t len = strlen (resp->name);
+	      resp->name = mu_realloc (resp->name, len + 2);
+	      resp->name[len] = resp->separator;
+	      resp->name[len+1] = 0;
+	    }
+	}
+      ml_set_completion_append_character (0);
+    }
+
+  if (mu_list_get_iterator (fg->list, &fg->itr))
+    {
+      mu_list_destroy (&fg->list);
+      return -1;
+    }
+  mu_iterator_first (fg->itr);
+  fg->repl = repl;
+  fg->flags = flags;
+  return 0;
+}
+
+static char *
+filegen_next (struct filegen *fg)
+{
+  while (!mu_iterator_is_done (fg->itr))
     {
       struct mu_list_response *resp;
-      mu_iterator_current (itr, (void**)&resp);
-      mu_iterator_next (itr);
-      if (resp->type & flags)
+      mu_iterator_current (fg->itr, (void**)&resp);
+      mu_iterator_next (fg->itr);
+      if (resp->type & fg->flags)
 	{
 	  char *ret;
-	  if (pathlen)
-	    {
-	      size_t len = strlen (resp->name + pathlen);
-	      char *ptr;
+	  size_t len = strlen (resp->name + fg->pathlen);
+	  char *ptr;
 
-	      ret = mu_alloc (len + (repl ? 1 : 0) + 1);
-	      ptr = ret;
-	      if (repl)
-		*ptr++ = repl;
-	      memcpy (ptr, resp->name + pathlen, len);
-	      ptr[len] = 0;
-	    }
-	  else
-	    ret = mu_strdup (resp->name);
+	  ret = mu_alloc (len + (fg->repl ? 1 : 0) + 1);
+	  ptr = ret;
+	  if (fg->repl)
+	    *ptr++ = fg->repl;
+	  memcpy (ptr, resp->name + fg->pathlen, len);
+	  ptr[len] = 0;
+	  //	  if (resp->type & (fg->flags & MU_FOLDER_ATTRIBUTE_DIRECTORY))
 	  return ret;
 	}
     }
-  mu_iterator_destroy (&itr);
-  mu_list_destroy (&list);
+  filegen_free (fg);
   return NULL;
 }
 
 static char *
 folder_generator (const char *text, int state)
 {
-  char *ret;
-  static size_t pathlen;
+  static struct filegen fg;
 
   if (!state)
     {
-      char *path = util_folder_path ("");
+      int rc;
+      char *path = util_folder_path ("+");
       if (!path)
 	return NULL;
 
-      pathlen = strlen (path);
-      ret = file_generator (text, state, path, pathlen, '+',
-			    MU_FOLDER_ATTRIBUTE_ALL);
+      rc = filegen_init (&fg, text, path,
+			 any_folder,
+			 PATHLEN_AUTO, '+',
+			 MU_FOLDER_ATTRIBUTE_ALL);
       free (path);
+      if (rc)
+	return NULL;
     }
-  else
-    ret = file_generator (text, state, NULL, pathlen, '+',
-			  MU_FOLDER_ATTRIBUTE_ALL);
-  return ret;
+  return filegen_next (&fg);
 }
 
 static char *
@@ -562,7 +663,7 @@ msgtype_generator (const char *text, int state)
 {
   /* Allowed message types, plus '/'. The latter can folow a colon,
      meaning body lookup */
-  static char types[] = "dnorTtu/"; 
+  static char types[] = "dnorTtu/";
   static int i;
   char c;
 
@@ -659,7 +760,7 @@ char **
 file_compl (int argc, char **argv, int point)
 {
   char *text;
-  
+
   if (point & COMPL_WS)
     {
       ml_set_completion_append_character (0);
@@ -679,12 +780,12 @@ file_compl (int argc, char **argv, int point)
     case '&':
       ml_attempted_completion_over ();
       break;
-      
+
     default:
       /* Suppose it is a file name */
       return rl_completion_matches (text, rl_filename_completion_function);
     }
-  
+
   return NULL;
 }
 
@@ -712,32 +813,45 @@ msglist_file_compl (int argc, char **argv, int point)
 static char *
 dir_generator (const char *text, int state)
 {
-  char *ret;
-  static size_t pathlen;
-  static int repl;
+  static struct filegen fg;
 
   if (!state)
     {
       char *path;
+      char *p;
+      int rc;
+      char repl;
+      size_t pathlen;
+
       switch (text[0])
 	{
 	case '+':
-	  text++;
-	  repl = '+';
-	  path = util_folder_path (text);
-	  pathlen = strlen (path) - strlen (text);
+	  {
+	    char *f;
+	    repl = '+';
+	    f = util_folder_path ("+");
+	    pathlen = strlen (f);
+	    path = mu_make_file_name (f, text + 1);
+	    free (f);
+	  }
 	  break;
 
 	case '~':
 	  repl = '~';
 	  if (text[1] == '/')
 	    {
-	      path = mu_get_homedir ();
-	      text += 2;
-	      pathlen = strlen (path);
-	      break;
+	      char *home = mu_get_homedir ();
+	      pathlen = strlen (home);
+	      path = mu_make_file_name (home, text + 2);
+	      free (home);
 	    }
-	  /* else FIXME! */
+	  else
+	    {
+	      ml_attempted_completion_over ();
+	      return NULL;
+	      /* FIXME: implement user-name completion */
+	    }
+	  break;
 
 	case '/':
 	  path = mu_strdup (text);
@@ -746,19 +860,36 @@ dir_generator (const char *text, int state)
 	  break;
 
 	default:
-	  path = mu_strdup ("./");
-	  pathlen = 2;
+	  {
+	    char *cwd = mu_getcwd ();
+	    pathlen = strlen (cwd);
+	    path = mu_make_file_name (cwd, text);
+	    free (cwd);
+	  }
 	  repl = 0;
 	}
-
-      ret = file_generator (text, state, path, pathlen, repl,
-			    MU_FOLDER_ATTRIBUTE_DIRECTORY);
-      free (path);
+      p = strrchr (path, '/');
+      if (*p)
+	{
+	  if (p[1])
+	    *p++ = 0;
+	  else
+	    p = "";
+	  rc = filegen_init (&fg, p, path[0] ? path : "/",
+			     local_folder,
+			     pathlen, repl,
+			     MU_FOLDER_ATTRIBUTE_DIRECTORY);
+	}
+      else
+	{
+	  ml_attempted_completion_over ();
+	  rc = -1;
+	}
+      if (rc)
+	return NULL;
     }
-  else
-    ret = file_generator (text, state, NULL, pathlen, repl,
-			  MU_FOLDER_ATTRIBUTE_DIRECTORY);
-  return ret;
+
+  return filegen_next (&fg);
 }
 
 char **
@@ -798,20 +929,6 @@ alias_compl (int argc, char **argv, int point)
   ml_attempted_completion_over ();
   return rl_completion_matches ((point & COMPL_WS) ? "" : argv[argc-1],
 				alias_generator);
-}
-
-static char *
-mkfilename (const char *dir, const char *file)
-{
-  size_t len = strlen (dir) + 1 + strlen (file) + 1;
-  char *p = malloc (len);
-  if (p)
-    {
-      strcpy (p, dir);
-      strcat (p, "/");
-      strcat (p, file);
-    }
-  return p;
 }
 
 static char *
@@ -877,7 +994,7 @@ exec_generator (const char *text, int state)
 
       while ((ent = readdir (dp)))
 	{
-	  char *name = mkfilename (dir, ent->d_name);
+	  char *name = mu_make_file_name (dir, ent->d_name);
 	  if (name)
 	    {
 	      int rc = access (name, X_OK);

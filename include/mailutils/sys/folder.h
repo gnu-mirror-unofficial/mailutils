@@ -28,9 +28,6 @@
 extern "C" {
 # endif
 
-# define MU_FOLDER_LIST 0
-# define MU_FOLDER_ENUM 1
-  
 struct _mu_folder
 {
   /* Data */
@@ -39,7 +36,7 @@ struct _mu_folder
   mu_property_t property;
   mu_monitor_t monitor;
   mu_url_t url;
-  int flags;
+  int is_local;
   int ref;
   size_t uid;
 

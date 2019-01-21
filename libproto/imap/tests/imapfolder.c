@@ -202,6 +202,7 @@ main (int argc, char **argv)
       mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_create", fname, rc);
       return 1;
     }
+  mu_folder_attach_ticket (folder);
   
   rc = mu_folder_open (folder, MU_STREAM_READ);
   if (rc)

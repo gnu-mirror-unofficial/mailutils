@@ -18,7 +18,7 @@
 SUBDIRS = \
  auth base address list sockaddr cidr cfg cli diag\
  filter locus mailbox mailer mime msgset opt server string stream stdstream\
- property url imapio datetime . tests 
+ property url imapio datetime wicket . tests
 
 lib_LTLIBRARIES = libmailutils.la
 
@@ -49,7 +49,8 @@ libmailutils_la_LIBADD = \
  string/libstring.la\
  stream/libstream.la\
  stdstream/libstdstream.la\
- url/liburl.la
+ url/liburl.la\
+ wicket/libwicket.la
 
 libmailutils_la_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 

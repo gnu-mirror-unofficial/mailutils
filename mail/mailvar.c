@@ -289,7 +289,7 @@ struct mailvar_symbol mailvar_tab[] =
 
     { { "quiet", }, MAILVAR_TYPEMASK (mailvar_type_boolean) | MAILVAR_HIDDEN,
       "suppresses the printing of the version when first invoked" },
-    
+
     { { NULL }, }
   };
 

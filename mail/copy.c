@@ -45,6 +45,7 @@ append_to_mailbox (char const *filename, msgset_t *msglist, int mark,
                    mu_strerror (status));
       return 1;
     }
+  mu_mailbox_attach_ticket (mbx);
   if ((status = mu_mailbox_open (mbx, MU_STREAM_WRITE | MU_STREAM_CREAT)) != 0)
     {
       mu_error (_("Cannot open mailbox %s: %s"), filename, 

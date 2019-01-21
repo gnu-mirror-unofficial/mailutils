@@ -24,7 +24,8 @@
 int
 mail_cd (int argc, char **argv)
 {
-  char *dir;
+  char *dir, *edir;
+  int rc;
   
   if (argc > 2)
     return 1;
@@ -33,10 +34,16 @@ mail_cd (int argc, char **argv)
   else 
     dir = getenv ("HOME");
 
-  if (chdir (dir))
+  rc = mu_mailbox_expand_name (dir, &edir);
+  if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "chdir", dir, errno);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_expand_name", dir, rc);
       return 1;
     }
-  return 0;
+
+  rc = chdir (edir);
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERROR, "chdir", edir, errno);
+  free (edir);
+  return rc;
 }

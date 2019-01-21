@@ -36,7 +36,7 @@
 #include <mailutils/property.h>
 #include <mailutils/mailbox.h>
 #include <mailutils/imaputil.h>
-
+#include <mailutils/util.h>
 #include <mailutils/sys/folder.h>
 
 /* Internal folder list.  */
@@ -121,6 +121,7 @@ mu_folder_create_from_record (mu_folder_t *pfolder, mu_url_t url,
 	  if (folder != NULL)
 	    {
 	      folder->url = url;
+	      folder->is_local = record->flags & MU_RECORD_LOCAL;
 	      /* Initialize the internal foilder lock, now so the
 		 concrete folder could use it.  */
 	      status = mu_monitor_create (&folder->monitor, 0, folder);
@@ -168,6 +169,52 @@ mu_folder_create (mu_folder_t *pfolder, const char *name)
   if (rc)
     mu_url_destroy (&url);
   return rc;
+}
+
+int
+mu_folder_attach_ticket (mu_folder_t folder)
+{
+  mu_authority_t auth = NULL;
+  int rc = MU_ERR_NOENT;
+
+  if (mu_folder_get_authority (folder, &auth) == 0 && auth)
+    {
+      char *filename = mu_tilde_expansion (mu_ticket_file,
+					   MU_HIERARCHY_DELIMITER, NULL);
+      mu_wicket_t wicket;
+
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
+		("Reading user ticket file %s", filename));
+      if ((rc = mu_file_wicket_create (&wicket, filename)) == 0)
+	{
+	  mu_ticket_t ticket;
+
+	  if ((rc = mu_wicket_get_ticket (wicket, NULL, &ticket)) == 0)
+	    {
+	      rc = mu_authority_set_ticket (auth, ticket);
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
+			("Retrieved and set ticket: %d", rc));
+	    }
+	  else
+	    mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		      ("Error retrieving ticket: %s\n",
+		       mu_strerror (rc)));
+	  mu_wicket_destroy (&wicket);
+	}
+      else
+	mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		  ("Error creating wicket: %s\n", mu_strerror (rc)));
+      free (filename);
+    }
+  return rc;
+}
+
+int
+mu_folder_is_local (mu_folder_t folder)
+{
+  if (!folder)
+    return -1;
+  return folder->is_local;
 }
 
 /* The folder is destroy if it is the last reference.  */

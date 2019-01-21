@@ -60,6 +60,9 @@ extern int  mu_folder_enumerate      (mu_folder_t, const char *,
 extern int  mu_folder_lsub           (mu_folder_t, const char *, const char *,
 				      mu_list_t *);
 
+extern int mu_folder_attach_ticket (mu_folder_t folder);
+extern int mu_folder_is_local (mu_folder_t folder);
+
   /* Match function */
 extern int mu_folder_set_match (mu_folder_t folder, mu_folder_match_fp pmatch);
 extern int mu_folder_get_match (mu_folder_t folder,
