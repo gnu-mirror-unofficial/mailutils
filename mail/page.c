@@ -90,13 +90,21 @@ cond_page_invalidate (size_t value)
     {
       if (page_map[page_avail-1] == value)
 	page_invalidate (0);
-      else if (page_avail > 1)
-	for (i = 0; i < page_avail-1; i++)
-	  if (page_map[i] >= value && value <= page_map[i+1])
+      else
+	{
+	  if (page_avail > 1)
 	    {
-	      page_invalidate (0);
-	      return;
+	      for (i = 0; i < page_avail-1; i++)
+		if (page_map[i] >= value && value <= page_map[i+1])
+		  {
+		    page_invalidate (0);
+		    return;
+		  }
 	    }
+	  if (page_avail < page_size
+	      && (value > page_map[page_avail-1] || value < page_map[0]))
+	    page_invalidate (0);
+	}
     }
 }
 
