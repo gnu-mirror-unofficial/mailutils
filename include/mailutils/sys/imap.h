@@ -42,7 +42,7 @@ extern "C" {
   while (0)
 #define MU_IMAP_IS_XSCRIPT_MASK(imap,n)         \
   ((imap)->flags & MU_IMAP_XSCRIPT_MASK (n))
-  
+
 enum mu_imap_client_state
   {
     MU_IMAP_CLIENT_READY,
@@ -81,7 +81,7 @@ enum mu_imap_response
     MU_IMAP_NO,
     MU_IMAP_BAD
   };
-  
+
 struct _mu_imap
   {
     int flags;
@@ -90,11 +90,11 @@ struct _mu_imap
     enum mu_imap_response response;
     /* The recent response code */
     int response_code;
-    
+
     /* Error string (if any) */
     char *errstr;
     size_t errsize;
-    
+
     enum mu_imap_client_state client_state;
     enum mu_imap_session_state session_state;
 
@@ -102,7 +102,7 @@ struct _mu_imap
     size_t tag_len;  /* Length of the command tag */
     int *tag_buf;    /* Tag number (BCD) */
     char *tag_str;   /* String representation (tag_len + 1 bytes, asciiz) */
-    
+
     mu_list_t capa;
     mu_imapio_t io;
 
@@ -135,7 +135,7 @@ struct imap_list_element
 };
 
 #define MU_IMAP_FSET(p,f) ((p)->flags |= (f))
-#define MU_IMAP_FISSET(p,f) ((p)->flags & (f))  
+#define MU_IMAP_FISSET(p,f) ((p)->flags & (f))
 #define MU_IMAP_FCLR(p,f) ((p)->flags &= ~(f))
 
 int _mu_imap_init (mu_imap_t imap);
@@ -161,7 +161,7 @@ struct imap_command
 };
 
 int mu_imap_gencom (mu_imap_t imap, struct imap_command *cmd);
-  
+
 /* If status indicates an error, return.
   */
 #define MU_IMAP_CHECK_ERROR(imap, status)			\
@@ -169,8 +169,8 @@ int mu_imap_gencom (mu_imap_t imap, struct imap_command *cmd);
     {								\
       if (status != 0)						\
 	{							\
-          imap->client_state = MU_IMAP_CLIENT_ERROR;		\
-          return status;					\
+	  imap->client_state = MU_IMAP_CLIENT_ERROR;		\
+	  return status;					\
 	}							\
     }								\
   while (0)
@@ -184,18 +184,18 @@ int mu_imap_gencom (mu_imap_t imap, struct imap_command *cmd);
     {							\
       switch (status)					\
 	{						\
-        case 0:						\
+	case 0:						\
 	  break;					\
-        case EAGAIN:					\
-        case EINPROGRESS:				\
-        case EINTR:					\
+	case EAGAIN:					\
+	case EINPROGRESS:				\
+	case EINTR:					\
 	  return status;				\
-        case MU_ERR_REPLY:				\
-        case MU_ERR_BADREPLY:				\
+	case MU_ERR_REPLY:				\
+	case MU_ERR_BADREPLY:				\
 	  imap->client_state = MU_IMAP_CLIENT_READY;	\
 	  return status;				\
-        default:					\
-          imap->client_state = MU_IMAP_CLIENT_ERROR;	\
+	default:					\
+	  imap->client_state = MU_IMAP_CLIENT_ERROR;	\
 	  return status;				\
 	}						\
     }							\
@@ -214,21 +214,21 @@ int _mu_imap_process_untagged_response (mu_imap_t imap, mu_list_t list,
 					mu_imap_response_action_t fun,
 					void *data);
 int _mu_imap_process_tagged_response (mu_imap_t imap, mu_list_t resp);
- 
+
 int _mu_imap_response (mu_imap_t imap, mu_imap_response_action_t fun,
 		       void *data);
-  
+
 int _mu_imap_list_element_is_string (struct imap_list_element *elt,
 				     const char *str);
 int _mu_imap_list_element_is_nil (struct imap_list_element *elt);
 
 int _mu_imap_list_nth_element_is_string (mu_list_t list, size_t n,
 					 const char *str);
-  
+
 int _mu_imap_collect_flags (struct imap_list_element *arg, int *res);
 
 struct imap_list_element *_mu_imap_list_at (mu_list_t list, int idx);
-  
+
 int _mu_imap_parse_fetch_response (mu_list_t resp, mu_list_t *result_list);
 
 void _mu_close_handler (mu_imap_t imap);
@@ -253,18 +253,19 @@ int _mu_imap_mailbox_init (mu_mailbox_t mailbox);
 struct _mu_imap_message
 {
   int flags;
-  size_t uid;               /* Message UID */   
+  size_t msgno;             /* Message sequence number */
+  size_t uid;               /* Message UID */
   int attr_flags;           /* Attributes */
   mu_off_t offset;          /* Offset in the message cache stream */
   mu_off_t body_start;      /* Start of message, relative to offset */
-  mu_off_t body_end;        /* End of message, relative to offset */  
+  mu_off_t body_end;        /* End of message, relative to offset */
   size_t header_lines;      /* Number of lines in the header */
   size_t body_lines;        /* Number of lines in the body */
   size_t message_size;      /* Message size */
   size_t message_lines;     /* Number of lines in the message */
   struct mu_imapenvelope *env; /* IMAP envelope */
   mu_stream_t header_stream;   /* Memory stream with message headers */
-  mu_message_t message;     /* Pointer to the message structure */ 
+  mu_message_t message;     /* Pointer to the message structure */
   struct _mu_imap_mailbox *imbx; /* Back pointer.  */
 };
 
@@ -273,8 +274,8 @@ struct _mu_imap_message
 struct _mu_imap_mailbox
 {
   int flags;
-  struct mu_imap_stat stats;     /* Mailbox statistics */ 
-  struct _mu_imap_message *msgs; /* Array of messages */
+  struct mu_imap_stat stats;     /* Mailbox statistics */
+  struct _mu_imap_message **msgs; /* Array of messages */
   size_t msgs_cnt;               /* Number of used slots in msgs */
   size_t msgs_max;               /* Number of slots in msgs */
   mu_stream_t cache;          /* Message cache stream */

@@ -35,7 +35,7 @@ struct mu_kwd mu_imap_response_codes[] = {
   /* [CAPABILITY (list)] */
   { "CAPABILITY",     MU_IMAP_RESPONSE_CAPABILITY },
   /* [PARSE] text */
-  { "PARSE",          MU_IMAP_RESPONSE_PARSE }, 
+  { "PARSE",          MU_IMAP_RESPONSE_PARSE },
   /* [PERMANENTFLAGS (list)] */
   { "PERMANENTFLAGS", MU_IMAP_RESPONSE_PERMANENTFLAGS },
   /* [READ-ONLY] */
@@ -43,9 +43,9 @@ struct mu_kwd mu_imap_response_codes[] = {
   /* [READ-WRITE] */
   { "READ-WRITE",     MU_IMAP_RESPONSE_READ_WRITE },
   /* [TRYCREATE] */
-  { "TRYCREATE",      MU_IMAP_RESPONSE_TRYCREATE },  
+  { "TRYCREATE",      MU_IMAP_RESPONSE_TRYCREATE },
   /* [UIDNEXT N] */
-  { "UIDNEXT",        MU_IMAP_RESPONSE_UIDNEXT }, 
+  { "UIDNEXT",        MU_IMAP_RESPONSE_UIDNEXT },
   /* [UIDVALIDITY N] */
   { "UIDVALIDITY",    MU_IMAP_RESPONSE_UIDVALIDITY },
   /* [UNSEEN N] */
@@ -62,23 +62,23 @@ parse_response_code (mu_imap_t imap, mu_list_t resp)
   arg = _mu_imap_list_at (resp, 1);
   if (!arg)
     return -1;
-  
+
   if (_mu_imap_list_element_is_string (arg, "["))
     {
       arg = _mu_imap_list_at (resp, 2);
       if (!arg || arg->type != imap_eltype_string)
 	return -1;
-      
+
       if (mu_kwd_xlat_name (mu_imap_response_codes, arg->v.string, &rcode))
 	return -1;
-      
+
       arg = _mu_imap_list_at (resp, 4);
       if (!arg || !_mu_imap_list_element_is_string (arg, "]"))
 	return -1;
     }
   return rcode;
 }
-  
+
 static void
 ok_response (mu_imap_t imap, mu_list_t resp, void *data)
 {
@@ -98,7 +98,7 @@ ok_response (mu_imap_t imap, mu_list_t resp, void *data)
       imap->mbox_stat.flags |= MU_IMAP_STAT_PERMANENT_FLAGS;
       mu_imap_callback (imap, MU_IMAP_CB_PERMANENT_FLAGS, 0, &imap->mbox_stat);
       return;
-	  
+
     case MU_IMAP_RESPONSE_UIDNEXT:
       arg = _mu_imap_list_at (resp, 3);
       if (!arg || arg->type != imap_eltype_string)
@@ -111,7 +111,7 @@ ok_response (mu_imap_t imap, mu_list_t resp, void *data)
 	  mu_imap_callback (imap, MU_IMAP_CB_UIDNEXT, 0, &imap->mbox_stat);
 	}
       return;
-			    
+
     case MU_IMAP_RESPONSE_UIDVALIDITY:
       arg = _mu_imap_list_at (resp, 3);
       if (!arg || arg->type != imap_eltype_string)
@@ -124,7 +124,7 @@ ok_response (mu_imap_t imap, mu_list_t resp, void *data)
 	  mu_imap_callback (imap, MU_IMAP_CB_UIDVALIDITY, 0, &imap->mbox_stat);
 	}
       return;
-      
+
     case MU_IMAP_RESPONSE_UNSEEN:
       arg = _mu_imap_list_at (resp, 3);
       if (!arg || arg->type != imap_eltype_string)
@@ -260,7 +260,7 @@ _process_unsolicited_response (mu_imap_t imap, mu_list_t resp)
 {
   size_t count;
   struct imap_list_element *arg;
-  
+
   if (mu_list_count (resp, &count))
     return 1;
 
@@ -274,13 +274,13 @@ _process_unsolicited_response (mu_imap_t imap, mu_list_t resp)
       arg = _mu_imap_list_at (resp, 1);
       if (!arg)
 	return 1;
-      
+
       if (_mu_imap_list_element_is_string (arg, "EXISTS"))
 	{
 	  arg = _mu_imap_list_at (resp, 0);
 	  if (!arg)
 	    return 1;
-	  
+
 	  n = strtoul (arg->v.string, &p, 10);
 	  if (*p)
 	    return 1;
@@ -304,6 +304,26 @@ _process_unsolicited_response (mu_imap_t imap, mu_list_t resp)
 			    &imap->mbox_stat);
 	  return 0;
 	}
+      else if (_mu_imap_list_element_is_string (arg, "EXPUNGE"))
+	{
+	  arg = _mu_imap_list_at (resp, 0);
+	  if (!arg)
+	    return 1;
+
+	  n = strtoul (arg->v.string, &p, 10);
+	  if (*p)
+	    return 1;
+
+	  /* Update message count, if available */
+	  if ((imap->mbox_stat.flags & MU_IMAP_STAT_MESSAGE_COUNT)
+	      && imap->mbox_stat.message_count > 0)
+	    imap->mbox_stat.message_count--;
+	  /* Assume recent count is invalid. */
+	  imap->mbox_stat.flags &= ~MU_IMAP_STAT_RECENT_COUNT;
+
+	  mu_imap_callback (imap, MU_IMAP_CB_EXPUNGE, n, &imap->mbox_stat);
+	  return 0;
+	}
     }
   else if (count == 3 &&
 	   _mu_imap_list_nth_element_is_string (resp, 1, "FETCH"))
@@ -317,12 +337,12 @@ _process_unsolicited_response (mu_imap_t imap, mu_list_t resp)
 	  msgno = strtoul (arg->v.string, &p, 10);
 	  if (*p)
 	    return 1;
-	  
+
 	  arg = _mu_imap_list_at (resp, 2);
 	  if (arg->type == imap_eltype_list)
 	    {
 	      mu_list_t list;
-	      
+
 	      if (_mu_imap_parse_fetch_response (arg->v.list, &list) == 0)
 		{
 		  mu_imap_callback (imap, MU_IMAP_CB_FETCH, msgno, list);
@@ -416,10 +436,9 @@ int
 _mu_imap_process_tagged_response (mu_imap_t imap, mu_list_t resp)
 {
   size_t count;
-  
+
   if (mu_list_count (resp, &count))
     return 1;
 
   return _std_tagged_response (imap, count, resp);
 }
-
