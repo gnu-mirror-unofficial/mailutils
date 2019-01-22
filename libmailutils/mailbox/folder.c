@@ -39,13 +39,6 @@
 #include <mailutils/util.h>
 #include <mailutils/sys/folder.h>
 
-/* Internal folder list.  */
-static mu_list_t known_folder_list;
-static int is_known_folder (mu_url_t, mu_folder_t *);
-
-/* Static folder lock.  */
-static struct mu_monitor folder_lock = MU_MONITOR_INITIALIZER;
-
 int
 mu_folder_glob_match (const char *name, void *pattern, int flags)
 {
@@ -58,13 +51,6 @@ mu_folder_imap_match (const char *name, void *pattern, int flags)
   return mu_imap_wildmatch (pattern, name, '/');
 }
 
-/* A folder could be remote (IMAP), or local(a spool directory) like $HOME/Mail
-   etc ..  We maintain a list of known folders to avoid creating multiple
-   folders for the same URL.  So, when mu_folder_create is called we check if
-   we already have a folder for that URL and return it, otherwise we create a
-   new one.  Downsides: the scheme to detect the same URL is very weak, and
-   there could be cases where you'll want a different folder for the same URL,
-   there is not easy way to do this.  */
 int
 mu_folder_create_from_record (mu_folder_t *pfolder, mu_url_t url,
 			      mu_record_t record)
@@ -100,20 +86,6 @@ mu_folder_create_from_record (mu_folder_t *pfolder, mu_url_t url,
 		return status;
 	    }
 	  
-	  mu_monitor_wrlock (&folder_lock);
-
-	  /* Check if we already have the same URL folder.  */
-	  if (is_known_folder (url, &folder))
-	    {
-	      folder->ref++;
-	      *pfolder = folder;
-	      mu_url_destroy (&url); /* FIXME: Hmm */
-	      mu_monitor_unlock (&folder_lock);
-	      return  0;
-	    }
-	  else
-	    mu_monitor_unlock (&folder_lock);
-	  
 	  /* Create a new folder.  */
 
 	  /* Allocate memory for the folder.  */
@@ -135,10 +107,6 @@ mu_folder_create_from_record (mu_folder_t *pfolder, mu_url_t url,
 			folder->_match = mu_folder_imap_match;
 		      *pfolder = folder;
 		      folder->ref++;
-		      /* Put on the internal list of known folders.  */
-		      if (known_folder_list == NULL)
-			mu_list_create (&known_folder_list);
-		      mu_list_append (known_folder_list, folder);
 		    }
 		}
 	      /* Something went wrong, destroy the object. */
@@ -229,18 +197,7 @@ mu_folder_destroy (mu_folder_t *pfolder)
 
       mu_monitor_wrlock (monitor);
 
-      /* Check if this the last reference for this folder.  If yes removed
-         it from the list.  */
-      mu_monitor_wrlock (&folder_lock);
       folder->ref--;
-      /* Remove the folder from the list of known folder.  */
-      if (folder->ref <= 0)
-	mu_list_remove (known_folder_list, folder);
-      /* If the list is empty we can safely remove it.  */
-      if (mu_list_is_empty (known_folder_list))
-	mu_list_destroy (&known_folder_list);
-
-      mu_monitor_unlock (&folder_lock);
 
       if (folder->ref <= 0)
 	{
@@ -526,40 +483,5 @@ mu_folder_get_url (mu_folder_t folder, mu_url_t *purl)
     return MU_ERR_OUT_PTR_NULL;
   *purl = folder->url;
   return 0;
-}
-
-static int
-is_known_folder (mu_url_t url, mu_folder_t *pfolder)
-{
-  int ret = 0;
-  mu_folder_t folder = NULL;
-  mu_iterator_t iterator;
-
-  if (url == NULL || pfolder == NULL)
-    return ret;
-
-  if (mu_list_get_iterator (known_folder_list, &iterator) != 0)
-    return ret;
-
-  for (mu_iterator_first (iterator); !mu_iterator_is_done (iterator);
-       mu_iterator_next (iterator))
-    {
-      mu_iterator_current (iterator, (void **)&folder);
-      /* Check if the same URL type.  */
-      if (folder && folder->url
-	  && mu_url_is_same_scheme (url, folder->url)
-	  && mu_url_is_same_user (url, folder->url)
-	  && mu_url_is_same_host (url, folder->url)
-	  && mu_url_is_same_path (url, folder->url) 
-	  && mu_url_is_same_port (url, folder->url))
-	{
-	  ret = 1;
-	  break;
-	}
-    }
-  if (ret)
-    *pfolder = folder;
-  mu_iterator_destroy (&iterator);
-  return ret;
 }
 
