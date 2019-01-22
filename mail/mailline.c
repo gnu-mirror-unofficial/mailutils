@@ -477,37 +477,16 @@ enum
 #define PATHLEN_AUTO ((size_t)-1)
 
 static int
-filegen_init (struct filegen *fg,
-	      const char *text,
-	      const char *folder_path,
-	      int type,
-	      size_t pathlen,
-	      int repl,
-	      int flags)
+new_folder (mu_folder_t *pfolder, mu_url_t url, int type)
 {
-  char *pathref;
-  char *wcard;
   mu_folder_t folder;
-  size_t count, i, len;
-  mu_url_t url;
   int rc;
 
-  pathref = mu_strdup (text);
-  len = strlen (pathref);
-  for (i = len; i > 0; i--)
-    if (pathref[i-1] == '/')
-      break;
-  wcard = mu_alloc (len - i + 2);
-  strcpy (wcard, pathref + i);
-  strcat (wcard, "%");
-  pathref[i] = 0;
-
-  rc = mu_folder_create (&folder, folder_path);
+  rc = mu_folder_create_from_record (&folder, url, NULL);
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_create", folder_path, rc);
-      free (wcard);
-      free (pathref);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_create",
+		       mu_url_to_string (url), rc);
       return -1;
     }
 
@@ -516,8 +495,7 @@ filegen_init (struct filegen *fg,
       if (type == local_folder)
 	{
 	  mu_error ("%s", _("folder must be set to a local folder"));
-	  free (wcard);
-	  free (pathref);
+	  mu_folder_destroy (&folder);
 	  return -1;
 	}
 
@@ -542,18 +520,81 @@ filegen_init (struct filegen *fg,
   rc = mu_folder_open (folder, MU_STREAM_READ);
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_open", folder_path, rc);
-      free (wcard);
-      free (pathref);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_open",
+		       mu_url_to_string (url), rc);
+      mu_folder_destroy (&folder);
       return -1;
     }
 
-  if (mu_folder_get_url (folder, &url))
+  *pfolder = folder;
+  return 0;
+}
+
+static int
+folder_match_url (mu_folder_t folder, mu_url_t url)
+{
+  mu_url_t furl;
+  int rc = mu_folder_get_url (folder, &furl);
+  if (rc)
     {
-      free (wcard);
-      free (pathref);
-      mu_folder_destroy (&folder);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_get_url", NULL, rc);
+      return 0;
     }
+  return mu_url_is_same_scheme (url, furl)
+	  && mu_url_is_same_user (url, furl)
+	  && mu_url_is_same_host (url, furl)
+	  && mu_url_is_same_portstr (url, furl);
+}
+
+static int
+filegen_init (struct filegen *fg,
+	      const char *text,
+	      const char *folder_path,
+	      int type,
+	      size_t pathlen,
+	      int repl,
+	      int flags)
+{
+  char *pathref;
+  char *wcard;
+  mu_folder_t folder;
+  size_t count, i, len;
+  mu_url_t url;
+  int rc;
+  int free_folder;
+
+  rc = mu_mailbox_get_folder (mbox, &folder);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_get_folder", NULL, rc);
+      return -1;
+    }
+
+  rc = mu_url_create (&url, folder_path);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_url_create", folder_path, rc);
+      return -1;
+    }
+
+  if (folder_match_url (folder, url))
+    free_folder = 0;
+  else
+    {
+      if (new_folder (&folder, url, type))
+	return -1;
+      free_folder = 1;
+    }
+
+  pathref = mu_strdup (text);
+  len = strlen (pathref);
+  for (i = len; i > 0; i--)
+    if (pathref[i-1] == '/')
+      break;
+  wcard = mu_alloc (len - i + 2);
+  strcpy (wcard, pathref + i);
+  strcat (wcard, "%");
+  pathref[i] = 0;
 
   if (pathlen == PATHLEN_AUTO)
     {
@@ -572,7 +613,8 @@ filegen_init (struct filegen *fg,
   mu_folder_list (folder, pathref, wcard, 1, &fg->list);
   free (wcard);
   free (pathref);
-  mu_folder_destroy (&folder);
+  if (free_folder)
+    mu_folder_destroy (&folder);
 
   if (mu_list_count (fg->list, &count) || count == 0)
     {
@@ -588,7 +630,7 @@ filegen_init (struct filegen *fg,
 	  mu_list_head (fg->list, (void**)&resp);
 	  if ((resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
 	      && strcmp (resp->name, text) == 0)
-	    ml_set_completion_append_character ('/');
+	    ml_set_completion_append_character (resp->separator);
 	}
     }
 
