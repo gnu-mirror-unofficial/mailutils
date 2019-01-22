@@ -131,6 +131,7 @@ int mu_url_is_same_user   (mu_url_t, mu_url_t);
 int mu_url_is_same_path   (mu_url_t, mu_url_t);
 int mu_url_is_same_host   (mu_url_t, mu_url_t);
 int mu_url_is_same_port   (mu_url_t, mu_url_t);
+int mu_url_is_same_portstr(mu_url_t, mu_url_t);
 
 int mu_url_matches_ticket   (mu_url_t ticket, mu_url_t url, int *wcn);  
 
