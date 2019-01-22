@@ -581,19 +581,15 @@ filegen_init (struct filegen *fg,
     }
   else if (count == 1)
     {
+      ml_set_completion_append_character (0);
       if (flags & MU_FOLDER_ATTRIBUTE_DIRECTORY)
 	{
 	  struct mu_list_response *resp;
 	  mu_list_head (fg->list, (void**)&resp);
-	  if (resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
-	    {
-	      size_t len = strlen (resp->name);
-	      resp->name = mu_realloc (resp->name, len + 2);
-	      resp->name[len] = resp->separator;
-	      resp->name[len+1] = 0;
-	    }
+	  if ((resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
+	      && strcmp (resp->name, text) == 0)
+	    ml_set_completion_append_character ('/');
 	}
-      ml_set_completion_append_character (0);
     }
 
   if (mu_list_get_iterator (fg->list, &fg->itr))
