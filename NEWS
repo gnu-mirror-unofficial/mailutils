@@ -1,10 +1,51 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-01-16
+GNU mailutils NEWS -- history of user-visible changes. 2019-01-22
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 Version 3.5.90 (git)
+
+* Fixes in the 'mail' utility
+
+** showenvelope
+
+With the showenvelope variable set, mail incorrectly displayed
+envelope on the stdout, instead of using the current output stream.
+
+** pipe command
+
+Last argument always specifies the command to pipe messages to.
+
+** fixed / and :/ searches in message sets
+
+** Fix and improve argument completion
+
+** Don't print original file name, use postprocessed URL representation
+
+The original file name might contain passwords (if it refers to a
+remote mailbox).
+
+** Improve folder handling and name expansion
+
+** Fix header display after deletions
+
+* Fixes in IMAP client library
+
+** Speed up opening IMAP mailboxes
+
+Initial scan of an imap mailbox retrieves, among other data, message headers.
+This considerably speeds up the operation of such tools as mail
+(initial loading), frm or from.
+
+** handle EXPUNGE response
+
+This fixes interoperation with Dovecot imap.
+
+** fix incorporation of new messages
+
+* Improved documentation
+
 
 Version 3.5 - 2018-10-27
 
