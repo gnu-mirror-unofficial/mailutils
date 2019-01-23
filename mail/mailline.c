@@ -454,10 +454,11 @@ command_compl (int argc, char **argv, int point)
 
 struct filegen
 {
-  mu_list_t list;
-  mu_iterator_t itr;
-  size_t pathlen;
-  char repl;
+  mu_list_t list;     /* List of matches */
+  mu_iterator_t itr;  /* Iterator over this list */
+  size_t prefix_len;  /* Length of initial prefix */
+  char repl;          /* Character to replace initial prefix with */ 
+  size_t path_len;    /* Length of pathname part */
   int flags;
 };
 
@@ -474,7 +475,7 @@ enum
     local_folder
   };
 
-#define PATHLEN_AUTO ((size_t)-1)
+#define PREFIX_AUTO ((size_t)-1)
 
 static int
 new_folder (mu_folder_t *pfolder, mu_url_t url, int type)
@@ -551,7 +552,7 @@ filegen_init (struct filegen *fg,
 	      const char *text,
 	      const char *folder_path,
 	      int type,
-	      size_t pathlen,
+	      size_t prefix_len,
 	      int repl,
 	      int flags)
 {
@@ -562,6 +563,7 @@ filegen_init (struct filegen *fg,
   mu_url_t url;
   int rc;
   int free_folder;
+  char const *urlpath;
 
   rc = mu_url_create (&url, folder_path);
   if (rc)
@@ -598,19 +600,14 @@ filegen_init (struct filegen *fg,
   strcat (wcard, "%");
   pathref[i] = 0;
 
-  if (pathlen == PATHLEN_AUTO)
-    {
-      char const *urlpath;
-
-      mu_url_sget_path (url, &urlpath);
-      fg->pathlen = strlen (urlpath);
-      while (fg->pathlen > 0 && urlpath[fg->pathlen-1] == '/')
-	fg->pathlen--;
-      if (fg->pathlen == 1 && urlpath[0] == '/')
-	fg->pathlen = 0;
-    }
+  mu_url_sget_path (url, &urlpath);
+  fg->path_len = strlen (urlpath);
+  if (fg->path_len > 0 && urlpath[fg->path_len - 1] != '/')
+    fg->path_len++;
+  if (prefix_len == PREFIX_AUTO)
+    fg->prefix_len = fg->path_len;
   else
-    fg->pathlen = pathlen;
+    fg->prefix_len = prefix_len;
 
   mu_folder_list (folder, pathref, wcard, 1, &fg->list);
   free (wcard);
@@ -631,7 +628,7 @@ filegen_init (struct filegen *fg,
 	  struct mu_list_response *resp;
 	  mu_list_head (fg->list, (void**)&resp);
 	  if ((resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
-	      && strcmp (resp->name, text) == 0)
+	      && strcmp (resp->name + fg->path_len, text) == 0)
 	    ml_set_completion_append_character (resp->separator);
 	}
     }
@@ -658,16 +655,15 @@ filegen_next (struct filegen *fg)
       if (resp->type & fg->flags)
 	{
 	  char *ret;
-	  size_t len = strlen (resp->name + fg->pathlen);
+	  char *name;
 	  char *ptr;
 
-	  ret = mu_alloc (len + (fg->repl ? 1 : 0) + 1);
+	  name = resp->name + fg->prefix_len;
+	  ret = mu_alloc (strlen (name) + (fg->repl ? 1 : 0) + 1);
 	  ptr = ret;
 	  if (fg->repl)
 	    *ptr++ = fg->repl;
-	  memcpy (ptr, resp->name + fg->pathlen, len);
-	  ptr[len] = 0;
-	  //	  if (resp->type & (fg->flags & MU_FOLDER_ATTRIBUTE_DIRECTORY))
+	  strcpy (ptr, name);
 	  return ret;
 	}
     }
@@ -689,7 +685,7 @@ folder_generator (const char *text, int state)
 
       rc = filegen_init (&fg, text, path,
 			 any_folder,
-			 PATHLEN_AUTO, '+',
+			 PREFIX_AUTO, '+',
 			 MU_FOLDER_ATTRIBUTE_ALL);
       free (path);
       if (rc)
@@ -861,7 +857,7 @@ dir_generator (const char *text, int state)
       char *p;
       int rc;
       char repl;
-      size_t pathlen;
+      size_t prefix_len;
 
       switch (text[0])
 	{
@@ -870,7 +866,7 @@ dir_generator (const char *text, int state)
 	    char *f;
 	    repl = '+';
 	    f = util_folder_path ("+");
-	    pathlen = strlen (f);
+	    prefix_len = strlen (f);
 	    path = mu_make_file_name (f, text + 1);
 	    free (f);
 	  }
@@ -881,7 +877,7 @@ dir_generator (const char *text, int state)
 	  if (text[1] == '/')
 	    {
 	      char *home = mu_get_homedir ();
-	      pathlen = strlen (home);
+	      prefix_len = strlen (home);
 	      path = mu_make_file_name (home, text + 2);
 	      free (home);
 	    }
@@ -895,14 +891,14 @@ dir_generator (const char *text, int state)
 
 	case '/':
 	  path = mu_strdup (text);
-	  pathlen = 0;
+	  prefix_len = 0;
 	  repl = 0;
 	  break;
 
 	default:
 	  {
 	    char *cwd = mu_getcwd ();
-	    pathlen = strlen (cwd);
+	    prefix_len = strlen (cwd);
 	    path = mu_make_file_name (cwd, text);
 	    free (cwd);
 	  }
@@ -917,7 +913,7 @@ dir_generator (const char *text, int state)
 	    p = "";
 	  rc = filegen_init (&fg, p, path[0] ? path : "/",
 			     local_folder,
-			     pathlen, repl,
+			     prefix_len, repl,
 			     MU_FOLDER_ATTRIBUTE_DIRECTORY);
 	}
       else
