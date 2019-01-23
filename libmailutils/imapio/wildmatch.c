@@ -31,7 +31,7 @@ _wild_match (const char *pat, const char *name, char delim, int icase)
 {
   while (pat && *pat)
     {
-      if (*name == 0 && *pat != '*')
+      if (*name == 0 && *pat != '*' && *pat != '%')
 	return WILD_ABORT;
       switch (*pat)
 	{
