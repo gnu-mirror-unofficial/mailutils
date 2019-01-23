@@ -159,15 +159,6 @@ ml_readline_with_intr (const char *prompt)
 
 #ifdef WITH_READLINE
 
-/* Flags for per-command completion functions */
-enum
-  {
-    COMPL_DFL     = 0x0, /* Nothing special */
-    COMPL_WS      = 0x1, /* Cursor pointing to a whitespace character
-			    at the start of input or past another whitespace */
-    COMPL_LASTARG = 0x2  /* Cursor pointing at or past the last argument */
-  };
-
 static char *insert_text;
 
 static int
@@ -1374,7 +1365,7 @@ ml_set_completion_append_character (int c MU_ARG_UNUSED)
 }
 
 void
-ml_attempted_completion_over ()
+ml_attempted_completion_over (void)
 {
 }
 

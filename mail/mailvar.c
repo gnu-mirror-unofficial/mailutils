@@ -767,14 +767,23 @@ mailvar_list_copy (int set)
 }
 
 
+enum
+  {
+    MAILVAR_ITR_ALL = 0,         /* Return all variables */
+    MAILVAR_ITR_SET = 0x1,       /* Return only variables that have been set */
+    MAILVAR_ITR_WRITABLE = 0x2   /* Return only writable variables */
+  };
+
 struct mailvar_iterator
 {
-  const char *prefix;
-  int prefixlen;
-  mu_list_t varlist;
-  mu_iterator_t varitr;
+  int flags;                /* MAILVAR_ITR_ bits */
+  const char *prefix;       /* Prefix to match */
+  int prefixlen;            /* Length of the prefix */
+  mu_list_t varlist;        /* List of collected variables */
+  mu_iterator_t varitr;     /* Iterator over varlist */
 };
 
+/* Return next match from ITR */
 const char *
 mailvar_iterate_next (struct mailvar_iterator *itr)
 {
@@ -782,29 +791,60 @@ mailvar_iterate_next (struct mailvar_iterator *itr)
 
   while (!mu_iterator_is_done (itr->varitr))
     {
+      size_t len;
+
       mu_iterator_current (itr->varitr, (void**) &vp);
       mu_iterator_next (itr->varitr);
 
+      if (itr->flags & MAILVAR_ITR_WRITABLE)
+	{
+	  const struct mailvar_symbol *sym = find_mailvar_symbol (vp->name);
+	  if (sym && (sym->flags & MAILVAR_RDONLY))
+	    continue;
+	}
+
       if (strlen (vp->name) >= itr->prefixlen
 	  && strncmp (vp->name, itr->prefix, itr->prefixlen) == 0)
-	return vp->name;
+	return strdup (vp->name);
+
+      /* See if it's a negated boolean */
+      if (itr->prefixlen >= 2 && memcmp (itr->prefix, "no", 2) == 0
+	  && (len = strlen (vp->name)) >= itr->prefixlen - 2
+	  && memcmp (vp->name, itr->prefix + 2, itr->prefixlen - 2) == 0)
+	{
+	  char *p;
+	  struct mailvar_symbol *sym = find_mailvar_symbol (vp->name);
+	  if (sym && !(sym->flags & (MAILVAR_TYPEMASK (mailvar_type_boolean))))
+	    continue;
+	  p = malloc (len + 3);
+	  if (p)
+	    {
+	      strcpy (p, "no");
+	      strcpy (p + 2, vp->name);
+	    }
+	  return p;
+	}
     }
   return NULL;
 }
 
+/* Initialize iterator, return the name of the first match */
 const char *
-mailvar_iterate_first (int set, const char *prefix, struct mailvar_iterator **pitr)
+mailvar_iterate_first (int flags,
+		       const char *prefix, struct mailvar_iterator **pitr)
 {
   struct mailvar_iterator *itr = mu_alloc (sizeof *itr);
+  itr->flags = flags;
   itr->prefix = prefix;
   itr->prefixlen = strlen (prefix);
-  itr->varlist = mailvar_list_copy (set);
+  itr->varlist = mailvar_list_copy (flags & MAILVAR_ITR_SET);
   mu_list_get_iterator (itr->varlist, &itr->varitr);
   mu_iterator_first (itr->varitr);
   *pitr = itr;
   return mailvar_iterate_next (itr);
 }
 
+/* Release memory used by ITR */
 void
 mailvar_iterate_end (struct mailvar_iterator **pitr)
 {
@@ -1005,13 +1045,13 @@ mail_variable (int argc, char **argv)
 
 #ifdef WITH_READLINE
 static char *
-mailvar_generator (int set, const char *text, int state)
+mailvar_generator (int flags, const char *text, int state)
 {
   static struct mailvar_iterator *itr;
   const char *p;
 
   if (!state)
-    p = mailvar_iterate_first (set, text, &itr);
+    p = mailvar_iterate_first (flags, text, &itr);
   else
     p = mailvar_iterate_next (itr);
 
@@ -1023,27 +1063,67 @@ mailvar_generator (int set, const char *text, int state)
   return strdup (p);
 }
 
+/* Completion generator for the "set" command */
 static char *
 mailvar_set_generator (const char *text, int state)
 {
-  return mailvar_generator (0, text, state);
+  return mailvar_generator (MAILVAR_ITR_WRITABLE, text, state);
 }
 
+/* Completion generator for the "unset" command */
 static char *
 mailvar_unset_generator (const char *text, int state)
 {
-  return mailvar_generator (1, text, state);
+  return mailvar_generator (MAILVAR_ITR_SET | MAILVAR_ITR_WRITABLE,
+			    text, state);
 }
 
-char **
-mailvar_set_compl (int argc, char **argv, int ws)
+/* Completion generator for the "variable" command */
+static char *
+mailvar_variable_generator (const char *text, int state)
 {
+  return mailvar_generator (MAILVAR_ITR_ALL, text, state);
+}
+
+/* Completion function for all three commands */
+char **
+mailvar_set_compl (int argc, char **argv, int point)
+{
+  /* Possible values for argv[0] are: set, unset, variable */
+  char **matches =
+    rl_completion_matches (point & COMPL_WS ? "" : argv[argc-1],
+			   argv[0][0] == 'u'
+			    ? mailvar_unset_generator
+			    : argv[0][0] == 's'
+			       ? mailvar_set_generator
+			       : mailvar_variable_generator);
   ml_attempted_completion_over ();
-  return rl_completion_matches (ws ? "" : argv[argc-1],
-				/* Possible values for argv[0] are:
-				   set, unset, variable */
-				argv[0][0] == 'u' ? mailvar_unset_generator
-						  : mailvar_set_generator);
+  if (matches && matches[1] == NULL) /* Exact match */
+    {
+      switch (argv[0][0])
+	{
+	case 'u':
+	  ml_set_completion_append_character (' ');
+	  break;
+
+	case 's':
+	  {
+	    struct mailvar_symbol *sym = find_mailvar_symbol (matches[0]);
+	    if (sym &&
+		(sym->flags & (MAILVAR_TYPEMASK (mailvar_type_string)
+			       | MAILVAR_TYPEMASK (mailvar_type_number))))
+	      ml_set_completion_append_character ('=');
+	    else
+	      ml_set_completion_append_character (' ');
+	  }
+	  break;
+
+	default:
+	  ml_set_completion_append_character (0);
+	}
+    }
+
+  return matches;
 }
 
 #endif

@@ -483,6 +483,16 @@ char *readline (char *prompt);
 #define MAIL_ATTRIBUTE_TOUCHED  0x0020
 
 void ml_attempted_completion_over (void);
+void ml_set_completion_append_character (int);
+
+/* Flags for per-command completion functions */
+enum
+  {
+    COMPL_DFL     = 0x0, /* Nothing special */
+    COMPL_WS      = 0x1, /* Cursor pointing to a whitespace character
+			    at the start of input or past another whitespace */
+    COMPL_LASTARG = 0x2  /* Cursor pointing at or past the last argument */
+  };
 
 #ifdef WITH_READLINE
 char **file_compl (int argc, char **argv, int ws);
