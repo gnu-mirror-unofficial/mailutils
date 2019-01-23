@@ -44,12 +44,14 @@ static int select_type (mu_message_t msg, void *closure);
 static int select_sender (mu_message_t msg, void *closure);
 static int select_deleted (mu_message_t msg, void *closure);
 static int check_set (msgset_t **pset);
- 
+
 int yyerror (const char *);
 int yylex  (void);
 
 static int msgset_flags = MSG_NODELETED;
+static size_t message_count;
 static msgset_t *result;
+static mu_opool_t tokpool;
 %}
 
 %union {
@@ -144,13 +146,23 @@ msg      : header REGEXP /* /.../ */
 	     hd.header = $1;
 	     hd.expr   = $2;
 	     $$ = msgset_select (select_header, &hd, 0, 0);
-	     if ($1)
-	       free ($1);
-	     free ($2);
+	     if (!$$)
+	       {
+		 if ($1)
+		   mu_error (_("No applicable messages from {%s:/%s}"), $1, $2);
+		 else
+		   mu_error (_("No applicable messages from {/%s}"), $2);
+		 YYERROR;
+	       }
 	   }
          | BODY
            {
 	     $$ = msgset_select (select_body, $1, 0, 0);
+	     if (!$$)
+	       {
+		 mu_error (_("No applicable messages from {:/%s}"), $1);
+		 YYERROR;
+	       }
 	   }
          | TYPE  /* :n, :d, etc */
            {
@@ -160,11 +172,20 @@ msg      : header REGEXP /* /.../ */
 		 YYERROR;
 	       }
 	     $$ = msgset_select (select_type, (void *)&$1, 0, 0);
+	     if (!$$)
+	       {
+		 mu_error (_("No messages satisfy :%c"), $1);
+		 YYERROR;
+	       }
 	   }
          | IDENT /* Sender name */
            {
 	     $$ = msgset_select (select_sender, (void *)$1, 0, 0);
-	     free ($1);
+	     if (!$$)
+	       {
+		 mu_error (_("No applicable messages from {%s}"), $1);
+		 YYERROR;
+	       }
 	   }
          ;
 
@@ -211,6 +232,8 @@ range    : number
          ;
 
 number   : partno
+           {
+	   }
          | partno '[' rangeset ']'
            {
 	     $$ = msgset_expand ($1, $3);
@@ -221,6 +244,12 @@ number   : partno
 
 partno   : NUMBER
            {
+	     if ($1 > message_count)
+	       {
+		 util_error_range ($1);
+		 YYERROR;
+	       }
+
 	     $$ = msgset_make_1 ($1);
 	   }
          | '(' rangeset ')'
@@ -279,14 +308,12 @@ yylex (void)
   if (mu_isalpha (*cur_p))
     {
       char *p = cur_p;
-      int len;
 
       while (*cur_p && *cur_p != ',' && *cur_p != ':') 
 	cur_p++;
-      len = cur_p - p + 1;
-      yylval.string = mu_alloc (len);
-      memcpy (yylval.string, p, len-1);
-      yylval.string[len-1] = 0;
+      mu_opool_append (tokpool, p, cur_p - p);
+      mu_opool_append_char (tokpool, 0);
+      yylval.string = mu_opool_finish (tokpool, NULL);
       if (*cur_p == ':')
 	{
 	  ++cur_p;
@@ -298,16 +325,17 @@ yylex (void)
   if (*cur_p == '/')
     {
       char *p = ++cur_p;
-      int len;
 
       while (*cur_p && *cur_p != '/')
 	cur_p++;
-      len = cur_p - p + 1;
+
+      mu_opool_append (tokpool, p, cur_p - p);
+      mu_opool_append_char (tokpool, 0);
+      yylval.string = mu_opool_finish (tokpool, NULL);
+
       if (*cur_p)
 	cur_p++;
-      yylval.string = mu_alloc (len);
-      memcpy (yylval.string, p, len-1);
-      yylval.string[len-1] = 0;
+
       return REGEXP;
     }
 
@@ -317,16 +345,17 @@ yylex (void)
       if (*cur_p == '/')
 	{
 	  char *p = ++cur_p;
-	  int len;
-
+	  
 	  while (*cur_p && *cur_p != '/')
 	    cur_p++;
-	  len = cur_p - p + 1;
+
+	  mu_opool_append (tokpool, p, cur_p - p);
+	  mu_opool_append_char (tokpool, 0);
+	  yylval.string = mu_opool_finish (tokpool, NULL);
+
 	  if (*cur_p)
 	    cur_p++;
-	  yylval.string = mu_alloc (len);
-	  memcpy (yylval.string, p, len-1);
-	  yylval.string[len-1] = 0;
+
 	  return BODY;
 	}
       if (*cur_p == 0)
@@ -348,10 +377,13 @@ msgset_parse (const int argc, char **argv, int flags, msgset_t **mset)
   cur_ind = 1;
   cur_p = NULL;
   result = NULL;
+
+  mu_opool_create (&tokpool, MU_OPOOL_ENOMEMABRT);
+  mu_mailbox_messages_count (mbox, &message_count);
   rc = yyparse ();
   if (rc == 0)
     {
-      if (result == NULL)
+      if (!result)
 	{
 	  util_noapp ();
 	  rc = 1;
@@ -359,6 +391,7 @@ msgset_parse (const int argc, char **argv, int flags, msgset_t **mset)
       else
 	*mset = result;
     }
+  mu_opool_destroy (&tokpool);
   return rc;
 }
 
@@ -555,7 +588,7 @@ msgset_select (int (*sel) (mu_message_t, void *), void *closure, int rev,
       for (i = total; i > 0; i--)
 	{
 	  mu_mailbox_get_message (mbox, i, &msg);
-	  if ((*sel)(msg, closure))
+	  if ((*sel) (msg, closure))
 	    {
 	      mp = msgset_make_1 (i);
 	      if (!first)
@@ -573,7 +606,7 @@ msgset_select (int (*sel) (mu_message_t, void *), void *closure, int rev,
       for (i = 1; i <= total; i++)
 	{
 	  mu_mailbox_get_message (mbox, i, &msg);
-	  if ((*sel)(msg, closure))
+	  if ((*sel) (msg, closure))
 	    {
 	      mp = msgset_make_1 (i);
 	      if (!first)
@@ -686,13 +719,13 @@ select_body (mu_message_t msg, void *closure)
 }
 
 int
-select_sender (mu_message_t msg MU_ARG_UNUSED, void *closure MU_ARG_UNUSED)
+select_sender (mu_message_t msg, void *closure)
 {
-  /* char *sender = (char*) closure; */
-  /* FIXME: all messages from sender argv[i] */
-  /* Annoying we can use mu_address_create() for that
-     but to compare against what? The email ?  */
-  return 0;
+  char *needle = (char*) closure;
+  char *sender = sender_string (msg);
+  int status = strcmp (sender, needle) == 0;
+  free (sender);
+  return status;
 }
 
 int
@@ -739,7 +772,12 @@ check_set (msgset_t **pset)
 {
   int flags = msgset_flags;
   int rc = 0;
-  
+
+  if (!*pset)
+    {
+      util_noapp ();
+      return 1;
+    }
   if (msgset_count (*pset) == 1)
     flags ^= MSG_SILENT;
   if (flags & MSG_NODELETED)

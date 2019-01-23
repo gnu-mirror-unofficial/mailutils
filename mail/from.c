@@ -219,9 +219,8 @@ hdr_date (struct header_call_args *args, void *data)
   return header_buf_string (args, date);
 }
 
-/* %f */
-static char *
-hdr_from (struct header_call_args *args, void *data)
+char *
+sender_string (mu_message_t msg)
 {
   char *from = NULL;
   
@@ -229,7 +228,7 @@ hdr_from (struct header_call_args *args, void *data)
     {  
       mu_header_t hdr;
       
-      if (mu_message_get_header (args->msg, &hdr) == 0
+      if (mu_message_get_header (msg, &hdr) == 0
 	  && mu_header_aget_value_unfold (hdr, MU_HEADER_FROM, &from) == 0)
 	{
 	  mu_address_t address = NULL;
@@ -276,11 +275,18 @@ hdr_from (struct header_call_args *args, void *data)
       mu_envelope_t env = NULL;
       const char *sender = "";
       
-      if (mu_message_get_envelope (args->msg, &env) == 0)
+      if (mu_message_get_envelope (msg, &env) == 0)
 	mu_envelope_sget_sender (env, &sender);
       from = mu_strdup (sender);
     }
+  return from;
+}
 
+/* %f */
+static char *
+hdr_from (struct header_call_args *args, void *data)
+{
+  char *from = sender_string (args->msg);
   header_buf_string (args, from);
   free (from);
   return args->buf;

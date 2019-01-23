@@ -677,6 +677,8 @@ util_outfolder_name (char *str)
 	    }
 	  free (s);
 	}
+      else
+	exp = mu_strdup (str);
       break;
 
     }

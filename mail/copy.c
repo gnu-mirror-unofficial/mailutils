@@ -239,7 +239,7 @@ mail_copy0 (int argc, char **argv, int mark)
 
   if (mail_expand_name (filename, &url))
     return 1;
-  filename = mu_url_to_string (url);
+  filename = (char*) mu_url_to_string (url);
   if (mu_url_is_scheme (url, "file") || mu_url_is_scheme (url, "mbox"))
     rc = append_to_file (filename, msglist, mark, &totals);
   else

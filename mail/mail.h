@@ -430,6 +430,7 @@ const char *util_url_to_string (mu_url_t url);
 mu_stream_t open_pager (size_t lines);
 
 void format_msgset (mu_stream_t str, const msgset_t *msgset, size_t *count);
+char *sender_string (mu_message_t msg);
 
 int is_address_field (const char *name);
 
