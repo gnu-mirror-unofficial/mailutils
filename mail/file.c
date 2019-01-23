@@ -16,7 +16,7 @@
 
 #include "mail.h"
 
-static char *prev_name;
+static mu_url_t prev_url;
 
 /* Expand mail special characters:
  * #	    the previous file
@@ -24,22 +24,37 @@ static char *prev_name;
  * +file    the file named in the folder directory (set folder=foo)
  * %	    system mailbox
  * %user    system mailbox of the user
+ * @        file given by the -f option
  */
-char *
-mail_expand_name (const char *name)
+int
+mail_expand_name (const char *name, mu_url_t *purl)
 {
-  int status = 0;
+  int rc;
   char *exp = NULL;
 
   if (strcmp (name, "#") == 0)
     {
-      if (!prev_name)
+      if (!prev_url)
 	{
 	  mu_error (_("No previous file"));
-	  return NULL;
+	  return -1;
 	}
       else
-	return mu_strdup (prev_name);
+	{
+	  rc = mu_url_dup (prev_url, purl);
+	  if (rc)
+	    mu_diag_funcall (MU_DIAG_ERROR, "mu_url_dup", exp, rc);
+	  return rc;
+	}
+    }
+
+  if (secondary_url && strcmp (name, "@") == 0)
+    {
+      rc = mu_url_dup (secondary_url, purl);
+      if (rc)
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_url_dup",
+			 mu_url_to_string (secondary_url), rc);
+      return rc;
     }
 
   if (strcmp (name, "&") == 0)
@@ -48,17 +63,22 @@ mail_expand_name (const char *name)
       if (!name)
 	{
 	  mu_error (_("MBOX environment variable not set"));
-	  return NULL;
+	  return MU_ERR_FAILURE;
 	}
       /* else fall through */
     }
 
-  status = mu_mailbox_expand_name (name, &exp);
+  rc = mu_mailbox_expand_name (name, &exp);
 
-  if (status)
-    mu_error (_("Failed to expand %s: %s"), name, mu_strerror (status));
+  if (rc)
+    mu_error (_("Failed to expand %s: %s"), name, mu_strerror (rc));
 
-  return (char*) exp;
+  rc = mu_url_create (purl, exp);
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_url_create", exp, rc);
+  free (exp);
+
+  return rc;
 }
 
 /*
@@ -76,50 +96,47 @@ mail_file (int argc, char **argv)
   else if (argc == 2)
     {
       /* switch folders */
-      char *pname;
-      mu_url_t url;
+      mu_url_t url, tmp_url;
       mu_mailbox_t newbox = NULL;
-      char *name = mail_expand_name (argv[1]);
       int status;
 
-      if (!name)
+      if (mail_expand_name (argv[1], &url))
 	return 1;
 
-      status = mu_mailbox_create (&newbox, name);
+      status = mu_mailbox_create_from_url (&newbox, url);
       if (status)
 	{
-	  mu_error(_("Cannot create mailbox %s: %s"), name,
+	  mu_error(_("Cannot create mailbox %s: %s"),
+		   mu_url_to_string (url),
 		   mu_strerror (status));
-	  free (name);
+	  mu_url_destroy (&url);
 	  return 1;
 	}
       mu_mailbox_attach_ticket (newbox);
 
       if ((status = mu_mailbox_open (newbox, MU_STREAM_RDWR)) != 0)
 	{
+	  mu_error(_("Cannot open mailbox %s: %s"),
+		   mu_url_to_string (url), mu_strerror (status));
 	  mu_mailbox_destroy (&newbox);
-	  mu_error(_("Cannot open mailbox %s: %s"), name, mu_strerror (status));
-	  free (name);
 	  return 1;
 	}
 
-      free (name); /* won't need it any more */
       page_invalidate (1); /* Invalidate current page map */
 
       mu_mailbox_get_url (mbox, &url);
-      pname = mu_strdup (mu_url_to_string (url));
+      mu_url_dup (url, &tmp_url);
+
       if (mail_mbox_close ())
 	{
-	  if (pname)
-	    free (pname);
+	  mu_url_destroy (&tmp_url);
 	  mu_mailbox_close (newbox);
 	  mu_mailbox_destroy (&newbox);
 	  return 1;
 	}
 
-      if (prev_name)
-	free (prev_name);
-      prev_name = pname;
+      mu_url_destroy (&prev_url);
+      prev_url = tmp_url;
 
       mbox = newbox;
       mu_mailbox_messages_count (mbox, &total);

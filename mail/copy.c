@@ -30,7 +30,7 @@ struct append_stat
 };
 
 static int
-append_to_mailbox (char const *filename, msgset_t *msglist, int mark,
+append_to_mailbox (mu_url_t url, msgset_t *msglist, int mark,
 		   struct append_stat *totals)
 {
   int status;
@@ -38,18 +38,21 @@ append_to_mailbox (char const *filename, msgset_t *msglist, int mark,
   msgset_t *mp;
   size_t size;
   mu_message_t msg;
-  
-  if ((status = mu_mailbox_create (&mbx, filename)) != 0)
+  mu_url_t url_copy;
+
+  mu_url_dup (url, &url_copy);
+  if ((status = mu_mailbox_create_from_url (&mbx, url_copy)) != 0)
     {
-      mu_error (_("Cannot create mailbox %s: %s"), filename, 
-                   mu_strerror (status));
+      mu_url_destroy (&url_copy);
+      mu_error (_("Cannot create mailbox %s: %s"), mu_url_to_string (url),
+		   mu_strerror (status));
       return 1;
     }
   mu_mailbox_attach_ticket (mbx);
-  if ((status = mu_mailbox_open (mbx, MU_STREAM_WRITE | MU_STREAM_CREAT)) != 0)
+  if ((status = mu_mailbox_open (mbx, MU_STREAM_CREAT | MU_STREAM_APPEND)) != 0)
     {
-      mu_error (_("Cannot open mailbox %s: %s"), filename, 
-                   mu_strerror (status));
+      mu_error (_("Cannot open mailbox %s: %s"), mu_url_to_string (url),
+		   mu_strerror (status));
       mu_mailbox_destroy (&mbx);
       return 1;
     }
@@ -58,7 +61,7 @@ append_to_mailbox (char const *filename, msgset_t *msglist, int mark,
     {
       status = util_get_message (mbox, mp->msg_part[0], &msg);
       if (status)
-        break;
+	break;
 
       status = mu_mailbox_append_message (mbx, msg);
       if (status)
@@ -66,20 +69,20 @@ append_to_mailbox (char const *filename, msgset_t *msglist, int mark,
 	  mu_error (_("Cannot append message: %s"), mu_strerror (status));
 	  break;
 	}
-      
+
       mu_message_size (msg, &size);
       totals->size += size;
       mu_message_lines (msg, &size);
       totals->lines += size;
 
       if (mark)
- 	{
+	{
 	  mu_attribute_t attr;
 	  mu_message_get_attribute (msg, &attr);
 	  mu_attribute_set_userflag (attr, MAIL_ATTRIBUTE_SAVED);
 	}
     }
-  
+
   mu_mailbox_close (mbx);
   mu_mailbox_destroy (&mbx);
   return 0;
@@ -105,7 +108,7 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 		filename, mu_strerror (status));
       return 1;
     }
-  
+
   status = mu_locker_create (&locker, filename,
 			     MU_LOCKER_KERNEL|MU_LOCKER_RETRY);
   if (status)
@@ -126,16 +129,16 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
       mu_stream_unref (ostr);
       return 1;
     }
-  
+
   for (mp = msglist; mp; mp = mp->next)
     {
       mu_envelope_t env;
       const char *s, *d;
       int n;
-      
+
       status = util_get_message (mbox, mp->msg_part[0], &msg);
       if (status)
-        break;
+	break;
 
       status = mu_message_get_envelope (msg, &env);
       if (status)
@@ -150,24 +153,24 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 	  mu_error (_("Cannot get envelope sender: %s"), mu_strerror (status));
 	  break;
 	}
-      
+
       status = mu_envelope_sget_date (env, &d);
       if (status)
 	{
 	  mu_error (_("Cannot get envelope date: %s"), mu_strerror (status));
 	  break;
 	}
-      
+
       status = mu_stream_printf (ostr, "From %s %s\n%n", s, d, &n);
       if (status)
 	{
 	  mu_error (_("Write error: %s"), mu_strerror (status));
 	  break;
 	}
-      
+
       totals->lines++;
       totals->size += n;
-      
+
       status = mu_message_get_streamref (msg, &mstr);
       if (status)
 	{
@@ -181,17 +184,17 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 	  mu_error (_("Cannot append message: %s"), mu_strerror (status));
 	  break;
 	}
-      
+
       mu_stream_unref (mstr);
 
       mu_stream_write (ostr, "\n", 1, NULL);
-      
+
       totals->size += size + 1;
       mu_message_lines (msg, &lines);
       totals->lines += lines + 1;
 
       if (mark)
- 	{
+	{
 	  mu_attribute_t attr;
 	  mu_message_get_attribute (msg, &attr);
 	  mu_attribute_set_userflag (attr, MAIL_ATTRIBUTE_SAVED);
@@ -203,7 +206,7 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 
   mu_locker_unlock (locker);
   mu_locker_destroy (&locker);
-  
+
   return 0;
 }
 
@@ -215,45 +218,36 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 int
 mail_copy0 (int argc, char **argv, int mark)
 {
-  char *filename = NULL;
+  mu_url_t url;
   msgset_t *msglist = NULL;
-  int sender = 0;
   struct append_stat totals = { 0, 0 };
-  int status;
+  int rc;
+  char *filename;
 
   if (mu_isupper (argv[0][0]))
-    sender = 1;
-  else if (argc >= 2)
-    filename = mail_expand_name (argv[--argc]);
-  else
-    filename = mu_strdup ("mbox");
-
-  if (msgset_parse (argc, argv, MSG_NODELETED|MSG_SILENT, &msglist))
     {
-      if (filename)
-	free (filename);
-      return 1;
+      if (msgset_parse (argc, argv, MSG_NODELETED, &msglist))
+	return 1;
+      filename = util_outfolder_name (util_get_sender (msglist->msg_part[0], 1));
+    }
+  else
+    {
+      filename = argc >= 2 ? argv[--argc] : getenv ("MBOX");
+      if (msgset_parse (argc, argv, MSG_NODELETED, &msglist))
+	return 1;
     }
 
-  if (sender)
-    filename = util_outfolder_name (util_get_sender (msglist->msg_part[0], 1));
-
-  if (!filename)
-    {
-      msgset_free (msglist);
-      return 1;
-    }
-
-  if (mu_is_proto (filename))
-    status = append_to_mailbox (filename, msglist, mark, &totals);
+  if (mail_expand_name (filename, &url))
+    return 1;
+  filename = mu_url_to_string (url);
+  if (mu_url_is_scheme (url, "file") || mu_url_is_scheme (url, "mbox"))
+    rc = append_to_file (filename, msglist, mark, &totals);
   else
-    status = append_to_file (filename, msglist, mark, &totals);
-  
-  if (status == 0)
+    rc = append_to_mailbox (url, msglist, mark, &totals);
+  if (rc == 0)
     mu_printf ("\"%s\" %3lu/%-5lu\n", filename,
-	     (unsigned long) totals.lines, (unsigned long) totals.size);
-
-  free (filename);
+	       (unsigned long) totals.lines, (unsigned long) totals.size);
+  mu_url_destroy (&url);
   msgset_free (msglist);
   return 0;
 }

@@ -27,7 +27,7 @@ static int
 noauth_ticket_get_cred (mu_ticket_t ticket, mu_url_t url, const char *challenge,
 			char **pplain, mu_secret_t *psec)
 {
-  return MU_ERR_AUTH_FAILURE;
+  return MU_ERR_AUTH_NO_CRED;
 }
 
 int

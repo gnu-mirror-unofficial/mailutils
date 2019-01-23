@@ -563,13 +563,6 @@ filegen_init (struct filegen *fg,
   int rc;
   int free_folder;
 
-  rc = mu_mailbox_get_folder (mbox, &folder);
-  if (rc)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_get_folder", NULL, rc);
-      return -1;
-    }
-
   rc = mu_url_create (&url, folder_path);
   if (rc)
     {
@@ -577,9 +570,18 @@ filegen_init (struct filegen *fg,
       return -1;
     }
 
-  if (folder_match_url (folder, url))
-    free_folder = 0;
+  rc = mu_mailbox_get_folder (mbox, &folder);
+  if (rc == 0)
+    {
+      if (folder_match_url (folder, url))
+	free_folder = 0;
+      else
+	folder = NULL;
+    }
   else
+    folder = NULL;
+
+  if (!folder)
     {
       if (new_folder (&folder, url, type))
 	return -1;

@@ -566,7 +566,10 @@ The system mailbox for @var{user}.
 The previous file.
 
 @item &
-The current mbox.
+The current @samp{mbox}.
+
+@item @@
+Secondary mailbox, given using the @option{-f} command line option.
 
 @item +@var{file}
 The named @var{file} in the folder directory. @xref{folder variable}.

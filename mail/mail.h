@@ -172,6 +172,7 @@ typedef int (*msg_handler_t) (msgset_t *mp, mu_message_t mesg, void *data);
 extern mu_mailbox_t mbox;
 extern size_t total;
 extern int interactive;
+extern mu_url_t secondary_url;
 extern const char *program_version;
 extern char *default_encoding;
 extern char *default_content_type;
@@ -259,7 +260,7 @@ char *mail_whoami (void);
 int mail_header_is_visible (const char *str);
 int mail_header_is_unfoldable (const char *str);
 int mail_mbox_close (void);
-char *mail_expand_name (const char *name);
+int mail_expand_name (const char *name, mu_url_t *purl);
 
 void send_append_header (char const *text);
 void send_append_header2 (char const *name, char const *value, int mode);
