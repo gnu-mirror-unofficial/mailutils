@@ -463,6 +463,7 @@ main (int argc, char **argv)
   setenv ("VISUAL", "vi", 0);
 
   /* set defaults for execution */
+  util_do_command ("setq PID=\"%lu\"", (unsigned long) getpid ());
   for (i = 0; i < sizeof (default_setup)/sizeof (default_setup[0]); i++)
     util_do_command ("%s", default_setup[i]);
 

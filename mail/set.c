@@ -20,10 +20,6 @@
  * se[t] [name[=[string]] ...] [name=number ...] [noname ...]
  */
 
-/*
- * NOTE: ask is a synonym for asksub
- */
-
 int
 mail_set (int argc, char **argv)
 {

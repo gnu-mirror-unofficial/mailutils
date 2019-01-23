@@ -2509,6 +2509,14 @@ Contains the directory in which files created by @code{save},
 @code{write}, etc. commands will be stored.  When unset, current
 directory is assumed.
 
+@kwindex PID
+@item PID
+@*Type: String, Read-Only
+@*Default: PID of the process.
+@vrindex PID, mail variable
+
+PID of the current @command{mail} process.
+
 @kwindex page
 @item page
 @*Type: Boolean.

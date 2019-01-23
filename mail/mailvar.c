@@ -52,12 +52,12 @@ static int set_folder (enum mailvar_cmd cmd,
 		       struct mailvar_variable *);
 static int set_headline (enum mailvar_cmd,
 			 struct mailvar_variable *);
-  
+
 struct mailvar_symbol mailvar_tab[] =
   {
     /* FIXME: */
     { { "allnet", }, MAILVAR_HIDDEN },
-    
+
     /* For compatibility with other mailx implementations.
        Never used, always true. */
     { { "append", },
@@ -110,7 +110,7 @@ struct mailvar_symbol mailvar_tab[] =
       N_("get date from the `Date:' header, instead of the envelope") },
     { { "debug", },
       MAILVAR_TYPEMASK (mailvar_type_string) |
-        MAILVAR_TYPEMASK (mailvar_type_boolean),
+	MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("set Mailutils debug level"),
       set_debug },
     { { "decode-fallback", },
@@ -134,7 +134,7 @@ struct mailvar_symbol mailvar_tab[] =
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("swap the meaning of reply and Reply commands") },
     { { "folder", },
-      MAILVAR_TYPEMASK (mailvar_type_string), 
+      MAILVAR_TYPEMASK (mailvar_type_string),
       N_("folder directory name"),
       set_folder },
     { { "fromfield", },
@@ -279,7 +279,7 @@ struct mailvar_symbol mailvar_tab[] =
     { { "xmailer", },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("add the `X-Mailer' header to the outgoing messages") },
-    
+
     { { "mime" },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("always compose MIME messages") },
@@ -288,7 +288,10 @@ struct mailvar_symbol mailvar_tab[] =
     { { "onehop", }, MAILVAR_HIDDEN, NULL },
 
     { { "quiet", }, MAILVAR_TYPEMASK (mailvar_type_boolean) | MAILVAR_HIDDEN,
-      "suppresses the printing of the version when first invoked" },
+      N_("suppresses the printing of the version when first invoked") },
+
+    { { "PID" }, MAILVAR_TYPEMASK (mailvar_type_string) | MAILVAR_RDONLY,
+      N_("PID of this process") },
 
     { { NULL }, }
   };
@@ -314,10 +317,10 @@ print_descr (mu_stream_t out, const char *s, int n,
 	     int doc_col, int rmargin, char *pfx)
 {
   mu_stream_stat_buffer stat;
-  
+
   if (!s)
     return;
-  
+
   mu_stream_set_stat (out, MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUT),
 		      stat);
   stat[MU_STREAM_STAT_OUT] = n;
@@ -328,14 +331,14 @@ print_descr (mu_stream_t out, const char *s, int n,
 
       if (stat[MU_STREAM_STAT_OUT] && pfx)
 	mu_stream_printf (out, "%s", pfx);
-      
+
       while (stat[MU_STREAM_STAT_OUT] < doc_col)
 	mu_stream_write (out, " ", 1, NULL);
 
       for (p = s; *p && p < s + (rmargin - doc_col); p++)
 	if (mu_isspace (*p))
 	  space = p;
-      
+
       if (!space || p < s + (rmargin - doc_col))
 	{
 	  mu_stream_printf (out, "%s", s);
@@ -372,7 +375,7 @@ mailvar_find_variable (const char *name, int create)
 {
   struct mailvar_symbol *sym;
   struct mailvar_variable *var;
-  
+
   sym = find_mailvar_symbol (name);
   if (sym)
     var = &sym->var;
@@ -387,7 +390,7 @@ mailvar_find_variable (const char *name, int create)
 	  mu_list_create (&mailvar_list);
 	  mu_list_set_comparator (mailvar_list, mailvar_variable_comp);
 	}
-  
+
       if (mu_list_locate (mailvar_list, &entry, (void**)&p))
 	{
 	  if (!create)
@@ -419,11 +422,11 @@ mailvar_find_variable (const char *name, int create)
    If PTR is not NULL, it must point to
 
    int           if TYPE is mailvar_type_number or mailvar_type_boolean
-   const char *  if TYPE is mailvar_type_string. 
+   const char *  if TYPE is mailvar_type_string.
 
    Passing PTR=NULL may be used to check whether the variable is set
    without retrieving its value. */
-   
+
 int
 mailvar_get (void *ptr, const char *variable, enum mailvar_type type, int warn)
 {
@@ -453,7 +456,7 @@ mailvar_get (void *ptr, const char *variable, enum mailvar_type type, int warn)
       default:
 	break;
       }
-  
+
   return 0;
 }
 
@@ -470,14 +473,14 @@ mailvar_variable_reset (struct mailvar_variable *var)
 {
   if (!var->set)
     return;
-  
+
   switch (var->type)
     {
     case mailvar_type_string:
       free (var->value.string);
       var->value.string = NULL;
       break;
-	      
+
     default:
       break;
     }
@@ -493,7 +496,7 @@ mailvar_variable_reset (struct mailvar_variable *var)
 
    Unless MOPTF_QUIET bit is set in FLAGS, the function performs
    semantic check, using the builtin options table.
- 
+
    If VALUE is null the VARIABLE is unset. */
 int
 mailvar_set (const char *variable, void *value, enum mailvar_type type,
@@ -503,7 +506,7 @@ mailvar_set (const char *variable, void *value, enum mailvar_type type,
   const struct mailvar_symbol *sym = find_mailvar_symbol (variable);
   enum mailvar_cmd cmd =
     (flags & MOPTF_UNSET) ? mailvar_cmd_unset : mailvar_cmd_set;
-  
+
   if (!(flags & MOPTF_QUIET) && mailvar_is_true ("variable-strict"))
     {
       if (!sym)
@@ -511,7 +514,9 @@ mailvar_set (const char *variable, void *value, enum mailvar_type type,
 			variable);
       else if (sym->flags & MAILVAR_RDONLY)
 	{
-	  mu_error (_("Cannot set read-only variable %s"),
+	  mu_error (cmd == mailvar_cmd_set
+		     ? _("Cannot set read-only variable %s")
+		     : _("Cannot unset read-only variable %s"),
 		    variable);
 	  return 1;
 	}
@@ -532,7 +537,7 @@ mailvar_set (const char *variable, void *value, enum mailvar_type type,
   newvar.type = var->type;
   newvar.set = 0;
   memset (&newvar.value, 0, sizeof (newvar.value));
-  
+
   switch (cmd)
     {
     case mailvar_cmd_set:
@@ -543,7 +548,7 @@ mailvar_set (const char *variable, void *value, enum mailvar_type type,
 	    case mailvar_type_number:
 	      newvar.value.number = *(int*)value;
 	      break;
-	  
+
 	    case mailvar_type_string:
 	      {
 		char *p = strdup (value);
@@ -555,11 +560,11 @@ mailvar_set (const char *variable, void *value, enum mailvar_type type,
 		newvar.value.string = p;
 	      }
 	      break;
-	  
+
 	    case mailvar_type_boolean:
 	      newvar.value.bool = *(int*)value;
 	      break;
-		  
+
 	    default:
 	      abort();
 	    }
@@ -592,20 +597,33 @@ mailvar_set (const char *variable, void *value, enum mailvar_type type,
 static int
 set_folder (enum mailvar_cmd cmd, struct mailvar_variable *var)
 {
-  int rc = mu_set_folder_directory (var->value.string);
+  int rc;
+
+  if (var->value.string)
+    {
+      char *p = mu_tilde_expansion (var->value.string, MU_HIERARCHY_DELIMITER,
+				    NULL);
+      if (!p)
+	mu_alloc_die ();
+      if (var->set)
+	free (var->value.string);
+      var->value.string = p;
+    }
+
+  rc = mu_set_folder_directory (var->value.string);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_set_folder_directory",
 		     var->value.string, rc);
   return rc;
 }
-		   
+
 
 static int
 set_headline (enum mailvar_cmd cmd, struct mailvar_variable *var)
 {
   if (cmd == mailvar_cmd_unset)
     return 1;
-  
+
   mail_compile_headline (var->value.string);
   return 0;
 }
@@ -615,7 +633,7 @@ set_decode_fallback (enum mailvar_cmd cmd, struct mailvar_variable *var)
 {
   char *value;
   int rc;
-  
+
   switch (cmd)
     {
     case mailvar_cmd_set:
@@ -625,7 +643,7 @@ set_decode_fallback (enum mailvar_cmd cmd, struct mailvar_variable *var)
     case mailvar_cmd_unset:
       value = "none";
     }
-  
+
   rc = mu_set_default_fallback (value);
   if (rc)
     mu_error (_("Incorrect value for decode-fallback"));
@@ -738,7 +756,7 @@ mu_list_t
 mailvar_list_copy (int set)
 {
   mu_list_t list = NULL;
-  
+
   if (mailvar_list)
     mu_list_map (mailvar_list, mailvar_mapper, NULL, 1, &list);
   if (!list)
@@ -747,7 +765,7 @@ mailvar_list_copy (int set)
   mu_list_sort (list, mailvar_variable_comp);
   return list;
 }
-  
+
 
 struct mailvar_iterator
 {
@@ -756,7 +774,7 @@ struct mailvar_iterator
   mu_list_t varlist;
   mu_iterator_t varitr;
 };
-  
+
 const char *
 mailvar_iterate_next (struct mailvar_iterator *itr)
 {
@@ -766,7 +784,7 @@ mailvar_iterate_next (struct mailvar_iterator *itr)
     {
       mu_iterator_current (itr->varitr, (void**) &vp);
       mu_iterator_next (itr->varitr);
-      
+
       if (strlen (vp->name) >= itr->prefixlen
 	  && strncmp (vp->name, itr->prefix, itr->prefixlen) == 0)
 	return vp->name;
@@ -812,7 +830,7 @@ mailvar_printer (void *item, void *data)
 {
   struct mailvar_variable *vp = item;
   struct mailvar_print_closure *clos = data;
-  
+
   if (clos->prettyprint)
     {
       const struct mailvar_symbol *sym = find_mailvar_symbol (vp->name);
@@ -832,17 +850,17 @@ mailvar_printer (void *item, void *data)
     case mailvar_type_number:
       mu_stream_printf (clos->out, "%s=%d", vp->name, vp->value.number);
       break;
-	  
+
     case mailvar_type_string:
       mu_stream_printf (clos->out, "%s=\"%s\"", vp->name, vp->value.string);
       break;
-	  
+
     case mailvar_type_boolean:
       if (!vp->value.bool)
 	mu_stream_printf (clos->out, "no");
       mu_stream_printf (clos->out, "%s", vp->name);
       break;
-	  
+
     case mailvar_type_whatever:
       mu_stream_printf (clos->out, "%s %s", vp->name, _("oops?"));
     }
@@ -856,7 +874,7 @@ mailvar_print (int set)
   mu_list_t varlist;
   size_t count;
   struct mailvar_print_closure clos;
-  
+
   varlist = mailvar_list_copy (set);
   mu_list_count (varlist, &count);
   clos.out = open_pager (count);
@@ -928,7 +946,7 @@ describe_symbol (mu_stream_t out, int width, const struct mailvar_symbol *sym)
     }
   mu_stream_printf (out, "\n");
   mu_stream_set_stat (out, 0, NULL);
-  
+
   mu_stream_printf (out, _("Type: "));
   for (i = 0, t = 0; i < sizeof (typestr) / sizeof (typestr[0]); i++)
     if (sym->flags & MAILVAR_TYPEMASK (i))
@@ -940,14 +958,14 @@ describe_symbol (mu_stream_t out, int width, const struct mailvar_symbol *sym)
   if (!t)
     mu_stream_printf (out, "%s", gettext (typestr[0]));
   mu_stream_printf (out, "\n");
-  
+
   mu_stream_printf (out, "%s", _("Current value: "));
   mailvar_variable_format (out, &sym->var, _("[not set]"));
 
   if (sym->flags & MAILVAR_RDONLY)
     mu_stream_printf (out, " [%s]", _("read-only"));
   mu_stream_printf (out, "\n");
-  
+
   print_descr (out, gettext (sym->descr ? sym->descr : N_("Not documented")),
 	       1, 1, width - 1, NULL);
   mu_stream_printf (out, "\n");
@@ -959,7 +977,7 @@ mail_variable (int argc, char **argv)
   int pagelines = util_get_crt ();
   int width = util_screen_columns ();
   mu_stream_t out = open_pager (pagelines + 1);
-  
+
   if (argc == 1)
     {
       struct mailvar_symbol *sym;
@@ -984,7 +1002,6 @@ mail_variable (int argc, char **argv)
   mu_stream_unref (out);
   return 0;
 }
-
 
 #ifdef WITH_READLINE
 static char *
@@ -992,7 +1009,7 @@ mailvar_generator (int set, const char *text, int state)
 {
   static struct mailvar_iterator *itr;
   const char *p;
-  
+
   if (!state)
     p = mailvar_iterate_first (set, text, &itr);
   else
@@ -1026,7 +1043,7 @@ mailvar_set_compl (int argc, char **argv, int ws)
 				/* Possible values for argv[0] are:
 				   set, unset, variable */
 				argv[0][0] == 'u' ? mailvar_unset_generator
-				                  : mailvar_set_generator);
+						  : mailvar_set_generator);
 }
 
 #endif

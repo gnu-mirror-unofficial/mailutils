@@ -28,6 +28,11 @@ envelope on the stdout, instead of using the current output stream.
 
 Last argument always specifies the command to pipe messages to.
 
+** echo command
+
+The echo command behaves similarly to its shell equivalent. In
+particular, variable and command expansions are performed.
+
 ** fixed / and :/ searches in message sets
 
 ** Fix and improve argument completion
