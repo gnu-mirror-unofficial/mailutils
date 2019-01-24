@@ -24,18 +24,6 @@
 #include <mailutils/errno.h>
 #include <mailutils/sys/streamref.h>
 
-#define _MU_STR_ERRMASK (_MU_STR_ERR|_MU_STR_EOF)
-
-static int
-streamref_return (struct _mu_streamref *sp, int rc)
-{
-  if (rc)
-    sp->stream.last_err = sp->transport->last_err;
-  sp->stream.flags = (sp->stream.flags & ~_MU_STR_ERRMASK) |
-                   (sp->transport->flags & _MU_STR_ERRMASK);
-  return rc;
-}
-
 static int
 _streamref_read (struct _mu_stream *str, char *buf, size_t bufsize,
 		 size_t *pnread)
@@ -67,7 +55,7 @@ _streamref_read (struct _mu_stream *str, char *buf, size_t bufsize,
       mu_stream_clearerr (sp->transport);
       return 0;
     }
-  return streamref_return (sp, rc);
+  return rc;
 }
 
 static int
@@ -101,7 +89,7 @@ _streamref_readdelim (struct _mu_stream *str, char *buf, size_t bufsize,
       mu_stream_clearerr (sp->transport);
       return 0;
     }
-  return streamref_return (sp, rc);
+  return rc;
 }
 
 static int
@@ -121,28 +109,28 @@ _streamref_write (struct _mu_stream *str, const char *buf, size_t bufsize,
 	  *pnwrite = nwrite;
 	}
     }
-  return streamref_return (sp, rc);
+  return rc;
 }
 
 static int
 _streamref_flush (struct _mu_stream *str)
 {
   struct _mu_streamref *sp = (struct _mu_streamref *)str;
-  return streamref_return (sp, mu_stream_flush (sp->transport));
+  return mu_stream_flush (sp->transport);
 }
 
 static int
 _streamref_open (struct _mu_stream *str)
 {
   struct _mu_streamref *sp = (struct _mu_streamref *)str;
-  return streamref_return (sp, mu_stream_open (sp->transport));
+  return mu_stream_open (sp->transport);
 }
 
 static int
 _streamref_close (struct _mu_stream *str)
 {
   struct _mu_streamref *sp = (struct _mu_streamref *)str;
-  return streamref_return (sp, mu_stream_close (sp->transport));
+  return mu_stream_close (sp->transport);
 }
 
 static void
@@ -165,7 +153,7 @@ _streamref_seek (struct _mu_stream *str, mu_off_t off, mu_off_t *ppos)
     {
       rc = mu_stream_size (sp->transport, &size);
       if (rc)
-	return streamref_return (sp, rc);
+	return rc;
       size -= sp->start;
     }
   
@@ -174,7 +162,7 @@ _streamref_seek (struct _mu_stream *str, mu_off_t off, mu_off_t *ppos)
   rc = mu_stream_seek (sp->transport, sp->start + off, MU_SEEK_SET,
 		       &sp->offset);
   if (rc)
-    return streamref_return (sp, rc);
+    return rc;
   *ppos = sp->offset - sp->start;
   return 0;
 }
@@ -192,7 +180,7 @@ _streamref_size (struct _mu_stream *str, mu_off_t *psize)
     {
       rc = mu_stream_size (sp->transport, &size);
       if (rc)
-	return streamref_return (sp, rc);
+	return rc;
       size -= sp->start;
     }
   if (rc == 0)
@@ -231,29 +219,28 @@ _streamref_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	    }
 	}
     }
-  return streamref_return (sp, mu_stream_ioctl (sp->transport, code,
-						opcode, arg));
+  return mu_stream_ioctl (sp->transport, code, opcode, arg);
 }
 
 static int
 _streamref_wait (struct _mu_stream *str, int *pflags, struct timeval *tvp)
 {
   struct _mu_streamref *sp = (struct _mu_streamref *)str;
-  return streamref_return (sp, mu_stream_wait (sp->transport, pflags, tvp));
+  return mu_stream_wait (sp->transport, pflags, tvp);
 }
 
 static int
 _streamref_truncate (struct _mu_stream *str, mu_off_t size)
 {
   struct _mu_streamref *sp = (struct _mu_streamref *)str;
-  return streamref_return (sp, mu_stream_truncate (sp->transport, size));
+  return mu_stream_truncate (sp->transport, size);
 }
   
 static int
 _streamref_shutdown (struct _mu_stream *str, int how)
 {
   struct _mu_streamref *sp = (struct _mu_streamref *)str;
-  return streamref_return (sp, mu_stream_shutdown (sp->transport, how));
+  return mu_stream_shutdown (sp->transport, how);
 }
 
 static const char *
