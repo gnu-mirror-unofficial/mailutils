@@ -1030,6 +1030,11 @@ mu_stream_write (mu_stream_t stream, const void *buf, size_t size,
 	}
       if (pnwritten)
 	*pnwritten = nbytes;
+      else if (nbytes < size)
+	{
+	  rc = EIO;
+	  mu_stream_seterr (stream, rc, 1);
+	}
     }
   return rc;
 }

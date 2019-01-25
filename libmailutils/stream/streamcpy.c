@@ -38,7 +38,7 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
   size_t bufsize, n;
   char *buf;
   mu_off_t total = 0;
-  
+
   if (pcsz)
     *pcsz = 0;
   if (size == 0)
@@ -56,7 +56,7 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 	default:
 	  return status;
 	}
-      
+
       if (size)
 	{
 	  mu_off_t pos;
@@ -68,7 +68,7 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 		return ESPIPE;
 	      size -= pos;
 	      break;
-      
+
 	    case EACCES:
 	      mu_stream_clearerr (src);
 	    case ENOSYS:
@@ -90,21 +90,26 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
       return ENOMEM;
 
   if (size)
-    while (size)
-      {
-	size_t rdsize = bufsize < size ? bufsize : size;
+    {
+      while (size)
+	{
+	  size_t rdsize = bufsize < size ? bufsize : size;
 
-	status = mu_stream_read (src, buf, rdsize, &n);
-	if (status)
-	  break;
-	if (n == 0)
-	  break;
-	status = mu_stream_write (dst, buf, n, NULL);
-	if (status)
-	  break;
-	size -= n;
-	total += n;
-      }
+	  status = mu_stream_read (src, buf, rdsize, &n);
+	  if (status)
+	    break;
+	  if (n == 0)
+	    break;
+	  status = mu_stream_write (dst, buf, n, NULL);
+	  if (status)
+	    break;
+	  size -= n;
+	  total += n;
+	}
+
+      if (!pcsz && size)
+	status = EIO;
+    }
   else
     while ((status = mu_stream_read (src, buf, bufsize, &n)) == 0
 	   && n > 0)
@@ -124,7 +129,3 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
   free (buf);
   return status;
 }
-      
-
-  
-  
