@@ -296,7 +296,6 @@ imap4d_search0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
 	  return RESP_BAD;
 	}
 
-      /* Currently only ASCII is supported */
       if (mu_c_strcasecmp (parsebuf.token, "US-ASCII"))
 	{
 	  parsebuf.charset = parse_strdup (&parsebuf, parsebuf.token);
