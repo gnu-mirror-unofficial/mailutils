@@ -156,14 +156,6 @@ util_parse_ctime_date (const char *date, time_t *timep,
   return 1;
 }
 
-/* Return the first ocurrence of NEEDLE in HAYSTACK. Case insensitive
-   comparison */
-char *
-util_strcasestr (const char *haystack, const char *needle)
-{
-  return mu_c_strcasestr (haystack, needle);
-}
-
 void
 util_print_flags (mu_attribute_t attr)
 {

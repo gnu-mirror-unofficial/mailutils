@@ -454,7 +454,6 @@ extern int util_parse_822_date (const char *date, time_t *timep,
 				enum datetime_parse_mode flag);
 extern int util_parse_ctime_date (const char *date, time_t *timep,
 				  enum datetime_parse_mode flag);
-extern char *util_strcasestr (const char *haystack, const char *needle);
 extern char *util_localname (void);
 
 void util_print_flags (mu_attribute_t attr);

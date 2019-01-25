@@ -688,8 +688,8 @@ mu_header_sget_value_n (mu_header_t header,
 
 int
 mu_header_aget_value_n (mu_header_t header,
-		      const char *name, int n,
-		      char **pval)
+			const char *name, int n,
+			char **pval)
 {
   const char *s;
   int status = mu_header_sget_value_n (header, name, n, &s);

@@ -15,6 +15,7 @@
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "imap4d.h"
+#include <mailutils/assoc.h>
 
 /*
  * This will be a royal pain in the arse to implement
@@ -90,43 +91,43 @@ struct search_node
 };
 
 static void cond_msgset (struct parsebuf *, struct search_node *,
-			 struct value *, struct value *);       
+			 struct value *, struct value *);
 static void cond_bcc (struct parsebuf *, struct search_node *,
 		      struct value *, struct value *);
 static void cond_before (struct parsebuf *, struct search_node *,
-			 struct value *, struct value *);     
+			 struct value *, struct value *);
 static void cond_body (struct parsebuf *, struct search_node *,
-		       struct value *, struct value *);       
+		       struct value *, struct value *);
 static void cond_cc (struct parsebuf *, struct search_node *,
-		     struct value *, struct value *);        
+		     struct value *, struct value *);
 static void cond_from (struct parsebuf *, struct search_node *,
-		       struct value *, struct value *);     
+		       struct value *, struct value *);
 static void cond_header (struct parsebuf *, struct search_node *,
-			 struct value *, struct value *);      
+			 struct value *, struct value *);
 static void cond_keyword (struct parsebuf *, struct search_node *,
-			  struct value *, struct value *);   
+			  struct value *, struct value *);
 static void cond_larger (struct parsebuf *, struct search_node *,
-			 struct value *, struct value *);   
+			 struct value *, struct value *);
 static void cond_on (struct parsebuf *, struct search_node *,
-		     struct value *, struct value *);         
+		     struct value *, struct value *);
 static void cond_sentbefore (struct parsebuf *, struct search_node *,
-			     struct value *, struct value *); 
+			     struct value *, struct value *);
 static void cond_senton (struct parsebuf *, struct search_node *,
-			 struct value *, struct value *);     
+			 struct value *, struct value *);
 static void cond_sentsince (struct parsebuf *, struct search_node *,
 			    struct value *, struct value *);
 static void cond_since (struct parsebuf *, struct search_node *,
-			struct value *, struct value *);      
+			struct value *, struct value *);
 static void cond_smaller (struct parsebuf *, struct search_node *,
-			  struct value *, struct value *);    
+			  struct value *, struct value *);
 static void cond_subject (struct parsebuf *, struct search_node *,
-			  struct value *, struct value *);  
+			  struct value *, struct value *);
 static void cond_text (struct parsebuf *, struct search_node *,
-		       struct value *, struct value *);       
+		       struct value *, struct value *);
 static void cond_to (struct parsebuf *, struct search_node *,
-		     struct value *, struct value *);      
+		     struct value *, struct value *);
 static void cond_uid (struct parsebuf *, struct search_node *,
-		      struct value *, struct value *);   
+		      struct value *, struct value *);
 
 /* A basic condition structure */
 struct cond
@@ -138,7 +139,7 @@ struct cond
 };
 
 /* Types are: s -- string
-              n -- number
+	      n -- number
 	      d -- date
 	      m -- message set
 */
@@ -213,23 +214,24 @@ struct mem_chain
 
 /* Maximum length of a token. Tokens longer than that are accepted, provided
    that they are enclosed in doublequotes */
-#define MAXTOKEN 64 
+#define MAXTOKEN 64
 
 /* Parse buffer structure */
 struct parsebuf
 {
-  imap4d_tokbuf_t tok;          /* Token buffer */   
+  imap4d_tokbuf_t tok;          /* Token buffer */
   int arg;                      /* Argument number */
   char *token;                  /* Current token */
-  int isuid;                    /* UIDs instead of msgnos are required */ 
+  int isuid;                    /* UIDs instead of msgnos are required */
   char *err_mesg;               /* Error message if a parse error occured */
   struct mem_chain *alloc;      /* Chain of objects allocated during parsing */
-  
+  char *charset;                /* Charset, other than US-ASCII requested */
+
   struct search_node *tree;     /* Parse tree */
-  
-                                /* Execution time only: */
+
+				/* Execution time only: */
   size_t msgno;                 /* Number of current message */
-  mu_message_t msg;             /* Current message */ 
+  mu_message_t msg;             /* Current message */
 };
 
 static void parse_free_mem (struct parsebuf *pb);
@@ -241,37 +243,38 @@ static struct search_node *parse_search_key (struct parsebuf *pb);
 static int parse_gettoken (struct parsebuf *pb, int req);
 static int search_run (struct parsebuf *pb);
 static void do_search (struct parsebuf *pb);
+static int available_charset (const char *charset);
 
 /*
 6.4.4.  SEARCH Command
 
    Arguments:  OPTIONAL [CHARSET] specification
-               searching criteria (one or more)
+	       searching criteria (one or more)
 
    Responses:  REQUIRED untagged response: SEARCH
 
    Result:     OK - search completed
-               NO - search error: can't search that [CHARSET] or
-                    criteria
-               BAD - command unknown or arguments invalid
+	       NO - search error: can't search that [CHARSET] or
+		    criteria
+	       BAD - command unknown or arguments invalid
 */
 
 int
 imap4d_search (struct imap4d_session *session,
-               struct imap4d_command *command, imap4d_tokbuf_t tok)
+	       struct imap4d_command *command, imap4d_tokbuf_t tok)
 {
   int rc;
   char *err_text= "";
-  
+
   rc = imap4d_search0 (tok, 0, &err_text);
   return io_completion_response (command, rc, "%s", err_text);
 }
-  
+
 int
 imap4d_search0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
 {
   struct parsebuf parsebuf;
-  
+
   memset (&parsebuf, 0, sizeof(parsebuf));
   parsebuf.tok = tok;
   parsebuf.arg = IMAP4_ARG_1 + !!isuid;
@@ -284,7 +287,7 @@ imap4d_search0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
       *err_text = "Too few args";
       return RESP_BAD;
     }
-  
+
   if (mu_c_strcasecmp (parsebuf.token, "CHARSET") == 0)
     {
       if (!parse_gettoken (&parsebuf, 0))
@@ -296,16 +299,21 @@ imap4d_search0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
       /* Currently only ASCII is supported */
       if (mu_c_strcasecmp (parsebuf.token, "US-ASCII"))
 	{
-	  *err_text = "Charset not supported";
-	  return RESP_NO;
+	  parsebuf.charset = parse_strdup (&parsebuf, parsebuf.token);
+	  if (!available_charset (parsebuf.charset))
+	    {
+	      *err_text = "[BADCHARSET] Charset not supported";
+	      return RESP_NO;
+	    }
 	}
+      else
+	parsebuf.charset = NULL;
 
       if (!parse_gettoken (&parsebuf, 0))
 	{
 	  *err_text = "Too few args";
 	  return RESP_BAD;
 	}
-
     }
 
   /* Compile the expression */
@@ -323,12 +331,12 @@ imap4d_search0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
       *err_text = "Junk at the end of statement";
       return RESP_BAD;
     }
-  
+
   /* Execute compiled expression */
   do_search (&parsebuf);
-  
+
   parse_free_mem (&parsebuf);
-  
+
   *err_text = "Completed";
   return RESP_OK;
 }
@@ -339,7 +347,7 @@ void
 do_search (struct parsebuf *pb)
 {
   size_t count = 0;
-  
+
   mu_mailbox_messages_count (mbox, &count);
 
   io_sendf ("* SEARCH");
@@ -417,7 +425,7 @@ parse_alloc (struct parsebuf *pb, size_t size)
   return parse_regmem (pb, p, NULL);
 }
 
-/* Create a copy of the string. */ 
+/* Create a copy of the string. */
 char *
 parse_strdup (struct parsebuf *pb, char *s)
 {
@@ -445,11 +453,11 @@ parse_msgset_create (struct parsebuf *pb, mu_mailbox_t mbox, int flags)
 
 /* A recursive-descent parser for the following grammar:
    search_key_list : search_key
-	           | search_key_list search_key
+		   | search_key_list search_key
 		   ;
 
    search_key      : simple_key
-	           | NOT simple_key
+		   | NOT simple_key
 		   | OR simple_key simple_key
 		   | '(' search_key_list ')'
 		   ;
@@ -486,16 +494,16 @@ struct search_node *
 parse_search_key (struct parsebuf *pb)
 {
   struct search_node *node;
-  
+
   if (strcmp (pb->token, "(") == 0)
     {
       if (parse_gettoken (pb, 1) == 0)
 	return NULL;
-      
+
       node = parse_search_key_list (pb);
       if (!node)
 	return NULL;
-      
+
       if (strcmp (pb->token, ")"))
 	{
 	  pb->err_mesg = "Unbalanced parenthesis";
@@ -581,7 +589,7 @@ parse_equiv_key (struct parsebuf *pb)
       /* shouldn't happen? */
       mu_diag_output (MU_DIAG_CRIT, _("%s:%d: INTERNAL ERROR (please report)"),
 		       __FILE__, __LINE__);
-      abort (); 
+      abort ();
     }
   imap4d_tokbuf_destroy (&pb->tok);
 
@@ -601,29 +609,29 @@ parse_simple_key (struct parsebuf *pb)
   for (condp = condlist; condp->name && mu_c_strcasecmp (condp->name, pb->token);
        condp++)
     ;
-  
+
   if (!condp->name)
     {
       mu_msgset_t msgset = parse_msgset_create (pb, mbox, MU_MSGSET_NUM);
-      
+
       if (mu_msgset_parse_imap (msgset,
 				pb->isuid ? MU_MSGSET_UID : MU_MSGSET_NUM,
-				pb->token, NULL) == 0) 
+				pb->token, NULL) == 0)
 	{
 	  struct search_node *np = parse_alloc (pb, sizeof *np);
 	  np->type = node_value;
 	  np->v.value.type = value_msgset;
 	  np->v.value.v.msgset = msgset;
-	  
+
 	  node = parse_alloc (pb, sizeof *node);
 	  node->type = node_call;
 	  node->v.key.keyword = "msgset";
 	  node->v.key.narg = 1;
 	  node->v.key.arg[0] = np;
 	  node->v.key.fun = cond_msgset;
-	  
+
 	  parse_gettoken (pb, 0);
-	  
+
 	  return node;
 	}
       else
@@ -632,13 +640,13 @@ parse_simple_key (struct parsebuf *pb)
 	  return NULL;
 	}
     }
-  
+
   node = parse_alloc (pb, sizeof *node);
   node->type = node_call;
   node->v.key.keyword = condp->name;
   node->v.key.fun = condp->inst;
   node->v.key.narg = 0;
-  
+
   parse_gettoken (pb, 0);
   if (condp->argtypes)
     {
@@ -646,7 +654,7 @@ parse_simple_key (struct parsebuf *pb)
       char *s;
       mu_off_t number;
       struct search_node *arg;
-      
+
       for (; *t; t++, parse_gettoken (pb, 0))
 	{
 	  if (node->v.key.narg >= MAX_NODE_ARGS)
@@ -654,13 +662,13 @@ parse_simple_key (struct parsebuf *pb)
 	      pb->err_mesg = "INTERNAL ERROR: too many arguments";
 	      return NULL;
 	    }
-	  
+
 	  if (!pb->token)
 	    {
 	      pb->err_mesg = "Not enough arguments for criterion";
 	      return NULL;
 	    }
-	  
+
 	  arg = parse_alloc (pb, sizeof *arg);
 	  arg->type = node_value;
 	  switch (*t)
@@ -669,7 +677,7 @@ parse_simple_key (struct parsebuf *pb)
 	      arg->v.value.type = value_string;
 	      arg->v.value.v.string = parse_strdup (pb, pb->token);
 	      break;
-	      
+
 	    case 'n': /* number */
 	      number = strtoul (pb->token, &s, 10);
 	      if (*s)
@@ -680,7 +688,7 @@ parse_simple_key (struct parsebuf *pb)
 	      arg->v.value.type = value_number;
 	      arg->v.value.v.number = number;
 	      break;
-	      
+
 	    case 'd': /* date */
 	      if (util_parse_internal_date (pb->token, &time,
 					    datetime_date_only))
@@ -691,19 +699,19 @@ parse_simple_key (struct parsebuf *pb)
 	      arg->v.value.type = value_date;
 	      arg->v.value.v.date = time;
 	      break;
-	      
+
 	    case 'u': /* UID message set */
 	      arg->v.value.v.msgset = parse_msgset_create (pb, NULL,
 							   MU_MSGSET_NUM);
 	      arg->v.value.type = value_msgset;
 	      if (mu_msgset_parse_imap (arg->v.value.v.msgset, MU_MSGSET_UID,
-					pb->token, NULL)) 
+					pb->token, NULL))
 		{
 		  pb->err_mesg = "Bogus number set";
 		  return NULL;
 		}
 	      break;
-	      
+
 	    default:
 	      mu_diag_output (MU_DIAG_CRIT,
 			      _("%s:%d: INTERNAL ERROR (please report)"),
@@ -711,7 +719,7 @@ parse_simple_key (struct parsebuf *pb)
 	      abort (); /* should never happen */
 	    }
 	  node->v.key.arg[node->v.key.narg++] = arg;
-	}  
+	}
     }
   return node;
 }
@@ -723,7 +731,7 @@ evaluate_node (struct search_node *node, struct parsebuf *pb,
 {
   int i;
   struct value argval[MAX_NODE_ARGS];
-  
+
   switch (node->type)
     {
     case node_call:
@@ -733,7 +741,7 @@ evaluate_node (struct search_node *node, struct parsebuf *pb,
 	  evaluate_node (node->v.key.arg[i], pb, &argval[i]);
 	  /* FIXME: node types? */
 	}
-      
+
       node->v.key.fun (pb, node, argval, val);
       break;
 
@@ -748,7 +756,7 @@ evaluate_node (struct search_node *node, struct parsebuf *pb,
 	  val->v.number = argval[1].v.number;
 	}
       break;
-      
+
     case node_or:
       val->type = value_number;
       evaluate_node (node->v.arg[0], pb, &argval[0]);
@@ -766,7 +774,7 @@ evaluate_node (struct search_node *node, struct parsebuf *pb,
       val->type = value_number;
       val->v.number = !argval[0].v.number;
       break;
-      
+
     case node_value:
       *val = node->v.value;
       break;
@@ -796,15 +804,38 @@ search_run (struct parsebuf *pb)
 static int
 _scan_header (struct parsebuf *pb, char *name, char *value)
 {
-  const char *hval;
+  char *hval;
   mu_header_t header = NULL;
-  
+  int i, rc;
+  int result = 0;
+
   mu_message_get_header (pb->msg, &header);
-  if (mu_header_sget_value (header, name, &hval) == 0)
+
+  for (i = 1;
+       result == 0
+	 && (rc = mu_header_aget_value_unfold_n (header, name, i, &hval)) == 0;
+       i++)
     {
-      return util_strcasestr (hval, value) != NULL;
+      if (pb->charset)
+	{
+	  char *tmp;
+	  rc = mu_rfc2047_decode (pb->charset, hval, &tmp);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERR, "mu_rfc2047_decode", hval, rc);
+	      free (hval);
+	      continue;
+	    }
+	  free (hval);
+	  hval = tmp;
+	}
+      result = mu_c_strcasestr (hval, value) != NULL;
+      free (hval);
     }
-  return 0;
+  if (!(rc == 0 || rc == MU_ERR_NOENT))
+    mu_diag_funcall (MU_DIAG_ERR, "mu_header_aget_value_unfold_n", NULL, rc);
+
+  return result;
 }
 
 /* Get the value of Date: field and convert it to timestamp */
@@ -813,7 +844,7 @@ _header_date (struct parsebuf *pb, time_t *timep)
 {
   const char *hval;
   mu_header_t header = NULL;
-  
+
   mu_message_get_header (pb->msg, &header);
   if (mu_header_sget_value (header, "Date", &hval) == 0
       && util_parse_822_date (hval, timep, datetime_date_only))
@@ -825,49 +856,194 @@ _header_date (struct parsebuf *pb, time_t *timep)
 static int
 _scan_header_all (struct parsebuf *pb, char *text)
 {
-  const char *hval;
   mu_header_t header = NULL;
   size_t fcount = 0;
   int i, rc;
+  int result;
 
   mu_message_get_header (pb->msg, &header);
   mu_header_get_field_count (header, &fcount);
-  for (i = rc = 0; i < fcount; i++)
+  result = 0;
+  for (i = 1; result == 0 && i < fcount; i++)
     {
-      if (mu_header_sget_field_value (header, i, &hval) == 0)
-	rc = util_strcasestr (hval, text) != NULL;
+      char *hval;
+
+      rc = mu_header_aget_field_value_unfold (header, i, &hval);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERR, "mu_header_aget_field_value_unfold",
+			   NULL, rc);
+	  continue;
+	}
+
+      if (pb->charset)
+	{
+	  char *tmp;
+	  rc = mu_rfc2047_decode (pb->charset, hval, &tmp);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERR, "mu_rfc2047_decode", hval, rc);
+	      free (hval);
+	      continue;
+	    }
+
+	  free (hval);
+	  hval = tmp;
+	}
+       result = mu_c_strcasestr (hval, text) != NULL;
+       free (hval);
     }
-  return rc;
+  return result;
+}
+
+static int
+_match_text (struct parsebuf *pb, mu_message_t msg, mu_content_type_t ct,
+	     char const *encoding,
+	     char *text)
+{
+  mu_body_t body;
+  mu_stream_t str;
+  int rc;
+  int result;
+  char *buffer = NULL;
+  size_t bufsize = 0;
+  size_t n;
+
+  mu_message_get_body (msg, &body);
+  mu_body_get_streamref (body, &str);
+
+  if (encoding)
+    {
+      mu_stream_t flt;
+      rc = mu_filter_create (&flt, str, encoding,
+			     MU_FILTER_DECODE,
+			     MU_STREAM_READ);
+      mu_stream_unref (str);
+      if (rc)
+	{
+	  mu_error (_("can't handle encoding %s: %s"),
+		    encoding, mu_strerror (rc));
+	  return 0;
+	}
+      str = flt;
+    }
+
+  if (pb->charset)
+    {
+      struct mu_mime_param *param;
+      if (mu_assoc_lookup (ct->param, "charset", &param) == 0
+	  && mu_c_strcasecmp (param->value, pb->charset))
+	{
+	  char const *argv[] = { "iconv", NULL, NULL, NULL };
+	  mu_stream_t flt;
+
+	  argv[1] = param->value;
+	  argv[2] = pb->charset;
+	  rc = mu_filter_chain_create (&flt, str,
+				       MU_FILTER_ENCODE,
+				       MU_STREAM_READ,
+				       MU_ARRAY_SIZE (argv) - 1,
+				       (char**) argv);
+	  mu_stream_unref (str);
+	  if (rc)
+	    {
+	      mu_error (_("can't convert from charset %s to %s"),
+			param->value, pb->charset);
+	      return 0;
+	    }
+	  str = flt;
+	}
+    }
+
+  result = 0;
+  while ((rc = mu_stream_getline (str, &buffer, &bufsize, &n)) == 0
+	 && n > 0)
+    {
+      result = mu_c_strcasestr (buffer, text) != NULL;
+      if (result)
+	break;
+    }
+  mu_stream_destroy (&str);
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERR, "mu_stream_getline", NULL, rc);
+  return result;
+}
+
+static int
+_match_multipart (struct parsebuf *pb, mu_message_t msg, char *text)
+{
+  mu_header_t hdr;
+  char *encoding;
+  int ismp;
+  int result;
+  mu_content_type_t ct;
+  char *buf;
+  int rc;
+
+  if (mu_message_is_multipart (msg, &ismp))
+    return 0;
+  if (mu_message_get_header (msg, &hdr))
+    return 0;
+
+  if (mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE, &buf))
+    {
+      buf = strdup ("text/plain");
+      if (!buf)
+	return 0;
+    }
+  rc = mu_content_type_parse (buf, NULL, &ct);
+  free (buf);
+  if (rc)
+    return 0;
+
+  if (mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING,
+				   &encoding))
+    encoding = NULL;
+
+  if (ismp)
+    {
+      size_t i, nparts;
+
+      mu_message_get_num_parts (msg, &nparts);
+
+      for (i = 1; i <= nparts; i++)
+	{
+	  mu_message_t submsg = NULL;
+
+	  if (mu_message_get_part (msg, i, &submsg) == 0)
+	    {
+	      result = _match_multipart (pb, submsg, text);
+	      if (result)
+		break;
+	    }
+	}
+    }
+  else if (mu_c_strcasecmp (ct->type, "message") == 0
+	   && mu_c_strcasecmp (ct->subtype, "rfc822") == 0)
+    {
+      mu_message_t submsg = NULL;
+
+      if (mu_message_unencapsulate (msg, &submsg, NULL) == 0)
+	{
+	  result = _match_multipart (pb, submsg, text);
+	}
+    }
+  else if (mu_c_strcasecmp (ct->type, "text") == 0)
+    result = _match_text (pb, msg, ct, encoding, text);
+
+  free (encoding);
+  mu_content_type_destroy (&ct);
+
+  return result;
 }
 
 /* Scan body of the message for the occurrence of a substring */
-/* FIXME: The algorithm below is broken */
 static int
 _scan_body (struct parsebuf *pb, char *text)
 {
-  mu_body_t body = NULL;
-  mu_stream_t stream = NULL;
-  size_t size = 0, lines = 0;
-  char buffer[128];
-  size_t n = 0;
-  int rc;
-  
-  mu_message_get_body (pb->msg, &body);
-  mu_body_size (body, &size);
-  mu_body_lines (body, &lines);
-  mu_body_get_streamref (body, &stream);
-  rc = 0;
-  while (rc == 0
-	 && mu_stream_read (stream, buffer, sizeof(buffer)-1, &n) == 0
-	 && n > 0)
-    {
-      buffer[n] = 0;
-      rc = util_strcasestr (buffer, text) != NULL;
-    }
-  mu_stream_destroy (&stream);
-  return rc;
+  return _match_multipart (pb, pb->msg, text);
 }
-
+
 /* Basic instructions */
 
 static void
@@ -885,7 +1061,7 @@ cond_bcc (struct parsebuf *pb, struct search_node *node, struct value *arg,
 {
   retval->type = value_number;
   retval->v.number = _scan_header (pb, MU_HEADER_BCC, arg[0].v.string);
-}                      
+}
 
 static void
 cond_before (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -895,7 +1071,7 @@ cond_before (struct parsebuf *pb, struct search_node *node, struct value *arg,
   time_t mesg_time;
   const char *date;
   mu_envelope_t env;
-  
+
   mu_message_get_envelope (pb->msg, &env);
   retval->type = value_number;
   if (mu_envelope_sget_date (env, &date))
@@ -905,7 +1081,7 @@ cond_before (struct parsebuf *pb, struct search_node *node, struct value *arg,
       util_parse_ctime_date (date, &mesg_time, datetime_date_only);
       retval->v.number = mesg_time < t;
     }
-}                   
+}
 
 static void
 cond_body (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -913,7 +1089,7 @@ cond_body (struct parsebuf *pb, struct search_node *node, struct value *arg,
 {
   retval->type = value_number;
   retval->v.number = _scan_body (pb, arg[0].v.string);
-}                     
+}
 
 static void
 cond_cc (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -921,7 +1097,7 @@ cond_cc (struct parsebuf *pb, struct search_node *node, struct value *arg,
 {
   retval->type = value_number;
   retval->v.number = _scan_header (pb, MU_HEADER_CC, arg[0].v.string);
-}                       
+}
 
 static void
 cond_from (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -931,14 +1107,14 @@ cond_from (struct parsebuf *pb, struct search_node *node, struct value *arg,
   mu_envelope_t env;
   const char *from;
   int rc = 0;
-  
+
   mu_message_get_envelope (pb->msg, &env);
   if (mu_envelope_sget_sender (env, &from) == 0)
-    rc = util_strcasestr (from, s) != NULL;
-  
+    rc = mu_c_strcasestr (from, s) != NULL;
+
   retval->type = value_number;
   retval->v.number = rc || _scan_header (pb, MU_HEADER_FROM, s);
-}                     
+}
 
 static void
 cond_header (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -949,7 +1125,7 @@ cond_header (struct parsebuf *pb, struct search_node *node, struct value *arg,
 
   retval->type = value_number;
   retval->v.number = _scan_header (pb, name, value);
-}                   
+}
 
 static void
 cond_keyword (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -957,22 +1133,22 @@ cond_keyword (struct parsebuf *pb, struct search_node *node, struct value *arg,
 {
   char *s = arg[0].v.string;
   mu_attribute_t attr = NULL;
-  
+
   mu_message_get_attribute (pb->msg, &attr);
   retval->type = value_number;
   retval->v.number = util_attribute_matches_flag (attr, s);
-}                  
+}
 
 static void
 cond_larger (struct parsebuf *pb, struct search_node *node, struct value *arg,
 	     struct value *retval)
 {
   size_t size = 0;
-  
+
   mu_message_size (pb->msg, &size);
   retval->type = value_number;
   retval->v.number = size > arg[0].v.number;
-}                   
+}
 
 static void
 cond_on (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -982,7 +1158,7 @@ cond_on (struct parsebuf *pb, struct search_node *node, struct value *arg,
   time_t mesg_time;
   const char *date;
   mu_envelope_t env;
-  
+
   mu_message_get_envelope (pb->msg, &env);
   retval->type = value_number;
   if (mu_envelope_sget_date (env, &date))
@@ -992,7 +1168,7 @@ cond_on (struct parsebuf *pb, struct search_node *node, struct value *arg,
       util_parse_ctime_date (date, &mesg_time, datetime_date_only);
       retval->v.number = t <= mesg_time && mesg_time <= t + 86400;
     }
-}                       
+}
 
 static void
 cond_sentbefore (struct parsebuf *pb, struct search_node *node,
@@ -1005,7 +1181,7 @@ cond_sentbefore (struct parsebuf *pb, struct search_node *node,
   _header_date (pb, &mesg_time);
   retval->type = value_number;
   retval->v.number = mesg_time < t;
-}               
+}
 
 static void
 cond_senton (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -1017,7 +1193,7 @@ cond_senton (struct parsebuf *pb, struct search_node *node, struct value *arg,
   _header_date (pb, &mesg_time);
   retval->type = value_number;
   retval->v.number = t <= mesg_time && mesg_time <= t + 86400;
-}                   
+}
 
 static void
 cond_sentsince (struct parsebuf *pb, struct search_node *node,
@@ -1030,7 +1206,7 @@ cond_sentsince (struct parsebuf *pb, struct search_node *node,
   _header_date (pb, &mesg_time);
   retval->type = value_number;
   retval->v.number = mesg_time >= t;
-}                
+}
 
 static void
 cond_since (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -1040,7 +1216,7 @@ cond_since (struct parsebuf *pb, struct search_node *node, struct value *arg,
   time_t mesg_time;
   const char *date;
   mu_envelope_t env;
-  
+
   mu_message_get_envelope (pb->msg, &env);
   retval->type = value_number;
   if (mu_envelope_sget_date (env, &date))
@@ -1050,18 +1226,18 @@ cond_since (struct parsebuf *pb, struct search_node *node, struct value *arg,
       util_parse_ctime_date (date, &mesg_time, datetime_date_only);
       retval->v.number = mesg_time >= t;
     }
-}                    
+}
 
 static void
 cond_smaller (struct parsebuf *pb, struct search_node *node, struct value *arg,
 	      struct value *retval)
 {
   size_t size = 0;
-  
+
   mu_message_size (pb->msg, &size);
   retval->type = value_number;
   retval->v.number = size < arg[0].v.number;
-}                  
+}
 
 static void
 cond_subject (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -1069,7 +1245,7 @@ cond_subject (struct parsebuf *pb, struct search_node *node, struct value *arg,
 {
   retval->type = value_number;
   retval->v.number = _scan_header (pb, MU_HEADER_SUBJECT, arg[0].v.string);
-}                  
+}
 
 static void
 cond_text (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -1078,7 +1254,7 @@ cond_text (struct parsebuf *pb, struct search_node *node, struct value *arg,
   char *s = arg[0].v.string;
   retval->type = value_number;
   retval->v.number = _scan_header_all (pb, s) || _scan_body (pb, s);
-}                     
+}
 
 static void
 cond_to (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -1086,7 +1262,7 @@ cond_to (struct parsebuf *pb, struct search_node *node, struct value *arg,
 {
   retval->type = value_number;
   retval->v.number = _scan_header (pb, MU_HEADER_TO, arg[0].v.string);
-}                       
+}
 
 static void
 cond_uid (struct parsebuf *pb, struct search_node *node, struct value *arg,
@@ -1094,10 +1270,34 @@ cond_uid (struct parsebuf *pb, struct search_node *node, struct value *arg,
 {
   int rc;
   size_t uid = 0;
-  
+
   mu_message_get_uid (pb->msg, &uid);
   rc = mu_msgset_locate (arg[0].v.msgset, pb->msgno, NULL);
   retval->type = value_number;
   retval->v.number = rc == 0;
-}                      
+}
 
+/* Return 1 if the CHARSET is available.
+   This function assumes that charset is available if it is possible
+   to create a filter for encoding ASCII data into it.
+ */
+static int
+available_charset (const char *charset)
+{
+  int rc;
+  mu_stream_t flt;
+  mu_stream_t null;
+  char const *argv[] = { "iconv", "US-ASCII", NULL, NULL };
+
+  rc = mu_nullstream_create (&null, MU_STREAM_READ);
+  if (rc)
+    return 0;
+  argv[2] = charset;
+  rc = mu_filter_chain_create (&flt, null, MU_FILTER_ENCODE, MU_STREAM_READ,
+			       MU_ARRAY_SIZE (argv) - 1, (char**) argv);
+  mu_stream_unref (null);
+  if (rc)
+    return 0;
+  mu_stream_destroy (&flt);
+  return 1;
+}
