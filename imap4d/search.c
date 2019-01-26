@@ -545,8 +545,14 @@ parse_search_key (struct parsebuf *pb)
       if (parse_gettoken (pb, 1) == 0)
 	 return NULL;
 
-      if ((leftarg = parse_search_key (pb)) == NULL
-	   || (rightarg = parse_search_key (pb)) == NULL)
+      if ((leftarg = parse_search_key (pb)) == NULL)
+	return NULL;
+      if (!pb->token)
+	{
+	  pb->err_mesg = "Too few args";
+	  return NULL;
+	}
+      if ((rightarg = parse_search_key (pb)) == NULL)
 	 return NULL;
 
       node = parse_alloc (pb, sizeof *node);
