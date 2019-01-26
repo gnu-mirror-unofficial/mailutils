@@ -43,14 +43,25 @@ AT_DATA([input],[$1])dnl
 ])
 imap4d IMAP4D_OPTIONS < input | tr -d '\r'])
 
+dnl IMAP4D_WITH_PREREQ(COND, TESTS)
+dnl ----------
+dnl Run TESTS if shell CONDitional yields true, otherwise skip them
+dnl
+m4_pushdef([IMAP4D_PREREQ])
+m4_define([IMAP4D_WITH_PREREQ],
+[m4_pushdef([IMAP4D_PREREQ],[$1])
+$2
+m4_popdef([IMAP4D_PREREQ])])
+
 dnl ------------------------------------------------------------
 dnl IMAP4D_CHECK([PREP], [INPUT], [STDOUT = `'], [STDERR = `'],
 dnl              [FILTER = `'],[expand])
 dnl
-m4_pushdef([IMAP4D_CHECK],[
+m4_define([IMAP4D_CHECK],[
 cwd=`pwd`
 $1
 AT_CHECK([
+m4_if(IMAP4D_PREREQ,,,[IMAP4D_PREREQ || AT_SKIP_TEST])
 IMAP4D_RUN([$2],[$6]) | m4_if([$5],,[remove_uidvalidity],[$5])
 ],
 [0],

@@ -1,0 +1,219 @@
+From gray@ps.example.org  Sat Jan 26 10:28:00 2019
+Date: Sat, 26 Jan 2019 12:28:00 +0200
+From: Gray <gray@ps.example.org>
+Message-Id: <201901261028.fBSKI8N04906@ps.example.org>
+To: Root <root@example.com>
+Subject: Jabberwocky
+
+`Twas brillig, and the slithy toves
+Did gyre and gimble in the wabe;
+All mimsy were the borogoves,
+And the mome raths outgrabe.
+
+`Beware the Jabberwock, my son!
+The jaws that bite, the claws that catch!
+Beware the Jujub bird, and shun
+The frumious Bandersnatch!'
+
+He took his vorpal sword in hand:
+Long time the manxome foe he sought --
+So rested he by the Tumtum gree,
+And stood awhile in thought.
+
+And as in uffish thought he stood,
+The Jabberwock, with eyes of flame,
+Came whiffling through the tulgey wook,
+And burbled as it came!
+
+One, two!  One, two!  And through and through
+The vorpal blade went snicker-snack!
+He left it dead, and with its head
+He went galumphing back.
+
+`And has thou slain the Jabberwock?
+Come to my arms, my beamish boy!
+O frabjous day!  Calloh!  Callay!
+He chortled in his joy.
+
+`Twas brillig, and the slithy toves
+Did gyre and gimble in the wabe;
+All mimsy were the borogoves,
+And the mome raths outgrabe.
+
+From gray@ps.example.net Sat Jan 26 10:31:25 2019
+Message-Id: <201901261031.g6CLhIb05086@ps.example.net>
+To: Root <root@example.com>
+Subject: How doth
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa0"
+Content-ID: <5082.1026510189.0@ps.example.net>
+Date: Sat, 26 Jan 2019 12:31:25 +0200
+From: Sergey Poznyakoff <gray@ps.example.net>
+
+------- =_aaaaaaaaaa0
+Content-Type: text/plain; charset="us-ascii"
+Content-ID: <5082.1026510189.1@ps.example.net>
+Content-Description: How doth
+
+How doth the little crocodile
+Improve his shining tail,
+And pour the waters of the Nile
+On every golden scale!
+
+`How cheerfully he seems to grin,
+How neatly spread his claws,
+And welcome little fishes in
+With gently smiling jaws!
+
+------- =_aaaaaaaaaa0--
+
+From gray@ps.example.net Sat Jan 26 10:38:07 2019
+Message-Id: <201901260938.g6CLowb05126@ps.example.net>
+To: Root <root@example.net>
+Subject: Nested MIME
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa0"
+Content-ID: <5122.1026510654.1@ps.example.net>
+Date: Sat, 26 Jan 2019 10:38:10 +0200
+From: Sergey Poznyakoff <gray@ps.example.net>
+
+------- =_aaaaaaaaaa0
+Content-Type: text/plain; charset="us-ascii"
+Content-ID: <5122.1026510654.2@ps.example.net>
+Content-Description: Father William Part I
+
+`You are old, Father William,' the young man said,
+`And your hair has become very white;
+And yet you incessantly stand on your head--
+Do you think, at your age, it is right?'
+
+`In my youth,' Father William replied to his son,
+`I feared it might injure the brain;
+But, now that I'm perfectly sure I have none,
+Why, I do it again and again.'
+
+
+------- =_aaaaaaaaaa0
+Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa1"
+Content-ID: <5122.1026510654.3@ps.example.net>
+
+------- =_aaaaaaaaaa1
+Content-Type: text/plain; name="msg.22"
+Content-ID: <5122.1026510654.4@ps.example.net>
+Content-Description: Father William Part II
+Content-Transfer-Encoding: base64
+
+YFlvdSBhcmUgb2xkLCcgc2FpZCB0aGUgeW91dGgsIGBhcyBJIG1lbnRpb25lZCBiZWZvcmUsCkFu
+ZCBoYXZlIGdyb3duIG1vc3QgdW5jb21tb25seSBmYXQ7CllldCB5b3UgdHVybmVkIGEgYmFjay1z
+b21lcnNhdWx0IGluIGF0IHRoZSBkb29yLS0KUHJheSwgd2hhdCBpcyB0aGUgcmVhc29uIG9mIHRo
+YXQ/JwoKYEluIG15IHlvdXRoLCcgc2FpZCB0aGUgc2FnZSwgYXMgaGUgc2hvb2sgaGlzIGdyZXkg
+bG9ja3MsCmBJIGtlcHQgYWxsIG15IGxpbWJzIHZlcnkgc3VwcGxlCkJ5IHRoZSB1c2Ugb2YgdGhp
+cyBvaW50bWVudC0tb25lIHNoaWxsaW5nIHRoZSBib3gtLQpBbGxvdyBtZSB0byBzZWxsIHlvdSBh
+IGNvdXBsZT8nCg==
+
+------- =_aaaaaaaaaa1
+Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa2"
+Content-ID: <5122.1026510654.5@ps.example.net>
+
+------- =_aaaaaaaaaa2
+Content-Type: text/plain; name="msg.23"
+Content-ID: <5122.1026510654.6@ps.example.net>
+Content-Description: Father William Part III
+Content-Transfer-Encoding: base64
+
+YFlvdSBhcmUgb2xkLCcgc2FpZCB0aGUgeW91dGgsIGBhbmQgeW91ciBqYXdzIGFyZSB0b28gd2Vh
+awpGb3IgYW55dGhpbmcgdG91Z2hlciB0aGFuIHN1ZXQ7CllldCB5b3UgZmluaXNoZWQgdGhlIGdv
+b3NlLCB3aXRoIHRoZSBib25lcyBhbmQgdGhlIGJlYWstLQpQcmF5IGhvdyBkaWQgeW91IG1hbmFn
+ZSB0byBkbyBpdD8nCgpgSW4gbXkgeW91dGgsJyBzYWlkIGhpcyBmYXRoZXIsIGBJIHRvb2sgdG8g
+dGhlIGxhdywKQW5kIGFyZ3VlZCBlYWNoIGNhc2Ugd2l0aCBteSB3aWZlOwpBbmQgdGhlIG11c2N1
+bGFyIHN0cmVuZ3RoLCB3aGljaCBpdCBnYXZlIHRvIG15IGphdywKSGFzIGxhc3RlZCB0aGUgcmVz
+dCBvZiBteSBsaWZlLicK
+
+------- =_aaaaaaaaaa2
+Content-Type: text/plain; name="msg.24"
+Content-ID: <5122.1026510654.7@ps.example.net>
+Content-Description: Father William Part IV
+Content-Transfer-Encoding: base64
+
+YFlvdSBhcmUgb2xkLCcgc2FpZCB0aGUgeW91dGgsIGBvbmUgd291bGQgaGFyZGx5IHN1cHBvc2UK
+VGhhdCB5b3VyIGV5ZSB3YXMgYXMgc3RlYWR5IGFzIGV2ZXI7CllldCB5b3UgYmFsYW5jZWQgYW4g
+ZWVsIG9uIHRoZSBlbmQgb2YgeW91ciBub3NlLS0KV2hhdCBtYWRlIHlvdSBzbyBhd2Z1bGx5IGNs
+ZXZlcj8nCgpgSSBoYXZlIGFuc3dlcmVkIHRocmVlIHF1ZXN0aW9ucywgYW5kIHRoYXQgaXMgZW5v
+dWdoLCcKU2FpZCBoaXMgZmF0aGVyOyBgZG9uJ3QgZ2l2ZSB5b3Vyc2VsZiBhaXJzIQpEbyB5b3Ug
+dGhpbmsgSSBjYW4gbGlzdGVuIGFsbCBkYXkgdG8gc3VjaCBzdHVmZj8KQmUgb2ZmLCBvciBJJ2xs
+IGtpY2sgeW91IGRvd24gc3RhaXJzIScK
+
+------- =_aaaaaaaaaa2--
+
+------- =_aaaaaaaaaa1--
+
+------- =_aaaaaaaaaa0--
+
+From gray@ps.example.net Sat Jan 26 10:40:08 2019
+Message-Id: <201901261040.g6CLhIb05086@example.net>
+To: Foo Bar <foobar@example.net>
+Subject: =?iso-8859-2?Q?Father_William_-_?=
+  =?iso-8859-2?Q?T=B3umaczenie_Antoniego_Marianowicza?=
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----- =201912093012.tXERYWQ.9301"
+Content-ID: <5082.1026510189.0@example.net>
+Date: Sat, 26 Jan 2019 12:40:18 +0200
+From: Sergey Poznyakoff <gray@ps.example.net>
+
+------- =201912093012.tXERYWQ.9301
+Content-Type: text/plain; charset=iso-8859-2
+Content-ID: <5082.1026510189.2@ps.example.net>
+Content-Description: Father William Part I
+Content-Transfer-Encoding: base64
+
+T2pjaWVjIFdpcmdpbGl1c3ogdWN6ebMgZHppZWNpIHN3b2plCk5hIGezb3dpZSBwcnp5IHR5bSBz
+dG9qsWMgd2llbGUgbGF0ClJ6ZWuzIGplZGVuIHogc3lu83c6IC0gVGFrIGJhcmR6byBzaeogYm9q
+6gpPIGNpZWJpZSBvamN6ZSwgYm+2IGp1vyBzdGFyeSBkemlhZC4KCi0gVyBsYXRhY2ggbbNvZG+2
+Y2kgLSBvamNpZWMgbXUgb2Rwb3dpZSAtCkJ5d2GzZW0gbmllcmF6IHcgc3RyYWNodSBvIHN382og
+bfN6ZywKTGVjeiBkemm2LCBnZHkgd2lkeuosIL9lIG1hbSBwdXN0byB3IGezb3dpZSwKxndpY3qx
+YywgbmFqd3m/ZWogc7N5c3rqIHdvZHkgcGx1c2su
+
+------- =201912093012.tXERYWQ.9301--
+
+From gray@example.net Sat Jan 26 10:41:48 2019
+Message-Id: <201901261041.g6CLhIb05086@example.net>
+To: Foo Bar <foobar@example.net>
+Subject: Fwd: =?utf-8?Q?Father_William_-_?=
+  =?utf-8?Q?T=C5=82umaczenie_Macieja_S=C5=82onimskiego?=
+MIME-Version: 1.0
+Content-Type: message/rfc822; name="message1"
+Content-ID: <5082.1026510189.0@ps.example.net>
+Content-Transfer-Encoding: binary
+Date: Sat, 13 Jan 2019 10:41:48 +0200
+From: Sergey Poznyakoff <gray@ps.example.net>
+
+Organization: Mailutils-tests
+Received: from example.net (localhost [127.0.0.1])
+	by example.net with ESMTP id g6CLhIb05086
+	for <gray@example.net>; Sat, 13 Jul 2002 00:43:18 +0300
+Message-Id: <200207122143.g6CLhIb05086@example.net>
+To: Foo Bar <foobar@nonexistent.net>
+Subject: =?utf-8?Q?Father_William_-_?=
+  =?utf-8?Q?T=C5=82umaczenie_Macieja_S=C5=82onimskiego?=
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----- =201912093012.tXERYWQ.9301"
+Content-ID: <5082.1026510189.0@example.net>
+Date: Sat, 13 Jul 2002 00:43:18 +0300
+From: Sergey Poznyakoff <gray@example.net>
+
+------- =201912093012.tXERYWQ.9301
+Content-Type: text/plain; name="msg.21"; charset=utf-8
+Content-ID: <5082.1026510189.2@example.net>
+Content-Description: Father William Part I
+Content-Transfer-Encoding: base64
+
+SmVzdGXFmyBzdGFyeSwgbcOzaiBvamN6ZSAtLSBzeW4gV2lsbGlhbWEgcnpla8WCIC0tCkkgdHdl
+IHfFgm9zeSBqdcW8IGNhxYJraWVtIHpiaWVsYcWCeTsKQ3p5IHV3YcW8YXN6IHphIHPFgnVzem5l
+LCB6d2HFvHl3c3p5IHR3w7NqIHdpZWssClN0YcSHIG5hIGfFgm93aWUgYmV6IHByemVyd3kgZHpp
+ZcWEIGNhxYJ5PwoKVyBkbmlhY2ggbcWCb2RvxZtjaSAtLSByemVrxYIgb2pjaWVjIC0tIG1hcnR3
+acWCbyBtbmllIHRvCkkgbyBtw7N6ZyBtw7NqIHdwYWRhxYJlbSB3Y2nEhcW8IHcgdHJ3b2fEmSwK
+TGVjeiBkemnFmywga2llZHkgd2llbSBqdcW8LCDFvGUgbmllIG1hbSB0YW0gZ28KTmlldXN0YW5u
+aWUgbmEgxYJiaWUgc3Rhd2HEhyBtb2fEmS4K
+
+------- =201912093012.tXERYWQ.9301--
+

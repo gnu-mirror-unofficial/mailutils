@@ -215,7 +215,7 @@ mime_descend (struct mime_descend_closure *closure,
 	    }
 	}
     }
-  else if (mu_c_strncasecmp (type, "message/rfc822", strlen (type)) == 0)
+  else if (mu_c_strncasecmp (type, "message/rfc822", 14) == 0)
     {
       mu_message_t submsg = NULL;
 

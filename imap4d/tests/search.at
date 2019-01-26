@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-dnl SEARCH_CHECK([NAME],[KW],[ARG],[OUTPUT])
+dnl SEARCH_CHECK([NAME],[KW],[ARG],[OUTPUT],[COND])
 m4_define([SEARCH_CHECK],[
 AT_SETUP([$1])
 AT_KEYWORDS([search $2])
 IMAP4D_CHECK([
-MUT_MBCOPY($abs_top_srcdir/testsuite/spool/search.mbox,INBOX)
+MUT_MBCOPY($abs_top_srcdir/testsuite/spool/SEARCH_MBOX,INBOX)
 ],
 [1 SELECT INBOX
 2 SEARCH $3
@@ -38,6 +38,8 @@ AT_CLEANUP
 ])
 
 dnl ----------------------------------------------------------------------
+m4_pushdef([SEARCH_MBOX],[search.mbox])
+
 # <message set>  Messages with message sequence numbers
 #                corresponding to the specified message sequence
 #                number set
@@ -151,3 +153,46 @@ SEARCH_CHECK([precedence 3],[search22],
 [OR FROM corrector (ANSWERED SENTSINCE "30-Jul-2002")],[2 3 4 8])
 
 dnl ----------------------------------------------------------------------
+m4_popdef([SEARCH_MBOX])
+m4_pushdef([SEARCH_MBOX],[search2.mbox])
+
+SEARCH_CHECK([BODY - plain message],[search23],
+[BODY Jujub],
+[1])
+
+SEARCH_CHECK([BODY - MIME level 1],[search24],
+[BODY crocodile],
+[2])
+
+SEARCH_CHECK([BODY - MIME level 1, base64],[search25],
+[BODY incessantly],
+[3])
+
+SEARCH_CHECK([BODY - MIME level 2, base64],[search26],
+[BODY "I have answered three questions"],
+[3])
+
+IMAP4D_WITH_PREREQ(
+[test `echo "seo=" | ckiconv iso-8859-2 utf-8` = "xIXEmQ=="],
+[
+SEARCH_CHECK([BODY CHARSET],[search27],
+[CHARSET utf-8 BODY "Ćwicząc, najwyżej słyszę"],
+[4],
+ICONV_TEST)
+
+SEARCH_CHECK([SUBJECT CHARSET],[search28],
+[CHARSET utf-8 SUBJECT "Tłumaczenie"],
+[4 5],
+ICONV_TEST)
+
+SEARCH_CHECK([BODY CHARSET - MIME message/rfc822],[search29],
+[CHARSET utf-8 BODY "uważasz za słuszne"],
+[5],
+ICONV_TEST)
+])
+
+SEARCH_CHECK([TEXT],[search30],
+[TEXT how],
+[2 3])
+m4_popdef([SEARCH_MBOX])
+
