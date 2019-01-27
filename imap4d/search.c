@@ -980,7 +980,7 @@ _match_multipart (struct parsebuf *pb, mu_message_t msg, char *text)
   mu_header_t hdr;
   char *encoding;
   int ismp;
-  int result;
+  int result = 0;
   mu_content_type_t ct;
   char *buf;
   int rc;
