@@ -78,7 +78,16 @@ imap4d_LDADD = \
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@ \
  ${MU_LIB_MAILUTILS}\
- @SERV_AUTHLIBS@ @MU_COMMON_LIBRARIES@ @MU_TCPWRAP_LIBRARIES@
+ @SERV_AUTHLIBS@\
+ @MU_COMMON_LIBRARIES@\
+ @MU_TCPWRAP_LIBRARIES@
+
+if MU_COND_UNISTRING
+  imap4d_LDADD += -lunistring
+  imap4d_SOURCES += unistr_u8.c
+else
+  imap4d_SOURCES += unistr_c.c
+endif
 
 ## This kludge is necessary to correctly establish imap4d -> MU_AUTHLIBS
 ## dependencies. Automake stupidly refuses to include them.

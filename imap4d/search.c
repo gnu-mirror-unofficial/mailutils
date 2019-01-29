@@ -813,8 +813,11 @@ _scan_header (struct parsebuf *pb, char *name, char *value)
   mu_header_t header = NULL;
   int i, rc;
   int result = 0;
-
+  char *needle;
+  
   mu_message_get_header (pb->msg, &header);
+
+  unistr_downcase (value, &needle);
 
   for (i = 1;
        result == 0
@@ -834,12 +837,13 @@ _scan_header (struct parsebuf *pb, char *name, char *value)
 	  free (hval);
 	  hval = tmp;
 	}
-      result = mu_c_strcasestr (hval, value) != NULL;
+      result = unistr_is_substring (hval, needle);
       free (hval);
     }
   if (!(rc == 0 || rc == MU_ERR_NOENT))
     mu_diag_funcall (MU_DIAG_ERR, "mu_header_aget_value_unfold_n", NULL, rc);
-
+  free (needle);
+  
   return result;
 }
 
@@ -865,9 +869,11 @@ _scan_header_all (struct parsebuf *pb, char *text)
   size_t fcount = 0;
   int i, rc;
   int result;
-
+  char *needle;
+  
   mu_message_get_header (pb->msg, &header);
   mu_header_get_field_count (header, &fcount);
+  unistr_downcase (text, &needle);
   result = 0;
   for (i = 1; result == 0 && i < fcount; i++)
     {
@@ -895,9 +901,10 @@ _scan_header_all (struct parsebuf *pb, char *text)
 	  free (hval);
 	  hval = tmp;
 	}
-       result = mu_c_strcasestr (hval, text) != NULL;
-       free (hval);
+      result = unistr_is_substring (hval, needle);
+      free (hval);
     }
+  free (needle);
   return result;
 }
 
@@ -913,7 +920,8 @@ _match_text (struct parsebuf *pb, mu_message_t msg, mu_content_type_t ct,
   char *buffer = NULL;
   size_t bufsize = 0;
   size_t n;
-
+  char *needle;
+  
   mu_message_get_body (msg, &body);
   mu_body_get_streamref (body, &str);
 
@@ -960,14 +968,16 @@ _match_text (struct parsebuf *pb, mu_message_t msg, mu_content_type_t ct,
 	}
     }
 
+  unistr_downcase (text, &needle);
   result = 0;
   while ((rc = mu_stream_getline (str, &buffer, &bufsize, &n)) == 0
 	 && n > 0)
     {
-      result = mu_c_strcasestr (buffer, text) != NULL;
+      result = unistr_is_substring (buffer, needle);
       if (result)
 	break;
     }
+  free (needle);
   mu_stream_destroy (&str);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERR, "mu_stream_getline", NULL, rc);

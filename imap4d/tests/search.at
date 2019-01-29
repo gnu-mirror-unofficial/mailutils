@@ -194,5 +194,16 @@ ICONV_TEST)
 SEARCH_CHECK([TEXT],[search30],
 [TEXT how],
 [2 3])
+
+IMAP4D_WITH_PREREQ(
+[test `echo "seo=" | ckiconv iso-8859-2 utf-8` = "xIXEmQ==" \
+ && imap4d --show-config-options | grep WITH_UNISTRING >/dev/null],
+[
+SEARCH_CHECK([BODY CHARSET (case-insensitive UTF)],[search31],
+[CHARSET utf-8 BODY "ĆWICZĄC, NAJWYŻEJ SŁYSZĘ"],
+[4],
+ICONV_TEST)
+])
+
 m4_popdef([SEARCH_MBOX])
 

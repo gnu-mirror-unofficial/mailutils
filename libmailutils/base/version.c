@@ -85,6 +85,9 @@ static struct mu_conf_option mu_conf_option[] = {
 #ifdef WITH_READLINE
   { "WITH_READLINE", N_("GNU Readline") },
 #endif
+#ifdef WITH_UNISTRING
+  { "WITH_UNISTRING", N_("Using GNU libunistring") },
+#endif  
 #ifdef HAVE_MYSQL
   { "HAVE_MYSQL", N_("MySQL") },
 #endif

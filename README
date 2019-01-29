@@ -151,6 +151,13 @@ mailutils-specific configuration options:
 
 	Build 'mail' without readline support.
 
+    --without-unistring
+
+        Build 'imap4d' without libunistring. Note, that libunistring
+        is necessary for SEARCH command to properly work on multibyte
+	string. The use of this option is therefore discouraged. It
+	is here mainly for development and debugging purposes.
+
     --without-gnutls
 
 	Disable the TLS/SSL encryption via GnuTLS (a Transport Layer

@@ -467,6 +467,9 @@ int is_atom (const char *s);
 int util_isdelim (const char *str);
 int util_trim_nl (char *s, size_t len);
 
+void unistr_downcase (char const *input, char **output);
+int unistr_is_substring (char const *haystack, char const *needle);
+
 int set_xscript_level (int xlev);
 
 int imap4d_init_tls_server (struct mu_tls_config *);

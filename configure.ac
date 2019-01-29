@@ -1057,8 +1057,8 @@ char *crypt(const char *key, const char *salt);
 
 AC_CHECK_LIB(crypt, crypt)
 
-#When using thread support some platforms need -D_REENTRANT to get the
-#right prototypes including errno.
+# When using thread support some platforms need -D_REENTRANT to get the
+# right prototypes including errno.
 dnl Check threading support
 # We have to rearrange things a little, it appears that the new autoconf
 # does not like long cascading AC_CHECK_LIB.
@@ -1131,6 +1131,44 @@ else
 fi
 
 AM_CONDITIONAL([MU_COND_READLINE], [test "$status_readline" = "yes"])
+
+# Check for libunistring
+AC_ARG_WITH([unistring],
+            AC_HELP_STRING([--without-unistring],
+                           [do not use unistring]),
+            [
+case "${withval}" in
+  yes) status_unistring=yes ;;
+  no)  status_unistring=no ;;
+  *)   AC_MSG_ERROR(bad value ${withval} for --without-unistring) ;;
+esac],[status_unistring=probe])
+
+AC_SUBST(UNISTRING_LIBS)
+
+if test "$status_unistring" != "no"; then
+  AC_CHECK_HEADERS([unicase.h unistr.h])
+
+  if test "$ac_cv_header_unicase_h$ac_cv_header_unistr_h" = yesyes; then
+    AC_CHECK_LIB(unistring, u8_tolower,
+      [UNISTRING_LIBS=-lunistring
+       status_unistring=yes],
+      [if test "$status_unistring" = "yes"; then
+         AC_MSG_ERROR(required library libunistring not found)
+       else
+         status_unistring=no
+       fi])
+  elif test "$status_unistring" = "yes"; then
+    AC_MSG_ERROR(header files for the required library libunistring not found)
+  else  
+    status_unistring=no
+  fi
+fi
+
+AH_TEMPLATE([WITH_UNISTRING],[Define to 1 if using libunistring])
+if test "$status_unistring" = "yes"; then
+  AC_DEFINE(WITH_UNISTRING,1,[Using libunistring])
+fi  
+AM_CONDITIONAL([MU_COND_UNISTRING],[test "$status_unistring" = "yes"])
 
 AH_BOTTOM([
 /* Newer versions of readline have rl_completion_matches */
@@ -1381,6 +1419,7 @@ Use GSSAPI .................... $status_gssapi
 Use TCP wrappers .............. $status_tcpwrap
 Pthread support ............... $status_pthread
 Readline support .............. $status_readline
+Libunistring support .......... $status_unistring
 MySQL support ................. $status_mysql
 PostgreSQL support ............ $status_pgsql
 LDAP support .................. $status_ldap
@@ -1435,6 +1474,7 @@ status_cxx=$mu_cv_enable_cxx
 status_tcpwrap=$status_tcpwrap
 status_pthread=$usepthread
 status_readline=$status_readline
+status_unistring=$status_unistring
 status_mysql=$status_mysql
 status_pgsql=$status_pgsql
 status_radius=$mu_cv_enable_radius
