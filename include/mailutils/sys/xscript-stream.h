@@ -21,13 +21,18 @@
 # include <mailutils/stream.h>
 # include <mailutils/sys/stream.h>
 
+struct _mu_xscript_channel
+{
+  int state;
+  size_t length;
+};
+
 struct _mu_xscript_stream
 {
   struct _mu_stream stream;
   mu_stream_t transport;
   mu_stream_t logstr;
-  int flags;
-  int level;
+  struct _mu_xscript_channel channel[2];
   char *prefix[2];
 };
 

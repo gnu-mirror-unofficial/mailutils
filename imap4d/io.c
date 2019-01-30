@@ -688,7 +688,6 @@ imap4d_readline (struct imap4d_tokbuf *tok)
 	  char *sp = NULL;
 	  char *buf;
 	  size_t len;
-	  int xlev = set_xscript_level (MU_XSCRIPT_PAYLOAD);
 	  
 	  number = strtoul (last_arg + 1, &sp, 10);
 	  /* Client can ask for non-synchronised literal,
@@ -697,6 +696,7 @@ imap4d_readline (struct imap4d_tokbuf *tok)
 	    io_sendf ("+ GO AHEAD\n");
 	  else if (*sp != '+')
 	    break;
+	  xscript_declare_client_payload (number);
 	  imap4d_tokbuf_expand (tok, number + 1);
 	  off = tok->level;
 	  buf = tok->buffer + off;
@@ -715,7 +715,6 @@ imap4d_readline (struct imap4d_tokbuf *tok)
 	  tok->level += len;
 	  tok->buffer[tok->level++] = 0;
 	  tok->argp[tok->argc - 1] = off;
-	  set_xscript_level (xlev);
 	}
       else
 	break;

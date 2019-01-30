@@ -18,22 +18,32 @@
    Each input line is prefixed with the input line number and echoed on
    stdout.
    
-   Input starting with '\\' is a command request.  It must contain a string
-   consisting of one of the following letters:
-     n       toggle normal transcript mode;
-     s       toggle secure transcript mode (passwords are not displayed);
-     p       toggle payload transcript mode.
-     
-   Several letters can be passed in a single request, although that doesn't
-   have much sense.
+   Input starting with '\' is a command request.  It must contain a string
+   consisting of one or two of the following letters:
    
+     n       toggle normal transcript level;
+     s       toggle secure transcript level (passwords are not displayed);
+     p       toggle payload transcript level;
+
+   If two letters are given, the first one sets mode for the input and
+   the second one for the output channel.
+
+   Single request letter may be followed with channel number, optionally
+   separated from it by any amount of whitespace. Channel number is 0
+   for input (client) and 1 for output (server) channel.
+
+   For the 'p' request, the channel number may be followed by whitespace
+   and data length.  In that case, the payload mode will be automatically
+   cancelled after receiving that many bytes on the channel. 
+     
    The server responds to the command request with a "// " followed by
-   the letters describing previous transcript mode.
+   the letters describing previous transcript level.
    
    Transcript of the session goes to stderr.
 */
 
 #include <mailutils/mailutils.h>
+#include <assert.h>
 
 mu_stream_t
 create_transcript (void)
@@ -54,48 +64,158 @@ create_transcript (void)
   return xstr;
 }
 
+static char level_letter[] = "nsp";
+
 static int
-xstream_setopt (mu_stream_t str, char const *buf)
+letter_to_level (int l)
 {
-  int flag = MU_XSCRIPT_NORMAL;
-  for (; *buf; buf++)
+  char *p = strchr (level_letter, l);
+  if (!p)
+    return -1;
+  return p - level_letter;
+}
+
+static int
+level_to_letter (int l)
+{
+  assert (l >= 0 && l < strlen (level_letter));
+  return level_letter[l];
+}
+
+enum
+  {
+    getnum_ok,
+    getnum_fail,
+    getnum_eol
+  };
+
+static int
+getnum (char **pbuf, unsigned int *pnum, int opt)
+{
+  unsigned int n;
+  char *start, *end;
+
+  start = mu_str_skip_class (*pbuf, MU_CTYPE_SPACE);
+  if (*start == 0)
     {
-      switch (*buf)
-	{
-	case 'n':
-	case 'N':
-	  flag |= MU_XSCRIPT_NORMAL;
-	  break;
-	case 's':
-	case 'S':
-	  flag |= MU_XSCRIPT_SECURE;
-	  break;
-	case 'p':
-	case 'P':
-	  flag |= MU_XSCRIPT_PAYLOAD;
-	  break;
-	case '\n':
-	  break;
-	default:
-	  mu_error ("unrecognized flag: %c", *buf);
-	  return -1;
-	}
-    }      
-  MU_ASSERT (mu_stream_ioctl (str, MU_IOCTL_XSCRIPTSTREAM,
-			      MU_IOCTL_XSCRIPTSTREAM_LEVEL, &flag));
-  mu_stream_printf (str, "// ");
-  if (flag == MU_XSCRIPT_NORMAL)
-    mu_stream_printf (str, "n");
-  else
-    {
-      if (flag & MU_XSCRIPT_SECURE)
-	mu_stream_printf (str, "s");
-      if (flag & MU_XSCRIPT_PAYLOAD)
-	mu_stream_printf (str, "p");
+      if (opt)
+	return getnum_eol;
+      mu_error ("expected number, but found end of line");
+      return getnum_fail;
     }
-  mu_stream_printf (str, "\n");
+      
+  errno = 0;
+  n = strtoul (start, &end, 10);
+  if (errno || (*end && !mu_isspace (*end)))
+    {
+      mu_error ("expected number, but found '%s'", start);
+      return getnum_fail;
+    }
+  *pnum = n;
+  *pbuf = end;
+  return getnum_ok;
+}
+
+static void
+print_level (mu_stream_t str, int level)
+{
+  int ilev = MU_XSCRIPT_LEVEL_UNPACK (0, level);
+  int olev = MU_XSCRIPT_LEVEL_UNPACK (1, level);
+  if (ilev == olev)
+    mu_stream_printf (str, "// %c\n", level_to_letter (ilev));
+  else
+    mu_stream_printf (str, "// %c%c\n",
+		      level_to_letter (ilev),
+		      level_to_letter (olev));
+}
+
+static int
+set_channel_level (mu_stream_t str, unsigned int cd, int level, char *buf)
+{
+  struct mu_xscript_channel chan;
+  unsigned int n;
+  
+  if (cd > 2)
+    {
+      mu_error ("expected 0 or 1, but found %ul", cd);
+      return -1;
+    }
+  
+  chan.cd = cd;
+  chan.level = level;
+  switch (getnum (&buf, &n, 1))
+    {
+    case getnum_eol:
+      chan.length = 0;
+      break;
+
+    case getnum_ok:
+      chan.length = n;
+      break;
+
+    case getnum_fail:
+      return -1;
+    }
+
+  if (mu_str_skip_class (buf, MU_CTYPE_SPACE)[0])
+    {
+      mu_error ("garbage after command");
+      return -1;
+    }
+
+  MU_ASSERT (mu_stream_ioctl (str, MU_IOCTL_XSCRIPTSTREAM,
+			      MU_IOCTL_XSCRIPTSTREAM_CHANNEL, &chan));
+  print_level (str, chan.level);
+  
   return 0;
 }
+
+static int
+set_level (mu_stream_t str, int level, char *buf)
+{
+  unsigned int n;
+  int olev;
+
+  olev = letter_to_level (*buf);
+  if (olev != -1)
+    {
+      level = MU_XSCRIPT_LEVEL_PACK (level, olev);
+      MU_ASSERT (mu_stream_ioctl (str, MU_IOCTL_XSCRIPTSTREAM,
+				  MU_IOCTL_XSCRIPTSTREAM_LEVEL, &level));
+      print_level (str, level);
+      return 0;
+    }
+
+  switch (getnum (&buf, &n, 1))
+    {
+    case getnum_eol:
+      MU_ASSERT (mu_stream_ioctl (str, MU_IOCTL_XSCRIPTSTREAM,
+				  MU_IOCTL_XSCRIPTSTREAM_LEVEL, &level));
+      print_level (str, level);
+      return 0;
+
+    case getnum_ok:
+      return set_channel_level (str, n, level, buf);
+
+    case getnum_fail:
+      break;
+    }
+
+  return -1;
+}
+
+static int
+xstream_setopt (mu_stream_t str, char *buf)
+{
+  int lev = letter_to_level (*buf);
+
+  if (lev == -1)
+    {
+      mu_error ("unrecognized level: %c", *buf);
+      return -1;
+    }
+  return set_level (str, lev, buf + 1);
+}      
 
 int
 main (int argc, char **argv)

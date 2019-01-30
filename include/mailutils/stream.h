@@ -173,6 +173,7 @@ int mu_ioctl_logstream_set_locus_deprecated (void) MU_DEPRECATED;
      Arg: struct mu_locus_range *
   */
 #define MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE   15
+
   /* Set locus range.
      Arg: struct mu_locus_range *
   */
@@ -182,9 +183,21 @@ int mu_ioctl_logstream_set_locus_deprecated (void) MU_DEPRECATED;
   /* Swap transcript levels.
      Arg: int *X
 
-     New transcript level is set to *X.  Previous level is stored in X.
+     New transcript level is set to *X.
+     If setting separate levels for each channel, use MU_XSCRIPT_LEVEL_PACK
+     macro to pack them into one integer value. Use
+     MU_IOCTL_XSCRIPTSTREAM_CHANNEL to confugure single channel.
+     
+     Upon successful return, previous levels are stored in X. Use the
+     MU_XSCRIPT_LEVEL_UNPACK macro to retrieve level for a particular
+     channel.
   */
-#define MU_IOCTL_XSCRIPTSTREAM_LEVEL 0  
+#define MU_IOCTL_XSCRIPTSTREAM_LEVEL 0
+  
+  /* Reconfigure a stream channel
+     Arg: struct mu_xscript_channel *
+   */
+#define MU_IOCTL_XSCRIPTSTREAM_CHANNEL 1
 
   /* Opcodes for MU_IOCTL_FD */
   /* Get "borrow state".  Borrowed descriptors remain in open state
@@ -202,6 +215,7 @@ int mu_ioctl_logstream_set_locus_deprecated (void) MU_DEPRECATED;
      Arg: void (*) (int, const char *, ...)
   */
 #define MU_IOCTL_SYSLOGSTREAM_SET_LOGGER 0
+
   /* Get logger function.
      Arg: void (**) (int, const char *, ...)
   */
@@ -390,11 +404,42 @@ int mu_tcp_stream_create_with_source_host (mu_stream_t *stream,
 int mu_tcp_stream_create (mu_stream_t *stream, const char *host, unsigned port,
 			  int flags);
 
-/* Transcript output levels */
+/* Transcript log levels */
 #define MU_XSCRIPT_NORMAL  0  /* Normal transcript */
-#define MU_XSCRIPT_SECURE  1  /* Security-related data are being transmitted */
+#define MU_XSCRIPT_SECURE  1  /* Security-related data filtered out */
 #define MU_XSCRIPT_PAYLOAD 2  /* Actual payload (may be copious) */
 
+#define MU_XSCRIPT_LEVEL_PACK_BIT 0x100
+#define MU_XSCRIPT_LEVEL_IS_PACKED(m) ((m) & MU_XSCRIPT_LEVEL_PACK_BIT)
+
+/* Packing/unpacking of channel modes for the
+   MU_IOCTL_XSCRIPTSTREAM.MU_IOCTL_XSCRIPTSTREAM_LEVEL ioctl.
+*/
+#define MU_XSCRIPT_LEVEL_MASK(chan, mode)	\
+  (((mode) & 0x3) << ((chan)<<2))
+#define MU_XSCRIPT_LEVEL_UNMASK(chan, mode)	\
+  ((((mode) & 0xff) >> ((chan)<<2)) & 0x3)
+
+/* Combine input and output channel modes into one integer, unless they
+   are the same, in which case return input mode unchanged.
+ */
+#define MU_XSCRIPT_LEVEL_PACK(imode, omode)	\
+  ((imode) == (omode)				\
+   ? (imode)					\
+   : (MU_XSCRIPT_LEVEL_PACK_BIT			\
+      | MU_XSCRIPT_LEVEL_MASK(0,imode)		\
+      | MU_XSCRIPT_LEVEL_MASK(1,omode)))
+#define MU_XSCRIPT_LEVEL_UNPACK(chan, pack)	\
+  (MU_XSCRIPT_LEVEL_IS_PACKED(pack)		\
+   ? MU_XSCRIPT_LEVEL_UNMASK(chan, pack) : (pack))
+
+struct mu_xscript_channel
+{
+  int cd;                   /* Channel descriptor */
+  int level;                /* Channel transcript level */
+  size_t length;            /* Length of data, for MU_XSCRIPT_PAYLOAD */
+};
+	
 int mu_xscript_stream_create(mu_stream_t *pref, mu_stream_t transport,
 			     mu_stream_t logstr,
 			     const char *prefix[]);

@@ -31,7 +31,25 @@ modify it under the terms of the GNU General Public License as
 \n
 published by the Free Software Foundation; either version 3, or (at
 your option) any later version.
+\sp
+pass test
+word word
+word word word
+\n
+\p 0
+\p 1 235
+GNU Mailutils is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 3, or (at
+your option) any later version.
 ])
+
+dnl Note on the length calculation for '\p 1' test:
+dnl 1. The server answers on the request by a 5 byte response.
+dnl 2. The length of the portion of the above text fragment until closing
+dnl    parenthesis is 206 bytes.
+dnl 3. Each of 4 lines above is preceded by 6-bytes prefix, which accounts
+dnl    for additional 24 bytes.
 
 AT_CHECK([xscript < input],
 [0],
@@ -50,6 +68,17 @@ AT_CHECK([xscript < input],
 // p
 0014: published by the Free Software Foundation; either version 3, or (at
 0015: your option) any later version.
+// n
+0017: pass test
+0018: word word
+0019: word word word
+// sp
+// n
+// n
+0023: GNU Mailutils is free software; you can redistribute it and/or
+0024: modify it under the terms of the GNU General Public License as
+0025: published by the Free Software Foundation; either version 3, or (at
+0026: your option) any later version.
 ],
 [C: first line
 S: 0001: first line
@@ -77,5 +106,17 @@ C: published by the Free Software Foundation; either version 3, or (at
 S: 0014: published by the Free Software Foundation; either version 3, or (at
 C: your option) any later version.
 S: 0015: your option) any later version.
+C: \sp
+S: (data...)
+C: PASS ***
+C: word word
+C: word word word
+C: \n
+S: // sp
+C: \p 0
+S: // n
+C: (data...)
+S: (data...)
+S:  any later version.
 ])
 AT_CLEANUP

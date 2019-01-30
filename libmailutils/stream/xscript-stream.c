@@ -37,21 +37,121 @@
    stream". Writes to log stream are prefixed with a string indicating
    direction of the data (read/write). Default prefixes are those used in
    RFCs -- "S: ", for data written ("Server"), and "C: ", for data read
-   ("Client"). */
+   ("Client").
 
-#define TRANS_READ     0x1
-#define TRANS_WRITE    0x2
-#define TRANS_DISABLED 0x4
-#define TRANS_IOSTREAM 0x8
-#define FLAG_TO_PFX(c) ((c & 0x3) - 1)
+   The stream can operate in three distinct modes, called "transcript
+   levels":
+
+   MU_XSCRIPT_NORMAL
+     The default level. Everything is logged indiscriminately. Programmers
+     should excercise care when using this mode, as it can reveal security
+     sensitive data (such as login credentials, etc.) as well as private
+     user's information (mail content).
+
+   MU_XSCRIPT_SECURE
+     The stream attempts to locate passwords and replaces them with three
+     asteriscs when sending to the log stream. This mode should be used before
+     the session is authenticated. Currently the following two constructs are
+     recognized:
+
+       PASS <STRING>
+       <WORD> LOGIN <STRING1> <STRING2>
+
+     Here, <WORD> stands for an unquoted word, and <STRING> stands for a
+     <WORD> or any sequence of characters enclosed in double-quotes. When
+     the first construct is encountered, <STRING> is replaced with "***" in
+     transcript. For the second construct, <STRING2> is replaced.
+
+     These two cover two most used authentication methods used in POP and
+     IMAP protocols.
+
+   MU_XSCRIPT_PAYLOAD
+     This mode is suitable when large amounts of user data are passed through
+     the stream, e.g. when sending literals in IMAP or sending replies to
+     RETR or TOP requests in POP protocol. In this mode, the stream logs
+     the single string "(data...)" upon receiving first block of data and
+     stops further logging.
+
+     This mode can be enabled for a certain amount of data that is about
+     to be sent, if such amount is known beforehand. In that case, the stream
+     will automatically revert to MU_XSCRIPT_NORMAL mode after that much
+     data has been processed. This is used when sending or receiving IMAP
+     literals.
+
+   Either direction (hereinafter called "channel") is implemented as an
+   independent state machine, so that the above modes can be configured
+   independently for each channel.
+
+   The stream is configured using the MU_IOCTL_XSCRIPTSTREAM ioctl family.
+   The following opcodes are implemented:
+
+   MU_IOCTL_XSCRIPTSTREAM_LEVEL
+     Set new transcript level(s) for both channels.
+
+     Argument: int *X
+
+     X is the desired transcript level. It will be set on both channels.
+     If different transcript levels are desired, they can be packed into
+     integer using the MU_XSCRIPT_LEVEL_PACK macro, e.g.
+
+       int n = MU_XSCRIPT_LEVEL_PACK(MU_XSCRIPT_SECURE, MU_XSCRIPT_NORMAL);
+       mu_stream_ioctl (str,
+			MU_IOCTL_XSCRIPTSTREAM,
+			MU_IOCTL_XSCRIPTSTREAM_LEVEL,
+			&n);
+
+     Upon successful return, previous transcript levels are stored in X.
+     This allows the programmer to restore prior settings using the
+     same ioctl.
+
+     The returned value is a single transcript level, if levels are the same
+     in both channels, or packed levels otherwise. This ensures compatibility
+     with the prior versions of libmailutils.
+
+     Whether it is packed or not, the level for each particular channel can be
+     retrieved from X using the MU_XSCRIPT_LEVEL_UNPACK macro.
+
+     It is advised to use MU_IOCTL_XSCRIPTSTREAM_LEVEL only when setting
+     same level for both channels. Otherwise, please use
+     MU_IOCTL_XSCRIPTSTREAM_CHANNEL.
+
+   MU_IOCTL_XSCRIPTSTREAM_CHANNEL
+     Reconfigure single channel.
+
+     Argument: struct mu_xscript_channel *C
+
+     Upon successful return, prior channel configuration is stored in the
+     memory location pointed to by C.
+
+     If C->level is MU_XSCRIPT_PAYLOAD, C->length can be set to a non-zero
+     value, indicated the amount of user data about to be passed through
+     the channel. The channel state will return to MU_XSCRIPT_NORMAL after
+     that much data are processed.
+
+     For any other value of C->level, C->length must be 0.
+*/
+
+enum
+  {
+    CHAN_READ = MU_TRANSPORT_INPUT,
+    CHAN_WRITE = MU_TRANSPORT_OUTPUT
+  };
+
+enum
+  {
+    XST_NORMAL = MU_XSCRIPT_NORMAL,
+    XST_SECURE = MU_XSCRIPT_SECURE,
+    XST_PAYLOAD = MU_XSCRIPT_PAYLOAD,
+    XST_SKIPLEN,
+    XST_DISABLED
+  };
 
 static int
-word_match (const char *buf, size_t len, int n, const char *word,
-	    size_t *pos)
+word_match (const char *buf, size_t len, int n, const char *word, size_t *pos)
 {
   size_t i = 0;
   size_t wl = strlen (word);
-  
+
   for (;; n--)
     {
       /* Skip whitespace separator */
@@ -60,7 +160,7 @@ word_match (const char *buf, size_t len, int n, const char *word,
 
       if (n == 0)
 	break;
-      
+
       /* Skip the argument */
       if (buf[i] == '"')
 	{
@@ -87,33 +187,50 @@ word_match (const char *buf, size_t len, int n, const char *word,
 }
 
 static void
-print_transcript (struct _mu_xscript_stream *str, int flag,
+print_transcript (struct _mu_xscript_stream *str, int dir,
 		  const char *buf, size_t size)
 {
   while (size)
     {
       const char *p;
       size_t len;
-      
-      if (str->flags & flag)
+
+      switch (str->channel[dir].state)
 	{
+	case XST_NORMAL:
+	case XST_SECURE:
 	  mu_stream_write (str->logstr,
-			   str->prefix[FLAG_TO_PFX(flag)],
-			   strlen (str->prefix[FLAG_TO_PFX (flag)]),
+			   str->prefix[dir],
+			   strlen (str->prefix[dir]),
 			   NULL);
-	  str->flags &= ~(flag | TRANS_DISABLED);
-	}
-      
-      if (str->flags & TRANS_DISABLED)
-	return;
-  
-      if (str->level == MU_XSCRIPT_PAYLOAD)
-	{
+	  break;
+
+	case XST_PAYLOAD:
+	  mu_stream_write (str->logstr,
+			   str->prefix[dir],
+			   strlen (str->prefix[dir]),
+			   NULL);
 	  mu_stream_printf (str->logstr, "(data...)\n");
-	  str->flags |= TRANS_DISABLED;
+	  if (str->channel[dir].length > 0)
+	    str->channel[dir].state = XST_SKIPLEN;
+	  else
+	    str->channel[dir].state = XST_DISABLED;
+	  continue;
+
+	case XST_SKIPLEN:
+	  len = (size <= str->channel[dir].length)
+		  ? size : str->channel[dir].length;
+	  str->channel[dir].length -= len;
+	  size -= len;
+	  buf += len;
+	  if (str->channel[dir].length == 0)
+	    str->channel[dir].state = XST_NORMAL;
+	  continue;
+
+	case XST_DISABLED:
 	  return;
 	}
-  
+
       p = memchr (buf, '\n', size);
       if (p)
 	{
@@ -121,10 +238,10 @@ print_transcript (struct _mu_xscript_stream *str, int flag,
 	  if (p > buf && p[-1] == '\r')
 	    len--;
 
-	  if (str->level == MU_XSCRIPT_SECURE)
+	  if (str->channel[dir].state == MU_XSCRIPT_SECURE)
 	    {
 	      size_t i;
-	      
+
 	      if (word_match (buf, len, 0, "PASS", &i))
 		mu_stream_printf (str->logstr, "PASS ***");
 	      else if (word_match (buf, len, 1, "LOGIN", &i))
@@ -155,8 +272,7 @@ print_transcript (struct _mu_xscript_stream *str, int flag,
 	  else
 	    mu_stream_write (str->logstr, buf, len, NULL);
 	  mu_stream_write (str->logstr, "\n", 1, NULL);
-	  str->flags |= flag;
-	  
+
 	  len = p - buf + 1;
 	  buf = p + 1;
 	  size -= len;
@@ -177,11 +293,11 @@ _xscript_event_cb (mu_stream_t str, int ev, unsigned long size, void *ptr)
   switch (ev)
     {
     case _MU_STR_EVENT_FILLBUF:
-      print_transcript (sp, TRANS_READ, ptr, size);
+      print_transcript (sp, CHAN_READ, ptr, size);
       break;
 
     case _MU_STR_EVENT_FLUSHBUF:
-      print_transcript (sp, TRANS_WRITE, ptr, size);
+      print_transcript (sp, CHAN_WRITE, ptr, size);
     }
 }
 
@@ -254,12 +370,18 @@ _xscript_size (struct _mu_stream *str, mu_off_t *psize)
   return mu_stream_size (sp->transport, psize);
 }
 
+static inline int
+state_to_level(int s)
+{
+  return s >= XST_PAYLOAD ? XST_PAYLOAD : s;
+}
+
 static int
 _xscript_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 {
   struct _mu_xscript_stream *sp = (struct _mu_xscript_stream *)str;
   int status = 0;
-  
+
   switch (code)
     {
     case MU_IOCTL_TRANSPORT:
@@ -290,10 +412,10 @@ _xscript_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
       break;
 
     case MU_IOCTL_SUBSTREAM:
-      if (sp->transport &&
-          ((status = mu_stream_ioctl (sp->transport, code, opcode, arg)) == 0 ||
-            status != ENOSYS))
-        return status;
+      if (sp->transport
+	  && ((status = mu_stream_ioctl (sp->transport, code, opcode, arg)) == 0
+	      || status != ENOSYS))
+	return status;
       /* fall through */
 
     case MU_IOCTL_TOPSTREAM:
@@ -327,13 +449,12 @@ _xscript_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	    {
 	      mu_stream_t *pstr = arg;
 	      mu_stream_t tmp;
-	  
+
 	      if (pstr[0] != pstr[1])
 		{
 		  status = mu_iostream_create (&tmp, pstr[0], pstr[1]);
 		  if (status)
 		    return status;
-		  sp->flags |= TRANS_IOSTREAM;
 		}
 	      else
 		{
@@ -361,18 +482,50 @@ _xscript_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	{
 	case MU_IOCTL_XSCRIPTSTREAM_LEVEL:
 	  {
-	    int oldlev = sp->level;
-	    sp->level = *(int*)arg;
-	    sp->flags &= TRANS_DISABLED;
-	    sp->flags |= TRANS_READ | TRANS_WRITE;
-	    *(int*)arg = oldlev;
+	    int imode = state_to_level (sp->channel[CHAN_READ].state);
+	    int omode = state_to_level (sp->channel[CHAN_WRITE].state);
+	    int pack = *(int*)arg;
+
+	    sp->channel[CHAN_READ].state =
+	      MU_XSCRIPT_LEVEL_UNPACK (CHAN_READ, pack);
+	    sp->channel[CHAN_READ].length = 0;
+
+	    sp->channel[CHAN_WRITE].state =
+	      MU_XSCRIPT_LEVEL_UNPACK (CHAN_WRITE, pack);
+	    sp->channel[CHAN_WRITE].length = 0;
+
+	    *(int*)arg = MU_XSCRIPT_LEVEL_PACK (imode, omode);
+	  }
+	  break;
+
+	case MU_IOCTL_XSCRIPTSTREAM_CHANNEL:
+	  {
+	    struct mu_xscript_channel ret;
+	    struct mu_xscript_channel *chp = arg;
+
+	    if (chp->cd < 0 || chp->cd > 1
+		|| chp->level > MU_XSCRIPT_PAYLOAD
+		|| (chp->level != MU_XSCRIPT_PAYLOAD && chp->length > 0))
+	      return EINVAL;
+
+	    ret.cd = chp->cd;
+	    ret.level = state_to_level (sp->channel[chp->cd].state);
+	    ret.length = sp->channel[chp->cd].length;
+
+	    sp->channel[chp->cd].state = chp->level;
+	    if (chp->level == MU_XSCRIPT_PAYLOAD)
+	      sp->channel[chp->cd].length = chp->length;
+	    else
+	      sp->channel[chp->cd].length = 0;
+
+	    *chp = ret;
 	  }
 	  break;
 	default:
 	  return EINVAL;
 	}
       break;
-      
+
     default:
       return mu_stream_ioctl (sp->transport, code, opcode, arg);
     }
@@ -415,29 +568,29 @@ const char *default_prefix[2] = {
 };
 
 int
-mu_xscript_stream_create(mu_stream_t *pref, mu_stream_t transport,
-			 mu_stream_t logstr,
-			 const char *prefix[])
+mu_xscript_stream_create (mu_stream_t *pref, mu_stream_t transport,
+			  mu_stream_t logstr,
+			  const char *prefix[])
 {
   int flags;
   struct _mu_xscript_stream *sp;
 
   mu_stream_get_flags (transport, &flags);
   sp = (struct _mu_xscript_stream *) _mu_stream_create (sizeof (*sp),
-                                                        flags | _MU_STR_OPEN);
+							flags | _MU_STR_OPEN);
   if (!sp)
     return ENOMEM;
 
-  sp->stream.read = _xscript_read; 
+  sp->stream.read = _xscript_read;
   if (transport->readdelim)
-    sp->stream.readdelim = _xscript_readdelim; 
+    sp->stream.readdelim = _xscript_readdelim;
   sp->stream.write = _xscript_write;
   sp->stream.flush = _xscript_flush;
-  sp->stream.open = _xscript_open; 
+  sp->stream.open = _xscript_open;
   sp->stream.close = _xscript_close;
-  sp->stream.done = _xscript_done; 
-  sp->stream.seek = _xscript_seek; 
-  sp->stream.size = _xscript_size; 
+  sp->stream.done = _xscript_done;
+  sp->stream.seek = _xscript_seek;
+  sp->stream.size = _xscript_size;
   sp->stream.ctl = _xscript_ctl;
   sp->stream.wait = _xscript_wait;
   sp->stream.truncate = _xscript_truncate;
@@ -445,23 +598,22 @@ mu_xscript_stream_create(mu_stream_t *pref, mu_stream_t transport,
   sp->stream.error_string = _xscript_error_string;
   sp->stream.event_cb = _xscript_event_cb;
   sp->stream.event_mask = _MU_STR_EVMASK(_MU_STR_EVENT_FILLBUF) |
-                          _MU_STR_EVMASK(_MU_STR_EVENT_FLUSHBUF);
+			  _MU_STR_EVMASK(_MU_STR_EVENT_FLUSHBUF);
   mu_stream_ref (transport);
   mu_stream_ref (logstr);
 
   sp->transport = transport;
   sp->logstr = logstr;
-  
-  sp->flags = TRANS_READ | TRANS_WRITE;
+
   if (prefix)
     {
-      sp->prefix[0] = strdup(prefix[0] ? prefix[0] : default_prefix[0]);
-      sp->prefix[1] = strdup(prefix[1] ? prefix[1] : default_prefix[1]);
+      sp->prefix[0] = strdup (prefix[0] ? prefix[0] : default_prefix[0]);
+      sp->prefix[1] = strdup (prefix[1] ? prefix[1] : default_prefix[1]);
     }
   else
     {
-      sp->prefix[0] = strdup(default_prefix[0]);
-      sp->prefix[1] = strdup(default_prefix[1]);
+      sp->prefix[0] = strdup (default_prefix[0]);
+      sp->prefix[1] = strdup (default_prefix[1]);
     }
 
   if (sp->prefix[0] == NULL || sp->prefix[1] == 0)
@@ -475,5 +627,3 @@ mu_xscript_stream_create(mu_stream_t *pref, mu_stream_t transport,
   *pref = (mu_stream_t) sp;
   return 0;
 }
-
-

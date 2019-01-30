@@ -292,3 +292,17 @@ set_xscript_level (int xlev)
     }
   return 0;
 }
+
+/* Hide next LEN bytes of client input in transcript */
+void
+xscript_declare_client_payload (size_t len)
+{
+  struct mu_xscript_channel chan;
+  
+  chan.cd = 0;
+  chan.level = MU_XSCRIPT_PAYLOAD;
+  chan.length = len;
+  mu_stream_ioctl (iostream, MU_IOCTL_XSCRIPTSTREAM,
+		   MU_IOCTL_XSCRIPTSTREAM_CHANNEL, &chan);
+}
+
