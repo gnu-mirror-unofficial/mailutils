@@ -25,7 +25,15 @@ using namespace mailutils;
 
 Mailcap :: Mailcap (const Stream& stm)
 {
-  int status = mu_mailcap_create (&mailcap, stm.stm);
+  int status;
+
+  status = mu_mailcap_create (&mailcap);
+  if (status == 0)
+    {
+      status = mu_mailcap_parse (mailcap, stm.stm, NULL);
+      if (status == MU_ERR_PARSE)
+	status = 0; /* FIXME */
+    }
   if (status)
     throw Exception ("Mailcap::Mailcap", status);
 }
@@ -47,20 +55,20 @@ size_t
 Mailcap :: entries_count ()
 {
   size_t count = 0;
-  int status = mu_mailcap_entries_count (mailcap, &count);
+  int status = mu_mailcap_get_count (mailcap, &count);
   if (status)
     throw Exception ("Mailcap::entries_count", status);
   return count;
 }
 
 MailcapEntry&
-Mailcap :: get_entry (size_t i)
+Mailcap :: find_entry (const std::string& name)
 {
   mu_mailcap_entry_t c_entry;
 
-  int status = mu_mailcap_get_entry (mailcap, i, &c_entry);
+  int status = mu_mailcap_find_entry (mailcap, name.c_str (), &c_entry);
   if (status)
-    throw Exception ("Mailcap::get_entry", status);
+    throw Exception ("Mailcap::find_entry", status);
 
   MailcapEntry* entry = new MailcapEntry (c_entry);
   return *entry;
@@ -89,32 +97,32 @@ MailcapEntry :: fields_count ()
 }
 
 std::string
-MailcapEntry :: get_field (size_t i)
+MailcapEntry :: get_field (const std::string& name)
 {
-  int status = mu_mailcap_entry_get_field (entry, i, buf, 
-					   sizeof (buf), NULL);
+  char const *value;
+  int status = mu_mailcap_entry_sget_field (entry, name.c_str (), &value);
   if (status)
     throw Exception ("MailcapEntry::get_field", status);
-  return std::string (buf);
+  return std::string (value ? value : "");
 }
 
 std::string
 MailcapEntry :: get_typefield ()
 {
-  int status = mu_mailcap_entry_get_typefield (entry, buf,
-					       sizeof (buf), NULL);
+  char const *value;
+  int status = mu_mailcap_entry_sget_type (entry, &value);
   if (status)
     throw Exception ("MailcapEntry::get_typefield", status);
-  return std::string (buf);
+  return std::string (value);
 }
 
 std::string
 MailcapEntry :: get_viewcommand ()
 {
-  int status = mu_mailcap_entry_get_viewcommand (entry, buf, 
-						 sizeof (buf), NULL);
+  char const *value;
+  int status = mu_mailcap_entry_sget_command (entry, &value); 
   if (status)
     throw Exception ("MailcapEntry::get_viewcommand", status);
-  return std::string (buf);
+  return std::string (value);
 }
 

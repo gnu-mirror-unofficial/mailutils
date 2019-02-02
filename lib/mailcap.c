@@ -18,15 +18,7 @@
 # include <config.h>
 #endif
 #include <mailutils/mailutils.h>
-#include <fnmatch.h>
 #include <sys/wait.h>
-#include <ctype.h>
-
-/* FNM_CASEFOLD is a GNU extension. Provide a replacement for systems 
-   lacking it. */
-#ifndef FNM_CASEFOLD
-# define FNM_CASEFOLD 0
-#endif
 
 /* Default mailcap path, the $HOME/.mailcap: entry is prepended to it */
 #define DEFAULT_MAILCAP \
@@ -41,15 +33,14 @@
 
 struct mime_context
 {
-  mu_stream_t input;         
+  mu_stream_t input;
   mu_header_t hdr;
-  char *content_type_buffer;
-  char *content_type;
-  mu_list_t values;
+  mu_content_type_t content_type;
+
   char *temp_file;
   int unlink_temp_file;
 
-  mu_list_t no_ask_types;
+  char *no_ask_types;
   int dh;
   int flags;
 };
@@ -59,29 +50,22 @@ mime_context_fill (struct mime_context *ctx, const char *file,
 		   mu_stream_t input, mu_header_t hdr, const char *no_ask,
 		   int interactive, int dry_run, mu_debug_handle_t dh)
 {
-  struct mu_wordsplit ws;
-  size_t i;
-  
+  int rc;
+  char *buffer;
+
   memset (ctx, 0, sizeof *ctx);
   ctx->input = input;
   ctx->hdr = hdr;
-  if (mu_header_aget_value (hdr, MU_HEADER_CONTENT_TYPE,
-			    &ctx->content_type_buffer))
-    return 1;
-  ws.ws_delim = ";";
-  if (mu_wordsplit (ctx->content_type_buffer, &ws,
-		    MU_WRDSF_DELIM|MU_WRDSF_SQUEEZE_DELIMS|MU_WRDSF_WS|
-		    MU_WRDSF_NOVAR|MU_WRDSF_NOCMD))
-    {
-      mu_error (_("cannot split line `%s': %s"),
-		ctx->content_type_buffer,
-		mu_wordsplit_strerror (&ws));
-      return 1;
-    }
 
-  ctx->content_type = ws.ws_wordv[0];
-  ws.ws_wordv[0] = NULL;
-  ctx->temp_file = file ? mu_strdup (file) : NULL; 
+  rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE, &buffer);
+  if (rc)
+    return 1;
+  rc = mu_content_type_parse (buffer, NULL, &ctx->content_type);
+  free (buffer);
+  if (rc)
+    return 1;
+
+  ctx->temp_file = file ? mu_strdup (file) : NULL;
   ctx->unlink_temp_file = 0;
 
   if (interactive)
@@ -89,56 +73,20 @@ mime_context_fill (struct mime_context *ctx, const char *file,
   if (dry_run)
     ctx->flags |= FLAGS_DRY_RUN;
   ctx->dh = dh;
-  
-  mu_list_create (&ctx->values);
 
-  for (i = 1; i < ws.ws_wordc; i++)
-    {
-      mu_list_append (ctx->values, ws.ws_wordv[i]);
-      ws.ws_wordv[i] = NULL;
-    }
-  mu_wordsplit_free (&ws);
-  
-  if (no_ask)
-    {
-      mu_list_create (&ctx->no_ask_types);
-      mu_list_set_destroy_item (ctx->no_ask_types, mu_list_free_item);
-      if (mu_string_split (no_ask, ",", ctx->no_ask_types))
-	return 1;
-    }
+  ctx->no_ask_types = no_ask ? mu_strdup (no_ask) : NULL;
+
   return 0;
 }
 
 static void
 mime_context_release (struct mime_context *ctx)
 {
-  free (ctx->content_type_buffer);
+  mu_content_type_destroy (&ctx->content_type);
   if (ctx->unlink_temp_file)
     unlink (ctx->temp_file);
   free (ctx->temp_file);
-  mu_list_destroy (&ctx->values);
-  mu_list_destroy (&ctx->no_ask_types);
-}
-
-static int
-mime_context_do_not_ask (struct mime_context *ctx)
-{
-  int rc = 0;
-  
-  if (ctx->no_ask_types)
-    {
-      mu_iterator_t itr;
-      mu_list_get_iterator (ctx->no_ask_types, &itr);
-      for (mu_iterator_first (itr); !rc && !mu_iterator_is_done (itr);
-	   mu_iterator_next (itr))
-	{
-	  char *p;
-	  mu_iterator_current (itr, (void**)&p);
-	  rc = fnmatch (p, ctx->content_type, FNM_CASEFOLD) == 0;
-	}
-      mu_iterator_destroy (&itr);
-    }
-  return rc;
+  free (ctx->no_ask_types);
 }
 
 static int
@@ -154,48 +102,9 @@ interactive_p (struct mime_context *ctx)
 }
 
 static void
-mime_context_get_content_type (struct mime_context *ctx, char **ptr)
-{
-  *ptr = ctx->content_type;
-}
-
-static void
 mime_context_get_input (struct mime_context *ctx, mu_stream_t *pinput)
 {
   *pinput = ctx->input;
-}
-
-static int
-mime_context_get_content_type_value (struct mime_context *ctx,
-				     char *name, size_t len,
-				     char **ptr, size_t *plen)
-{
-  mu_iterator_t itr = NULL;
-  int rc = 1;
-  
-  mu_list_get_iterator (ctx->values, &itr);
-  for (mu_iterator_first (itr);
-       !mu_iterator_is_done (itr); mu_iterator_next (itr))
-    {
-      char *item, *p;
-
-      mu_iterator_current (itr, (void**) &item);
-      p = strchr (item, '=');
-      if (p - item == len && strncasecmp (item, name, len) == 0)
-	{
-	  rc = 0;
-	  *ptr = ++p;
-	  *plen = strlen (*ptr);
-	  if (**ptr == '"')
-	    {
-	      ++*ptr;
-	      *plen -= 2;
-	    }
-	  break;
-	}
-    }
-  mu_iterator_destroy (&itr);
-  return rc;
 }
 
 /* FIXME: Rewrite via mu_stream_copy */
@@ -206,7 +115,7 @@ mime_context_write_input (struct mime_context *ctx, int fd)
   char buf[512];
   size_t n;
   int status;
-  
+
   mime_context_get_input (ctx, &input);
   status = mu_stream_seek (input, 0, SEEK_SET, NULL);
   if (status && status != ENOSYS)
@@ -239,12 +148,13 @@ mime_context_get_temp_file (struct mime_context *ctx, char **ptr)
 static mu_opool_t expand_pool;
 
 static int
-expand_string (struct mime_context *ct, char **pstr)
+expand_string (struct mime_context *ct, char const *input, char **pstr)
 {
-  char *p, *s;
+  char const *p;
+  char *s;
   int rc = 0;
-  
-  for (p = *pstr; *p; )
+
+  for (p = input; *p; )
     {
       switch (p[0])
 	{
@@ -257,26 +167,34 @@ expand_string (struct mime_context *ct, char **pstr)
 		rc = 1;
 		p += 2;
 		break;
-		
+
 	      case 't':
-		mime_context_get_content_type (ct, &s);
-		mu_opool_appendz (expand_pool, s);
+		mu_opool_appendz (expand_pool, ct->content_type->type);
+		mu_opool_append_char (expand_pool, '/');
+		mu_opool_appendz (expand_pool, ct->content_type->subtype);
 		p += 2;
 		break;
-		
+
 	      case '{':
 		{
 		  size_t n;
-		  char *q;
-		  
+		  char const *q;
+		  char *namebuf;
+		  struct mu_mime_param *param;
+
 		  p += 2;
 		  q = p;
 		  while (*p && *p != '}')
 		    p++;
-		  if (mime_context_get_content_type_value (ct,
-							   q, p-q,
-							   &s, &n) == 0)
-		    mu_opool_append (expand_pool, s, n);
+		  n = p - q;
+		  namebuf = mu_alloc (n + 1);
+		  memcpy (namebuf, q, n);
+		  namebuf[n] = 0;
+		  param = mu_assoc_get (ct->content_type->param, namebuf);
+		  if (param)
+		    /* FIXME: cset? */
+		    mu_opool_appendz (expand_pool, param->value);
+		  free (namebuf);
 		  if (*p)
 		    p++;
 		  break;
@@ -286,7 +204,7 @@ expand_string (struct mime_context *ct, char **pstr)
 	      case 'n':
 		p++;
 		break;
-		
+
 	      default:
 		mu_opool_append_char (expand_pool, p[0]);
 	      }
@@ -333,12 +251,12 @@ confirm_action (struct mime_context *ctx, const char *str)
 {
   char repl[128], *p;
   int len;
-  char *type;
 
-  mime_context_get_content_type (ctx, &type);
-  if (!interactive_p (ctx) || mime_context_do_not_ask (ctx))
+  if (!interactive_p (ctx)
+      || mu_mailcap_content_type_match (ctx->no_ask_types, ',',
+					ctx->content_type) == 0)
     return 1;
-  
+
   printf (_("Run `%s'?"), str);
   fflush (stdout);
 
@@ -348,40 +266,44 @@ confirm_action (struct mime_context *ctx, const char *str)
   len = strlen (p);
   if (len > 0 && p[len-1] == '\n')
     p[len--] = 0;
-  
+
   return mu_true_answer_p (p);
+}
+
+struct list_closure
+{
+  unsigned long n;
+};
+
+static int
+list_field (char const *name, char const *value, void *data)
+{
+  struct list_closure *fc = data;
+  printf ("\tfields[%lu]: ", fc->n++);
+  if (value)
+    printf ("%s=%s", name, value);
+  else
+    printf ("%s", name);
+  printf ("\n");
+  return 0;
 }
 
 static void
 dump_mailcap_entry (mu_mailcap_entry_t entry)
 {
-  char buffer[256];
-  size_t i, count;
-  
-  mu_mailcap_entry_get_typefield (entry, buffer, 
-				  sizeof (buffer), NULL);
-  printf ("typefield: %s\n", buffer);
-	  
+  char const *value;
+  struct list_closure lc;
+
+  mu_mailcap_entry_sget_type (entry, &value);
+  printf ("typefield: %s\n", value);
+
   /* view-command.  */
-  mu_mailcap_entry_get_viewcommand (entry, buffer, 
-				    sizeof (buffer), NULL);
-  printf ("view-command: %s\n", buffer);
+  mu_mailcap_entry_sget_command (entry, &value);
+  printf ("view-command: %s\n", value);
 
   /* fields.  */
-  mu_mailcap_entry_fields_count (entry, &count);
-  for (i = 1; i <= count; i++)
-    {
-      int status = mu_mailcap_entry_get_field (entry, i, buffer, 
-					       sizeof (buffer), NULL);
-      if (status)
-	{
-	  mu_error (_("cannot retrieve field %lu: %s"),
-		      (unsigned long) i,
-		    mu_strerror (status));
-	  break;
-	}
-      printf ("fields[%u]: %s\n", (unsigned) i, buffer);
-    }
+  lc.n = 1;
+  mu_mailcap_entry_fields_foreach (entry, list_field, &lc);
   printf ("\n");
 }
 
@@ -403,7 +325,7 @@ create_filter (char *cmd, int outfd, int *infd)
 
   if (infd)
     pipe (lp);
-  
+
   pid = fork ();
   if (pid == -1)
     {
@@ -421,7 +343,7 @@ create_filter (char *cmd, int outfd, int *infd)
       /* Child process */
       struct mu_wordsplit ws;
       char **argv;
-      
+
       if (need_shell_p (cmd))
 	{
 	  char *x_argv[4];
@@ -440,7 +362,7 @@ create_filter (char *cmd, int outfd, int *infd)
 	      _exit (127);
 	    }
 	  argv = ws.ws_wordv;
-	}      
+	}
       /* Create input channel: */
       if (infd)
 	{
@@ -448,11 +370,11 @@ create_filter (char *cmd, int outfd, int *infd)
 	    dup2 (lp[0], 0);
 	  close (lp[1]);
 	}
-      
+
       /* Create output channel */
       if (outfd != -1 && outfd != 1)
 	dup2 (outfd, 1);
-      
+
       execvp (argv[0], argv);
       mu_error (_("cannot execute `%s': %s"), cmd, mu_strerror (errno));
       _exit (127);
@@ -470,9 +392,9 @@ create_filter (char *cmd, int outfd, int *infd)
 static void
 print_exit_status (int status)
 {
-  if (WIFEXITED (status)) 
+  if (WIFEXITED (status))
     printf (_("Command exited with status %d\n"), WEXITSTATUS(status));
-  else if (WIFSIGNALED (status)) 
+  else if (WIFSIGNALED (status))
     printf(_("Command terminated on signal %d\n"), WTERMSIG(status));
   else
     printf (_("Command terminated\n"));
@@ -498,29 +420,17 @@ get_pager ()
 static int
 run_test (mu_mailcap_entry_t entry, struct mime_context *ctx)
 {
-  size_t size;
   int status = 0;
-  
-  if (mu_mailcap_entry_get_test (entry, NULL, 0, &size) == 0)
+  char const *value;
+
+  if (mu_mailcap_entry_sget_field (entry, MU_MAILCAP_TEST, &value) == 0)
     {
-      struct mu_wordsplit ws;
       char *str;
-
-      mu_opool_alloc (expand_pool, size + 1);
-      str = mu_opool_finish (expand_pool, NULL);
-      mu_mailcap_entry_get_test (entry, str, size + 1, NULL);
-
-      expand_string (ctx, &str);
-      if (mu_wordsplit (str, &ws, MU_WRDSF_DEFFLAGS))
-	{
-	  mu_error (_("%s failed: %s"), "mu_wordsplit",
-		    mu_wordsplit_strerror (&ws));
-	  return 1;
-	}
-      
-      if (mu_spawnvp (ws.ws_wordv[0], ws.ws_wordv, &status))
+      char *argv[] = { "/bin/sh", "-c", NULL, NULL };
+      expand_string (ctx, value, &str);
+      argv[2] = str;
+      if (mu_spawnvp (argv[0], argv, &status))
 	status = 1;
-      mu_wordsplit_free (&ws);
     }
   return status;
 }
@@ -528,59 +438,52 @@ run_test (mu_mailcap_entry_t entry, struct mime_context *ctx)
 static int
 run_mailcap (mu_mailcap_entry_t entry, struct mime_context *ctx)
 {
-  char *view_command;   
-  size_t size;          
-  int flag;             
-  int status;           
-  int fd;                
-  int *pfd = NULL;      
-  int outfd = -1;       
+  char const *view_command;
+  char *command;
+  int status;
+  int fd;
+  int *pfd = NULL;
+  int outfd = -1;
   pid_t pid;
-  
-  if (mu_debug_level_p (ctx->dh, MU_DEBUG_TRACE3))
+  struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
+
+  if (mu_mailcap_entry_get_locus (entry, &lr) == 0)
+    {
+      mu_stream_lprintf (mu_strout, &lr, "trying entry\n");
+      mu_locus_range_deinit (&lr);
+    }
+  if (mu_debug_level_p (ctx->dh, MU_DEBUG_TRACE2))
     dump_mailcap_entry (entry);
 
   if (run_test (entry, ctx))
     return -1;
 
   if (interactive_p (ctx))
-    {
-      if (mu_mailcap_entry_get_viewcommand (entry, NULL, 0, &size))
-	return 1;
-      size++;
-      mu_opool_alloc (expand_pool, size);
-      view_command = mu_opool_finish (expand_pool, NULL);
-      mu_mailcap_entry_get_viewcommand (entry, view_command, size, NULL);
-    }
+    status = mu_mailcap_entry_sget_command (entry, &view_command);
   else
-    {
-      if (mu_mailcap_entry_get_value (entry, "print", NULL, 0, &size))
-	return 1;
-      size++;
-      mu_opool_alloc (expand_pool, size);
-      view_command = mu_opool_finish (expand_pool, NULL);
-      mu_mailcap_entry_get_value (entry, "print", view_command, size, NULL);
-    }
+    status = mu_mailcap_entry_sget_field (entry, MU_MAILCAP_PRINT, &view_command);
+
+  if (status)
+    return 1;
 
   /* NOTE: We don't create temporary file for %s, we just use
      mimeview_file instead */
-  if (expand_string (ctx, &view_command))
+  if (expand_string (ctx, view_command, &command))
     pfd = NULL;
   else
     pfd = &fd;
-  mu_debug (ctx->dh, MU_DEBUG_TRACE0, (_("executing %s...\n"), view_command));
+  mu_debug (ctx->dh, MU_DEBUG_TRACE0, (_("executing %s...\n"), command));
 
-  if (!confirm_action (ctx, view_command))
+  if (!confirm_action (ctx, command))
     return 1;
   if (dry_run_p (ctx))
     return 0;
-  
-  flag = 0;
+
   if (interactive_p (ctx)
-      && mu_mailcap_entry_copiousoutput (entry, &flag) == 0 && flag)
+      && mu_mailcap_entry_sget_field (entry, MU_MAILCAP_COPIOUSOUTPUT, NULL) == 0)
     create_filter (get_pager (), -1, &outfd);
-  
-  pid = create_filter (view_command, outfd, pfd);
+
+  pid = create_filter (command, outfd, pfd);
   if (pid > 0)
     {
       if (pfd)
@@ -588,7 +491,7 @@ run_mailcap (mu_mailcap_entry_t entry, struct mime_context *ctx)
 	  mime_context_write_input (ctx, fd);
 	  close (fd);
 	}
-	
+
       while (waitpid (pid, &status, 0) < 0)
 	if (errno != EINTR)
 	  {
@@ -602,62 +505,14 @@ run_mailcap (mu_mailcap_entry_t entry, struct mime_context *ctx)
 }
 
 static int
-find_entry (const char *file, struct mime_context *ctx)
+entry_selector (mu_mailcap_entry_t entry, void *data)
 {
-  mu_mailcap_t mailcap;
-  int status;
-  mu_stream_t stream;
-  int rc = 1;
+  struct mime_context *ctx = data;
+  char const *pattern;
 
-  mu_debug (ctx->dh, MU_DEBUG_TRACE1, (_("trying %s...\n"), file));
-  status = mu_file_stream_create (&stream, file, MU_STREAM_READ);
-  if (status)
-    {
-      if (status != ENOENT)
-	mu_error ("cannot open input stream %s: %s",
-		  file, mu_strerror (status));
-      return -1;
-    }
-
-  status = mu_mailcap_create (&mailcap, stream);
-  if (status == 0)
-    {
-      size_t i, count = 0;
-      char *type;
-
-      mime_context_get_content_type (ctx, &type);
-        
-      mu_mailcap_entries_count (mailcap, &count);
-      for (i = 1; i <= count; i++)
-	{
-	  mu_mailcap_entry_t entry;
-	  char buffer[256];
-	  
-	  if (mu_mailcap_get_entry (mailcap, i, &entry))
-	    continue;
-	  
-	  /* typefield.  */
-	  mu_mailcap_entry_get_typefield (entry,
-					  buffer, sizeof (buffer), NULL);
-	  
-	  if (fnmatch (buffer, type, FNM_CASEFOLD) == 0)
-	    {
-	      mu_debug (ctx->dh, MU_DEBUG_TRACE1, (_("found in %s\n"), file));
-	      if (run_mailcap (entry, ctx) == 0)
-                {
-		  rc = 0;
-		  break;
-		}
-	    }
-	}
-      mu_mailcap_destroy (&mailcap);
-    }
-  else
-    {
-      mu_error ("cannot create mailcap for %s: %s",
-		file, mu_strerror (status));
-    }
-  return rc;
+  if (mu_mailcap_entry_sget_type (entry, &pattern))
+    return 1;
+  return mu_mailcap_content_type_match (pattern, 0, ctx->content_type);
 }
 
 int
@@ -669,7 +524,7 @@ display_stream_mailcap (const char *ident, mu_stream_t stream, mu_header_t hdr,
   struct mu_wordsplit ws;
   struct mime_context ctx;
   int rc = 1;
-  
+
   if (mime_context_fill (&ctx, ident, stream, hdr,
 			 no_ask, interactive, dry_run, dh))
     return 1;
@@ -681,10 +536,10 @@ display_stream_mailcap (const char *ident, mu_stream_t stream, mu_header_t hdr,
 						DEFAULT_MAILCAP);
       free (home);
       if (!mailcap_path_tmp)
-        return 1;
+	return 1;
       mailcap_path = mailcap_path_tmp;
     }
-  
+
   mu_opool_create (&expand_pool, MU_OPOOL_ENOMEMABRT);
 
   ws.ws_delim = ":";
@@ -697,14 +552,33 @@ display_stream_mailcap (const char *ident, mu_stream_t stream, mu_header_t hdr,
     }
   else
     {
-      size_t i;
+      mu_mailcap_finder_t finder;
+      int flags = MU_MAILCAP_FLAG_DEFAULT;
+      struct mu_mailcap_error_closure *errcp = NULL;
+      struct mu_mailcap_selector_closure selcl;
+      mu_mailcap_entry_t entry;
+      int rc;
 
-      for (i = 0; i < ws.ws_wordc; i++)
+      if (mu_debug_level_p (ctx.dh, MU_DEBUG_TRACE1)
+	  || mu_debug_level_p (ctx.dh, MU_DEBUG_TRACE2))
+	flags |= MU_MAILCAP_FLAG_LOCUS;
+      if (mu_debug_level_p (ctx.dh, MU_DEBUG_ERROR))
+	errcp = &mu_mailcap_default_error_closure;
+
+      memset (&selcl, 0, sizeof (selcl));
+      selcl.selector = entry_selector;
+      selcl.data = &ctx;
+
+      rc = mu_mailcap_finder_create (&finder, flags,
+				     &selcl, errcp, ws.ws_wordv);
+      mu_wordsplit_free (&ws);
+
+      while ((rc = mu_mailcap_finder_next_match (finder, &entry)) == 0)
 	{
-	  if ((rc = find_entry (ws.ws_wordv[i], &ctx)) == 0)
+	  if (run_mailcap (entry, &ctx) == 0)
 	    break;
 	}
-      mu_wordsplit_free (&ws);
+      mu_mailcap_finder_destroy (&finder);
     }
   mu_opool_destroy (&expand_pool);
   free (mailcap_path_tmp);

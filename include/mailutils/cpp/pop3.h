@@ -56,7 +56,7 @@ class Pop3
   void quit ();
   Stream& retr (unsigned int msgno);
   void rset ();
-  void stat (unsigned int* count, mu_off_t* octets);
+  void stat (size_t* count, mu_off_t* octets);
   Stream& top (unsigned int msgno, unsigned int lines);
   std::string uidl  (unsigned int msgno);
   Iterator& uidl_all ();

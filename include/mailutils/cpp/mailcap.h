@@ -40,10 +40,10 @@ class MailcapEntry
   size_t fields_count ();
   std::string get_typefield ();
   std::string get_viewcommand ();
-  std::string get_field (size_t i);
+  std::string get_field (const std::string& name);
 
-  inline std::string operator [] (size_t i) {
-    return this->get_field (i);
+  inline std::string operator [] (const std::string& name) {
+    return this->get_field (name);
   }
 };
 
@@ -58,10 +58,10 @@ class Mailcap
   ~Mailcap ();
 
   size_t entries_count ();
-  MailcapEntry& get_entry (size_t i);
+  MailcapEntry& find_entry (const std::string& name);
 
-  inline MailcapEntry& operator [] (size_t i) {
-    return this->get_entry (i);
+  inline MailcapEntry& operator [] (const std::string& name) {
+    return this->find_entry (name);
   }
 };
 

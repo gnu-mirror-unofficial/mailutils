@@ -16,9 +16,34 @@
 # <http://www.gnu.org/licenses/>.
 
 SUBDIRS = \
- auth base address list sockaddr cidr cfg cli diag\
- filter locus mailbox mailer mime msgset opt server string stream stdstream\
- property url imapio datetime wicket . tests
+ auth\
+ base\
+ address\
+ list\
+ sockaddr\
+ cidr\
+ cfg\
+ cli\
+ diag\
+ filter\
+ locus\
+ mailbox\
+ mailcap\
+ mailer\
+ mime\
+ msgset\
+ opt\
+ server\
+ string\
+ stream\
+ stdstream\
+ property\
+ url\
+ imapio\
+ datetime\
+ wicket\
+ .\
+ tests
 
 lib_LTLIBRARIES = libmailutils.la
 
@@ -40,6 +65,7 @@ libmailutils_la_LIBADD = \
  list/liblist.la\
  locus/liblocus.la\
  mailbox/libmailbox.la\
+ mailcap/libmailcap.la\
  mailer/libmailer.la\
  mime/libmime.la\
  msgset/libmsgset.la\

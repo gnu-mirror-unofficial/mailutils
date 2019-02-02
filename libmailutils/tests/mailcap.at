@@ -14,17 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_BANNER(Mailcap)
-
 dnl ------------------------------------------------------------
 dnl MAILCAP([NAME], [KW = `'], [INPUT], [STDOUT = `'],
 dnl         [STDERR = `'], [RUN-IF-FAIL], [RUN-IF-PASS])
 dnl
 
+m4_pushdef([MAILCAP_OPTIONS])
+
 m4_pushdef([MAILCAP],[
 m4_pushdef([MU_TEST_GROUP],[Mailcap])
 m4_pushdef([MU_TEST_KEYWORDS],[mailcap])
-m4_pushdef([MU_TEST_COMMAND],[mailcap])
+m4_pushdef([MU_TEST_COMMAND],[mailcap MAILCAP_OPTIONS])
 MU_GENERIC_TEST([$1],[$2],[$3],[],[$4],[$5])
 m4_popdef([MU_TEST_COMMAND])
 m4_popdef([MU_TEST_KEYWORDS])
@@ -280,4 +280,260 @@ nametemplate=%s.au],
 
 ]])
 
+m4_pushdef([MAILCAP_OPTIONS],[-l])
+MAILCAP([Locations],[mailcap_loc],
+[# Sample mailcap file
+# For testing location tracing
+application/pgp;\
+	pgp -m %s;\
+	needsterminal
+
+
+image/jpeg;\
+	xv -8 -geometry +0 '%s';\
+	description=JPEG Image;\
+	test=test "$DISPLAY"
+
+# Comment 1
+
+# Comment 2
+
+image/*;\
+	xv -8 -geometry +0 '%s';\
+	description=%t Image;\
+	test=test "$DISPLAY";\
+	nametemplate=%s.IMAGE
+message/rfc822;\
+	formail > '%s.mbox' < '%s' \&\& mutt -m mbox -f '%s.mbox' \&\& rm -f '%s.mbox';\
+	description=Mail Text;\
+	needsterminal
+text/html;\
+	lynx -force_html '%s';\
+	description=HTML Text;\
+	needsterminal;\
+	nametemplate=%s.html
+# Final entry
+# Provides default for all
+# other text types
+text/*;\
+	${PAGER:-"more"} '%s';\
+	edit=${EDITOR:-"vi"} '%s';\
+	compose=${EDITOR:-"vi"} '%s';\
+	print=a2ps '%s';\
+	needsterminal
+],
+[[<stdin>:3-5: entry[1]
+	typefield: application/pgp
+	view-command: pgp -m %s
+	fields[1]: needsterminal
+
+<stdin>:8-11: entry[2]
+	typefield: image/jpeg
+	view-command: xv -8 -geometry +0 '%s'
+	fields[1]: description=JPEG Image
+	fields[2]: test=test "$DISPLAY"
+
+<stdin>:17-21: entry[3]
+	typefield: image/*
+	view-command: xv -8 -geometry +0 '%s'
+	fields[1]: description=%t Image
+	fields[2]: test=test "$DISPLAY"
+	fields[3]: nametemplate=%s.IMAGE
+
+<stdin>:22-25: entry[4]
+	typefield: message/rfc822
+	view-command: formail > '%s.mbox' < '%s' \&\& mutt -m mbox -f '%s.mbox' \&\& rm -f '%s.mbox'
+	fields[1]: description=Mail Text
+	fields[2]: needsterminal
+
+<stdin>:26-30: entry[5]
+	typefield: text/html
+	view-command: lynx -force_html '%s'
+	fields[1]: description=HTML Text
+	fields[2]: needsterminal
+	fields[3]: nametemplate=%s.html
+
+<stdin>:34-39: entry[6]
+	typefield: text/*
+	view-command: ${PAGER:-"more"} '%s'
+	fields[1]: edit=${EDITOR:-"vi"} '%s'
+	fields[2]: compose=${EDITOR:-"vi"} '%s'
+	fields[3]: print=a2ps '%s'
+	fields[4]: needsterminal
+
+]])
+
+m4_pushdef([MU_TEST_PASS_FILE],[-f $1])
+MAILCAP([mu_mailcap_parse_file],[mu_mailcap_parse_file],
+[# Sample mailcap file
+# For testing location tracing
+application/pgp;\
+	pgp -m %s;\
+	needsterminal
+
+
+image/jpeg;\
+	xv -8 -geometry +0 '%s';\
+	description=JPEG Image;\
+	test=test "$DISPLAY"
+
+# Comment 1
+
+# Comment 2
+
+image/*;\
+	xv -8 -geometry +0 '%s';\
+	description=%t Image;\
+	test=test "$DISPLAY";\
+	nametemplate=%s.IMAGE
+message/rfc822;\
+	formail > '%s.mbox' < '%s' \&\& mutt -m mbox -f '%s.mbox' \&\& rm -f '%s.mbox';\
+	description=Mail Text;\
+	needsterminal
+text/html;\
+	lynx -force_html '%s';\
+	description=HTML Text;\
+	needsterminal;\
+	nametemplate=%s.html
+# Final entry
+# Provides default for all
+# other text types
+text/*;\
+	${PAGER:-"more"} '%s';\
+	edit=${EDITOR:-"vi"} '%s';\
+	compose=${EDITOR:-"vi"} '%s';\
+	print=a2ps '%s';\
+	needsterminal
+],
+[[input:3-5: entry[1]
+	typefield: application/pgp
+	view-command: pgp -m %s
+	fields[1]: needsterminal
+
+input:8-11: entry[2]
+	typefield: image/jpeg
+	view-command: xv -8 -geometry +0 '%s'
+	fields[1]: description=JPEG Image
+	fields[2]: test=test "$DISPLAY"
+
+input:17-21: entry[3]
+	typefield: image/*
+	view-command: xv -8 -geometry +0 '%s'
+	fields[1]: description=%t Image
+	fields[2]: test=test "$DISPLAY"
+	fields[3]: nametemplate=%s.IMAGE
+
+input:22-25: entry[4]
+	typefield: message/rfc822
+	view-command: formail > '%s.mbox' < '%s' \&\& mutt -m mbox -f '%s.mbox' \&\& rm -f '%s.mbox'
+	fields[1]: description=Mail Text
+	fields[2]: needsterminal
+
+input:26-30: entry[5]
+	typefield: text/html
+	view-command: lynx -force_html '%s'
+	fields[1]: description=HTML Text
+	fields[2]: needsterminal
+	fields[3]: nametemplate=%s.html
+
+input:34-39: entry[6]
+	typefield: text/*
+	view-command: ${PAGER:-"more"} '%s'
+	fields[1]: edit=${EDITOR:-"vi"} '%s'
+	fields[2]: compose=${EDITOR:-"vi"} '%s'
+	fields[3]: print=a2ps '%s'
+	fields[4]: needsterminal
+
+]])
+m4_popdef([MU_TEST_PASS_FILE])
+
+m4_popdef([MAILCAP_OPTIONS])
+
 m4_popdef([MAILCAP])
+m4_popdef([MAILCAP_OPTIONS])
+
+AT_SETUP([mailcap_finder])
+AT_KEYWORDS([mailcap mailcap_finder])
+AT_CHECK([
+AT_DATA([1.mc],
+[application/pgp;\
+	pgp -m %s;\
+	needsterminal
+
+image/jpeg;\
+	xv -8 -geometry +0 '%s';\
+	description=JPEG Image;\
+	test=test "$DISPLAY"
+
+message/rfc822;\
+	formail > '%s.mbox' < '%s' \&\& mutt -m mbox -f '%s.mbox' \&\& rm -f '%s.mbox';\
+	description=Mail Text;\
+	needsterminal
+text/html;\
+	lynx -force_html '%s';\
+	description=HTML Text;\
+	needsterminal;\
+	nametemplate=%s.html
+])
+AT_DATA([2.mc],
+[# Final entries for various
+# content types
+
+image/*;\
+	xv -8 -geometry +0 '%s';\
+	description=%t Image;\
+	test=test "$DISPLAY";\
+	nametemplate=%s.IMAGE
+
+text/*;\
+	${PAGER:-"more"} '%s';\
+	edit=${EDITOR:-"vi"} '%s';\
+	compose=${EDITOR:-"vi"} '%s';\
+	print=a2ps '%s';\
+	needsterminal
+])
+
+mcf -l text/plain 1.mc 2.mc
+mcf -l text/html 1.mc 2.mc
+mcf -l message/rfc822 1.mc 2.mc
+mcf -l application/octet-stream 1.mc 2.mc
+],
+[0],
+[[text/plain
+2.mc:10-15: entry[1]
+	typefield: text/*
+	view-command: ${PAGER:-"more"} '%s'
+	fields[1]: edit=${EDITOR:-"vi"} '%s'
+	fields[2]: compose=${EDITOR:-"vi"} '%s'
+	fields[3]: print=a2ps '%s'
+	fields[4]: needsterminal
+
+text/html
+1.mc:14-18: entry[1]
+	typefield: text/html
+	view-command: lynx -force_html '%s'
+	fields[1]: description=HTML Text
+	fields[2]: needsterminal
+	fields[3]: nametemplate=%s.html
+
+2.mc:10-15: entry[2]
+	typefield: text/*
+	view-command: ${PAGER:-"more"} '%s'
+	fields[1]: edit=${EDITOR:-"vi"} '%s'
+	fields[2]: compose=${EDITOR:-"vi"} '%s'
+	fields[3]: print=a2ps '%s'
+	fields[4]: needsterminal
+
+message/rfc822
+1.mc:10-13: entry[1]
+	typefield: message/rfc822
+	view-command: formail > '%s.mbox' < '%s' \&\& mutt -m mbox -f '%s.mbox' \&\& rm -f '%s.mbox'
+	fields[1]: description=Mail Text
+	fields[2]: needsterminal
+
+application/octet-stream
+]])
+AT_CLEANUP
+
+
+

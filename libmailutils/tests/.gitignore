@@ -2,6 +2,7 @@ atconfig
 atlocal
 cidr
 conttype
+ctm
 package.m4
 testsuite
 testsuite.dir
@@ -23,6 +24,7 @@ listop
 linetrack
 logstr
 mailcap
+mcf
 mimehdr
 modmesg
 modtofsaf

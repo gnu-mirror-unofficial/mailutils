@@ -20,101 +20,133 @@
 
 #include <mailutils/types.h>
 #include <mailutils/errno.h>
+#include <mailutils/locus.h>
+#include <mailutils/util.h>
 
 /* See RFC1524 (A User Agent Configuration Mechanism).  */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+#if 0
+}
+#endif
 
-/* Create a mailcap from stream.  */
-int mu_mailcap_create (mu_mailcap_t * mailcap, mu_stream_t stream);
+struct mu_mailcap_selector_closure
+{
+  int (*selector) (mu_mailcap_entry_t, void *);
+  void *data;
+  void (*data_free) (void *);
+};
 
-/* Destroy mailcap object.  */
-void mu_mailcap_destroy (mu_mailcap_t * mailcap);
+struct mu_mailcap_error_closure
+{
+  void (*error) (void *, struct mu_locus_range const *, char const *);
+  void *data;
+  void (*data_free) (void *);
+};
 
-/* Return the number of entries in the mailcap file.  */
-int mu_mailcap_entries_count (mu_mailcap_t mailcap, size_t *pno);
+extern struct mu_mailcap_error_closure mu_mailcap_default_error_closure;
 
-/* Return the mailcap record number, no, of the mailcap file .  */
-int mu_mailcap_get_entry (mu_mailcap_t mailcap, size_t no,
+#define MU_MAILCAP_FLAG_DEFAULT 0
+#define MU_MAILCAP_FLAG_LOCUS   0x1
+
+int mu_mailcap_create (mu_mailcap_t *pmailcap);
+void mu_mailcap_destroy (mu_mailcap_t *pmailcap);
+
+int mu_mailcap_set_flags (mu_mailcap_t mailcap, int flags);
+int mu_mailcap_get_flags (mu_mailcap_t mailcap, int *flags);
+
+int mu_mailcap_set_error (mu_mailcap_t mailcap,
+			  struct mu_mailcap_error_closure const *err);
+int mu_mailcap_get_error (mu_mailcap_t mailcap,
+			  struct mu_mailcap_error_closure *err);
+int mu_mailcap_set_selector (mu_mailcap_t mailcap,
+			     struct mu_mailcap_selector_closure const *sel);
+int mu_mailcap_get_selector (mu_mailcap_t mailcap,
+			     struct mu_mailcap_selector_closure *sel);
+
+int mu_mailcap_get_count (mu_mailcap_t mailcap, size_t *pcount);
+int mu_mailcap_get_iterator (mu_mailcap_t mailcap, mu_iterator_t *pitr);
+int mu_mailcap_foreach (mu_mailcap_t mailcap,
+			int (*action) (mu_mailcap_entry_t, void *),
+			void *data);
+int mu_mailcap_get_entry (mu_mailcap_t mailcap, size_t n,
 			  mu_mailcap_entry_t *entry);
+int mu_mailcap_find_entry (mu_mailcap_t mailcap, char const *type,
+			   mu_mailcap_entry_t *entry);
 
-/* Return the number of fields in a mailcap entry */  
-int mu_mailcap_entry_fields_count (mu_mailcap_entry_t entry,
-				   size_t *pcount);
+int mu_mailcap_parse (mu_mailcap_t mailcap, mu_stream_t input,
+		      struct mu_locus_point const *pt);
+int mu_mailcap_parse_file (mu_mailcap_t mailcap, char const *file_name);
 
-/* Save in buffer[] the content-type of the record.  */
-int mu_mailcap_entry_get_typefield (mu_mailcap_entry_t entry,
-				    char *buffer, size_t buflen,
-				    size_t *pn);
+int mu_mailcap_entry_create (mu_mailcap_entry_t *ret_entry,
+			     char *type, char *command);
+void mu_mailcap_entry_destroy (mu_mailcap_entry_t *pent);
+void mu_mailcap_entry_destroy_item (void *ptr);
 
-/* Save in buffer[] the view command of the record.  */
-int mu_mailcap_entry_get_viewcommand (mu_mailcap_entry_t entry,
-				      char *buffer, size_t buflen,
-				      size_t *pn);
+int mu_mailcap_entry_sget_type (mu_mailcap_entry_t ent, char const **ptype);
+int mu_mailcap_entry_aget_type (mu_mailcap_entry_t ent, char **ptype);
+int mu_mailcap_entry_get_type (mu_mailcap_entry_t ent,
+			       char *buffer, size_t buflen,
+			       size_t *pn);
 
-/* Save in buffer[] the field number no the record .  */
-int mu_mailcap_entry_get_field (mu_mailcap_entry_t entry, size_t no,
-			        char *buffer, size_t buflen, size_t *pn);
+int mu_mailcap_entry_sget_command (mu_mailcap_entry_t ent, char const **pcommand);
+int mu_mailcap_entry_aget_command (mu_mailcap_entry_t ent, char **pcommand);
+int mu_mailcap_entry_get_command (mu_mailcap_entry_t ent,
+				  char *buffer, size_t buflen,
+				  size_t *pn);
 
-/* Save in buffer the value of a key:
- * mu_mailcap_entry_get_value (entry, "compose", buffer, buflen, pn);
- * i.e compose="lynx %s" -->  "lynx %s" will be saved in the buffer without
- * the quotes.  */
-int mu_mailcap_entry_get_value (mu_mailcap_entry_t entry, const char *key,
-				char *buffer, size_t buflen, size_t *pn);
+int mu_mailcap_entry_get_locus (mu_mailcap_entry_t ent,
+				struct mu_locus_range *loc);
 
-/* Helper function saving in buffer, the argument of "compose" field.  */
-int mu_mailcap_entry_get_compose (mu_mailcap_entry_t entry, char *buffer,
-				  size_t buflen, size_t *pn);
+void mu_mailcap_entry_field_deallocate (void *ptr);
+int mu_mailcap_entry_set_bool (mu_mailcap_entry_t ent, char const *name);
+int mu_mailcap_entry_set_string (mu_mailcap_entry_t ent, char const *name,
+				 char const *value);
+int mu_mailcap_entry_field_unset (mu_mailcap_entry_t ent, char const *name);
+int mu_mailcap_entry_fields_count (mu_mailcap_entry_t ent, size_t *pcount);
+int mu_mailcap_entry_fields_foreach (mu_mailcap_entry_t ent,
+			      int (*action) (char const *, char const *, void *),
+			      void *data);
+int mu_mailcap_entry_fields_get_iterator (mu_mailcap_entry_t ent,
+					  mu_iterator_t *pitr);
 
-/* Helper function saving in buffer, the argument of "composetyped" field.  */
-int mu_mailcap_entry_get_composetyped (mu_mailcap_entry_t entry,
-				       char *buffer, size_t buflen,
-				       size_t *pn);
+int mu_mailcap_entry_sget_field (mu_mailcap_entry_t ent, char const *name,
+				 char const **pval);
+int mu_mailcap_entry_aget_field (mu_mailcap_entry_t ent, char const *name,
+				 char **pval);
+int mu_mailcap_entry_get_field (mu_mailcap_entry_t ent,
+				char const *name,
+				char *buffer, size_t buflen,
+				size_t *pn);
 
-/* Helper function saving in buffer, the argument of "edit" field.  */
-int mu_mailcap_entry_get_edit (mu_mailcap_entry_t entry, char *buffer,
-			       size_t buflen, size_t *pn);
+#define MU_MAILCAP_NEEDSTERMINAL "needsterminal"
+#define MU_MAILCAP_COPIOUSOUTPUT "copiousoutput"
+#define MU_MAILCAP_COMPOSE "compose"
+#define MU_MAILCAP_COMPOSETYPED "composetyped"
+#define MU_MAILCAP_PRINT "print"
+#define MU_MAILCAP_EDIT "edit"
+#define MU_MAILCAP_TEST "test"
+#define MU_MAILCAP_X11_BITMAP "x11-bitmap"
+#define MU_MAILCAP_TEXTUALNEWLINES "textualnewlines"
+#define MU_MAILCAP_DESCRIPTION "description"
 
-/* Helper function saving in buffer, the argument of "textualnewlines" field.  */
-int mu_mailcap_entry_get_textualnewlines (mu_mailcap_entry_t entry,
-					  char *buffer, size_t buflen,
-					  size_t *pn);
+int mu_mailcap_string_match (char const *pattern, int delim, char const *type);
+int mu_mailcap_content_type_match (const char *pattern, int delim,
+				   mu_content_type_t ct);
 
-/* Helper function saving in buffer, the argument of "test" field.  */
-int mu_mailcap_entry_get_test (mu_mailcap_entry_t entry,
-			       char *buffer, size_t buflen, size_t *pn);
+typedef struct _mu_mailcap_finder *mu_mailcap_finder_t;
 
-/* Helper function saving in buffer, the argument of "x11-bitmap" field.  */
-int mu_mailcap_entry_get_x11bitmap (mu_mailcap_entry_t entry,
-				    char *buffer, size_t buflen, size_t *pn);
-
-/* Helper function saving in buffer, the argument of "description" field.  */
-int mu_mailcap_entry_get_description (mu_mailcap_entry_t entry,
-				      char *buffer, size_t buflen,
-				      size_t *pn);
-
-/* Helper function saving in buffer, the argument of "nametemplate" field.  */
-int mu_mailcap_entry_get_nametemplate (mu_mailcap_entry_t entry,
-				       char *buffer, size_t buflen,
-			               size_t *pn);
-
-/* Helper function saving in buffer, the argument of "notes" field.  */
-int mu_mailcap_entry_get_notes (mu_mailcap_entry_t entry, char *buffer,
-			        size_t buflen, size_t *pn);
-
-/* Helper function. Returns *on != 0 if the flag "needsterminal" is in the
-   record.  */
-int mu_mailcap_entry_needsterminal (mu_mailcap_entry_t entry, int *on);
-
-/* Helper function. Returns *on != 0 if the flag "copiousoutput" is in the
-   record.  */
-int mu_mailcap_entry_copiousoutput (mu_mailcap_entry_t entry, int *on);
+int mu_mailcap_finder_create (mu_mailcap_finder_t *, int,
+			      struct mu_mailcap_selector_closure *,
+			      struct mu_mailcap_error_closure *,
+			      char **file_names);
+int mu_mailcap_finder_next_match (mu_mailcap_finder_t, mu_mailcap_entry_t *);
+void mu_mailcap_finder_destroy (mu_mailcap_finder_t *);
 
 #ifdef __cplusplus
 }
 #endif
-  
+
 #endif

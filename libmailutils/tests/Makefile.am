@@ -43,6 +43,7 @@ noinst_PROGRAMS = \
  addr\
  cidr\
  conttype\
+ ctm\
  debugspec\
  decode2047\
  dump\
@@ -58,6 +59,7 @@ noinst_PROGRAMS = \
  linetrack\
  logstr\
  mailcap\
+ mcf\
  mimehdr\
  modtofsaf\
  msgset\
@@ -96,6 +98,7 @@ TESTSUITE_AT = \
  decode2047.at\
  crlf.at\
  crlfdot.at\
+ ctm.at\
  encode2047.at\
  exp.at\
  fromflt.at\

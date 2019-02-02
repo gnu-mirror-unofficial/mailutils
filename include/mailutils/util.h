@@ -23,6 +23,7 @@
 #include <mailutils/list.h>
 #include <mailutils/types.h>
 #include <mailutils/cidr.h>
+#include <mailutils/filter.h>
 
 #ifdef __cplusplus
 extern "C" {

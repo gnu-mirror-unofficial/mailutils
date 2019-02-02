@@ -1,0 +1,95 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2019 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([Content-type matcher])
+AT_KEYWORDS([mailcap ctm])
+AT_CHECK(
+[echo "# single string match"
+ctm -n 'text/plain' text/plain text/html tEXt/PLAIN
+
+echo "# single pattern match"
+ctm -n 'text/*' text/plain text/html image/jpeg
+
+echo "# single string match (mu_mailcap_content_type_match)"
+ctm -nc 'text/plain' text/plain text/html
+
+echo "# single pattern match (mu_mailcap_content_type_match)"
+ctm -nc 'text/*' text/plain text/html image/jpeg
+
+echo "# pattern list match"
+ctm 'text/*,application/x-tar, image/jpeg, image/tiff   ,,message/rfc822,,multipart/mixed' \
+ text/plain\
+ TEXT/HTML\
+ application/x-tar\
+ IMAGE/Jpeg\
+ image/tiff\
+ message/rfc822\
+ multipart/mixed\
+ multipart/alternative\
+ image/png
+
+echo "# pattern list match (mu_mailcap_content_type_match)"
+ctm -c \
+ 'text/*,application/x-tar, image/jpeg, image/tiff   ,,message/rfc822,,multipart/mixed' \
+ text/plain\
+ TEXT/HTML\
+ application/x-tar\
+ IMAGE/Jpeg\
+ image/tiff\
+ message/rfc822\
+ multipart/mixed\
+ multipart/alternative\
+ image/png
+],
+[0],
+[# single string match
+text/plain: 0
+text/html: 1
+tEXt/PLAIN: 0
+# single pattern match
+text/plain: 0
+text/html: 0
+image/jpeg: 1
+# single string match (mu_mailcap_content_type_match)
+text/plain: 0
+text/html: 1
+# single pattern match (mu_mailcap_content_type_match)
+text/plain: 0
+text/html: 0
+image/jpeg: 1
+# pattern list match
+text/plain: 0
+TEXT/HTML: 0
+application/x-tar: 0
+IMAGE/Jpeg: 0
+image/tiff: 0
+message/rfc822: 0
+multipart/mixed: 0
+multipart/alternative: 1
+image/png: 1
+# pattern list match (mu_mailcap_content_type_match)
+text/plain: 0
+TEXT/HTML: 0
+application/x-tar: 0
+IMAGE/Jpeg: 0
+image/tiff: 0
+message/rfc822: 0
+multipart/mixed: 0
+multipart/alternative: 1
+image/png: 1
+])
+
+AT_CLEANUP

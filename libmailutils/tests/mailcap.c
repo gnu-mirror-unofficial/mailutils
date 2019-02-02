@@ -19,73 +19,184 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
-#include <mailutils/mailcap.h>
-#include <mailutils/stream.h>
-#include <mailutils/error.h>
+#include <mailutils/mailutils.h>
 
+struct list_closure
+{
+  unsigned long n;
+};
+
+static void list_all (mu_mailcap_t mailcap);
+static void list_single_entry (mu_mailcap_entry_t ent);
+static int list_field (char const *name, char const *value, void *data);
+static int list_entry (mu_mailcap_entry_t ent, void *closure);
+
+/* usage:
+     mailcap [-f FILE]
+       List entries
+     mailcap [-f FILE] TYPE
+       List first entry matching TYPE
+     mailcap [-f FILE] TYPE FIELD
+       List FIELD from the first entry matching TYPE
+ */
 int
 main (int argc, char **argv)
 {
-  mu_stream_t stream = NULL;
   int status = 0;
-  mu_mailcap_t mailcap = NULL;
+  int flags = MU_MAILCAP_FLAG_DEFAULT;
+  mu_mailcap_t mailcap;
+  char *file = NULL;
+  char *arg;
 
-  status = mu_stdio_stream_create (&stream, MU_STDIN_FD,
-				   MU_STREAM_READ|MU_STREAM_SEEK);
-  if (status)
+  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
+
+  while (--argc && (arg = *++argv)[0] == '-')
     {
-      mu_error ("cannot create input stream: %s",
-		mu_strerror (status));
-      exit (1);
-    }
-
-  status = mu_mailcap_create (&mailcap, stream);
-  if (status == 0)
-    {
-      int i;
-      size_t count = 0;
-      char buffer[256];
-
-      mu_mailcap_entries_count (mailcap, &count);
-      for (i = 1; i <= count; i++)
+      if (strcmp (arg, "--") == 0)
 	{
-	  size_t j;
-	  mu_mailcap_entry_t entry = NULL;
-	  size_t fields_count = 0;
-
-	  printf ("entry[%d]\n", i);
-
-	  mu_mailcap_get_entry (mailcap, i, &entry);
-
-	  /* typefield.  */
-	  mu_mailcap_entry_get_typefield (entry, buffer, 
-					  sizeof (buffer), NULL);
-	  printf ("\ttypefield: %s\n", buffer);
-	  
-	  /* view-command.  */
-	  mu_mailcap_entry_get_viewcommand (entry, buffer, 
-					    sizeof (buffer), NULL);
-	  printf ("\tview-command: %s\n", buffer);
-
-	  /* fields.  */
-	  mu_mailcap_entry_fields_count (entry, &fields_count);
-	  for (j = 1; j <= fields_count; j++)
-	    {
-	      int status = mu_mailcap_entry_get_field (entry, j, buffer, 
-						       sizeof (buffer), NULL);
-	      if (status)
-		{
-		  mu_error ("cannot retrieve field %lu: %s",
-			    (unsigned long) j,
-			    mu_strerror (status));
-		  break;
-		}
-	      printf ("\tfields[%lu]: %s\n", (unsigned long) j, buffer);
-	    }
-	  printf ("\n");
+	  argc--;
+	  argv++;
+	  break;
 	}
-      mu_mailcap_destroy (&mailcap);
+      else if (strncmp (arg, "-f", 2) == 0)
+	{
+	  if (arg[2])
+	    file = arg + 2;
+	  else if (--argc)
+	    file = *++argv;
+	  else
+	    {
+	      mu_error ("-f requires arguments");
+	      return 1;
+	    }
+	}
+      else if (strcmp (arg, "-l") == 0)
+	flags |= MU_MAILCAP_FLAG_LOCUS;
+      else
+	{
+	  mu_error ("unrecognized option: %s", arg);
+	  return 1;
+	}
     }
-  
+
+  MU_ASSERT (mu_mailcap_create (&mailcap));
+  mu_mailcap_set_error (mailcap, &mu_mailcap_default_error_closure);
+  if (flags != MU_MAILCAP_FLAG_DEFAULT)
+    MU_ASSERT (mu_mailcap_set_flags (mailcap, flags));
+
+  if (file)
+    status = mu_mailcap_parse_file (mailcap, file);
+  else
+    {
+      struct mu_locus_point point = MU_LOCUS_POINT_INITIALIZER;
+
+      mu_locus_point_set_file (&point, "<stdin>");
+      point.mu_line = 1;
+      status = mu_mailcap_parse (mailcap, mu_strin, &point);
+      mu_locus_point_deinit (&point);
+    }
+
+  if (status && status != MU_ERR_PARSE)
+    {
+      mu_error ("%s", mu_strerror (status));
+      return 1;
+    }
+
+  switch (argc)
+    {
+    case 0:
+      list_all (mailcap);
+      break;
+
+    case 1:
+      {
+	mu_mailcap_entry_t entry;
+
+	MU_ASSERT (mu_mailcap_find_entry (mailcap, argv[0], &entry));
+	list_single_entry (entry);
+      }
+      break;
+
+    case 2:
+      {
+	mu_mailcap_entry_t entry;
+	char const *value;
+
+	MU_ASSERT (mu_mailcap_find_entry (mailcap, argv[0], &entry));
+	status = mu_mailcap_entry_sget_field (entry, argv[1], &value);
+	if (status == 0)
+	  {
+	    if (value)
+	      mu_printf ("%s=%s\n", argv[1], value);
+	    else
+	      mu_printf ("%s is set\n", argv[1]);
+	  }
+	else if (status == MU_ERR_NOENT)
+	  mu_printf ("%s is not set\n", argv[1]);
+	else
+	  mu_error ("%s", mu_strerror (status));
+      }
+      break;
+
+    default:
+      mu_error ("too many arguments");
+      return 1;
+    }
+
+  mu_mailcap_destroy (&mailcap);
+  return 0;
+}
+
+static void
+list_all (mu_mailcap_t mailcap)
+{
+  struct list_closure lc;
+  lc.n = 1;
+  mu_mailcap_foreach (mailcap, list_entry, &lc);
+}
+
+int
+list_entry (mu_mailcap_entry_t ent, void *closure)
+{
+  struct list_closure *lc = closure;
+  struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
+
+  if (mu_mailcap_entry_get_locus (ent, &lr) == 0)
+    {
+      mu_stream_lprintf (mu_strout, &lr, "entry[%lu]\n", lc->n);
+      mu_locus_range_deinit (&lr);
+    }
+  else
+    mu_printf ("entry[%lu]\n", lc->n);
+  list_single_entry (ent);
+  lc->n++;
+  return 0;
+}
+
+static void
+list_single_entry (mu_mailcap_entry_t ent)
+{
+  struct list_closure fc;
+  char const *val;
+
+  MU_ASSERT (mu_mailcap_entry_sget_type (ent, &val));
+  mu_printf ("\ttypefield: %s\n", val);
+  MU_ASSERT (mu_mailcap_entry_sget_command (ent, &val));
+  mu_printf ("\tview-command: %s\n", val);
+  fc.n = 1;
+  mu_mailcap_entry_fields_foreach (ent, list_field, &fc);
+  mu_printf ("\n");
+}
+
+static int
+list_field (char const *name, char const *value, void *data)
+{
+  struct list_closure *fc = data;
+  mu_printf ("\tfields[%lu]: ", fc->n++);
+  if (value)
+    mu_printf ("%s=%s", name, value);
+  else
+    mu_printf ("%s", name);
+  mu_printf ("\n");
   return 0;
 }

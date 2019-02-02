@@ -15,8 +15,9 @@
 #  along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
 from mailutils import stream, mailcap
+from os import environ
 
-stm = stream.FileStream ("/etc/mailcap")
+stm = stream.FileStream (environ['MAILCAP'] if 'MAILCAP' in environ else "/etc/mailcap")
 mc = mailcap.Mailcap (stm)
 
 for i, entry in enumerate (mc):

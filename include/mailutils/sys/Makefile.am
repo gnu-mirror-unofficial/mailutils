@@ -36,6 +36,7 @@ sysinclude_HEADERS = \
  list.h\
  logstream.h\
  mailbox.h\
+ mailcap.h\
  mailer.h\
  mapfile_stream.h\
  memory_stream.h\

@@ -12,7 +12,7 @@
    Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General
-   Public License along with this library.  If not, see 
+   Public License along with this library.  If not, see
    <http://www.gnu.org/licenses/>. */
 
 #include "libmu_py.h"
@@ -89,8 +89,13 @@ api_mailcap_create (PyObject *self, PyObject *args)
       return NULL;
     }
 
-  status = mu_mailcap_create (&py_mc->mc, py_stm->stm);
-  return _ro (PyLong_FromLong (status));
+  status = mu_mailcap_create (&py_mc->mc);
+  if (status)
+    return _ro (PyInt_FromLong (status));
+  status = mu_mailcap_parse (py_mc->mc, py_stm->stm, NULL);
+  if (status == MU_ERR_PARSE)
+    status = 0; /* FIXME */
+  return _ro (PyInt_FromLong (status));
 }
 
 static PyObject *
@@ -115,7 +120,7 @@ api_mailcap_entries_count (PyObject *self, PyObject *args)
   if (!PyArg_ParseTuple (args, "O!", &PyMailcapType, &py_mc))
     return NULL;
 
-  status = mu_mailcap_entries_count (py_mc->mc, &count);
+  status = mu_mailcap_get_count (py_mc->mc, &count);
   return status_object (status, PyLong_FromSize_t (count));
 }
 
@@ -126,11 +131,26 @@ api_mailcap_get_entry (PyObject *self, PyObject *args)
   Py_ssize_t i;
   PyMailcap *py_mc;
   PyMailcapEntry *py_entry = PyMailcapEntry_NEW ();
-
   if (!PyArg_ParseTuple (args, "O!n", &PyMailcapType, &py_mc, &i))
     return NULL;
   ASSERT_INDEX_RANGE (i, "mailcap");
   status = mu_mailcap_get_entry (py_mc->mc, i, &py_entry->entry);
+
+  Py_INCREF (py_entry);
+  return status_object (status, (PyObject *)py_entry);
+}
+
+static PyObject *
+api_mailcap_find_entry (PyObject *self, PyObject *args)
+{
+  int status;
+  PyMailcap *py_mc;
+  PyMailcapEntry *py_entry = PyMailcapEntry_NEW ();
+  char *name;
+
+  if (!PyArg_ParseTuple (args, "O!s", &PyMailcapType, &py_mc, &name))
+    return NULL;
+  status = mu_mailcap_find_entry (py_mc->mc, name, &py_entry->entry);
 
   Py_INCREF (py_entry);
   return status_object (status, (PyObject *)py_entry);
@@ -154,46 +174,46 @@ static PyObject *
 api_mailcap_entry_get_field (PyObject *self, PyObject *args)
 {
   int status;
-  Py_ssize_t i;
-  char buf[256];
+  char *name;
+  char const *value;
   PyMailcapEntry *py_entry;
 
-  if (!PyArg_ParseTuple (args, "O!n", &PyMailcapEntryType, &py_entry, &i))
+  if (!PyArg_ParseTuple (args, "O!s", &PyMailcapEntryType, &py_entry, &name))
     return NULL;
-  ASSERT_INDEX_RANGE (i, "mailcap");
-  status = mu_mailcap_entry_get_field (py_entry->entry, i, buf,
-				       sizeof (buf), NULL);
-  return status_object (status, PyUnicode_FromString (buf));
+  status = mu_mailcap_entry_sget_field (py_entry->entry, name, &value);
+  return status_object (status,
+			status == 0
+			  ? (value ? PyString_FromString (value)
+				   : PyBool_FromLong (1))
+			  : PyBool_FromLong (0));
 }
 
 static PyObject *
 api_mailcap_entry_get_typefield (PyObject *self, PyObject *args)
 {
   int status;
-  char buf[256];
+  char const *value;
   PyMailcapEntry *py_entry;
 
   if (!PyArg_ParseTuple (args, "O!", &PyMailcapEntryType, &py_entry))
     return NULL;
 
-  status = mu_mailcap_entry_get_typefield (py_entry->entry, buf,
-					   sizeof (buf), NULL);
-  return status_object (status, PyUnicode_FromString (buf));
+  status = mu_mailcap_entry_sget_type (py_entry->entry, &value);
+  return status_object (status, PyString_FromString (status == 0 ? value : ""));
 }
 
 static PyObject *
 api_mailcap_entry_get_viewcommand (PyObject *self, PyObject *args)
 {
   int status;
-  char buf[256];
+  char const *value;
   PyMailcapEntry *py_entry;
 
   if (!PyArg_ParseTuple (args, "O!", &PyMailcapEntryType, &py_entry))
     return NULL;
 
-  status = mu_mailcap_entry_get_viewcommand (py_entry->entry, buf,
-					     sizeof (buf), NULL);
-  return status_object (status, PyUnicode_FromString (buf));
+  status = mu_mailcap_entry_sget_command (py_entry->entry, &value);
+  return status_object (status, PyString_FromString (status == 0 ? value : ""));
 }
 
 static PyMethodDef methods[] = {
@@ -208,6 +228,9 @@ static PyMethodDef methods[] = {
 
   { "get_entry", (PyCFunction) api_mailcap_get_entry, METH_VARARGS,
     "Return in 'entry' the mailcap entry of 'no'." },
+
+  { "find_entry", (PyCFunction) api_mailcap_find_entry, METH_VARARGS,
+    "Return in 'entry' the mailcap entry for given content-type." },
 
   { "entry_fields_count", (PyCFunction) api_mailcap_entry_fields_count,
     METH_VARARGS,

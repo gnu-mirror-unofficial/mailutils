@@ -17,11 +17,13 @@
 m4_include([testsuite.inc])
 
 dnl ------------------------------------------------------------
-m4_define([MU_TEST_GROUP],[generic])
+m4_pushdef([MU_TEST_GROUP],[generic])
 dnl ------------------------------------------------------------
-m4_define([MU_TEST_KEYWORDS])
+m4_pushdef([MU_TEST_KEYWORDS])
 dnl ------------------------------------------------------------
-m4_define([MU_TEST_COMMAND])
+m4_pushdef([MU_TEST_COMMAND])
+dnl ------------------------------------------------------------
+m4_pushdef([MU_TEST_PASS_FILE],[< $1])
 
 m4_define([mu_trimstr],[m4_if([$2],-1,[$1],[m4_substr([$1],0,$2)...])])
 m4_define([mu_firstline],[mu_trimstr([$1],m4_index([$1],[
@@ -41,13 +43,13 @@ dnl STDERR      $6
 dnl RUN-IF-FAIL $7
 dnl RUN-IF-PASS $8
 dnl
-m4_define([MU_GENERIC_TEST],[
+m4_pushdef([MU_GENERIC_TEST],[
 AT_SETUP([m4_if(MU_TEST_GROUP,[],,MU_TEST_GROUP: )m4_if([$1],[],[mu_firstline([$3])],[$1])])
 AT_KEYWORDS([MU_TEST_KEYWORDS $2])
 AT_CHECK([
 AT_DATA([input],[$3
 ])
-MU_TEST_COMMAND < input],[$4],[$5],[$6],[$7],[$8])
+MU_TEST_COMMAND MU_TEST_PASS_FILE(input)],[$4],[$5],[$6],[$7],[$8])
 AT_CLEANUP
 ])
 
@@ -184,7 +186,11 @@ m4_include([wordsplit.at])
 m4_include([exp.at])
 m4_include([url.at])
 m4_include([url-comp.at])
+
+AT_BANNER(Mailcap)
+m4_include([ctm.at])
 m4_include([mailcap.at])
+
 m4_include([wicket.at])
 m4_include([prop.at])
 
@@ -237,3 +243,10 @@ m4_include([msgset.at])
 m4_include([globtest.at])
 
 m4_include([linetrack.at])
+
+
+m4_popdef([MU_TEST_GROUP])
+m4_popdef([MU_TEST_KEYWORDS])
+m4_popdef([MU_TEST_COMMAND])
+m4_popdef([MU_TEST_PASS_FILE])
+m4_popdef([MU_GENERIC_TEST])

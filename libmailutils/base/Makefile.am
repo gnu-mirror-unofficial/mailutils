@@ -43,7 +43,6 @@ libbase_la_SOURCES = \
  lcall.c\
  locale.c\
  locker.c\
- mailcap.c\
  md5.c\
  monitor.c\
  msgid.c\
