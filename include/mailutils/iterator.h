@@ -44,6 +44,12 @@ extern void mu_iterator_destroy (mu_iterator_t *);
 extern int mu_iterator_first    (mu_iterator_t);
 extern int mu_iterator_next     (mu_iterator_t);
 extern int mu_iterator_skip (mu_iterator_t iterator, ssize_t count);
+extern int mu_iterator_skip_while (mu_iterator_t iterator,
+				   int (*pred) (void *, void *),
+				   void *data);
+extern int mu_iterator_skip_until (mu_iterator_t iterator,
+				   int (*pred) (void *, void *),
+				   void *data);
 extern int mu_iterator_current  (mu_iterator_t, void **pitem);
 extern int mu_iterator_current_kv (mu_iterator_t,
 				   const void **key, void **pitem);  

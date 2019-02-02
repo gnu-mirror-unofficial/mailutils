@@ -62,7 +62,7 @@ mu_iterator_set_next (mu_iterator_t itr, int (*next) (void *))
 
 int
 mu_iterator_set_getitem (mu_iterator_t itr,
-                         int (*getitem) (void *, void **, const void **))
+			 int (*getitem) (void *, void **, const void **))
 {
   if (!itr)
     return EINVAL;
@@ -135,7 +135,7 @@ mu_iterator_dup (mu_iterator_t *piterator, mu_iterator_t orig)
 {
   mu_iterator_t iterator;
   int status;
-  
+
   if (piterator == NULL)
     return MU_ERR_OUT_PTR_NULL;
   if (orig == NULL)
@@ -151,7 +151,7 @@ mu_iterator_dup (mu_iterator_t *piterator, mu_iterator_t orig)
       free (iterator);
       return status;
     }
-  iterator->is_advanced = orig->is_advanced;   
+  iterator->is_advanced = orig->is_advanced;
   iterator->dup = orig->dup;
   iterator->destroy = orig->destroy;
   iterator->first = orig->first;
@@ -160,7 +160,7 @@ mu_iterator_dup (mu_iterator_t *piterator, mu_iterator_t orig)
   iterator->delitem = orig->delitem;
   iterator->finished_p = orig->finished_p;
   iterator->itrctl = orig->itrctl;
-  
+
   *piterator = iterator;
   return 0;
 }
@@ -173,7 +173,7 @@ mu_iterator_destroy (mu_iterator_t *piterator)
 
   if ((*piterator)->destroy)
     (*piterator)->destroy (*piterator, (*piterator)->owner);
-  
+
   free (*piterator);
   *piterator = NULL;
 }
@@ -208,14 +208,61 @@ mu_iterator_skip (mu_iterator_t iterator, ssize_t count)
 }
 
 int
+mu_iterator_skip_while (mu_iterator_t iterator,
+			int (*pred) (void *, void *),
+			void *data)
+{
+  int status;
+  if (!iterator || !pred)
+    return EINVAL;
+  do
+    {
+      if ((status = mu_iterator_next (iterator)) == 0)
+	{
+	  void *item;
+	  if ((status = mu_iterator_current  (iterator, &item)) == 0)
+	    if (!pred (item, data))
+	      break;
+	}
+    }
+  while (status == 0);
+
+  return status;
+}
+
+int
+mu_iterator_skip_until (mu_iterator_t iterator,
+			int (*pred) (void *, void *),
+			void *data)
+{
+  int status;
+  if (!iterator || !pred)
+    return EINVAL;
+  do
+    {
+      if ((status = mu_iterator_next (iterator)) == 0)
+	{
+	  void *item;
+	  if ((status = mu_iterator_current  (iterator, &item)) == 0)
+	    if (pred (item, data))
+	      break;
+	}
+    }
+  while (status == 0);
+
+  return status;
+}
+
+
+int
 mu_iterator_current (mu_iterator_t iterator, void **pitem)
 {
   return mu_iterator_current_kv (iterator, NULL, pitem);
 }
 
 int
-mu_iterator_current_kv (mu_iterator_t iterator, 
-                        const void **pkey, void **pitem)
+mu_iterator_current_kv (mu_iterator_t iterator,
+			const void **pkey, void **pitem)
 {
   void *ptr;
   int rc = iterator->getitem (iterator->owner, &ptr, pkey);
@@ -278,7 +325,7 @@ int
 mu_iterator_detach (mu_iterator_t *root, mu_iterator_t iterator)
 {
   mu_iterator_t itr, prev;
-  
+
   for (itr = *root, prev = NULL; itr; prev = itr, itr = itr->next_itr)
     if (iterator == itr)
       break;
@@ -290,7 +337,7 @@ mu_iterator_detach (mu_iterator_t *root, mu_iterator_t iterator)
       else
 	*root = itr->next_itr;
     }
-  
+
   return 0;
 }
 
