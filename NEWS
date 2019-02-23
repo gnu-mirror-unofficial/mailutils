@@ -1,23 +1,23 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-02-03
+GNU mailutils NEWS -- history of user-visible changes. 2019-02-23
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.5.90 (git)
+Version 3.6 - 2019-02-23
 
 * Rewrite mailcap (RFC1524) support
-
-FIXME: This is incompatible change. Bump VI_CURRENT.
 
 * imap4d: SEARCH command
 
 ** Implemented SEARCH CHARSET
 
+This requires libiconv and libunistring.
+
 ** Improved SEARCH BODY and SEARCH TEXT commands
 
 Both commands now properly descend into multipart message parts and
-decode messages, if necessary. This requires libiconv and libunistring.
+decode messages, if necessary.
 
 * Fixes in the 'mail' utility
 
@@ -69,7 +69,7 @@ This considerably speeds up the operation of such tools as mail
 
 ** handle EXPUNGE response
 
-This fixes interoperation with Dovecot imap.
+This fixes interoperation with Dovecot imap daemon.
 
 ** fix incorporation of new messages
 
