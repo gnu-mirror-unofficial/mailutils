@@ -91,11 +91,11 @@ api_mailcap_create (PyObject *self, PyObject *args)
 
   status = mu_mailcap_create (&py_mc->mc);
   if (status)
-    return _ro (PyInt_FromLong (status));
+    return _ro (PyLong_FromLong (status));
   status = mu_mailcap_parse (py_mc->mc, py_stm->stm, NULL);
   if (status == MU_ERR_PARSE)
     status = 0; /* FIXME */
-  return _ro (PyInt_FromLong (status));
+  return _ro (PyLong_FromLong (status));
 }
 
 static PyObject *
@@ -183,7 +183,7 @@ api_mailcap_entry_get_field (PyObject *self, PyObject *args)
   status = mu_mailcap_entry_sget_field (py_entry->entry, name, &value);
   return status_object (status,
 			status == 0
-			  ? (value ? PyString_FromString (value)
+			  ? (value ? PyUnicode_FromString (value)
 				   : PyBool_FromLong (1))
 			  : PyBool_FromLong (0));
 }
@@ -199,7 +199,7 @@ api_mailcap_entry_get_typefield (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_mailcap_entry_sget_type (py_entry->entry, &value);
-  return status_object (status, PyString_FromString (status == 0 ? value : ""));
+  return status_object (status, PyUnicode_FromString (status == 0 ? value : ""));
 }
 
 static PyObject *
@@ -213,7 +213,7 @@ api_mailcap_entry_get_viewcommand (PyObject *self, PyObject *args)
     return NULL;
 
   status = mu_mailcap_entry_sget_command (py_entry->entry, &value);
-  return status_object (status, PyString_FromString (status == 0 ? value : ""));
+  return status_object (status, PyUnicode_FromString (status == 0 ? value : ""));
 }
 
 static PyMethodDef methods[] = {
