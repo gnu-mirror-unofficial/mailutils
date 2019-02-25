@@ -39,13 +39,8 @@ dnl Library paths
 AC_SUBST(MU_LIB_AUTH,'${top_builddir}/libmu_auth/libmu_auth.la')
 AC_SUBST(MU_LIB_MAILUTILS,'${top_builddir}/libmailutils/libmailutils.la')
 AC_SUBST(MU_LIB_SQL,'${top_builddir}/sql/libsql.la')
-AC_SUBST(MU_LIB_IMAP)
-AC_SUBST(MU_LIB_MAILDIR)
 AC_SUBST(MU_LIB_MAILER,'${top_builddir}/libproto/mailer/libmu_mailer.la')
 AC_SUBST(MU_LIB_MBOX,'${top_builddir}/libproto/mbox/libmu_mbox.la')
-AC_SUBST(MU_LIB_MH)
-AC_SUBST(MU_LIB_NNTP)
-AC_SUBST(MU_LIB_POP)
 AC_SUBST(MU_LIB_SIEVE,'${top_builddir}/libmu_sieve/libmu_sieve.la')
 AC_SUBST(MU_LIB_SCM)
 AC_SUBST(MU_LIB_CPP)
@@ -1001,18 +996,16 @@ AC_ARG_WITH([virtual-pwddir],
 		*)  SITE_VIRTUAL_PWDDIR="\$(sysconfdir)/${withval}";;
 	     esac],
              [SITE_VIRTUAL_PWDDIR="\$(sysconfdir)/domain"])
-	     
-MU_ENABLE_SUPPORT([imap],
-         [MU_LIB_IMAP='${top_builddir}/libproto/imap/libmu_imap.la'])
-MU_ENABLE_SUPPORT([pop],
-         [MU_LIB_POP='${top_builddir}/libproto/pop/libmu_pop.la'])
-MU_ENABLE_SUPPORT([nntp],
-         [MU_LIB_NNTP='${top_builddir}/libproto/nntp/libmu_nntp.la'],[],
-	 ["$mu_build_experimental" = "yes"])
-MU_ENABLE_SUPPORT([mh],
-         [MU_LIB_MH='${top_builddir}/libproto/mh/libmu_mh.la'])
-MU_ENABLE_SUPPORT([maildir],
-         [MU_LIB_MAILDIR='${top_builddir}/libproto/maildir/libmu_maildir.la'])
+
+# Mailbox formats
+MU_LIB_LOCAL_MAILBOX='$(MU_LIB_MBOX)'
+MU_ENABLE_REMOTE_MAILBOX_FORMAT([imap])
+# This is not a full-fledged testsuite yet, but it might be useful anyways
+AC_CONFIG_FILES([libproto/imap/tests/Makefile])
+MU_ENABLE_REMOTE_MAILBOX_FORMAT([pop])
+MU_ENABLE_LOCAL_MAILBOX_FORMAT([nntp],[],[],["$mu_build_experimental" = "yes"])
+MU_ENABLE_LOCAL_MAILBOX_FORMAT([mh])
+MU_ENABLE_LOCAL_MAILBOX_FORMAT([maildir])
 
 AC_SUBST(MU_SMTP_PROGRAMS_BUILD)
 AC_SUBST(MU_SMTP_DEJATOOL)
@@ -1194,7 +1187,7 @@ GINT_INIT([gint],[2.2.0 with-guile],
 	       GUILE_BINDIR="`guile-config info prefix`/bin"
 	   fi
            LIBMU_SCM=../libmu_scm/libmu_scm.la
-           LIBMU_SCM_DEPS='${MU_LIB_MBOX} ${MU_LIB_IMAP} ${MU_LIB_POP} ${MU_LIB_MH} ${MU_LIB_MAILDIR} ${MU_LIB_MAILER}'
+           LIBMU_SCM_DEPS='${MU_LIB_MAILBOX} ${MU_LIB_MAILER}'
            MU_GUILE_SIEVE_MOD_DIR='$(GUILE_SITE)/$(PACKAGE)/sieve-modules'
            GINT_INCLUDES='${MU_APP_COMMON_INCLUDES}'
            if test $REPLACE_STRERROR = 1; then
@@ -1526,13 +1519,6 @@ AC_CONFIG_FILES([
  libmu_sieve/extensions/Makefile
  libproto/Makefile
  libproto/mbox/Makefile
- libproto/mh/Makefile
- libproto/maildir/Makefile
- libproto/mailer/Makefile
- libproto/pop/Makefile
- libproto/nntp/Makefile
- libproto/imap/Makefile
- libproto/imap/tests/Makefile
  maidag/Makefile
  mail/Makefile
  mail/testsuite/Makefile

@@ -107,12 +107,7 @@ AM_CPPFLAGS =\
 mh_LIBS = \
  ./libmh.a\
  ../lib/libmuaux.la\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_MH}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_MAILER}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@\
@@ -133,12 +128,7 @@ inc_LDADD = \
  @LIBMU_SCM_DEPS@\
  @MU_LIB_PY@ @PYTHON_LIBS@\
  ${MU_LIB_SIEVE}\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_MH}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_MAILER}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@\

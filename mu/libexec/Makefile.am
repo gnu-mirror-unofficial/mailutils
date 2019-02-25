@@ -97,12 +97,7 @@ mailutils_send_LDADD = \
 mailutils_stat_SOURCES = stat.c
 mailutils_stat_LDADD = \
  ${MU_APP_LIBRARIES}\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@\
  $(MUTOOL_LIBRARIES_TAIL)

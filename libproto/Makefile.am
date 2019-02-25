@@ -14,25 +14,25 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
+SUBDIRS = mbox mailer
+
 if MU_COND_SUPPORT_POP
-  POP_DIR = pop
+  SUBDIRS += pop
 endif
 
 if MU_COND_SUPPORT_IMAP
-  IMAP_DIR = imap
+  SUBDIRS += imap
 endif
 
 if MU_COND_SUPPORT_NNTP
-  NNTP_DIR = nntp
+  SUBDIRS += nntp
 endif
 
 if MU_COND_SUPPORT_MH
-  MH_DIR = mh
+  SUBDIRS += mh
 endif
 
 if MU_COND_SUPPORT_MAILDIR
-  MAILDIR_DIR = maildir
+  SUBDIRS += maildir
 endif
-
-SUBDIRS = mbox $(POP_DIR) $(NNTP_DIR) $(IMAP_DIR) $(MH_DIR) $(MAILDIR_DIR) mailer
 

@@ -42,12 +42,7 @@ libmu_scm_la_SOURCES=\
 
 libmu_scm_la_LDFLAGS = -rpath $(libdir) -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 libmu_scm_la_LIBADD = \
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_MAILER}\
  ${MU_LIB_MAILUTILS}\
  @GUILE_LIBS@

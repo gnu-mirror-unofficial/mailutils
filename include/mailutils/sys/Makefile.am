@@ -22,6 +22,7 @@ sysinclude_HEADERS = \
  body.h\
  dbm.h\
  debcat.h\
+ dotmail.h\
  envelope.h\
  file_stream.h\
  filter.h\

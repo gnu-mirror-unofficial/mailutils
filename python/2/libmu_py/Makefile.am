@@ -48,12 +48,7 @@ libmu_py_la_LDFLAGS = -rpath $(libdir) \
  -export-symbols-regex '^(mu_py_|Py).*' \
  -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 libmu_py_la_LIBADD = $(PYTHON_LIBS) @MU_COMMON_LIBRARIES@ \
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  ${MU_LIB_MAILER}\
  ${MU_LIB_SIEVE}\

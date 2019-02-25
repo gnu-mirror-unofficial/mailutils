@@ -27,12 +27,7 @@ from_LDADD = $(common_ldadd)
 
 common_ldadd = \
  ${MU_APP_LIBRARIES}\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@\
  ${MU_LIB_MAILUTILS}\

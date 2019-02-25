@@ -53,12 +53,7 @@ url_parse_SOURCES = url-parse.cc
 LDADD =\
  ../../lib/libmuaux.la\
  ../../libmu_cpp/libmu_cpp.la\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  ${MU_LIB_MAILER}\
  ${MU_LIB_SIEVE}\

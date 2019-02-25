@@ -85,24 +85,14 @@ mta_LDADD =\
 
 sfrom_LDADD =\
  ../lib/libmuaux.la\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@\
  ${MU_LIB_MAILUTILS}
 
 mboxsize_LDADD =\
  ../lib/libmuaux.la\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@\
  ${MU_LIB_MAILUTILS}
@@ -116,12 +106,7 @@ nntpclient_LDADD = \
  @READLINE_LIBS@
 
 lsf_LDADD = \
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@ \
  ${MU_LIB_MAILUTILS}
@@ -141,12 +126,7 @@ muemail_LDADD = \
 mboxidx_CPPFLAGS = @MU_APP_COMMON_INCLUDES@
 mboxidx_LDADD=\
  ../lib/libmuaux.la\
- ${MU_LIB_MBOX}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_POP}\
- ${MU_LIB_NNTP}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_MAILBOX}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@ \
  ${MU_LIB_MAILUTILS}

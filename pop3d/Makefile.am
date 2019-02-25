@@ -51,9 +51,7 @@ endif
 
 pop3d_LDADD = \
  ${MU_APP_LIBRARIES}\
- ${MU_LIB_MBOX}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_LOCAL_MAILBOX}\
  ${MU_LIB_AUTH}\
  @MU_AUTHLIBS@ \
  ${MU_LIB_MAILUTILS}\
@@ -73,9 +71,7 @@ popauth_LDADD = \
 pop3d_DEPENDENCIES = \
  @MU_AUTHLIBS_DEPENDENCY@ \
  ../lib/libmuaux.la \
- ${MU_LIB_MBOX}\
- ${MU_LIB_MH}\
- ${MU_LIB_MAILDIR}\
+ ${MU_LIB_LOCAL_MAILBOX}\
  ${MU_LIB_MAILUTILS}\
  ${LIBMU_DBM}
 
