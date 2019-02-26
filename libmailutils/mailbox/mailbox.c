@@ -489,15 +489,73 @@ mu_mailbox_messages_count (mu_mailbox_t mbox, size_t *num)
 int
 mu_mailbox_messages_recent (mu_mailbox_t mbox, size_t *num)
 {
-  _MBOX_CHECK_Q (mbox, _messages_recent);
-  return mbox->_messages_recent (mbox, num);
+  size_t i, count, n;
+  int rc;
+
+  _MBOX_CHECK_FLAGS (mbox);
+  if (mbox->flags & MU_STREAM_QACCESS)
+    return MU_ERR_BADOP;
+  if (mbox->_messages_recent)
+    return mbox->_messages_recent (mbox, num);
+
+  rc = mu_mailbox_messages_count (mbox, &count);
+  if (rc)
+    return rc;
+  n = 0;
+  for (i = 1; i < count; i++)
+    {
+      mu_message_t msg;
+      mu_attribute_t attr;
+
+      rc = mu_mailbox_get_message (mbox, i, &msg);
+      if (rc)
+	return rc;
+      rc = mu_message_get_attribute (msg, &attr);
+      if (rc)
+	return rc;
+      if (mu_attribute_is_recent (attr))
+	n++;
+    }
+  *num = n;
+  return 0;
 }
 
 int
 mu_mailbox_message_unseen (mu_mailbox_t mbox, size_t *num)
 {
-  _MBOX_CHECK_Q (mbox, _message_unseen);
-  return mbox->_message_unseen (mbox, num);
+  int rc;
+  size_t i, count;
+
+  _MBOX_CHECK_FLAGS (mbox);
+  if (mbox->flags & MU_STREAM_QACCESS)
+    return MU_ERR_BADOP;
+  if (mbox->_message_unseen)
+    return mbox->_message_unseen (mbox, num);
+
+  rc = mu_mailbox_messages_count (mbox, &count);
+  if (rc)
+    return rc;
+  for (i = 1; i < count; i++)
+    {
+      mu_message_t msg;
+      mu_attribute_t attr;
+      int rc;
+
+      rc = mu_mailbox_get_message (mbox, i, &msg);
+      if (rc)
+	return rc;
+      rc = mu_message_get_attribute (msg, &attr);
+      if (rc)
+	return rc;
+      if (!mu_attribute_is_seen (attr))
+	{
+	  *num = i;
+	  return 0;
+	}
+    }
+
+  *num = 0;
+  return 0;
 }
 
 int
