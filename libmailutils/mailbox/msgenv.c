@@ -32,20 +32,59 @@
 #include <mailutils/mu_auth.h>
 #include <mailutils/address.h>
 #include <mailutils/sys/message.h>
+#include <mailutils/cstr.h>
+#include <mailutils/stream.h>
 
 /* Message envelope */
+
+static int
+get_received_date (mu_message_t msg, struct tm *tm, struct mu_timezone *tz)
+{
+  mu_header_t hdr;
+  int rc;
+  char *val;
+  char *p;
+
+  rc = mu_message_get_header (msg, &hdr);
+  if (rc)
+    return rc;
+
+  rc = mu_header_aget_value_unfold_n (hdr, MU_HEADER_RECEIVED, -1, &val);
+  if (rc)
+    return rc;
+
+  rc = MU_ERR_NOENT;
+
+  /* RFC 5321, section-4.4 (page 58-59)
+     Time-stamp-line  = "Received:" FWS Stamp <CRLF>
+     Stamp      = From-domain By-domain Opt-info [CFWS] ";"
+		  FWS date-time
+		  ; where "date-time" is as defined in RFC 5322 [4]
+		  ; but the "obs-" forms, especially two-digit
+		  ; years, are prohibited in SMTP and MUST NOT be used.
+  */
+  p = strchr (val, ';');
+  if (*p)
+    {
+      p = mu_str_skip_class (p + 1, MU_CTYPE_SPACE);
+      if (*p && mu_scan_datetime (p, MU_DATETIME_SCAN_RFC822, tm, tz, NULL) == 0)
+	rc = 0;
+    }
+  free (val);
+
+  return rc;
+}
+
 static int
 message_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
 		       size_t *pnwrite)
 {
   mu_message_t msg = mu_envelope_get_owner (envelope);
-  time_t t;
   size_t n;
+  int rc = 0;
 
   if (msg == NULL)
     return EINVAL;
-
-  /* FIXME: extract the time from "Date:".  */
 
   if (buf == NULL || len == 0)
     {
@@ -53,15 +92,50 @@ message_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
     }
   else
     {
+      struct tm tm;
+      struct mu_timezone tz;
+      time_t t;
       char tmpbuf[MU_DATETIME_FROM_LENGTH+1];
-      t = time (NULL);
-      n = mu_strftime (tmpbuf, sizeof tmpbuf, 
-                       MU_DATETIME_FROM, gmtime (&t));
-      n = mu_cpystr (buf, tmpbuf, len);
+      mu_stream_t str;
+      mu_off_t size;
+
+      rc = get_received_date (msg, &tm, &tz);
+      if (rc)
+	return rc;
+
+      t = mu_datetime_to_utc (&tm, &tz);
+
+      rc = mu_fixed_memory_stream_create (&str, tmpbuf, sizeof (tmpbuf),
+					  MU_STREAM_RDWR);
+      if (rc)
+	return rc;
+
+      rc = mu_c_streamftime (str, MU_DATETIME_FROM, gmtime (&t), NULL);
+      if (rc)
+	{
+	  mu_stream_unref (str);
+	  return rc;
+	}
+
+      rc = mu_stream_seek (str, 0, MU_SEEK_CUR, &size);
+      if (rc)
+	{
+	  mu_stream_unref (str);
+	  return rc;
+	}
+
+      if (size > len)
+	size = len;
+
+      mu_stream_seek (str, 0, MU_SEEK_SET, NULL);
+      rc = mu_stream_read (str, buf, size, &n);
+      if (n < len)
+	buf[n] = 0;
+      mu_stream_unref (str);
     }
   if (pnwrite)
     *pnwrite = n;
-  return 0;
+  return rc;
 }
 
 static int
@@ -74,6 +148,7 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
   const char *sender;
   struct mu_auth_data *auth = NULL;
   static char *hdrnames[] = {
+    "Return-Path",
     "X-Envelope-Sender",
     "X-Envelope-From",
     "X-Original-Sender",
