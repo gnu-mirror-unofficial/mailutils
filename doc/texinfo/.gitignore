@@ -30,4 +30,7 @@ stamp-vti
 texinfo.tex
 vers-muint.texi
 version.texi
-
+mailutils.kys
+mailutils.vrs
+manual.tar*
+manual

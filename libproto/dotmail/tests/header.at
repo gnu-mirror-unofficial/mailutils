@@ -1,0 +1,88 @@
+# GNU Mailutils -- a suite of utilities for electronic mail
+# Copyright (C) 2019 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+DM_TEST([header],
+[dm_mesg 1 header_lines header_size header_count 2 header_lines header_size header_count],
+[Received: (from hare@wonder.land) 
+	by wonder.land id 3301
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date: Mon, 29 Jul 2002 22:00:01 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3301@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Return-Path: hare@wonder.land
+
+Have some wine
+.
+Date: Mon, 29 Jul 2002 22:00:02 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3302@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+
+I don't see any wine
+.
+],
+[1 header_lines: 10
+1 header_size: 315
+1 header_count: 7
+2 header_lines: 7
+2 header_size: 206
+2 header_count: 6
+])
+
+DM_TEST([headers],
+[dm_mesg 1 headers 2 headers],
+[Received: (from hare@wonder.land) 
+	by wonder.land id 3301
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date: Mon, 29 Jul 2002 22:00:01 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3301@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Return-Path: hare@wonder.land
+
+Have some wine
+.
+Date: Mon, 29 Jul 2002 22:00:02 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3302@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+
+I don't see any wine
+.
+],
+[1 headers: Received:(from hare@wonder.land) by wonder.land id 3301 for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date:Mon, 29 Jul 2002 22:00:01 +0100
+From:March Hare  <hare@wonder.land>
+Message-Id:<200207292200.3301@wonder.land>
+To:Alice  <alice@wonder.land>
+Subject:Invitation
+Return-Path:hare@wonder.land
+
+2 headers: Date:Mon, 29 Jul 2002 22:00:02 +0100
+From:Alice  <alice@wonder.land>
+Message-Id:<200207292200.3302@wonder.land>
+To:March Hare  <hare@wonder.land>
+Subject:Re: Invitation
+Return-Path:alice@wonder.land
+
+])

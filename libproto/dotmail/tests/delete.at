@@ -1,0 +1,75 @@
+# GNU Mailutils -- a suite of utilities for electronic mail
+# Copyright (C) 2019 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+DM_TEST([delete],
+[dm_mesg 3 set_deleted expunge 3 body_text
+dm_mbox count
+],
+[Received: (from hare@wonder.land) 
+	by wonder.land id 3301
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date: Mon, 29 Jul 2002 22:00:01 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3301@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Return-Path: hare@wonder.land
+
+Have some wine
+.
+Received: (from alice@wonder.land) 
+	by wonder.land id 3302
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:07 +0100
+Date: Mon, 29 Jul 2002 22:00:02 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3302@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+
+I don't see any wine
+.
+Received: (from hare@wonder.land) 
+	by wonder.land id 3303
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:08 +0100
+Date: Mon, 29 Jul 2002 22:00:03 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3303@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Re: Invitation
+Return-Path: hare@wonder.land
+
+There isn't any
+.
+Received: (from alice@wonder.land) 
+	by wonder.land id 3304
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+Date: Mon, 29 Jul 2002 22:00:04 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3304@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+
+Then it wasn't very civil of you to offer it
+.
+],
+[3 set_deleted: OK
+expunge: OK
+3 body_text: Then it wasn't very civil of you to offer it
+
+3
+])

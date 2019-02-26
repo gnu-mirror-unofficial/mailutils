@@ -19,18 +19,17 @@
 (use-modules ((mailutils mailutils))
 	     ((ice-9 regex)))
 
-
 (define-public (message-format dest msg)
   "Formats a message hiding all mutable information (email and date)."
   "The @samp{dest} argument has the same meaning as in @samp{format}."
   (let ((s (with-output-to-string (lambda () (display msg)))))
     (cond
-     ((string-match "^(#<message )\".+@.+\" \"(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [ 0123][0-9] [[:digit:]]{2}:[[:digit:]]{2}\" ([[:digit:]]+) ([[:digit:]]+)>$" s) =>
+     ((string-match "^(#<message )\".+@.+\" \"(((Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [ 0123][0-9] [[:digit:]]{2}:[[:digit:]]{2})|UNKNOWN)\" ([[:digit:]]+) ([[:digit:]]+)>$" s) =>
       (lambda (m)
 	(format dest "~a\"X@Y\" \"Dow Mon Day HH:MM\" ~a ~a>"
 		(match:substring m 1)
-	        (match:substring m 4)
-	        (match:substring m 5)))))))
+	        (match:substring m 6)
+	        (match:substring m 7)))))))
 
 (define-public (string->message str)
   (mu-message-from-port (open-input-string str)))

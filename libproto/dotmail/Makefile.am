@@ -1,5 +1,5 @@
 ## This file is part of GNU Mailutils.
-## Copyright (C) 2006-2019 Free Software Foundation, Inc.
+## Copyright (C) 2019 Free Software Foundation, Inc.
 ##
 ## GNU Mailutils is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -14,29 +14,14 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-SUBDIRS = mbox mailer
+AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
 
-if MU_COND_SUPPORT_POP
-  SUBDIRS += pop
-endif
+lib_LTLIBRARIES = libmu_dotmail.la
+libmu_dotmail_la_LDFLAGS=-version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
+libmu_dotmail_la_LIBADD = ${MU_LIB_MAILUTILS}
+libmu_dotmail_la_SOURCES = \
+ dotmail.c\
+ message.c\
+ folder.c
 
-if MU_COND_SUPPORT_IMAP
-  SUBDIRS += imap
-endif
-
-if MU_COND_SUPPORT_NNTP
-  SUBDIRS += nntp
-endif
-
-if MU_COND_SUPPORT_MH
-  SUBDIRS += mh
-endif
-
-if MU_COND_SUPPORT_MAILDIR
-  SUBDIRS += maildir
-endif
-
-if MU_COND_SUPPORT_DOTMAIL
-  SUBDIRS += dotmail
-endif
-
+SUBDIRS = . tests

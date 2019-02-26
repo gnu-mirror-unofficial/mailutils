@@ -131,9 +131,12 @@ extern mu_record_t mu_smtps_record;
 extern mu_record_t mu_sendmail_record;
 /* Program mailer, "prog://", "|" */
 extern mu_record_t mu_prog_record;
+
+extern mu_record_t mu_dotmail_record;
   
 #define mu_register_all_mbox_formats() do {\
   mu_registrar_record (mu_mbox_record);\
+  mu_registrar_record (mu_dotmail_record);\
   mu_registrar_record (mu_pop_record);\
   mu_registrar_record (mu_pops_record);\
   mu_registrar_record (mu_imap_record);\
@@ -145,6 +148,7 @@ extern mu_record_t mu_prog_record;
 
 #define mu_register_local_mbox_formats() do {\
   mu_registrar_record (mu_mbox_record);\
+  mu_registrar_record (mu_dotmail_record);\
   mu_registrar_record (mu_mh_record);\
   mu_registrar_record (mu_maildir_record);\
   mu_registrar_set_default_record (MU_DEFAULT_RECORD);\

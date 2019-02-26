@@ -16,7 +16,7 @@ dnl You should have received a copy of the GNU General Public License along
 dnl with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.63)
-AC_INIT([GNU Mailutils], [3.6], [bug-mailutils@gnu.org], [mailutils],
+AC_INIT([GNU Mailutils], [3.6.90], [bug-mailutils@gnu.org], [mailutils],
         [http://mailutils.org])
 AC_CONFIG_SRCDIR([libmailutils/mailbox/mailbox.c])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -1006,6 +1006,7 @@ MU_ENABLE_REMOTE_MAILBOX_FORMAT([pop])
 MU_ENABLE_LOCAL_MAILBOX_FORMAT([nntp],[],[],["$mu_build_experimental" = "yes"])
 MU_ENABLE_LOCAL_MAILBOX_FORMAT([mh])
 MU_ENABLE_LOCAL_MAILBOX_FORMAT([maildir])
+MU_ENABLE_LOCAL_MAILBOX_FORMAT([dotmail])
 
 AC_SUBST(MU_SMTP_PROGRAMS_BUILD)
 AC_SUBST(MU_SMTP_DEJATOOL)
@@ -1519,6 +1520,7 @@ AC_CONFIG_FILES([
  libmu_sieve/extensions/Makefile
  libproto/Makefile
  libproto/mbox/Makefile
+ libproto/mailer/Makefile
  maidag/Makefile
  mail/Makefile
  mail/testsuite/Makefile
