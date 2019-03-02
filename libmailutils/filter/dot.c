@@ -125,19 +125,22 @@ _dot_decoder (void *xd,
   optr = iobuf->output;
   osize = iobuf->osize;
 
-  for (i = j = 0; *pstate != dot_decode_end && i < isize && j < osize; i++)
+  for (i = j = 0; i < isize && j < osize; i++)
     {
       unsigned char c = *iptr++;
       int curstate = *pstate;
       
       *pstate = new_decode_state (curstate, c);
-      if (!(c == '.' && (curstate == dot_decode_init ||
-			 curstate == dot_decode_lf)))
-	optr[j++] = c;
+      if (c == '.'
+	  && (curstate == dot_decode_init || curstate == dot_decode_lf))
+	    continue;
+      if (*pstate == dot_decode_end)
+	{
+	  iobuf->eof = 1;
+	  break;
+	}
+      optr[j++] = c;
     }
-  
-  if (*pstate == dot_decode_end)
-    iobuf->eof = 1;
 
   iobuf->isize = i;
   iobuf->osize = j;

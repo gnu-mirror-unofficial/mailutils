@@ -726,7 +726,7 @@ smtp (mu_stream_t str)
 		if (rc)
 		  {
 		    mu_diag_funcall (MU_DIAG_ERROR, "mu_filter_create",
-				     "CRLFDOT", rc);
+				     "DOT", rc);
 		    exit (EX_UNAVAILABLE);
 		  }
 		smtp_reply (str, 354,

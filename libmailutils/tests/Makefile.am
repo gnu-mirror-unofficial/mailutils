@@ -96,6 +96,7 @@ TESTSUITE_AT = \
  base64e.at\
  debugspec.at\
  decode2047.at\
+ dot.at\
  crlf.at\
  crlfdot.at\
  ctm.at\

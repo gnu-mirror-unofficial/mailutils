@@ -97,6 +97,7 @@ mu_stream_seterr (struct _mu_stream *stream, int code, int perm)
     {
     case 0:
     case EAGAIN:
+    case ENOSYS:
     case EINPROGRESS:
       break;
 
