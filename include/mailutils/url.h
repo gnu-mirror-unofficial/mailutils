@@ -152,6 +152,24 @@ int mu_url_add_param (mu_url_t url, size_t pc, const char **pv);
 int mu_url_clear_param (mu_url_t url);
 int mu_url_add_query (mu_url_t url, size_t pc, const char **pv);
 int mu_url_clear_query (mu_url_t url);  
+
+  /* Mailbox format autodetection accuracy levels */
+enum
+  {
+    /* Auto: accuracy will be set from the environment variable
+       MU_AUTODETECT_ACCURACY */
+    MU_AUTODETECT_ACCURACY_AUTO = -1,
+    /* Do only a rough estimation of the mailbox format: fastest but
+       possibly inaccurate. */
+    MU_AUTODETECT_ACCURACY_FAST = 0,
+    /* Default: minimal accuracy */
+    MU_AUTODETECT_ACCURACY_DEFAULT = 1,
+    /* Any non-negative value also allowed */
+  };
+
+int mu_scheme_autodetect_p (mu_url_t);
+void mu_set_autodetect_accuracy (int v);
+int mu_autodetect_accuracy (void);
   
 #ifdef __cplusplus
 }

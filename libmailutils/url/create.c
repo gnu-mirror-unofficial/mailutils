@@ -457,7 +457,11 @@ _mu_url_create_internal (struct mu_url_ctx *ctx, mu_url_t hint)
 	url->flags |= MU_URL_PATH;
     }
   else
-    rc = _mu_url_ctx_parse (ctx);
+    {
+      if (ctx->flags & MU_URL_PARSE_LOCAL)
+	scheme = "file";
+      rc = _mu_url_ctx_parse (ctx);
+    }
   
   if (rc)
     return rc;

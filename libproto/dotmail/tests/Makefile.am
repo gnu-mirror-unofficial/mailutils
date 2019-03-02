@@ -42,7 +42,8 @@ AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@
 noinst_PROGRAMS = \
  dm_mbox\
  dm_mesg\
- dm_qget
+ dm_qget\
+ dm_detect
 
 LDADD = ${MU_LIB_DOTMAIL} ${MU_LIB_MAILUTILS}
 
@@ -52,6 +53,7 @@ LDADD = ${MU_LIB_DOTMAIL} ${MU_LIB_MAILUTILS}
 
 TESTSUITE_AT = \
  testsuite.at\
+ autodetect.at\
  count.at\
  env.at\
  attr.at\

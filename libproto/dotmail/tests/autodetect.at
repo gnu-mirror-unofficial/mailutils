@@ -1,0 +1,137 @@
+# GNU Mailutils -- a suite of utilities for electronic mail
+# Copyright (C) 2019 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([format detection])
+AT_KEYWORDS([autodetect])
+AT_CHECK(
+[AT_DATA([empty],[])
+
+# Valid dotmail mailbox
+AT_DATA([dotmail],
+[Received: (from hare@wonder.land) 
+	by wonder.land id 3301
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date: Mon, 29 Jul 2002 22:00:01 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3301@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Return-Path: hare@wonder.land
+
+Have some wine
+.
+Received: (from alice@wonder.land) 
+	by wonder.land id 3302
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:07 +0100
+Date: Mon, 29 Jul 2002 22:00:02 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3302@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+
+I don't see any wine
+.
+])
+
+# Valid mbox mailbox
+AT_DATA([mbox],
+[From hare@wonder.land Mon Jul 29 22:00:08 2002
+Received: (from hare@wonder.land)
+        by wonder.land id 3301
+        for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date: Mon, 29 Jul 2002 22:00:01 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3301@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+])
+
+# Malformed dotmail: no final dot
+AT_DATA([nodot],
+[Received: (from hare@wonder.land) 
+	by wonder.land id 3301
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date: Mon, 29 Jul 2002 22:00:01 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3301@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Return-Path: hare@wonder.land
+
+Have some wine
+.
+Received: (from alice@wonder.land) 
+	by wonder.land id 3302
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:07 +0100
+Date: Mon, 29 Jul 2002 22:00:02 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3302@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+
+I don't see any wine
+])
+
+# Garbage input that is similar to header line
+AT_DATA([badheader],
+[Something-that-looks-like-A%: header
+text
+.
+])
+
+# Garbage input
+AT_DATA([garbage],
+[ZZKTJVLRF97GGVYv+hMsbO2gHUe/4ra31zXffN9vS10FG8lUBixFJJ9kv+F1/5muYhG6n2JrrLC9ZScpn9zNRrMqLVH/9slNBadT6fZL9hAmxyYQUMbqcCmsmn3A7rNVfKgfubufBpsUg/dzqsJWN4DOPQACSVYMY2DIGmEYt2Rdt3s1/VdpJZhaHEETWQzXyaG0iAZn4r2iD2InJHPOalG7WJhj1cCHHToEA029GRMx6uHhOWBjXT5P0H3ebhEujbIBj9e6aX5u42jg/+YuCoVpy8fbESHiB3gc9ijKgyGrVLBQLkikc6sK7E8xjwGhu75G4LKVTctff8UyqRjgUR5eA7TuI9+VmCnO7pf5LR/QDFzV1smrfR1BzX3dudbjdCyR3xW2oYFyWRJDlycFULVuRmG87u795P4DOeH6/+I32AnJeJNX40vEzprqQwdxdkifBtcDiKvhcecFgbQLIw4OKrOEuFBMraViHC6ZFkLBNf6aXBk+xiv6U8ogDH4a1+
+])
+export MU_AUTODETECT_ACCURACY
+for MU_AUTODETECT_ACCURACY in 0 1 2
+do
+  echo "MU_AUTODETECT_ACCURACY=$MU_AUTODETECT_ACCURACY"
+  dm_detect empty dotmail mbox nodot badheader garbage
+done
+],
+[0],
+[MU_AUTODETECT_ACCURACY=0
+empty: 2
+dotmail: 2
+mbox: 2
+nodot: 2
+badheader: 2
+garbage: 2
+MU_AUTODETECT_ACCURACY=1
+empty: 2
+dotmail: 2
+mbox: 0
+nodot: 2
+badheader: 0
+garbage: 0
+MU_AUTODETECT_ACCURACY=2
+empty: 2
+dotmail: 2
+mbox: 0
+nodot: 0
+badheader: 0
+garbage: 0
+])
+AT_CLEANUP
+
+
+  

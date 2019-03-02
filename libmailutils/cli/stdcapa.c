@@ -29,8 +29,9 @@
 #include <mailutils/registrar.h>
 #include <mailutils/locker.h>
 #include <mailutils/mu_auth.h>
+#include <mailutils/url.h>
 
-/* ************************************************************************* 
+/* *************************************************************************
  * Logging section
  * ************************************************************************* */
 static void
@@ -40,13 +41,13 @@ cli_log_facility (struct mu_parseopt *po, struct mu_option *opt,
   if (mu_string_to_syslog_facility (arg, &mu_log_facility))
     mu_parseopt_error (po, _("unknown syslog facility `%s'"), arg);
 }
-  
+
 static int
 cb_facility (void *data, mu_config_value_t *val)
 {
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
-  
+
   if (mu_string_to_syslog_facility (val->v.string, &mu_log_facility))
     {
       mu_error (_("unknown syslog facility `%s'"), val->v.string);
@@ -59,7 +60,7 @@ static int
 cb_severity (void *data, mu_config_value_t *val)
 {
   unsigned n;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
   if (mu_severity_from_string (val->v.string, &n))
@@ -69,7 +70,7 @@ cb_severity (void *data, mu_config_value_t *val)
     }
   mu_log_severity_threshold = n;
   return 0;
-}      
+}
 
 static struct mu_cfg_param logging_cfg[] = {
   { "syslog", mu_c_bool, &mu_log_syslog, 0, NULL,
@@ -84,7 +85,7 @@ static struct mu_cfg_param logging_cfg[] = {
   { "facility", mu_cfg_callback, NULL, 0, cb_facility,
     N_("Set syslog facility. Arg is one of the following: user, daemon, "
        "auth, authpriv, mail, cron, local0 through local7 (case-insensitive), "
-       "or a facility number."), 
+       "or a facility number."),
     /* TRANSLATORS: Translate only arg: and <number>, rest are keywords */
     N_("arg: auth|authpriv|mail|local0-local7|<number>") },
   { "session-id", mu_c_bool, &mu_log_session_id, 0, NULL,
@@ -109,8 +110,8 @@ logging_commit (void *unused)
 			       MU_STRERR_SYSLOG : MU_STRERR_STDERR);
 }
 
-/* ************************************************************************* 
- * Mailer                                                                    
+/* *************************************************************************
+ * Mailer
  * ************************************************************************* */
 static void
 cli_mailer (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -132,7 +133,7 @@ static int
 cb_mailer (void *data, mu_config_value_t *val)
 {
   int rc;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
   rc = mu_mailer_set_url_default (val->v.string);
@@ -149,7 +150,7 @@ static struct mu_cfg_param mailer_cfg[] = {
   { NULL }
 };
 
-/* ************************************************************************* 
+/* *************************************************************************
  * Debugging
  * ************************************************************************* */
 static void
@@ -234,13 +235,43 @@ cb_mailbox_type (void *data, mu_config_value_t *val)
     mu_error (_("invalid mailbox type: %s"), val->v.string);
   return 0;
 }
-  
+
 static int
 cb_folder (void *data, mu_config_value_t *val)
 {
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
   mu_set_folder_directory (val->v.string);
+  return 0;
+}
+
+static int
+cb_autodetect_accuracy (void *data, mu_config_value_t *val)
+{
+  int v;
+  char *errmsg;
+
+  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
+    return 1;
+  if (strcmp (val->v.string, "auto") == 0)
+    v = MU_AUTODETECT_ACCURACY_AUTO;
+  else if (strcmp (val->v.string, "fast") == 0)
+    v = MU_AUTODETECT_ACCURACY_FAST;
+  else if (strcmp (val->v.string, "minimal") == 0
+	   || strcmp (val->v.string, "default") == 0)
+    v = MU_AUTODETECT_ACCURACY_DEFAULT;
+  else
+    {
+      int rc = mu_str_to_c (val->v.string, mu_c_int, &v, &errmsg);
+      if (rc)
+	{
+	  mu_error (_("conversion failed: %s"),
+		    errmsg ? errmsg : mu_strerror (rc));
+	  free (errmsg);
+	}
+      else
+	mu_set_autodetect_accuracy (v);
+    }
   return 0;
 }
 
@@ -257,6 +288,15 @@ static struct mu_cfg_param mailbox_cfg[] = {
   { "folder", mu_cfg_callback, NULL, 0, cb_folder,
     N_("Default user mail folder"),
     N_("dir: string") },
+  { "autodetect-accuracy", mu_cfg_callback, NULL, 0, cb_autodetect_accuracy,
+    N_("Accuracy level of mailbox format autodetection. Argument is either a"
+       " decimal number or any of the following constants:\n"
+       "  auto    - set accuracy level from the environment variable\n"
+       "            MU_AUTODETECT_ACCURACY (default)\n"
+       "  fast    - do only a rough estimation of the mailbox format: fastest,\n"
+       "            but possibly inaccurate\n"
+       "  minimal - good balance between speed and accuracy"),
+    N_("n: number") },
   { NULL }
 };
 
@@ -268,7 +308,7 @@ cb_locker_flags (void *data, mu_config_value_t *val)
 {
   int flags = 0;
   char const *s;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
 
@@ -279,19 +319,19 @@ cb_locker_flags (void *data, mu_config_value_t *val)
 	case 'E':
 	  flags |= MU_LOCKER_EXTERNAL;
 	  break;
-	      
+
 	case 'R':
 	  flags |= MU_LOCKER_RETRY;
 	  break;
-	      
+
 	case 'T':
 	  flags |= MU_LOCKER_TIME;
 	  break;
-	      
+
 	case 'P':
 	  flags |= MU_LOCKER_PID;
 	  break;
-	      
+
 	default:
 	  mu_error (_("invalid lock flag `%c'"), *s);
 	}
@@ -306,7 +346,7 @@ cb_locker_retry_timeout (void *data, mu_config_value_t *val)
   int rc;
   time_t t;
   char *errmsg;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
   rc = mu_str_to_c (val->v.string, mu_c_time, &t, &errmsg);
@@ -330,7 +370,7 @@ cb_locker_retry_count (void *data, mu_config_value_t *val)
   int rc;
   size_t n;
   char *errmsg;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
   rc = mu_str_to_c (val->v.string, mu_c_size, &n, &errmsg);
@@ -354,7 +394,7 @@ cb_locker_expire_timeout (void *data, mu_config_value_t *val)
   int rc;
   time_t t;
   char *errmsg;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
   rc = mu_str_to_c (val->v.string, mu_c_time, &t, &errmsg);
@@ -381,7 +421,7 @@ cb_locker_external (void *data, mu_config_value_t *val)
   mu_locker_set_default_flags (MU_LOCKER_TIME, mu_locker_set_bit);
   return 0;
 }
-  
+
 static struct mu_cfg_param locking_cfg[] = {
   /* FIXME: Flags are superfluous. */
   { "flags", mu_cfg_callback, NULL, 0, cb_locker_flags,
@@ -409,7 +449,7 @@ static int
 cb_email_addr (void *data, mu_config_value_t *val)
 {
   int rc;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
 
@@ -424,7 +464,7 @@ static int
 cb_email_domain (void *data, mu_config_value_t *val)
 {
   int rc;
-  
+
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
 

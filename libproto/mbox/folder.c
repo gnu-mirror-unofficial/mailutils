@@ -73,22 +73,23 @@ _mbox_is_scheme (mu_record_t record, mu_url_t url, int flags)
 	    }
 	  else if (flags & MU_FOLDER_ATTRIBUTE_FILE)
 	    {
-#if 0
-	      /* FIXME: This effectively sieves out all non-mailbox files,
-		 but it makes mu_folder_enumerate crawl, which is
-		 intolerable for imap4d LIST command. */
-	      int fd = open (path, O_RDONLY);
-	      if (fd != -1)
+	      if (mu_autodetect_accuracy () > 0)
 		{
-		  char buf[5];
-		  if (read (fd, buf, 5) == 5)
-		    if (memcmp (buf, "From ", 5) == 0)
-		      rc |= MU_FOLDER_ATTRIBUTE_FILE;
-		  close (fd);
+		  /* FIXME: This effectively sieves out all non-mailbox files,
+		     but it makes mu_folder_enumerate crawl, which is
+		     intolerable for imap4d LIST command. */
+		  int fd = open (path, O_RDONLY);
+		  if (fd != -1)
+		    {
+		      char buf[5];
+		      if (read (fd, buf, 5) == 5)
+			if (memcmp (buf, "From ", 5) == 0)
+			  rc |= MU_FOLDER_ATTRIBUTE_FILE;
+		      close (fd);
+		    }
 		}
-#else
-	      rc |= MU_FOLDER_ATTRIBUTE_FILE;
-#endif
+	      else
+		rc |= MU_FOLDER_ATTRIBUTE_FILE;
 	    }
 	}
 	  

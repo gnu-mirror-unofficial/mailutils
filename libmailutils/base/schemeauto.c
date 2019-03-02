@@ -1,4 +1,3 @@
-/* Returns true if SCHEME represents a local (autodetect) mail folder.  */
 /* GNU Mailutils -- a suite of utilities for electronic mail
    Copyright (C) 1999-2019 Free Software Foundation, Inc.
 
@@ -19,7 +18,7 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
-
+#include <stdlib.h>
 #include <mailutils/url.h>
 
 /* Returns true if SCHEME represents a local (autodetect) mail folder.  */
@@ -33,4 +32,25 @@ mu_scheme_autodetect_p (mu_url_t url)
     }
   return 0;
 }
-    
+
+static int accuracy = MU_AUTODETECT_ACCURACY_AUTO;
+
+void
+mu_set_autodetect_accuracy (int v)
+{
+  accuracy = v;
+}
+
+int
+mu_autodetect_accuracy (void)
+{
+  if (accuracy == MU_AUTODETECT_ACCURACY_AUTO)
+    {
+      char *p = getenv ("MU_AUTODETECT_ACCURACY");
+      if (!p)
+	accuracy = MU_AUTODETECT_ACCURACY_DEFAULT;
+      else
+	accuracy = atoi (p);
+    }
+  return accuracy;
+}

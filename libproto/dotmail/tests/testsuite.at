@@ -42,4 +42,5 @@ m4_include([uid.at])
 m4_include([qget.at])
 m4_include([append.at])
 m4_include([delete.at])
+m4_include([autodetect.at])
 
