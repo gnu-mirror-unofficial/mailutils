@@ -42,19 +42,59 @@ Not the same thing a bit! You might just
 as well say that "I see what I eat" is the same thing as "I eat
 what I see"!
 .
+Received: (from hare@wonder.land) 
+	by wonder.land id 3316
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:21 +0100
+Date: Mon, 29 Jul 2002 22:00:16 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3316@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Re: Be specific
+Return-Path: hare@wonder.land
+
+..
+...
+....
+.....
+......
+.......
+.
 ],
 [],[],
 [1
 body_lines
 body_size
+body_text
 2
 body_lines
 body_size
+body_text
+3
+body_lines
+body_size
+body_text
 ],
 [1 current message
 1 body_lines: 2
 1 body_size: 77
+1 body_text: I do, at least--at least I mean what
+I say--that's the same thing, you know.
+
 2 current message
 2 body_lines: 3
 2 body_size: 118
+2 body_text: Not the same thing a bit! You might just
+as well say that "I see what I eat" is the same thing as "I eat
+what I see"!
+
+3 current message
+3 body_lines: 6
+3 body_size: 27
+3 body_text: .
+..
+...
+....
+.....
+......
+
 ])

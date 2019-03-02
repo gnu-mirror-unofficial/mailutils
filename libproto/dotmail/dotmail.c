@@ -355,13 +355,14 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 			     mu_strerror (rc)));
 		  return rc;
 		}
-	      state = dotmail_scan_body;
+	      state = dotmail_scan_body_newline;
 	    }
 	  else
 	    state = dotmail_scan_header;
 	  break;
 
 	case dotmail_scan_body:
+	  dmsg->body_size++;
 	  if (cur == '\n')
 	    {
 	      dmsg->body_lines++;
@@ -370,6 +371,7 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	  break;
 
 	case dotmail_scan_body_newline:
+	  dmsg->body_size++;
 	  if (cur == '.')
 	    state = dotmail_scan_dot;
 	  else if (cur == '\n')
@@ -395,6 +397,7 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 		  return rc;
 		}
 	      dmsg->message_end -= 2;
+	      dmsg->body_size--;
 
 	      /* Every 100 mesgs update the lock, it should be every minute.  */
 	      if (mailbox->locker && (dmp->mesg_count % 100) == 0)
@@ -406,7 +409,13 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	      state = dotmail_scan_init;
 	    }
 	  else
-	    state = dotmail_scan_body;
+	    {
+	      if (cur == '.')
+		dmsg->body_dot_stuffed = 1;
+	      else
+		dmsg->body_size++;
+	      state = dotmail_scan_body;
+	    }
 	  break;
 	}
     }

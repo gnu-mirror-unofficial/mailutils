@@ -211,7 +211,7 @@ dotmail_body_size (mu_body_t body, size_t *psize)
   if (!dmsg)
     return EINVAL;
   if (psize)
-    *psize = dmsg->message_end - dmsg->body_start;
+    *psize = dmsg->body_size;
   return 0;
 }
 
@@ -252,19 +252,40 @@ static int
 _msg_body_setup (mu_message_t msg, struct mu_dotmail_message *dmsg)
 {
   mu_body_t body;
-  mu_stream_t stream;
+  mu_stream_t stream, flt;
   int rc;
 
-  rc = mu_body_create (&body, msg);
+  if (dmsg->body_dot_stuffed)
+    {
+      rc = mu_streamref_create_abridged (&stream,
+					 dmsg->mbox->mailbox->stream,
+					 dmsg->body_start,
+					 dmsg->message_end + 1);
+      if (rc)
+	return rc;
+
+      rc = mu_filter_create (&flt, stream, "DOT",
+			     MU_FILTER_DECODE, MU_STREAM_READ);
+      mu_stream_unref (stream);
+      if (rc)
+	return rc;
+
+      rc = mu_rdcache_stream_create (&stream, flt,
+				     MU_STREAM_READ|MU_STREAM_SEEK);
+      mu_stream_unref (flt);
+    }
+  else
+    {
+      rc = mu_streamref_create_abridged (&stream,
+					 dmsg->mbox->mailbox->stream,
+					 dmsg->body_start,
+					 dmsg->message_end - 1);
+    }
   if (rc)
     return rc;
-  rc = mu_streamref_create_abridged (&stream,
-				     dmsg->mbox->mailbox->stream,
-				     dmsg->body_start,
-				     dmsg->message_end - 1);
-  if (rc)
-    mu_body_destroy (&body, msg);
-  else
+
+  rc = mu_body_create (&body, msg);
+  if (rc == 0)
     {
       mu_body_set_stream (body, stream, msg);
       mu_body_set_size (body, dotmail_body_size, msg);

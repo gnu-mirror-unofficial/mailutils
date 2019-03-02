@@ -34,9 +34,11 @@ struct mu_dotmail_message
   mu_off_t body_start;    /* Start of body */
   mu_off_t message_end;   /* End of message */
   /* Additional info */
+  size_t body_size;       /* Number of octets in unstuffed message body */
   size_t body_lines;      /* Number of lines in message body */
   unsigned long uid;      /* IMAP-style uid.  */
   char *hdr[MU_DOTMAIL_HDR_MAX]; /* Pre-scanned headers */
+  unsigned body_dot_stuffed:1;   /* True if body is dot-stuffed */
   unsigned headers_scanned:1;    /* True if hdr is filled */
   unsigned attr_scanned:1;       /* True if attr_flags is initialized */
   unsigned body_lines_scanned:1; /* True if body_lines is initialized */
