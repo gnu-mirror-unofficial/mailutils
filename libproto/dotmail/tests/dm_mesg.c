@@ -32,7 +32,7 @@ get_num (char const *s)
 }
 
 void
-dm_env_date (mu_message_t msg, char **argv)
+dm_env_date (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_envelope_t env;
   char *str;
@@ -44,7 +44,7 @@ dm_env_date (mu_message_t msg, char **argv)
 }
 
 void
-dm_env_sender (mu_message_t msg, char **argv)
+dm_env_sender (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_envelope_t env;
   char *str;
@@ -56,7 +56,7 @@ dm_env_sender (mu_message_t msg, char **argv)
 }
 
 void
-dm_header_lines (mu_message_t msg, char **argv)
+dm_header_lines (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_header_t hdr;
   size_t lines;
@@ -66,7 +66,7 @@ dm_header_lines (mu_message_t msg, char **argv)
 }
 
 void
-dm_header_count (mu_message_t msg, char **argv)
+dm_header_count (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_header_t hdr;
   size_t n;
@@ -76,7 +76,7 @@ dm_header_count (mu_message_t msg, char **argv)
 }
 
 void
-dm_header_size (mu_message_t msg, char **argv)
+dm_header_size (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_header_t hdr;
   size_t s;
@@ -86,7 +86,7 @@ dm_header_size (mu_message_t msg, char **argv)
 }
 
 void
-dm_header_field (mu_message_t msg, char **argv)
+dm_header_field (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_header_t hdr;
   size_t n = get_num (argv[0]);
@@ -97,7 +97,7 @@ dm_header_field (mu_message_t msg, char **argv)
 }
 
 void
-dm_header_value (mu_message_t msg, char **argv)
+dm_header_value (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_header_t hdr;
   size_t n = get_num (argv[0]);
@@ -108,7 +108,7 @@ dm_header_value (mu_message_t msg, char **argv)
 }
 
 void
-dm_headers (mu_message_t msg, char **argv)
+dm_headers (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_header_t hdr;
   char const *name;
@@ -127,7 +127,7 @@ dm_headers (mu_message_t msg, char **argv)
 }
 
 void
-dm_body_lines (mu_message_t msg, char **argv)
+dm_body_lines (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_body_t body;
   size_t lines;
@@ -137,7 +137,7 @@ dm_body_lines (mu_message_t msg, char **argv)
 }
 
 void
-dm_body_size (mu_message_t msg, char **argv)
+dm_body_size (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_body_t body;
   size_t s;
@@ -147,7 +147,7 @@ dm_body_size (mu_message_t msg, char **argv)
 }
 
 void
-dm_body_text (mu_message_t msg, char **argv)
+dm_body_text (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_body_t body;
   mu_stream_t str;
@@ -158,7 +158,7 @@ dm_body_text (mu_message_t msg, char **argv)
 }
 
 void
-dm_attr (mu_message_t msg, char **argv)
+dm_attr (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_attribute_t attr;
   char abuf[MU_STATUS_BUF_SIZE];
@@ -168,7 +168,7 @@ dm_attr (mu_message_t msg, char **argv)
 }
 
 void
-dm_uid (mu_message_t msg, char **argv)
+dm_uid (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   size_t uid;
   MU_ASSERT (mu_message_get_uid (msg, &uid));
@@ -180,7 +180,7 @@ dm_uid (mu_message_t msg, char **argv)
 #define __cat4__(a,b,c,d) a ## b ## c ## d
 #define ATTR_FUN(op,attr)				\
 static void						\
-__cat4__(dm_,op,_,attr) (mu_message_t msg, char **argv)	\
+__cat4__(dm_,op,_,attr) (mu_mailbox_t mbx, mu_message_t msg, char **argv) \
 {							\
   mu_attribute_t a;                                     \
   MU_ASSERT (mu_message_get_attribute (msg, &a));       \
@@ -205,67 +205,84 @@ ATTR_FUN(unset,recent)
 ATTR_FUN(unset,read)
 
 void
-dmbox_append (mu_mailbox_t mbx, char *filename)
+dm_append (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 {
   mu_stream_t str;
-  mu_message_t msg;
-  MU_ASSERT (mu_file_stream_create (&str, filename, MU_STREAM_READ));
-  MU_ASSERT (mu_stream_to_message (str, &msg));
-  MU_ASSERT (mu_mailbox_append_message (mbx, msg));
+  mu_message_t newmsg;
+  MU_ASSERT (mu_file_stream_create (&str, argv[0], MU_STREAM_READ));
+  MU_ASSERT (mu_stream_to_message (str, &newmsg));
+  MU_ASSERT (mu_mailbox_append_message (mbx, newmsg));
   mu_stream_destroy (&str);
-  mu_printf ("append: OK\n");
+  mu_printf ("OK");
 }
 
-
-typedef void (*dm_action) (mu_message_t, char **);
+void
+dm_expunge (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+{
+  MU_ASSERT (mu_mailbox_expunge (mbx));
+  mu_printf ("OK");
+}
 
-static struct
+void
+dm_sync (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+{
+  MU_ASSERT (mu_mailbox_sync (mbx));
+  mu_printf ("OK");
+}
+
+typedef void (*dm_action_fn) (mu_mailbox_t, mu_message_t, char **);
+
+struct dm_action
 {
   char *name;
-  dm_action act;
+  dm_action_fn fn;
+  int needs_message;
   int narg;
-} actions[] = {
-  { "env_date", dm_env_date },
-  { "env_sender", dm_env_sender },
-  { "header_lines", dm_header_lines },
-  { "header_size", dm_header_size },
-  { "header_count", dm_header_count },
-  { "header_field", dm_header_field, 1 },
-  { "header_value", dm_header_value, 1 },
-  { "headers", dm_headers },
-  { "body_lines", dm_body_lines },
-  { "body_size", dm_body_size },
-  { "body_text", dm_body_text },
-  { "attr", dm_attr },
-  { "uid", dm_uid },
-  { "set_seen", dm_set_seen },
-  { "set_answered", dm_set_answered },
-  { "set_flagged", dm_set_flagged },
-  { "set_deleted", dm_set_deleted },
-  { "set_draft", dm_set_draft },
-  { "set_recent", dm_set_recent },
-  { "set_read", dm_set_read },
-  { "unset_seen", dm_unset_seen },
-  { "unset_answered", dm_unset_answered },
-  { "unset_flagged", dm_unset_flagged },
-  { "unset_deleted", dm_unset_deleted },
-  { "unset_draft", dm_unset_draft },
-  { "unset_recent", dm_unset_recent },
-  { "unset_read", dm_unset_read },
+};
+
+struct dm_action actions[] = {
+  { "env_date",       dm_env_date,       1, 0 },
+  { "env_sender",     dm_env_sender,     1, 0 },
+  { "header_lines",   dm_header_lines,   1, 0 },
+  { "header_size",    dm_header_size,    1, 0 },
+  { "header_count",   dm_header_count,   1, 0 },
+  { "header_field",   dm_header_field,   1, 1 },
+  { "header_value",   dm_header_value,   1, 1 },
+  { "headers",        dm_headers,        1, 0 },
+  { "body_lines",     dm_body_lines,     1, 0 },
+  { "body_size",      dm_body_size,      1, 0 },
+  { "body_text",      dm_body_text,      1, 0 },
+  { "attr",           dm_attr,           1, 0 },
+  { "uid",            dm_uid,            1, 0 },
+  { "set_seen",       dm_set_seen,       1, 0 },
+  { "set_answered",   dm_set_answered,   1, 0 },
+  { "set_flagged",    dm_set_flagged,    1, 0 },
+  { "set_deleted",    dm_set_deleted,    1, 0 },
+  { "set_draft",      dm_set_draft,      1, 0 },
+  { "set_recent",     dm_set_recent,     1, 0 },
+  { "set_read",       dm_set_read,       1, 0 },
+  { "unset_seen",     dm_unset_seen,     1, 0 },
+  { "unset_answered", dm_unset_answered, 1, 0 },
+  { "unset_flagged",  dm_unset_flagged,  1, 0 },
+  { "unset_deleted",  dm_unset_deleted,  1, 0 },
+  { "unset_draft",    dm_unset_draft,    1, 0 },
+  { "unset_recent",   dm_unset_recent,   1, 0 },
+  { "unset_read",     dm_unset_read,     1, 0 },
+  { "expunge",        dm_expunge,        0, 0 },
+  { "sync",           dm_sync,           0, 0 },
+  { "append",         dm_append,         0, 1 },
+  
   { NULL }
 };
 
-static dm_action
-get_action (char const *s, size_t *narg)
+static struct dm_action *
+get_action (char const *s)
 {
   size_t i;
 
   for (i = 0; actions[i].name; i++)
     if (strcmp (actions[i].name, s) == 0)
-      {
-	*narg = actions[i].narg;
-	return actions[i].act;
-      }
+      return &actions[i];
 
   return NULL;
 }    
@@ -276,7 +293,12 @@ main (int argc, char **argv)
   mu_mailbox_t mbx;
   mu_message_t msg = NULL;
   char *mailbox_name = getenv ("MAIL");
-  size_t n;
+  size_t msgno;
+  char *buf = NULL;
+  size_t size = 0, n;
+  struct mu_wordsplit ws;
+  int wsflags;
+  int rc;
   
   mu_set_program_name (argv[0]);
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
@@ -295,73 +317,61 @@ main (int argc, char **argv)
 
   MU_ASSERT (mu_mailbox_create_default (&mbx, mailbox_name));
   MU_ASSERT (mu_mailbox_open (mbx, MU_STREAM_RDWR));
- 
-  while (argc--)
+
+  wsflags  = MU_WRDSF_DEFFLAGS
+           | MU_WRDSF_COMMENT
+           | MU_WRDSF_ALLOC_DIE
+           | MU_WRDSF_SHOWERR;
+  ws.ws_comment = "#";
+
+  while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
-      char *a = *argv++;
-      dm_action f;
-      size_t narg;
+      struct dm_action *act;
       
-      if (mu_isdigit (*a))
-	{
-	  n = get_num (a);
-	  MU_ASSERT (mu_mailbox_get_message (mbx, n, &msg));
-	  continue;
-	}
+      mu_ltrim_class (buf, MU_CTYPE_SPACE);
+      mu_rtrim_class (buf, MU_CTYPE_SPACE);
 
-      if (strcmp (a, "expunge") == 0)
-	{
-	  MU_ASSERT (mu_mailbox_expunge (mbx));
-	  mu_printf ("expunge: OK\n");
-	  continue;
-	}
+      MU_ASSERT (mu_wordsplit (buf, &ws, wsflags));
+      wsflags |= MU_WRDSF_REUSE;
 
-      if (strcmp (a, "sync") == 0)
-	{
-	  MU_ASSERT (mu_mailbox_sync (mbx));
-	  mu_printf ("sync: OK\n");
-	  continue;
-	}
-
-      if (strcmp (a, "append") == 0)
-	{
-	  if (argc < 1)
-	    {
-	      mu_error ("not enough arguments for %s", a);
-	      return 1;
-	    }
-	  dmbox_append (mbx, argv[0]);
-	  argc--;
-	  argv++;
-	  continue;
-	}
+      if (ws.ws_wordc == 0)
+	continue;
       
-      f = get_action (a, &narg);
-      if (!f)
+      if (mu_isdigit (*ws.ws_wordv[0]))
 	{
-	  mu_error ("%s: unrecognized action", a);
+	  msgno = get_num (ws.ws_wordv[0]);
+	  MU_ASSERT (mu_mailbox_get_message (mbx, msgno, &msg));
+	  mu_printf ("%lu current message\n", (unsigned long) msgno);
+	  continue;
+	}
+
+      act = get_action (ws.ws_wordv[0]);
+      if (!act)
+	{
+	  mu_error ("%s: unrecognized action", ws.ws_wordv[0]);
 	  return 1;
 	}
 
-      if (!msg)
+      if (act->needs_message && !msg)
 	{
 	  mu_error ("no message selected");
 	  return 1;
 	}
 
-      if (narg > argc)
+      if (act->narg + 1 != ws.ws_wordc)
 	{
-	  mu_error ("not enough arguments for %s", a);
+	  mu_error ("bad number of arguments for %s", ws.ws_wordv[0]);
 	  return 1;
 	}
-      
-      mu_printf ("%lu %s: ", (unsigned long) n, a);
-      f (msg, argv);
-      mu_printf ("\n");
 
-      argc -= narg;
-      argv += narg;
+      if (act->needs_message)
+	mu_printf ("%lu ", (unsigned long) msgno);
+      mu_printf ("%s: ", ws.ws_wordv[0]);
+      act->fn (mbx, msg, ws.ws_wordv + 1);
+      mu_printf ("\n");
     }
+  if (wsflags & MU_WRDSF_REUSE)
+    mu_wordsplit_free (&ws);
   mu_mailbox_close (mbx);
   mu_mailbox_destroy (&mbx);
   return 0;

@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-DM_TEST([uid],
-[dm_mesg 1 uid 2 uid 3 uid],
+DM_MESG([uid],
 [Received: (from hare@wonder.land) 
 	by wonder.land id 3301
 	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
@@ -56,7 +55,18 @@ Return-Path: hare@wonder.land
 There isn't any
 .
 ],
-[1 uid: 1
+[],[],
+[1
+uid
+2
+uid
+3
+uid
+],
+[1 current message
+1 uid: 1
+2 current message
 2 uid: 2
+3 current message
 3 uid: 1001
 ])

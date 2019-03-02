@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-DM_TEST([attr],
-[dm_mesg 1 attr 2 attr],
+DM_MESG([attr],
 [Received: (from hare@wonder.land) 
 	by wonder.land id 3301
 	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
@@ -42,6 +41,14 @@ Return-Path: alice@wonder.land
 I don't see any wine
 .
 ],
-[1 attr: -
+[],[],
+[1
+attr
+2
+attr
+],
+[1 current message
+1 attr: -
+2 current message
 2 attr: FOR
 ])

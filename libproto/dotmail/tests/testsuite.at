@@ -28,6 +28,22 @@ $2
 [0],
 [$4])
 AT_CLEANUP])
+
+dnl DM_MESG([NAME],[MBOX],[PRE],[POST],[INPUT],[OUTPUT])
+m4_define([DM_MESG],
+ [AT_SETUP($1)
+AT_CHECK(
+ [AT_DATA([dmbx],[$2])
+AT_DATA([input],[$5]) 
+MAIL=./dmbx
+export MAIL
+$3
+dm_mesg < input
+$4
+],
+[0],
+[$6])
+AT_CLEANUP])
  
 AT_INIT
 m4_include([count.at])
@@ -43,4 +59,5 @@ m4_include([qget.at])
 m4_include([append.at])
 m4_include([delete.at])
 m4_include([autodetect.at])
+m4_include([setattr.at])
 

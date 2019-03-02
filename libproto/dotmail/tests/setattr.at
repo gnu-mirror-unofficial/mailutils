@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-DM_MESG([delete],
+DM_MESG([set attributes],
 [Received: (from hare@wonder.land) 
 	by wonder.land id 3301
 	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
@@ -63,24 +63,68 @@ Return-Path: alice@wonder.land
 
 Then it wasn't very civil of you to offer it
 .
+Received: (from hare@wonder.land) 
+	by wonder.land id 3305
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:10 +0100
+Date: Mon, 29 Jul 2002 22:00:05 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3305@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Re: Invitation
+Return-Path: hare@wonder.land
+
+It wasn't very civil of you to sit down without being invited
+.
 ],
-[],[dm_mbox count],
-[# Mark third message as deleted
-3
-set_deleted
-# Expunge deleted messages
-expunge
-# Message 4 becomes 3 after expunge. Re-select it.
-3
-# Display headers and body to check if it has been properly updated.
+[],[],
+[# Select 3rd message
+3 
+# Display its attributes
+attr
+# Set the Read attribute
+set_read
+# Set the Draft attribute
+set_draft
+# Display modified attributes
+attr
+# Synchronize the mailbox with disk storage
+sync
+# Display modified attributes: should be the same as before
+attr 
+# Display all headers; the Status header is missing, because
+# the mu_header_t object was not notified about the change.
+# Not sure if that's right, but that's the way the library works now.
 headers
+# Display the message text; this is to make sure all offsets
+# in the mu_dotmail_message structure have been updated correctly
+# after the change.
+body_text
+# Select fourth message
+4 
+# The following two commands make sure offsets in the subsequent messages
+# are all fixed up.
+headers 
 body_text
 ],
 [3 current message
-3 set_deleted: OK
-expunge: OK
-3 current message
-3 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+3 attr: -
+3 set_read: OK
+3 set_draft: OK
+3 attr: dR
+sync: OK
+3 attr: dR
+3 headers: Received:(from hare@wonder.land) by wonder.land id 3303 for alice@wonder.land; Mon, 29 Jul 2002 22:00:08 +0100
+Date:Mon, 29 Jul 2002 22:00:03 +0100
+From:March Hare  <hare@wonder.land>
+Message-Id:<200207292200.3303@wonder.land>
+To:Alice  <alice@wonder.land>
+Subject:Re: Invitation
+Return-Path:hare@wonder.land
+
+3 body_text: There isn't any
+
+4 current message
+4 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
 Date:Mon, 29 Jul 2002 22:00:04 +0100
 From:Alice  <alice@wonder.land>
 Message-Id:<200207292200.3304@wonder.land>
@@ -88,7 +132,7 @@ To:March Hare  <hare@wonder.land>
 Subject:Re: Invitation
 Return-Path:alice@wonder.land
 
-3 body_text: Then it wasn't very civil of you to offer it
+4 body_text: Then it wasn't very civil of you to offer it
 
-3
 ])
+

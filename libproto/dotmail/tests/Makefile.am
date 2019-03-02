@@ -65,7 +65,8 @@ TESTSUITE_AT = \
  uid.at\
  qget.at\
  append.at\
- delete.at
+ delete.at\
+ setattr.at
 
 TESTSUITE = $(srcdir)/testsuite
 M4=m4

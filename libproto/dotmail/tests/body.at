@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-DM_TEST([body],
-[dm_mesg 1 body_lines body_size 2 body_lines body_size],
+DM_MESG([body],
 [Received: (from alice@wonder.land) 
 	by wonder.land id 3314
 	for hare@wonder.land; Mon, 29 Jul 2002 22:00:19 +0100
@@ -44,8 +43,18 @@ as well say that "I see what I eat" is the same thing as "I eat
 what I see"!
 .
 ],
-[1 body_lines: 2
+[],[],
+[1
+body_lines
+body_size
+2
+body_lines
+body_size
+],
+[1 current message
+1 body_lines: 2
 1 body_size: 77
+2 current message
 2 body_lines: 3
 2 body_size: 118
 ])
