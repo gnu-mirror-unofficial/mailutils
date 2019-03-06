@@ -857,13 +857,17 @@ int
 restore_date (mu_message_t msg, char **pret)
 {
   mu_header_t hdr;
-  const char *s;
+  const char *s = NULL;
   char *date = NULL;
   struct tm tm;
   struct mu_timezone tz;
   
   if (mu_message_get_header (msg, &hdr) == 0)
-    mu_header_sget_value (hdr, MU_HEADER_DATE, &s);
+    {
+      int rc = mu_header_sget_value (hdr, MU_HEADER_DATE, &s);
+      if (rc && rc != MU_ERR_NOENT)
+	return rc;
+    }
 
   if (s && mu_scan_datetime (s, MU_DATETIME_SCAN_RFC822, &tm, &tz, NULL) == 0)
     {
