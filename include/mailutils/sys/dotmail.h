@@ -39,9 +39,9 @@ struct mu_dotmail_message
   unsigned long uid;      /* IMAP-style uid.  */
   char *hdr[MU_DOTMAIL_HDR_MAX]; /* Pre-scanned headers */
   unsigned body_dot_stuffed:1;   /* True if body is dot-stuffed */
-  unsigned headers_scanned:1;    /* True if hdr is filled */
   unsigned attr_scanned:1;       /* True if attr_flags is initialized */
   unsigned body_lines_scanned:1; /* True if body_lines is initialized */
+  unsigned uid_modified:1;/* UID|uidvalidity|uidnext has been modified */
   int attr_flags;         /* Packed "Status:" attribute flags */
   mu_message_t message;   /* Pointer to the message object if any */
   /* Backlink to the mailbox */
@@ -65,10 +65,8 @@ struct mu_dotmail_mailbox
 
   mu_off_t size;             /* Size of the mailbox.  */
   unsigned long uidvalidity; /* Uidvalidity value */
-  unsigned uidnext;          /* Expected next UID value */
+  unsigned long uidnext;     /* Expected next UID value */
   unsigned uidvalidity_scanned:1; /* True if uidvalidity is initialized */
-  size_t scanned_uids_count; /* Number of messages for which UIDs have been
-				scanned */
   
   struct mu_dotmail_message **mesg; /* Array of messages */
   size_t mesg_count;       /* Number of messages in mesgv */
@@ -78,9 +76,8 @@ struct mu_dotmail_mailbox
 int mu_dotmail_mailbox_init (mu_mailbox_t mailbox);
 void mu_dotmail_message_free (struct mu_dotmail_message *dmsg);
 int mu_dotmail_message_get (struct mu_dotmail_message *dmsg, mu_message_t *mptr);
-int mu_dotmail_message_headers_prescan (struct mu_dotmail_message *dmsg);
 int mu_dotmail_message_attr_load (struct mu_dotmail_message *dmsg);
-int mu_dotmail_mailbox_scan_uids (mu_mailbox_t mailbox, size_t msgno);
+int mu_dotmail_mailbox_uid_setup (struct mu_dotmail_mailbox *dmp);
 int mu_dotmail_message_reconstruct (mu_stream_t dest,
 				    struct mu_dotmail_message *dmsg,
 				    struct mu_dotmail_message_ref *ref);

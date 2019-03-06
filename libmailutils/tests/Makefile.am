@@ -54,6 +54,7 @@ noinst_PROGRAMS = \
  fsaftomod\
  fsfolder\
  globtest\
+ hdrcpy\
  imapio\
  listop\
  linetrack\
@@ -108,6 +109,7 @@ TESTSUITE_AT = \
  fsfolder00.at\
  fsfolder01.at\
  fsfolder02.at\
+ hdrcpy.at\
  hdrflt.at\
  htmlent.at\
  globtest.at\

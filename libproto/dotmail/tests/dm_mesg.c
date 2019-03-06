@@ -114,7 +114,7 @@ dm_headers (mu_mailbox_t mbx, mu_message_t msg, char **argv)
   char const *name;
   char *val;
   size_t i, n;
-  
+
   MU_ASSERT (mu_message_get_header (msg, &hdr));
   MU_ASSERT (mu_header_get_field_count (hdr, &n));
   for (i = 1; i <= n; i++)
@@ -229,6 +229,46 @@ dm_sync (mu_mailbox_t mbx, mu_message_t msg, char **argv)
   MU_ASSERT (mu_mailbox_sync (mbx));
   mu_printf ("OK");
 }
+
+void
+dm_count (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+{
+  size_t n;
+  MU_ASSERT (mu_mailbox_messages_count (mbx, &n));
+  mu_printf ("%lu", (unsigned long) n);
+}
+
+void
+dm_uidvalidity (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+{
+  unsigned long v;
+  MU_ASSERT (mu_mailbox_uidvalidity (mbx, &v));
+  mu_printf ("%lu", v);
+}
+
+void
+dm_uidnext (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+{
+  size_t n;
+  MU_ASSERT (mu_mailbox_uidnext (mbx, &n));
+  mu_printf ("%lu", (unsigned long) n);
+}
+
+void
+dm_recent (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+{
+  size_t n;
+  MU_ASSERT (mu_mailbox_messages_recent (mbx, &n));
+  mu_printf ("%lu", (unsigned long) n);
+}
+
+void
+dm_unseen (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+{
+  size_t n;
+  MU_ASSERT (mu_mailbox_message_unseen (mbx, &n));
+  mu_printf ("%lu", (unsigned long) n);
+}
 
 typedef void (*dm_action_fn) (mu_mailbox_t, mu_message_t, char **);
 
@@ -271,7 +311,11 @@ struct dm_action actions[] = {
   { "expunge",        dm_expunge,        0, 0 },
   { "sync",           dm_sync,           0, 0 },
   { "append",         dm_append,         0, 1 },
-  
+  { "uidvalidity",    dm_uidvalidity,    0, 0 },
+  { "uidnext",        dm_uidnext,        0, 0 },
+  { "count",          dm_count,          0, 0 },
+  { "recent",         dm_recent,         0, 0 },
+  { "unseen",         dm_unseen,         0, 0 },
   { NULL }
 };
 
@@ -285,7 +329,7 @@ get_action (char const *s)
       return &actions[i];
 
   return NULL;
-}    
+}
 
 int
 main (int argc, char **argv)
@@ -299,7 +343,7 @@ main (int argc, char **argv)
   struct mu_wordsplit ws;
   int wsflags;
   int rc;
-  
+
   mu_set_program_name (argv[0]);
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
   mu_registrar_record (mu_dotmail_record);
@@ -319,15 +363,15 @@ main (int argc, char **argv)
   MU_ASSERT (mu_mailbox_open (mbx, MU_STREAM_RDWR));
 
   wsflags  = MU_WRDSF_DEFFLAGS
-           | MU_WRDSF_COMMENT
-           | MU_WRDSF_ALLOC_DIE
-           | MU_WRDSF_SHOWERR;
+	   | MU_WRDSF_COMMENT
+	   | MU_WRDSF_ALLOC_DIE
+	   | MU_WRDSF_SHOWERR;
   ws.ws_comment = "#";
 
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
       struct dm_action *act;
-      
+
       mu_ltrim_class (buf, MU_CTYPE_SPACE);
       mu_rtrim_class (buf, MU_CTYPE_SPACE);
 
@@ -336,7 +380,7 @@ main (int argc, char **argv)
 
       if (ws.ws_wordc == 0)
 	continue;
-      
+
       if (mu_isdigit (*ws.ws_wordv[0]))
 	{
 	  msgno = get_num (ws.ws_wordv[0]);

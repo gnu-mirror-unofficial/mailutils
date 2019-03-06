@@ -1,0 +1,39 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2010-2019 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([header exclusion copy])
+AT_KEYWORDS([header-filter hdrcpy])
+AT_CHECK([
+AT_DATA([input],[From: gray@example.com
+Subject: Header exclusion test
+X-UID: 1000
+To: root@example.com
+X-IMAPbase: 1 5
+Message-Id: 0123456778
+X-IMAPtest: foo
+X-Mailer: hidden
+])
+
+hdrcpy X-uid X-imapbase x-Mailer < input
+],
+[0],
+[From: gray@example.com
+Subject: Header exclusion test
+To: root@example.com
+Message-Id: 0123456778
+X-IMAPtest: foo
+])
+AT_CLEANUP

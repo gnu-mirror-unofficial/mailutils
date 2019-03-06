@@ -29,152 +29,6 @@
 #include <mailutils/attribute.h>
 #include <mailutils/io.h>
 
-/* Status, UID, uidnext and uidvalidity */
-static char *expect[] = {
-  "status:    ",
-  "x-imapbase:",
-  "x-uid:     ",
-};
-
-static char *canon_name[] = {
-  MU_HEADER_STATUS,
-  MU_HEADER_X_IMAPBASE,
-  MU_HEADER_X_UID
-};
-
-int
-mu_dotmail_message_headers_prescan (struct mu_dotmail_message *dmsg)
-{
-  mu_stream_t stream;
-  int rc;
-  enum
-  {
-    prescan_state_init,
-    prescan_state_expect,
-    prescan_state_skip,
-    prescan_state_stop
-  } state = prescan_state_init;
-
-  int i = 0;
-  int j = 0;
-
-  char cur;
-  size_t n;
-
-  if (dmsg->headers_scanned)
-    return 0;
-
-  rc = mu_streamref_create_abridged (&stream,
-				     dmsg->mbox->mailbox->stream,
-				     dmsg->message_start,
-				     dmsg->body_start - 1);
-  if (rc)
-    return rc;
-
-  rc = mu_stream_seek (stream, 0, MU_SEEK_SET, NULL);
-  if (rc)
-    {
-      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("%s:%s (%s): %s",
-		 __func__, "mu_stream_seek", dmsg->mbox->name,
-		 mu_strerror (rc)));
-      return rc;
-    }
-
-  while (state != prescan_state_stop
-	 && (rc = mu_stream_read (stream, &cur, 1, &n)) == 0
-	 && n == 1)
-    {
-      switch (state)
-	{
-	case prescan_state_init:
-	  j = 0;
-	  state = prescan_state_stop;
-	  for (i = 0; i < MU_DOTMAIL_HDR_MAX; i++)
-	    {
-	      if (dmsg->hdr[i] == NULL)
-		{
-		  state = prescan_state_skip;
-		  if (expect[i][j] == mu_tolower (cur))
-		    {
-		      j++;
-		      state = prescan_state_expect;
-		      break;
-		    }
-		}
-	    }
-	  break;
-
-	case prescan_state_expect:
-	  {
-	    int c = mu_tolower (cur);
-	    if (expect[i][j] != c)
-	      {
-		if (++i == MU_DOTMAIL_HDR_MAX
-		    || memcmp (expect[i-1], expect[i], j)
-		    || expect[i][j] != c)
-		  {
-		    state = prescan_state_skip;
-		    break;
-		  }
-	      }
-
-	    if (c == ':')
-	      {
-		char *buf = NULL;
-		size_t size = 0;
-		size_t n;
-
-		rc = mu_stream_getline (stream, &buf, &size, &n);
-		if (rc)
-		  {
-		    mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			      ("%s:%s (%s): %s",
-			       __func__, "mu_stream_getline",
-			       dmsg->mbox->name,
-			       mu_strerror (rc)));
-		    return rc;
-		  }
-		if (n > 0)
-		  {
-		    buf[n-1] = 0;
-		    dmsg->hdr[i] = buf;
-		  }
-		else
-		  free (buf);
-		state = prescan_state_init;
-	      }
-	    else
-	      {
-		j++;
-		if (expect[i][j] == 0)
-		  state = prescan_state_skip;
-	      }
-	  }
-	  break;
-
-	case prescan_state_skip:
-	  if (cur == '\n')
-	    state = prescan_state_init;
-	  break;
-
-	default:
-	  break; /* Should not happen */
-	}
-    }
-
-  if (rc)
-    {
-      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("%s:%s (%s): %s",
-		 __func__, "mu_stream_read", dmsg->mbox->name,
-		 mu_strerror (rc)));
-      /* Try to get on with what we've got this far */
-    }
-  dmsg->headers_scanned = 1;
-  return 0;
-}
-
 void
 mu_dotmail_message_free (struct mu_dotmail_message *dmsg)
 {
@@ -301,9 +155,6 @@ mu_dotmail_message_attr_load (struct mu_dotmail_message *dmsg)
 {
   if (!dmsg->attr_scanned)
     {
-      int rc = mu_dotmail_message_headers_prescan (dmsg);
-      if (rc)
-	return rc;
       if (dmsg->hdr[mu_dotmail_hdr_status])
 	mu_string_to_flags (dmsg->hdr[mu_dotmail_hdr_status], &dmsg->attr_flags);
       else
@@ -369,8 +220,8 @@ static int
 dotmail_message_uid (mu_message_t msg, size_t *puid)
 {
   struct mu_dotmail_message *dmsg = mu_message_get_owner (msg);
-  int rc = mu_dotmail_mailbox_scan_uids (dmsg->mbox->mailbox, dmsg->num + 1);
-  if (rc == 0 && puid)
+  int rc = mu_dotmail_mailbox_uid_setup (dmsg->mbox);
+  if (rc == 0)
     *puid = dmsg->uid;
   return rc;
 }
@@ -438,154 +289,119 @@ mu_dotmail_message_get (struct mu_dotmail_message *dmsg, mu_message_t *mptr)
 }
 
 static int
-msg_header_to_stream (mu_stream_t dest, mu_stream_t src,
-		      struct mu_dotmail_message const *dmsg)
+dotmail_message_uid_save (mu_stream_t dst,
+			  struct mu_dotmail_message const *dmsg)
 {
-  int rc;
-#define LA_MAX (sizeof (expect[0]) - 1)
-  char lookahead[LA_MAX];
-  int la_idx = 0;
-  enum
-  {
-    save_state_init,
-    save_state_expect,
-    save_state_skip,
-    save_state_copy,
-    save_state_stop
-  } state = save_state_init;
-  int i = 0;
-  int j = 0;
-  int hdr_saved[MU_DOTMAIL_HDR_MAX];
-
-  memset (&hdr_saved, 0, sizeof hdr_saved);
-  while (1)
+  struct mu_dotmail_mailbox *dmp = dmsg->mbox;
+  if (dmp->uidvalidity_scanned)
     {
-      char c;
-      size_t n;
-
-      rc = mu_stream_read (src, &c, 1, &n);
-      if (rc)
-	return rc;
-      if (n == 0)
-	{
-	  if (la_idx)
-	    {
-	      rc = mu_stream_write (dest, lookahead, la_idx, NULL);
-	      if (rc)
-		return rc;
-	    }
-	  break;
-	}
-
-      if (state == save_state_init || state == save_state_expect)
-	{
-	  if (la_idx == LA_MAX)
-	    state = save_state_copy;
-	  else
-	    {
-	      lookahead[la_idx++] = c;
-	      c = mu_tolower (c);
-	    }
-	}
-
-      switch (state)
-	{
-	case save_state_init:
-	  if (c == '\n')
-	    {
-	      /* End of headers. */
-	      for (i = 0; i < MU_DOTMAIL_HDR_MAX; i++)
-		{
-		  if (!hdr_saved[i] && dmsg->hdr[i])
-		    {
-		      mu_stream_printf (dest, "%s: %s\n",
-					canon_name[i], dmsg->hdr[i]);
-		      if (mu_stream_err (dest))
-			return mu_stream_last_error (dest);
-		    }
-		}
-	      state = save_state_stop;
-	      break;
-	    }
-
-	  j = 0;
-	  state = save_state_copy;
-	  for (i = 0; i < MU_DOTMAIL_HDR_MAX; i++)
-	    {
-	      if (!hdr_saved[i] && expect[i][j] == c)
-		{
-		  j++;
-		  state = save_state_expect;
-		  break;
-		}
-	    }
-	  break;
-
-	case save_state_expect:
-	  if (expect[i][j] != c)
-	    {
-	      if (++i == MU_DOTMAIL_HDR_MAX
-		  || memcmp (expect[i-1], expect[i], j)
-		  || expect[i][j] != c)
-		{
-		  state = save_state_copy;
-		  break;
-		}
-	    }
-
-	  if (c == ':')
-	    {
-	      if (dmsg->hdr[i])
-		{
-		  rc = mu_stream_write (dest, lookahead, la_idx, NULL);
-		  if (rc)
-		    return rc;
-		  rc = mu_stream_write (dest, dmsg->hdr[i],
-					strlen (dmsg->hdr[i]), NULL);
-		  if (rc)
-		    return rc;
-		  rc = mu_stream_write (dest, "\n", 1, NULL);
-		  if (rc)
-		    return rc;
-		}
-	      hdr_saved[i] = 1;
-	      la_idx = 0;
-	      state = save_state_skip;
-	    }
-	  else
-	    {
-	      j++;
-	      if (expect[i][j] == 0)
-		state = save_state_copy;
-	    }
-	  break;
-
-	case save_state_copy:
-	  if (la_idx > 0)
-	    {
-	      rc = mu_stream_write (dest, lookahead, la_idx, NULL);
-	      if (rc)
-		return rc;
-	      la_idx = 0;
-	    }
-	  rc = mu_stream_write (dest, &c, 1, NULL);
-	  if (c == '\n')
-	    state = save_state_init;
-	  break;
-
-	case save_state_skip:
-	  if (c == '\n')
-	    state = save_state_init;
-	  break;
-
-	default:
-	  abort (); /* Should not happen */
-	}
+      if (dmsg->hdr[mu_dotmail_hdr_x_imapbase])
+	mu_stream_printf (dst, "%s: %s\n",
+			  MU_HEADER_X_IMAPBASE,
+			  dmsg->hdr[mu_dotmail_hdr_x_imapbase]);
+      mu_stream_printf (dst, "%s: %lu\n",
+			MU_HEADER_X_UID,
+			dmsg->uid);
+      return mu_stream_err (dst) ? mu_stream_last_error (dst) : 0;
     }
-
   return 0;
 }
 
+/* Copy message DMSG to DST replacing the UID-related information.
+   The message is unchanged otherwise.
+*/
+int
+dotmail_message_copy_with_uid (mu_stream_t dst,
+			       struct mu_dotmail_message const *dmsg,
+			       struct mu_dotmail_message_ref *ref)
+{
+  int rc;
+  mu_stream_t src;
+  static char *exclude_headers[] = {
+    MU_HEADER_X_IMAPBASE,
+    MU_HEADER_X_UID,
+    NULL
+  };
+
+  src = dmsg->mbox->mailbox->stream;
+
+  rc = mu_stream_seek (dst, 0, MU_SEEK_CUR, &ref->message_start);
+  if (rc)
+    return rc;
+
+  rc = mu_stream_seek (src, dmsg->message_start, MU_SEEK_SET, NULL);
+  if (rc)
+    return rc;
+
+  rc = mu_stream_header_copy (dst, src, exclude_headers);
+  if (rc)
+    return rc;
+
+  rc = dotmail_message_uid_save (dst, dmsg);
+  if (rc)
+    return rc;
+
+  rc = mu_stream_write (dst, "\n", 1, NULL);
+  if (rc)
+    return rc;
+
+  rc = mu_stream_seek (dst, 0, MU_SEEK_CUR, &ref->body_start);
+  if (rc)
+    return rc;
+
+  rc = mu_stream_copy (dst, src,
+		       dmsg->message_end - dmsg->body_start + 2,
+		       NULL);
+  if (rc)
+    return rc;
+
+  return mu_stream_seek (dst, 0, MU_SEEK_CUR, &ref->message_end);
+}
+
+static int
+msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
+		      struct mu_dotmail_message *dmsg)
+{
+  static char *exclude_headers[] = {
+    MU_HEADER_STATUS,
+    MU_HEADER_X_IMAPBASE,
+    MU_HEADER_X_UID,
+    NULL
+  };
+  mu_attribute_t attr;
+  int rc;
+
+  rc = mu_stream_header_copy (dst, src, exclude_headers);
+  if (rc)
+    return rc;
+
+  rc = dotmail_message_uid_save (dst, dmsg);
+  if (rc)
+    return rc;
+
+  rc = mu_message_get_attribute (dmsg->message, &attr);
+  if (rc)
+    return rc;
+
+  free (dmsg->hdr[mu_dotmail_hdr_status]);
+  dmsg->hdr[mu_dotmail_hdr_status] = malloc (MU_STATUS_BUF_SIZE);
+  if (!dmsg->hdr[mu_dotmail_hdr_status])
+    return ENOMEM;
+  rc = mu_attribute_to_string (attr, dmsg->hdr[mu_dotmail_hdr_status],
+			       MU_STATUS_BUF_SIZE, NULL);
+  if (rc)
+    return rc;
+
+  mu_stream_printf (dst, "%s: %s\n",
+		    MU_HEADER_STATUS,
+		    dmsg->hdr[mu_dotmail_hdr_status]);
+
+  return mu_stream_write (dst, "\n", 1, NULL);
+}
+
+/* Write to DEST a reconstructed copy of the message DMSG. Update
+   the tracking reference REF.
+*/
 int
 mu_dotmail_message_reconstruct (mu_stream_t dest,
 				struct mu_dotmail_message *dmsg,
@@ -595,19 +411,9 @@ mu_dotmail_message_reconstruct (mu_stream_t dest,
   mu_header_t hdr;
   mu_body_t body;
   mu_stream_t str, flt;
-  mu_attribute_t attr;
 
-  rc = mu_message_get_attribute (dmsg->message, &attr);
-  if (rc)
-    return rc;
-  free (dmsg->hdr[mu_dotmail_hdr_status]);
-  dmsg->hdr[mu_dotmail_hdr_status] = malloc (MU_STATUS_BUF_SIZE);
-  if (!dmsg->hdr[mu_dotmail_hdr_status])
-    return ENOMEM;
-  rc = mu_attribute_to_string (attr, dmsg->hdr[mu_dotmail_hdr_status],
-			       MU_STATUS_BUF_SIZE, NULL);
-  if (rc)
-    return rc;
+  if (!dmsg->message)
+    return dotmail_message_copy_with_uid (dest, dmsg, ref);
 
   rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_start);
   if (rc)

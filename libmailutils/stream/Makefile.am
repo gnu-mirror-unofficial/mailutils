@@ -20,6 +20,7 @@ noinst_LTLIBRARIES = libstream.la
 libstream_la_SOURCES = \
  file_stream.c\
  fltstream.c\
+ hdrcpy.c\
  iostream.c\
  logstream.c\
  mapfile_stream.c\
