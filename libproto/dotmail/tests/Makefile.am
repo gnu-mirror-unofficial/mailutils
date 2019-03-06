@@ -40,7 +40,6 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
 noinst_PROGRAMS = \
- dm_mbox\
  dm_mesg\
  dm_qget\
  dm_detect

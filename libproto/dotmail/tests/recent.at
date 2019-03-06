@@ -15,7 +15,7 @@
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 DM_TEST([recent],
-[dm_mbox recent],
+[dm_mesg recent],
 [Return-Path: hare@wonder.land
 Received: (from hare@wonder.land) 
 	by wonder.land id 3301
@@ -80,5 +80,5 @@ Return-Path: hare@wonder.land
 It wasn't very civil of you to sit down without being invited
 .
 ],
-[2
+[recent: 2
 ])

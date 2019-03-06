@@ -64,7 +64,7 @@ Return-Path: alice@wonder.land
 Then it wasn't very civil of you to offer it
 .
 ],
-[],[dm_mbox count],
+[],[dm_mesg count],
 [# Mark third message as deleted
 3
 set_deleted
@@ -90,5 +90,5 @@ Return-Path:alice@wonder.land
 
 3 body_text: Then it wasn't very civil of you to offer it
 
-3
+count: 3
 ])

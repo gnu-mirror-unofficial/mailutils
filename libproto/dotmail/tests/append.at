@@ -66,7 +66,7 @@ X-UID: 1034
 
 Then it wasn't very civil of you to offer it
 ])],
-[dm_mbox count],
+[dm_mesg count],
 [# Append new message
 append msg
 # Select it
@@ -92,7 +92,7 @@ Return-Path:alice@wonder.land
 
 4 body_text: Then it wasn't very civil of you to offer it
 
-4
+count: 4
 ])
 
 DM_MESG([append with uid],
@@ -151,7 +151,7 @@ X-UID: 1034
 
 Then it wasn't very civil of you to offer it
 ])],
-[dm_mbox count uidvalidity uidnext],
+[dm_mesg count\; uidvalidity\; uidnext],
 [# Append new message
 append msg
 # Select it
@@ -185,9 +185,9 @@ X-UID:140
 uidvalidity: 1027976406
 uidnext: 141
 sync: OK
-4
-1027976406
-141
+count: 4
+uidvalidity: 1027976406
+uidnext: 141
 ])
 
 DM_MESG([append to empty mailbox],

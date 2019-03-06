@@ -31,91 +31,98 @@ get_num (char const *s)
   return n;
 }
 
+struct interp_env
+{
+  mu_mailbox_t mbx;
+  mu_message_t msg;
+  size_t msgno;
+};
+
 void
-dm_env_date (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_env_date (struct interp_env *ienv, char **argv)
 {
   mu_envelope_t env;
   char *str;
 
-  MU_ASSERT (mu_message_get_envelope (msg, &env));
+  MU_ASSERT (mu_message_get_envelope (ienv->msg, &env));
   MU_ASSERT (mu_envelope_aget_date (env, &str));
   mu_printf ("%s", str);
   free (str);
 }
 
 void
-dm_env_sender (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_env_sender (struct interp_env *ienv, char **argv)
 {
   mu_envelope_t env;
   char *str;
 
-  MU_ASSERT (mu_message_get_envelope (msg, &env));
+  MU_ASSERT (mu_message_get_envelope (ienv->msg, &env));
   MU_ASSERT (mu_envelope_aget_sender (env, &str));
   mu_printf ("%s", str);
   free (str);
 }
 
 void
-dm_header_lines (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_header_lines (struct interp_env *ienv, char **argv)
 {
   mu_header_t hdr;
   size_t lines;
-  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_message_get_header (ienv->msg, &hdr));
   MU_ASSERT (mu_header_lines (hdr, &lines));
   mu_printf ("%lu", (unsigned long) lines);
 }
 
 void
-dm_header_count (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_header_count (struct interp_env *ienv, char **argv)
 {
   mu_header_t hdr;
   size_t n;
-  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_message_get_header (ienv->msg, &hdr));
   MU_ASSERT (mu_header_get_field_count (hdr, &n));
   mu_printf ("%lu", (unsigned long) n);
 }
 
 void
-dm_header_size (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_header_size (struct interp_env *ienv, char **argv)
 {
   mu_header_t hdr;
   size_t s;
-  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_message_get_header (ienv->msg, &hdr));
   MU_ASSERT (mu_header_size (hdr, &s));
   mu_printf ("%lu", (unsigned long) s);
 }
 
 void
-dm_header_field (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_header_field (struct interp_env *ienv, char **argv)
 {
   mu_header_t hdr;
   size_t n = get_num (argv[0]);
   char const *s;
-  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_message_get_header (ienv->msg, &hdr));
   MU_ASSERT (mu_header_sget_field_name (hdr, n, &s));
   mu_printf ("%s", s);
 }
 
 void
-dm_header_value (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_header_value (struct interp_env *ienv, char **argv)
 {
   mu_header_t hdr;
   size_t n = get_num (argv[0]);
   char const *s;
-  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_message_get_header (ienv->msg, &hdr));
   MU_ASSERT (mu_header_sget_field_value (hdr, n, &s));
   mu_printf ("%s", s);
 }
 
 void
-dm_headers (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_headers (struct interp_env *ienv, char **argv)
 {
   mu_header_t hdr;
   char const *name;
   char *val;
   size_t i, n;
 
-  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_message_get_header (ienv->msg, &hdr));
   MU_ASSERT (mu_header_get_field_count (hdr, &n));
   for (i = 1; i <= n; i++)
     {
@@ -127,51 +134,51 @@ dm_headers (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 }
 
 void
-dm_body_lines (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_body_lines (struct interp_env *ienv, char **argv)
 {
   mu_body_t body;
   size_t lines;
-  MU_ASSERT (mu_message_get_body (msg, &body));
+  MU_ASSERT (mu_message_get_body (ienv->msg, &body));
   MU_ASSERT (mu_body_lines (body, &lines));
   mu_printf ("%lu", (unsigned long) lines);
 }
 
 void
-dm_body_size (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_body_size (struct interp_env *ienv, char **argv)
 {
   mu_body_t body;
   size_t s;
-  MU_ASSERT (mu_message_get_body (msg, &body));
+  MU_ASSERT (mu_message_get_body (ienv->msg, &body));
   MU_ASSERT (mu_body_size (body, &s));
   mu_printf ("%lu", (unsigned long) s);
 }
 
 void
-dm_body_text (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_body_text (struct interp_env *ienv, char **argv)
 {
   mu_body_t body;
   mu_stream_t str;
-  MU_ASSERT (mu_message_get_body (msg, &body));
+  MU_ASSERT (mu_message_get_body (ienv->msg, &body));
   MU_ASSERT (mu_body_get_streamref (body, &str));
   MU_ASSERT (mu_stream_copy (mu_strout, str, 0, NULL));
   mu_stream_unref (str);
 }
 
 void
-dm_attr (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_attr (struct interp_env *ienv, char **argv)
 {
   mu_attribute_t attr;
   char abuf[MU_STATUS_BUF_SIZE];
-  MU_ASSERT (mu_message_get_attribute (msg, &attr));
+  MU_ASSERT (mu_message_get_attribute (ienv->msg, &attr));
   MU_ASSERT (mu_attribute_to_string (attr, abuf, sizeof (abuf), NULL));
   mu_printf ("%s", abuf[0] ? abuf : "-");
 }
 
 void
-dm_uid (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_uid (struct interp_env *ienv, char **argv)
 {
   size_t uid;
-  MU_ASSERT (mu_message_get_uid (msg, &uid));
+  MU_ASSERT (mu_message_get_uid (ienv->msg, &uid));
   mu_printf ("%lu", (unsigned long) uid);
 }
 
@@ -180,10 +187,10 @@ dm_uid (mu_mailbox_t mbx, mu_message_t msg, char **argv)
 #define __cat4__(a,b,c,d) a ## b ## c ## d
 #define ATTR_FUN(op,attr)				\
 static void						\
-__cat4__(dm_,op,_,attr) (mu_mailbox_t mbx, mu_message_t msg, char **argv) \
+__cat4__(dm_,op,_,attr) (struct interp_env *ienv, char **argv) \
 {							\
   mu_attribute_t a;                                     \
-  MU_ASSERT (mu_message_get_attribute (msg, &a));       \
+  MU_ASSERT (mu_message_get_attribute (ienv->msg, &a));       \
   MU_ASSERT (__cat4__(mu_attribute_,op,_,attr)(a));	\
   mu_printf ("OK");                                     \
 }
@@ -205,72 +212,72 @@ ATTR_FUN(unset,recent)
 ATTR_FUN(unset,read)
 
 void
-dm_append (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_append (struct interp_env *ienv, char **argv)
 {
   mu_stream_t str;
   mu_message_t newmsg;
   MU_ASSERT (mu_file_stream_create (&str, argv[0], MU_STREAM_READ));
   MU_ASSERT (mu_stream_to_message (str, &newmsg));
-  MU_ASSERT (mu_mailbox_append_message (mbx, newmsg));
+  MU_ASSERT (mu_mailbox_append_message (ienv->mbx, newmsg));
   mu_stream_destroy (&str);
   mu_printf ("OK");
 }
 
 void
-dm_expunge (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_expunge (struct interp_env *ienv, char **argv)
 {
-  MU_ASSERT (mu_mailbox_expunge (mbx));
+  MU_ASSERT (mu_mailbox_expunge (ienv->mbx));
   mu_printf ("OK");
 }
 
 void
-dm_sync (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_sync (struct interp_env *ienv, char **argv)
 {
-  MU_ASSERT (mu_mailbox_sync (mbx));
+  MU_ASSERT (mu_mailbox_sync (ienv->mbx));
   mu_printf ("OK");
 }
 
 void
-dm_count (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_count (struct interp_env *ienv, char **argv)
 {
   size_t n;
-  MU_ASSERT (mu_mailbox_messages_count (mbx, &n));
+  MU_ASSERT (mu_mailbox_messages_count (ienv->mbx, &n));
   mu_printf ("%lu", (unsigned long) n);
 }
 
 void
-dm_uidvalidity (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_uidvalidity (struct interp_env *ienv, char **argv)
 {
   unsigned long v;
-  MU_ASSERT (mu_mailbox_uidvalidity (mbx, &v));
+  MU_ASSERT (mu_mailbox_uidvalidity (ienv->mbx, &v));
   mu_printf ("%lu", v);
 }
 
 void
-dm_uidnext (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_uidnext (struct interp_env *ienv, char **argv)
 {
   size_t n;
-  MU_ASSERT (mu_mailbox_uidnext (mbx, &n));
+  MU_ASSERT (mu_mailbox_uidnext (ienv->mbx, &n));
   mu_printf ("%lu", (unsigned long) n);
 }
 
 void
-dm_recent (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_recent (struct interp_env *ienv, char **argv)
 {
   size_t n;
-  MU_ASSERT (mu_mailbox_messages_recent (mbx, &n));
+  MU_ASSERT (mu_mailbox_messages_recent (ienv->mbx, &n));
   mu_printf ("%lu", (unsigned long) n);
 }
 
 void
-dm_unseen (mu_mailbox_t mbx, mu_message_t msg, char **argv)
+dm_unseen (struct interp_env *ienv, char **argv)
 {
   size_t n;
-  MU_ASSERT (mu_mailbox_message_unseen (mbx, &n));
+  MU_ASSERT (mu_mailbox_message_unseen (ienv->mbx, &n));
   mu_printf ("%lu", (unsigned long) n);
 }
 
-typedef void (*dm_action_fn) (mu_mailbox_t, mu_message_t, char **);
+typedef void (*dm_action_fn) (struct interp_env *, char **);
 
 struct dm_action
 {
@@ -331,17 +338,50 @@ get_action (char const *s)
   return NULL;
 }
 
+void
+interpret (struct interp_env *env, int argc, char **argv)
+{
+  struct dm_action *act;
+
+  if (mu_isdigit (*argv[0]))
+    {
+      env->msgno = get_num (argv[0]);
+      MU_ASSERT (mu_mailbox_get_message (env->mbx, env->msgno, &env->msg));
+      mu_printf ("%lu current message\n", (unsigned long) env->msgno);
+      return;
+    }
+
+  act = get_action (argv[0]);
+  if (!act)
+    {
+      mu_error ("%s: unrecognized action", argv[0]);
+      exit (1);
+    }
+
+  if (act->needs_message && !env->msg)
+    {
+      mu_error ("no message selected");
+      exit (1);
+    }
+
+  if (act->narg + 1 != argc)
+    {
+      mu_error ("bad number of arguments for %s", argv[0]);
+      exit (1);
+    }
+
+  if (act->needs_message)
+    mu_printf ("%lu ", (unsigned long) env->msgno);
+  mu_printf ("%s: ", argv[0]);
+  act->fn (env, argv + 1);
+  mu_printf ("\n");
+}
+
 int
 main (int argc, char **argv)
 {
-  mu_mailbox_t mbx;
-  mu_message_t msg = NULL;
+  struct interp_env env = { NULL, NULL, 0 };
   char *mailbox_name = getenv ("MAIL");
-  size_t msgno;
-  char *buf = NULL;
-  size_t size = 0, n;
-  struct mu_wordsplit ws;
-  int wsflags;
   int rc;
 
   mu_set_program_name (argv[0]);
@@ -359,64 +399,62 @@ main (int argc, char **argv)
       argv++;
     }
 
-  MU_ASSERT (mu_mailbox_create_default (&mbx, mailbox_name));
-  MU_ASSERT (mu_mailbox_open (mbx, MU_STREAM_RDWR));
+  MU_ASSERT (mu_mailbox_create_default (&env.mbx, mailbox_name));
+  MU_ASSERT (mu_mailbox_open (env.mbx, MU_STREAM_RDWR));
 
-  wsflags  = MU_WRDSF_DEFFLAGS
-	   | MU_WRDSF_COMMENT
-	   | MU_WRDSF_ALLOC_DIE
-	   | MU_WRDSF_SHOWERR;
-  ws.ws_comment = "#";
-
-  while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
+  if (argc)
     {
-      struct dm_action *act;
-
-      mu_ltrim_class (buf, MU_CTYPE_SPACE);
-      mu_rtrim_class (buf, MU_CTYPE_SPACE);
-
-      MU_ASSERT (mu_wordsplit (buf, &ws, wsflags));
-      wsflags |= MU_WRDSF_REUSE;
-
-      if (ws.ws_wordc == 0)
-	continue;
-
-      if (mu_isdigit (*ws.ws_wordv[0]))
+      while (argc)
 	{
-	  msgno = get_num (ws.ws_wordv[0]);
-	  MU_ASSERT (mu_mailbox_get_message (mbx, msgno, &msg));
-	  mu_printf ("%lu current message\n", (unsigned long) msgno);
-	  continue;
-	}
+	  int i, n = 0;
+	  for (i = 0; i < argc; i++)
+	    {
+	      size_t len = strlen (argv[i]);
+	      if (argv[i][len - 1] == ';')
+		{
+		  if (len == 1)
+		    n = 1;
+		  else
+		    argv[i][len - 1] = 0;
+		  i++;
+		  break;
+		}
+	    }
 
-      act = get_action (ws.ws_wordv[0]);
-      if (!act)
-	{
-	  mu_error ("%s: unrecognized action", ws.ws_wordv[0]);
-	  return 1;
+	  interpret (&env, i-n, argv);
+	  argc -= i;
+	  argv += i;
 	}
-
-      if (act->needs_message && !msg)
-	{
-	  mu_error ("no message selected");
-	  return 1;
-	}
-
-      if (act->narg + 1 != ws.ws_wordc)
-	{
-	  mu_error ("bad number of arguments for %s", ws.ws_wordv[0]);
-	  return 1;
-	}
-
-      if (act->needs_message)
-	mu_printf ("%lu ", (unsigned long) msgno);
-      mu_printf ("%s: ", ws.ws_wordv[0]);
-      act->fn (mbx, msg, ws.ws_wordv + 1);
-      mu_printf ("\n");
     }
-  if (wsflags & MU_WRDSF_REUSE)
-    mu_wordsplit_free (&ws);
-  mu_mailbox_close (mbx);
-  mu_mailbox_destroy (&mbx);
+  else
+    {
+      char *buf = NULL;
+      size_t size = 0, n;
+      struct mu_wordsplit ws;
+      int wsflags;
+
+      wsflags  = MU_WRDSF_DEFFLAGS
+	       | MU_WRDSF_COMMENT
+	       | MU_WRDSF_ALLOC_DIE
+	       | MU_WRDSF_SHOWERR;
+      ws.ws_comment = "#";
+
+      while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
+	{
+	  mu_ltrim_class (buf, MU_CTYPE_SPACE);
+	  mu_rtrim_class (buf, MU_CTYPE_SPACE);
+
+	  MU_ASSERT (mu_wordsplit (buf, &ws, wsflags));
+	  wsflags |= MU_WRDSF_REUSE;
+
+	  if (ws.ws_wordc == 0)
+	    continue;
+	  interpret (&env, ws.ws_wordc, ws.ws_wordv);
+	}
+      if (wsflags & MU_WRDSF_REUSE)
+	mu_wordsplit_free (&ws);
+    }
+  mu_mailbox_close (env.mbx);
+  mu_mailbox_destroy (&env.mbx);
   return 0;
 }
