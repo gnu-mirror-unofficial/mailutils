@@ -48,6 +48,14 @@ end.
 ])
 AT_CLEANUP
 
+AT_SETUP([DOT empty input])
+AT_KEYWORDS([DOT empty input])
+AT_CHECK([fltst dot encode read < /dev/null],
+[0],
+[.
+])
+AT_CLEANUP
+
 AT_SETUP([DOT reversibility])
 AT_KEYWORDS([filter dot])
 AT_CHECK([

@@ -178,7 +178,7 @@ _dot_encoder (void *xd,
   size_t isize;
   char *optr;
   size_t osize;
-  int *state = xd;
+  enum dot_encode_state *state = xd;
   
   switch (cmd)
     {
@@ -229,6 +229,7 @@ _dot_encoder (void *xd,
     {
       switch (*state)
 	{
+	case dot_encode_init:
 	case dot_encode_lf:
 	  if (j + 2 > osize)
 	    result = mu_filter_again;
