@@ -150,6 +150,8 @@ cli_attach (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
 			default_content_type, default_encoding))
     exit (po->po_exit_error);
 
+  mime_option = 1;
+  
   free (content_name);
   content_name = NULL;
   free (content_filename);
