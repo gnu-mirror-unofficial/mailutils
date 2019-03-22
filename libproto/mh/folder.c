@@ -60,6 +60,24 @@ mh_dir_p (const char *name)
 
   while (!result && (entry = readdir (dir)))
     {
+      char *pname;
+      struct stat st;
+      int rc;
+
+      if (entry->d_name[0] == '.'
+	  && (entry->d_name[1] == 0
+	      || (entry->d_name[1] == '.' && entry->d_name[2] == 0)))
+	continue;
+
+      pname = mu_make_file_name (name, entry->d_name);
+      if (!pname)
+	continue;
+
+      rc = stat (pname, &st);
+      free (pname);
+      if (rc || !S_ISREG (st.st_mode))
+	continue;
+
       switch (entry->d_name[0])
 	{
 	case '.':
@@ -119,12 +137,15 @@ _mh_is_scheme (mu_record_t record, mu_url_t url, int flags)
 }
 
 static int
-_mh_list_p (mu_record_t record, const char *name, int flags MU_ARG_UNUSED)
+_mh_list_p (mu_record_t record, const char *name, int flags)
 {
   if (name[0] == ',' ||
       ((strlen (name) > 3) &&
        (memcmp (name, ".mh", 3) == 0 || memcmp (name, ".mu", 3) == 0)))
     return 0;
+
+  if (flags == MU_FOLDER_ATTRIBUTE_DIRECTORY)
+    return 1;
 
   for (; *name; name++)
     if (!mu_isdigit (*name))

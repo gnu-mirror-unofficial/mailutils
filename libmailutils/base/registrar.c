@@ -342,8 +342,6 @@ mu_record_get_folder (mu_record_t record, int (*(*_pfolder)) (mu_folder_t))
 int
 mu_record_list_p (mu_record_t record, const char *name, int flags)
 {
-  if (record == NULL)
-    return EINVAL;
   return record == NULL
           || !record->_list_p
           || record->_list_p (record, name, flags);
