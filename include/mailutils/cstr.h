@@ -31,6 +31,9 @@ int mu_c_strcasecmp (const char *a, const char *b);
 int mu_c_strncasecmp (const char *a, const char *b, size_t n);
 char *mu_c_strcasestr (const char *haystack, const char *needle);
 
+int mu_string_prefix (char const *str, char const *pfx);
+int mu_string_suffix (char const *str, char const *sfx);
+  
 size_t mu_rtrim_class (char *str, int __class);
 size_t mu_rtrim_cset (char *str, const char *cset);
 size_t mu_ltrim_class (char *str, int __class);

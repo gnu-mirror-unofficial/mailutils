@@ -32,7 +32,9 @@ libstring_la_SOURCES = \
  str_to_c.c\
  strcount.c\
  strltrim.c\
+ strpref.c\
  strskip.c\
+ strsuf.c\
  stripws.c\
  strlst.c\
  strrtrim.c\
