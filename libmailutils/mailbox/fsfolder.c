@@ -183,18 +183,12 @@ struct inode_list           /* Inode/dev number list used to cut off
   dev_t dev;
 };
 
-struct search_data
+struct folder_scan_data
 {
-  mu_list_t result;
-  mu_folder_enumerate_fp enumfun;
-  void *enumdata;
+  mu_folder_t folder;
   char *dirname;
   size_t dirlen;
-  void *pattern;
-  int flags;
-  size_t max_level;
   size_t errcnt;
-  mu_folder_t folder;
 };
 
 static int
@@ -207,34 +201,28 @@ inode_list_lookup (struct inode_list *list, struct stat *st)
 }
 
 static int
-list_helper (struct search_data *data, mu_record_t record,
-	     const char *dirname, size_t level,
-	     struct inode_list *ilist)
+list_helper (struct mu_folder_scanner *scn,
+	     struct folder_scan_data *data,
+	     struct inode_list *ilist,
+	     const char *dirname, size_t level)
 {
   DIR *dirp;
   struct dirent *dp;
   int stop = 0;
     
-  if (data->max_level && level > data->max_level)
+  if (scn->max_level && level > scn->max_level)
     return 0;
 
   dirp = opendir (dirname);
   if (dirp == NULL)
     {
       mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
-		("list_helper cannot open directory %s: %s",
-		 dirname, mu_strerror (errno)));
+		("%s: %s(%s): %s",
+		 __func__, "opendir", dirname, mu_strerror (errno)));
       data->errcnt++;
       return 1;
     }
 
-  if (!record)
-    {
-      int type;
-      mu_registrar_lookup (dirname, MU_FOLDER_ATTRIBUTE_ALL,
-			   &record, &type);
-    }
-  
   while ((dp = readdir (dirp)))
     {
       char const *ename = dp->d_name;
@@ -257,15 +245,16 @@ list_helper (struct search_data *data, mu_record_t record,
 	    f = MU_FOLDER_ATTRIBUTE_LINK;
 	  else
 	    f = 0;
-	  if (mu_record_list_p (record, ename, f))
+	  if (mu_registrar_list_p (scn->records, ename, f))
 	    {
-	      if (data->folder->_match == NULL
+	      if (scn->pattern == NULL
+		  || data->folder->_match == NULL
 		  || data->folder->_match (fname + data->dirlen +
 					   ((data->dirlen > 1
 					     && data->dirname[data->dirlen-1] != '/') ?
 					    1 : 0),
-					   data->pattern,
-					   data->flags) == 0)
+					   scn->pattern,
+					   scn->match_flags) == 0)
 		{
 		  char *refname = fname;
 		  int type = 0;
@@ -276,7 +265,7 @@ list_helper (struct search_data *data, mu_record_t record,
 		  if (resp == NULL)
 		    {
 		      mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
-				("list_helper: %s", mu_strerror (ENOMEM)));
+				("%s: %s", __func__, mu_strerror (ENOMEM)));
 		      data->errcnt++;
 		      free (fname);
 		      continue;
@@ -284,6 +273,27 @@ list_helper (struct search_data *data, mu_record_t record,
 		  
 		  mu_registrar_lookup (refname, MU_FOLDER_ATTRIBUTE_ALL,
 				       &rec, &type);
+		  if (scn->records)
+		    {
+		      int rc;
+		      rc = mu_list_locate (scn->records, &rec, NULL);
+		      if (rc)
+			{
+			  if (rc != MU_ERR_NOENT)
+			    mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+				      ("%s(%s):%s: %s",
+				       __func__, dirname, "mu_list_locate",
+				       mu_strerror (rc)));
+			  continue;
+			}
+		    }
+		  
+		  if (type == 0)
+		    {
+		      free (fname);
+		      free (resp);
+		      continue;
+		    }
 		  
 		  resp->name = fname;
 		  resp->level = level;
@@ -291,16 +301,9 @@ list_helper (struct search_data *data, mu_record_t record,
 		  resp->type = type;
 		  resp->format = rec;
 		  
-		  if (resp->type == 0)
+		  if (scn->enumfun)
 		    {
-		      free (resp->name);
-		      free (resp);
-		      continue;
-		    }
-		  
-		  if (data->enumfun)
-		    {
-		      if (data->enumfun (data->folder, resp, data->enumdata))
+		      if (scn->enumfun (data->folder, resp, scn->enumdata))
 			{
 			  free (resp->name);
 			  free (resp);
@@ -309,10 +312,20 @@ list_helper (struct search_data *data, mu_record_t record,
 			}
 		    }
 		  
-		  if (data->result)
+		  if (scn->result)
 		    {
+		      int rc;
+		      rc = mu_list_append (scn->result, resp);
+		      if (rc)
+			mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+				  ("%s(%s):%s: %s",
+				   __func__, dirname, "mu_list_append",
+				   mu_strerror (rc)));
+
+		      /* Prevent fname from being freed at the end of the
+			 loop
+		      */
 		      fname = NULL;
-		      mu_list_append (data->result, resp);
 		    }
 		  else
 		    free (resp);
@@ -325,8 +338,8 @@ list_helper (struct search_data *data, mu_record_t record,
 		      idata.inode = st.st_ino;
 		      idata.dev   = st.st_dev;
 		      idata.next  = ilist;
-		      stop = list_helper (data, rec, refname, level + 1,
-					  &idata);
+		      stop = list_helper (scn, data, &idata, refname,
+					  level + 1);
 		    }
 		}
 	      else if (S_ISDIR (st.st_mode))
@@ -336,15 +349,15 @@ list_helper (struct search_data *data, mu_record_t record,
 		  idata.inode = st.st_ino;
 		  idata.dev   = st.st_dev;
 		  idata.next  = ilist;
-		  stop = list_helper (data, NULL, fname, level + 1, &idata);
+		  stop = list_helper (scn, data, &idata, fname, level + 1);
 		}
 	    }
 	}
       else
 	{
 	  mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
-		    ("list_helper cannot stat %s: %s",
-		     fname, mu_strerror (errno)));
+		    ("%s: lstat(%s): %s",
+		     __func__, fname, mu_strerror (errno)));
 	}
       free (fname);
     }
@@ -353,29 +366,18 @@ list_helper (struct search_data *data, mu_record_t record,
 }
 
 static int
-_fsfolder_list (mu_folder_t folder, const char *ref,
-		void *pattern,
-		int flags,
-		size_t max_level,
-		mu_list_t flist,
-		mu_folder_enumerate_fp enumfun, void *enumdata)
+_fsfolder_list (mu_folder_t folder, struct mu_folder_scanner *scn)
 {
   struct _mu_fsfolder *fsfolder = folder->data;
   struct inode_list iroot;
-  struct search_data sdata;
+  struct folder_scan_data sdata;
   
   memset (&iroot, 0, sizeof iroot);
-  sdata.dirname = get_pathname (fsfolder->dirname, ref);
-  sdata.dirlen = strlen (sdata.dirname);
-  sdata.result = flist;
-  sdata.enumfun = enumfun;
-  sdata.enumdata = enumdata;
-  sdata.pattern = pattern;
-  sdata.flags = flags;
-  sdata.max_level = max_level;
   sdata.folder = folder;
+  sdata.dirname = get_pathname (fsfolder->dirname, scn->refname);
+  sdata.dirlen = strlen (sdata.dirname);
   sdata.errcnt = 0;
-  list_helper (&sdata, NULL, sdata.dirname, 0, &iroot);
+  list_helper (scn, &sdata, &iroot, sdata.dirname, 0);
   free (sdata.dirname);
   /* FIXME: error code */
   return 0;

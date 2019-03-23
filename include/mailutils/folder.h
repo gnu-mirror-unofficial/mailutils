@@ -51,18 +51,42 @@ extern int  mu_folder_delete         (mu_folder_t, const char *);
 extern int  mu_folder_rename         (mu_folder_t, const char *, const char *);
 extern int  mu_folder_subscribe      (mu_folder_t, const char *);
 extern int  mu_folder_unsubscribe    (mu_folder_t, const char *);
-extern int  mu_folder_list           (mu_folder_t, const char *, void *,
-				      size_t, mu_list_t *);
-extern int  mu_folder_enumerate      (mu_folder_t, const char *,
-				      void *, int, 
-				      size_t, mu_list_t *,
-				      mu_folder_enumerate_fp, void *);
 extern int  mu_folder_lsub           (mu_folder_t, const char *, const char *,
 				      mu_list_t *);
 
 extern int mu_folder_attach_ticket (mu_folder_t folder);
 extern int mu_folder_is_local (mu_folder_t folder);
 
+  /* Scan API */
+/* The mu_folder_scanner structure controls the scanning. All of
+   members are optional. Unused ones must be initialized to 0.
+*/
+struct mu_folder_scanner
+{
+  char const *refname;     /* Reference name */
+  void *pattern;           /* Matching pattern */
+  int match_flags;         /* Matching flags */
+  size_t max_level;        /* Max. nesting level to descend */
+  mu_folder_enumerate_fp enumfun; /* Enumeration function */
+  void *enumdata;                 /* Data for enumfun */
+  mu_list_t records;        /* List of allowed records */
+  mu_list_t result;         /* Result list */
+};
+
+#define MU_FOLDER_SCANNER_INITIALIZER \
+  { NULL, NULL, 0, 0, NULL, NULL, NULL, NULL }
+  
+int mu_folder_scan (mu_folder_t folder, struct mu_folder_scanner *scn);
+
+/* The following two functions are implemented as alternative entry
+   points to mu_folder_scan: */
+extern int  mu_folder_list           (mu_folder_t, const char *, void *,
+				      size_t, mu_list_t *);
+extern int  mu_folder_enumerate      (mu_folder_t, const char *,
+				      void *, int, 
+				      size_t, mu_list_t *,
+				      mu_folder_enumerate_fp, void *);
+    
   /* Match function */
 extern int mu_folder_set_match (mu_folder_t folder, mu_folder_match_fp pmatch);
 extern int mu_folder_get_match (mu_folder_t folder,

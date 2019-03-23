@@ -261,21 +261,19 @@ _enumerate_helper (void *item, void *data)
   return clos->fun (clos->folder, rp, clos->data);
 }
 
+/* NOTE: scn->records is ignored */
 static int
-_mu_imap_folder_list (mu_folder_t folder, const char *ref, void *name,
-		      int flags, size_t max_level,
-		      mu_list_t flist,
-		      mu_folder_enumerate_fp efp, void *edp)
+_mu_imap_folder_list (mu_folder_t folder, struct mu_folder_scanner *scn)
 {
   mu_imap_t imap = folder->data;
   mu_list_t list;
-  int rc = mu_imap_list_new (imap, ref, name, &list);
+  int rc = mu_imap_list_new (imap, scn->refname, scn->pattern, &list);
 
   if (rc)
     return rc;
 
-  if (max_level ||
-      (flags & MU_FOLDER_ATTRIBUTE_ALL) != MU_FOLDER_ATTRIBUTE_ALL)
+  if (scn->max_level
+      || (scn->match_flags & MU_FOLDER_ATTRIBUTE_ALL) != MU_FOLDER_ATTRIBUTE_ALL)
     {
       /* Filter out the list, eliminating non-matching entries */
       mu_iterator_t itr;
@@ -293,25 +291,26 @@ _mu_imap_folder_list (mu_folder_t folder, const char *ref, void *name,
 	  struct mu_list_response *rp;
 
 	  mu_iterator_current (itr, (void**) &rp);
-	  if (!(rp->type & flags) || (max_level && rp->level > max_level))
+	  if (!(rp->type & scn->match_flags)
+	      || (scn->max_level && rp->level > scn->max_level))
 	    mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
 	}
       mu_iterator_destroy (&itr);
     }
 
-  if (efp)
+  if (scn->enumfun)
     {
       struct enumerate_closure clos;
 
       clos.folder = folder;
-      clos.fun = efp;
-      clos.data = edp;
+      clos.fun = scn->enumfun;
+      clos.data = scn->enumdata;
 
       rc = mu_list_foreach (list, _enumerate_helper, &clos);
     }
 
-  if (flist)
-    mu_list_append_list (flist, list);
+  if (scn->result)
+    mu_list_append_list (scn->result, list);
 
   mu_list_destroy (&list);
 

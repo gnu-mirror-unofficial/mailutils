@@ -29,7 +29,7 @@ fsfolder -name=dir rename bar baz
 [renaming foo to bar
 rename successful
 listing '' '*'
-d- /    0 dir/bar
+-f /    0 dir/bar
 renaming bar to baz
 ],
 [fsfolder: mu_folder_rename(bar) failed: File exists

@@ -34,20 +34,20 @@ fsfolder -name=dir -sort dnl
 ],
 [0],
 [listing '' '*'
-d- /    0 dir/bar
-d- /    0 dir/foo
-d- /    0 dir/foo.mbox
+-f /    0 dir/bar
+-f /    0 dir/foo
+-f /    0 dir/foo.mbox
 d- /    0 dir/subdir
-d- /    1 dir/subdir/baz.mbox
-d- /    1 dir/subdir/file
+-f /    1 dir/subdir/baz.mbox
+-f /    1 dir/subdir/file
 listing 'subdir' '*'
-d- /    0 dir/subdir/baz.mbox
-d- /    0 dir/subdir/file
+-f /    0 dir/subdir/baz.mbox
+-f /    0 dir/subdir/file
 listing '' '*.mbox'
-d- /    0 dir/foo.mbox
-d- /    1 dir/subdir/baz.mbox
+-f /    0 dir/foo.mbox
+-f /    1 dir/subdir/baz.mbox
 listing 'subdir' '*.mbox'
-d- /    0 dir/subdir/baz.mbox
+-f /    0 dir/subdir/baz.mbox
 ])
 
 AT_CLEANUP

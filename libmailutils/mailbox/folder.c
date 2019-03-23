@@ -343,6 +343,18 @@ mu_list_response_free (void *data)
 }
 
 int
+mu_folder_scan (mu_folder_t folder, struct mu_folder_scanner *scn)
+{
+  if (!folder || !scn)
+    return EINVAL;
+  if (folder->_list == NULL)
+    return ENOSYS;
+  if (scn->result)
+    mu_list_set_destroy_item (scn->result, mu_list_response_free);
+  return folder->_list (folder, scn);
+}
+
+int
 mu_folder_list (mu_folder_t folder, const char *dirname, void *pattern,
 		size_t max_level,
 		mu_list_t *pflist)
@@ -360,29 +372,35 @@ mu_folder_enumerate (mu_folder_t folder, const char *name,
 		     mu_folder_enumerate_fp enumfun, void *enumdata)
 {
   int status;
-  if (folder == NULL)
+  if (folder == NULL || (!pflist && !enumfun))
     return EINVAL;
   else if (folder->_list == NULL)
     return ENOSYS;
   else
     {
-      mu_list_t list = NULL;
-      
+      struct mu_folder_scanner scn;
+
+      scn.refname = name;
+      scn.pattern = pattern;
+      scn.match_flags = flags;
+      scn.max_level = max_level;
+      scn.enumfun = enumfun;
+      scn.enumdata = enumdata;
+      scn.records = NULL;
       if (pflist)
 	{
-	  status = mu_list_create (&list);
+	  status = mu_list_create (&scn.result);
 	  if (status)
 	    return status;
-	  *pflist = list;
-	  mu_list_set_destroy_item (list, mu_list_response_free);
 	}
-      else if (!enumfun)
-	return EINVAL;
-      
-      status = folder->_list (folder, name, pattern, flags, max_level,
-			      list, enumfun, enumdata);
-      if (status)
-	mu_list_destroy (pflist);
+      status = mu_folder_scan (folder, &scn);
+      if (status == 0)
+	{
+	  if (pflist)
+	    *pflist = scn.result;
+	}
+      else
+	mu_list_destroy (&scn.result);
     }
   return status;
 }

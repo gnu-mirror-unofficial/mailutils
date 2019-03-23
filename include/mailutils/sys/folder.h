@@ -49,8 +49,7 @@ struct _mu_folder
 
   int  (*_open)        (mu_folder_t, int flag);
   int  (*_close)       (mu_folder_t);
-  int  (*_list)        (mu_folder_t, const char *, void *, int, size_t,
-			mu_list_t, mu_folder_enumerate_fp, void *);
+  int  (*_list)        (mu_folder_t, struct mu_folder_scanner *);
   int  (*_lsub)        (mu_folder_t, const char *, const char *,
 		        mu_list_t);
   mu_folder_match_fp   _match;

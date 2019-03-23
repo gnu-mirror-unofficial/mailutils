@@ -93,6 +93,7 @@ int mu_record_get_mailer      (mu_record_t, int (*(*)) (mu_mailer_t));
 int mu_record_get_folder      (mu_record_t, int (*(*)) (mu_folder_t));
   
 int mu_record_list_p (mu_record_t record, const char *name, int);
+int mu_registrar_list_p (mu_list_t rlist, char const *name, int flags);
   
 /* Records provided by the library.  */
 

@@ -400,6 +400,29 @@ mu_registrar_test_local_url (mu_url_t url, int *pres)
   return 0;
 }
 
+struct listable_closure
+{
+  char const *name;
+  int flags;
+};
+
+static int
+record_listable (void *item, void *data)
+{
+  mu_record_t record = item;
+  struct listable_closure *cls = data;
+  return !mu_record_list_p (record, cls->name, cls->flags);
+}
+
+int
+mu_registrar_list_p (mu_list_t rlist, char const *name, int flags)
+{
+  struct listable_closure cls = { name, flags };
+  if (!rlist)
+    rlist = registrar_list;
+  return !mu_list_foreach (rlist, record_listable, &cls);
+}	
+
 /* Apply flt to each record in the registry and remove those, for which it
    returns non-zero. */
 int

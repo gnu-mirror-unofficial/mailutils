@@ -19,6 +19,7 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <mailutils/error.h>
 #include <mailutils/errno.h>
 #include <mailutils/folder.h>
@@ -182,7 +183,30 @@ usage ()
 static int
 _always_is_scheme (mu_record_t record, mu_url_t url, int flags)
 {
-  return 1;
+  int res = 0;
+  char const *p;
+  struct stat st;
+  int rc = mu_url_sget_path (url, &p);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_url_sget_path", NULL, rc);
+      return 0;
+    }
+
+  if (lstat (p, &st))
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "lstat", p, rc);
+      return 0;
+    }
+      
+  if (S_ISDIR (st.st_mode))
+    res |= MU_FOLDER_ATTRIBUTE_DIRECTORY;
+  if (S_ISREG (st.st_mode))
+    res |= MU_FOLDER_ATTRIBUTE_FILE;
+  if (S_ISLNK (st.st_mode))
+    res |= MU_FOLDER_ATTRIBUTE_LINK;
+  
+  return res & flags;
 }
 
 static struct _mu_record test_record =
