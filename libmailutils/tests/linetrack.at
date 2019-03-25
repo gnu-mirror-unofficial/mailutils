@@ -54,11 +54,11 @@ liber:4.15-18: Naso
 TRACKTEST([retreat],[],[3],
 [
 agnosco
-#retreat 4
+.retreat 4
 veteris
 vestigia\n
 flamme
-#retreat 8
+.retreat 8
 Publius
 ],
 [liber:1.1-7: agnosco
@@ -73,7 +73,7 @@ TRACKTEST([retreat over several lines],[],[4],
 one\n
 two\n
 three
-#retreat 11
+.retreat 11
 four
 ],
 [liber:1.1-3: one\n
@@ -85,7 +85,7 @@ liber:1.3-6: four
 TRACKTEST([retreat to the beginning],[],[4],
 [one\n
 two\n
-#retreat 8
+.retreat 8
 three
 ],
 [liber:1.1-3: one\n
@@ -96,7 +96,7 @@ liber:1.1-5: three
 TRACKTEST([too big retreat],[],[2],
 [one\n
 two\n
-#retreat 10
+.retreat 10
 three
 ],
 [liber:1.1-3: one\n
@@ -110,14 +110,14 @@ TRACKTEST([origin 1],[],[10],
 [one\n
 two\n
 three\n
-#origin B 5 0
+.origin B 5 0
 four\n
 five\n
-#origin C 2 0
+.origin C 2 0
 six\n
 seven\n
 eight\n
-#stat
+.stat
 ],
 [liber:1.1-3: one\n
 liber:2.1-3: two\n
@@ -136,14 +136,14 @@ TRACKTEST([origin 2],[],[8],
 [one\n
 two\n
 three\n
-#origin B 5 0
+.origin B 5 0
 four\n
 five\n
-#origin C 2 0
+.origin C 2 0
 six\n
 seven\n
 eight\n
-#stat
+.stat
 ],
 [liber:1.1-3: one\n
 liber:2.1-3: two\n
@@ -162,14 +162,14 @@ TRACKTEST([origin 3],[],[7],
 [one\n
 two\n
 three\n
-#origin B 5 0
+.origin B 5 0
 four\n
 five\n
-#origin C 2 0
+.origin C 2 0
 six\n
 seven\n
 eight\n
-#stat
+.stat
 ],
 [liber:1.1-3: one\n
 liber:2.1-3: two\n
@@ -188,14 +188,14 @@ TRACKTEST([origin 4],[],[6],
 [one\n
 two\n
 three\n
-#origin B 5 0
+.origin B 5 0
 four\n
 five\n
-#origin C 2 0
+.origin C 2 0
 six\n
 seven\n
 eight\n
-#stat
+.stat
 ],
 [liber:1.1-3: one\n
 liber:2.1-3: two\n
@@ -214,16 +214,16 @@ TRACKTEST([retreat over origin],[],[9],
 [one\n
 two\n
 three\n
-#origin B 5 0
+.origin B 5 0
 four\n
 five\n
-#origin C 2 0
+.origin C 2 0
 six\n
 seven\n
 eight\n
-#retreat 17
+.retreat 17
 nine
-#stat
+.stat
 ],[liber:1.1-3: one\n
 liber:2.1-3: two\n
 liber:3.1-5: three\n
@@ -242,16 +242,16 @@ TRACKTEST([retreat over two origins],[],[9],
 [one\n
 two\n
 three\n
-#origin B 5 0
+.origin B 5 0
 four\n
 five\n
-#origin C 2 0
+.origin C 2 0
 six\n
 seven\n
 eight\n
-#retreat 32
+.retreat 32
 nine
-#stat
+.stat
 ],[liber:1.1-3: one\n
 liber:2.1-3: two\n
 liber:3.1-5: three\n
@@ -268,7 +268,7 @@ n_chars=12
 
 TRACKTEST([rebase],[],[9],
 [one
-#rebase archivum 5 3
+.rebase archivum 5 3
 two
 ],
 [liber:1.1-3: one
@@ -279,9 +279,9 @@ TRACKTEST([#line directive],[],[9],
 [agnosco
 veteris\n
 vestigia
-#line 20
+.line 20
 flamme\n
-#retreat 8
+.retreat 8
 Naso
 ],
 [liber:1.1-7: agnosco

@@ -48,7 +48,7 @@ fem
 
 TESTLIST([insert after],[],
 [add en tre fire fem
-ins after en to
+ins -after en to
 print],
 [# items: 5
 en
@@ -60,7 +60,7 @@ fem
 
 TESTLIST([insert before],[],
 [add en tre fire fem
-ins before tre to
+ins -before tre to
 print],
 [# items: 5
 en
@@ -118,7 +118,7 @@ en
 TESTLIST([pop-null],[],
 [pop],
 [],
-[mu_list_pop: Requested item not found
+[listop: mu_list_pop() failed: Requested item not found
 ])
 
 TESTLIST([get],[],

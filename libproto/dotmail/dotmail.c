@@ -930,7 +930,7 @@ dotmail_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		("%s(%s):%s: %s",
-		 __func__, dmp->name, "mu_docker_lock",
+		 __func__, dmp->name, "mu_locker_lock",
 		 mu_strerror (rc)));
       return rc;
     }

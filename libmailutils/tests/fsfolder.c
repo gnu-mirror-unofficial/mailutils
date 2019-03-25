@@ -31,17 +31,11 @@
 #include <mailutils/registrar.h>
 #include <mailutils/sys/folder.h>
 #include <mailutils/sys/registrar.h>
+#include <mailutils/opt.h>
+#include "tesh.h"
 
 int sort_option;
 int prefix_len;
-
-struct command
-{
-  char *verb;
-  int nargs;
-  char *args;
-  void (*handler) (mu_folder_t folder, char **argv);
-};
 
 static int
 compare_response (void const *a, void const *b)
@@ -70,16 +64,17 @@ _print_list_entry (void *item, void *data)
   return 0;
 }
 
-static void
-com_list (mu_folder_t folder, char **argv)
+static int
+com_list (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_folder_t folder = env;
   int rc;
   mu_list_t list;
   
-  mu_printf ("listing '%s' '%s'\n", argv[0], argv[1]);
-  rc = mu_folder_list (folder, argv[0], argv[1], 0, &list);
+  mu_printf ("listing '%s' '%s'\n", argv[1], argv[2]);
+  rc = mu_folder_list (folder, argv[1], argv[2], 0, &list);
   if (rc)
-    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_list", argv[0], rc);
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_list", argv[1], rc);
   else
     {
       if (sort_option)
@@ -87,18 +82,20 @@ com_list (mu_folder_t folder, char **argv)
       mu_list_foreach (list, _print_list_entry, &prefix_len);
       mu_list_destroy (&list);
     }
+  return 0;
 }
 
-static void
-com_lsub (mu_folder_t folder, char **argv)
+static int
+com_lsub (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_folder_t folder = env;
   int rc;
   mu_list_t list;
   
-  mu_printf ("listing subscriptions for '%s' '%s'\n", argv[0], argv[1]);
-  rc = mu_folder_lsub (folder, argv[0], argv[1], &list);
+  mu_printf ("listing subscriptions for '%s' '%s'\n", argv[1], argv[2]);
+  rc = mu_folder_lsub (folder, argv[1], argv[2], &list);
   if (rc)
-    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_lsub", argv[0], rc);
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_lsub", argv[1], rc);
   else
     {
       if (sort_option)
@@ -106,78 +103,71 @@ com_lsub (mu_folder_t folder, char **argv)
       mu_list_foreach (list, _print_list_entry, NULL);
       mu_list_destroy (&list);
     }
+  return 0;
 }
 
-static void
-com_rename (mu_folder_t folder, char **argv)
+static int
+com_rename (int argc, char **argv, mu_assoc_t options, void *env)
 {
   int rc;
-
-  mu_printf ("renaming %s to %s\n", argv[0], argv[1]);
-  rc = mu_folder_rename (folder, argv[0], argv[1]);
+  mu_folder_t folder = env;
+  
+  mu_printf ("renaming %s to %s\n", argv[1], argv[2]);
+  rc = mu_folder_rename (folder, argv[1], argv[2]);
   if (rc)
-    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_rename", argv[0], rc);
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_rename", argv[1], rc);
   else
     mu_printf ("rename successful\n");
+  return 0;
 }
 
-static void
-com_subscribe (mu_folder_t folder, char **argv)
+static int
+com_subscribe (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_folder_t folder = env;
   int rc;
 
-  mu_printf ("subscribing %s\n", argv[0]);
-  rc = mu_folder_subscribe (folder, argv[0]);
+  mu_printf ("subscribing %s\n", argv[1]);
+  rc = mu_folder_subscribe (folder, argv[1]);
   if (rc)
-    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_subscribe", argv[0], rc);
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_subscribe", argv[1], rc);
   else
     mu_printf ("subscribe successful\n");
+  return 0;
 }
 
-static void
-com_unsubscribe (mu_folder_t folder, char **argv)
+static int
+com_unsubscribe (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_folder_t folder = env;
   int rc;
 
-  mu_printf ("unsubscribing %s\n", argv[0]);
-  rc = mu_folder_unsubscribe (folder, argv[0]);
+  mu_printf ("unsubscribing %s\n", argv[1]);
+  rc = mu_folder_unsubscribe (folder, argv[1]);
   if (rc)
-    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_unsubscribe", argv[0], rc);
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_unsubscribe", argv[1], rc);
   else
     mu_printf ("unsubscribe successful\n");
+  return 0;
 }
 
-static struct command comtab[] = {
-  { "list", 2, "REF MBX", com_list },
-  { "lsub", 2, "REF MBX", com_lsub },
-  { "rename", 2, "OLD NEW", com_rename },
-  { "subscribe", 1, "MBX", com_subscribe },
-  { "unsubscribe", 1, "MBX", com_unsubscribe },
+static struct mu_tesh_command comtab[] = {
+  { "list", "REF MBX", com_list },
+  { "lsub", "REF MBX", com_lsub },
+  { "rename", "OLD NEW", com_rename },
+  { "subscribe", "MBX", com_subscribe },
+  { "unsubscribe", "MBX", com_unsubscribe },
   { NULL }
 };
 
-static struct command *
-find_command (const char *name)
-{
-  struct command *cp;
-  
-  for (cp = comtab; cp->verb; cp++)
-    if (strcmp (cp->verb, name) == 0)
-      return cp;
-  return NULL;
-}
-
 static void
-usage ()
+usage (void)
 {
-  struct command *cp;
-  
   mu_printf (
-    "usage: %s [-debug=SPEC] -name=URL [-sort] [-glob] OP ARG [ARG...] [OP ARG [ARG...]...]\n",
+    "usage: %s [-debug=SPEC] -name=URL [-sort] [-glob] OP ARG... [\\; OP ARG...]...]\n",
     mu_program_name);
   mu_printf ("OPerations and corresponding ARGuments are:\n");
-  for (cp = comtab; cp->verb; cp++)
-    mu_printf (" %s %s\n", cp->verb, cp->args);
+  mu_tesh_help (comtab, NULL);
 }
 
 static int
@@ -236,8 +226,8 @@ main (int argc, char **argv)
   mu_folder_t folder;
   char *fname = NULL;
   int glob_option = 0;
-  
-  mu_set_program_name (argv[0]);
+
+  mu_tesh_init (argv[0]);
   mu_registrar_record (&test_record);
 
   if (argc == 1)
@@ -291,30 +281,8 @@ main (int argc, char **argv)
 
   if (glob_option)
     mu_folder_set_match (folder, mu_folder_glob_match);
-  
-  while (i < argc)
-    {
-      char *comargs[2];
-      struct command *cmd;
-      
-      cmd = find_command (argv[i]);
-      if (!cmd)
-	{
-	  mu_error ("unknown command %s\n", argv[i]);
-	  break;
-	}
 
-      i++;
-      if (i + cmd->nargs > argc)
-	{
-	  mu_error ("not enough arguments for %s", cmd->verb);
-	  break;
-	}
-      memcpy (comargs, argv + i, cmd->nargs * sizeof (comargs[0]));
-      i += cmd->nargs;
-
-      cmd->handler (folder, comargs);
-    }
+  mu_tesh_read_and_eval (argc - i, argv + i, comtab, folder);
 
   mu_folder_close (folder);
   mu_folder_destroy (&folder);

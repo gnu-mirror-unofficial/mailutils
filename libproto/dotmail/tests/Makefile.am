@@ -43,6 +43,8 @@ noinst_PROGRAMS = \
  dm_mesg\
  dm_qget\
  dm_detect
+dm_mesg_LDFLAGS = -L$(top_builddir)/libmailutils/tests -lmu_tesh $(LDADD)
+dm_mesg_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/libmailutils/tests
 
 LDADD = ${MU_LIB_DOTMAIL} ${MU_LIB_MAILUTILS}
 

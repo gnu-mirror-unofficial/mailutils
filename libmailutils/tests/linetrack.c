@@ -1,7 +1,8 @@
 #include <mailutils/mailutils.h>
 #include <mailutils/locus.h>
+#include "tesh.h"
 
-int
+static int
 getnum (char const *arg, unsigned *ret)
 {
   char *end;
@@ -15,9 +16,10 @@ getnum (char const *arg, unsigned *ret)
   return 0;
 }
 
-static void
-com_retreat (mu_linetrack_t trk, size_t argc, char **argv)
+static int
+com_retreat (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_linetrack_t trk = env;
   unsigned x;
   if (getnum (argv[1], &x) == 0)
     {
@@ -27,56 +29,64 @@ com_retreat (mu_linetrack_t trk, size_t argc, char **argv)
       else if (rc)
 	mu_diag_funcall (MU_DIAG_ERROR, "mu_linetrack_retreat", argv[1], rc);
     }
+  return 0;
 }
 
-static void
-com_origin (mu_linetrack_t trk, size_t argc, char **argv)
+static int
+com_origin (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_linetrack_t trk = env;
   int rc;
   struct mu_locus_point pt;
 
   pt.mu_file = argv[1];
   if (getnum (argv[2], &pt.mu_line))
-    return;
+    return 0;
   if (getnum (argv[3], &pt.mu_col))
-    return;
+    return 0;
   rc = mu_linetrack_origin (trk, &pt);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_linetrack_origin", NULL, rc);
+  return 0;
 }
 
-static void
-com_line (mu_linetrack_t trk, size_t argc, char **argv)
+static int
+com_line (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_linetrack_t trk = env;
   int rc;
   struct mu_locus_point pt = MU_LOCUS_POINT_INITIALIZER;
 
   if (getnum (argv[1], &pt.mu_line))
-    return;
+    return 0;
   rc = mu_linetrack_origin (trk, &pt);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_linetrack_origin", NULL, rc);
+  return 0;
 }
 
-static void
-com_rebase (mu_linetrack_t trk, size_t argc, char **argv)
+static int
+com_rebase (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_linetrack_t trk = env;
   int rc;
   struct mu_locus_point pt;
 
   pt.mu_file = argv[1];
   if (getnum (argv[2], &pt.mu_line))
-    return;
+    return 0;
   if (getnum (argv[3], &pt.mu_col))
-    return;
+    return 0;
   rc = mu_linetrack_rebase (trk, &pt);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_linetrack_rebase", NULL, rc);
+  return 0;
 }
 
-static void
-com_point (mu_linetrack_t trk, size_t argc, char **argv)
+static int
+com_point (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_linetrack_t trk = env;
   struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
   int rc;
   
@@ -88,17 +98,21 @@ com_point (mu_linetrack_t trk, size_t argc, char **argv)
       mu_stream_lprintf (mu_strout, &lr, "%s\n", argv[0]);
       mu_locus_range_deinit (&lr);
     }
+  return 0;
 }
 
-static void
-com_bol_p (mu_linetrack_t trk, size_t argc, char **argv)
+static int
+com_bol_p (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_linetrack_t trk = env;
   mu_printf ("%d\n", mu_linetrack_at_bol (trk));
+  return 0;
 }
 
-static void
-com_stat (mu_linetrack_t trk, size_t argc, char **argv)
+static int
+com_stat (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  mu_linetrack_t trk = env;
   int rc;
   struct mu_linetrack_stat st;
   
@@ -111,23 +125,44 @@ com_stat (mu_linetrack_t trk, size_t argc, char **argv)
       mu_printf ("n_lines=%zu\n", st.n_lines);
       mu_printf ("n_chars=%zu\n", st.n_chars);
     }
+  return 0;
 }
-
-struct command
-{
-  char *name;
-  size_t argc;
-  void (*fun) (mu_linetrack_t trk, size_t argc, char **argv);
-};
 
-static struct command comtab[] = {
-  { "retreat",   2, com_retreat },
-  { "origin",    4, com_origin },
-  { "line",      2, com_line },
-  { "point",     1, com_point },
-  { "rebase",    4, com_rebase },
-  { "bol",       1, com_bol_p },
-  { "stat",      1, com_stat },
+static int
+lineproc (int argc, char **argv, mu_assoc_t options, void *env)
+{
+  char *buf = argv[0];
+  mu_linetrack_t trk = env;
+  struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
+  char *tok;
+
+  if (buf[0] == 0)
+    return 0;
+  if (buf[0] == '.')
+    {
+      /* command escape */
+      memmove (buf, buf + 1, strlen (buf));
+      return MU_ERR_USER0;
+    }
+  
+  mu_c_str_unescape (buf, "\\\n", "\\n", &tok);
+  mu_linetrack_advance (trk, &lr, tok, strlen (tok));
+  free (tok);
+  mu_stream_lprintf (mu_strout, &lr, "%s\n", buf);
+  mu_locus_range_deinit (&lr);
+  return 0;
+}
+
+
+static struct mu_tesh_command comtab[] = {
+  { "__LINEPROC__", "", lineproc },
+  { "retreat",   "COUNT", com_retreat },
+  { "origin",    "FILE LINE COL", com_origin },
+  { "line",      "NUMBER", com_line },
+  { "point",     "NUMBER", com_point },
+  { "rebase",    "FILE LINE COL", com_rebase },
+  { "bol",       "", com_bol_p },
+  { "stat",      "", com_stat },
   { NULL }
 };
 
@@ -137,16 +172,8 @@ main (int argc, char **argv)
   unsigned long max_lines;
   char *end;
   mu_linetrack_t trk;
-  int rc;
-  char *buf = NULL;
-  size_t size, n;
-  struct mu_wordsplit ws;
-  int wsf = MU_WRDSF_NOVAR | MU_WRDSF_NOCMD
-            | MU_WRDSF_SHOWERR | MU_WRDSF_ENOMEMABRT;
-  
-  mu_set_program_name (argv[0]);
-  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
 
+  mu_tesh_init (argv[0]);
   if (argc != 3)
     {
       mu_error ("usage: %s FILE LINES", mu_program_name);
@@ -160,40 +187,9 @@ main (int argc, char **argv)
     }
 
   MU_ASSERT (mu_linetrack_create (&trk, argv[1], max_lines));
-  while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
-    {
-      char *tok;
-      
-      n = mu_rtrim_class (buf, MU_CTYPE_SPACE);
-      if (n == 0)
-	continue;
-      if (buf[0] == '#')
-	{
-	  struct command *com;
 
-	  mu_wordsplit (buf+1, &ws, wsf);
-	  wsf |= MU_WRDSF_REUSE;
+  mu_tesh_read_and_eval (argc - 3, argv + 3, comtab, trk);
 
-	  for (com = comtab; com->name; com++)
-	    if (strcmp (com->name, ws.ws_wordv[0]) == 0
-		&& com->argc == ws.ws_wordc)
-	      break;
-	  if (com->name)
-	    com->fun (trk, ws.ws_wordc, ws.ws_wordv);
-	  else
-	    mu_error ("unrecognized command");
-	}
-      else
-	{
-	  struct mu_locus_range lr = MU_LOCUS_RANGE_INITIALIZER;
-	  
-	  mu_c_str_unescape (buf, "\\\n", "\\n", &tok);
-	  mu_linetrack_advance (trk, &lr, tok, strlen (tok));
-	  free (tok);
-	  mu_stream_lprintf (mu_strout, &lr, "%s\n", buf);
-	  mu_locus_range_deinit (&lr);
-	}
-    }
   mu_linetrack_destroy (&trk);
   return 0;
 }

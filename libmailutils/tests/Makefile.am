@@ -39,6 +39,10 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 ## -------------------------- ##
 
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+
+noinst_LTLIBRARIES = libmu_tesh.la
+libmu_tesh_la_SOURCES = tesh.c tesh.h
+
 noinst_PROGRAMS = \
  addr\
  cidr\
@@ -82,6 +86,12 @@ noinst_PROGRAMS = \
  wordwrap\
  wsp\
  xscript
+
+fsfolder_LDFLAGS = -lmu_tesh $(LDADD)
+
+linetrack_LDFLAGS = -lmu_tesh $(LDADD)
+
+listop_LDFLAGS = -lmu_tesh $(LDADD)
 
 LDADD = ${MU_LIB_MAILUTILS}
 

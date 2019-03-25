@@ -21,18 +21,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mailutils/mailutils.h>
+#include "tesh.h"
 
 static int interactive;
 
 void
 lperror (char *text, int rc)
 {
-  fprintf (stderr, "%s: %s\n", text, mu_strerror (rc));
+  mu_error ("%s: %s", text, mu_strerror (rc));
   exit (1);
 }
 
+#define NITR 4
+
+struct listop_closure
+{
+  mu_list_t lst;
+  mu_iterator_t itr[NITR];
+  int num;
+};
+
+static void
+listop_invalidate_iterators (struct listop_closure *cls)
+{
+  int i;
+
+  for (i = 0; i < NITR; i++)
+    mu_iterator_destroy (&cls->itr[i]);
+}
+
 void
-print (mu_list_t list)
+print_list (mu_list_t list)
 {
   mu_iterator_t itr;
   size_t count;
@@ -46,7 +65,7 @@ print (mu_list_t list)
   if (rc)
     lperror ("mu_iterator_current", rc);
 
-  printf ("# items: %lu\n", (unsigned long) count);
+  mu_printf ("# items: %lu\n", (unsigned long) count);
   for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
        mu_iterator_next (itr))
     {
@@ -55,90 +74,98 @@ print (mu_list_t list)
       rc = mu_iterator_current (itr, (void**) &text);
       if (rc)
 	lperror ("mu_iterator_current", rc);
-      printf ("%s\n", text);
+      mu_printf ("%s\n", text);
     }
   mu_iterator_destroy (&itr);
 }
 
-void
-count (mu_list_t list)
+int
+com_print (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
+  print_list (cls->lst);
+  return 0;
+}
+
+int
+com_count (int argc, char **argv, mu_assoc_t options, void *env)
+{
+  struct listop_closure *cls = env;
   size_t n;
   int rc;
 
-  rc = mu_list_count (list, &n);
+  rc = mu_list_count (cls->lst, &n);
   if (rc)
     lperror ("mu_iterator_current", rc);
   else
-    printf ("%lu\n", (unsigned long) n);
+    mu_printf ("%lu\n", (unsigned long) n);
+  return 0;
 }
 
-void
-next (mu_iterator_t itr, char *arg)
+int
+com_next (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  int skip = arg ? strtoul (arg, NULL, 0) :  1;
+  struct listop_closure *cls = env;
+  int skip = argc == 2 ? strtoul (argv[1], NULL, 0) :  1;
 
   if (skip == 0)
-    fprintf (stderr, "next arg?\n");
-  while (skip--)
-    mu_iterator_next (itr);
+    {
+      mu_error ("next arg?");
+    }
+  else
+    {
+      while (skip--)
+	mu_iterator_next (cls->itr[cls->num]);
+    }
+  return 0;
 }
 
-void
-delete (mu_list_t list, int argc, char **argv)
+int
+com_delete (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
+  mu_list_t list = cls->lst;
   int rc;
-
-  if (argc == 1)
-    {
-      fprintf (stderr, "del arg?\n");
-      return;
-    }
 
   while (--argc)
     {
       rc = mu_list_remove (list, *++argv);
       if (rc)
-	fprintf (stderr, "mu_list_remove(%s): %s\n", *argv, mu_strerror (rc));
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_list_remove", *argv, rc);
     }
+  return 0;
 }
 
-void
-add (mu_list_t list, int argc, char **argv)
+int
+com_add (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
+  mu_list_t list = cls->lst;
   int rc;
   
-  if (argc == 1)
-    {
-      fprintf (stderr, "add arg?\n");
-      return;
-    }
-
   while (--argc)
     {
       rc = mu_list_append (list, strdup (*++argv));
       if (rc)
-	fprintf (stderr, "mu_list_append: %s\n", mu_strerror (rc));
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_list_append", *argv, rc);
     }
+  return 0;
 }
 
-void
-prep (mu_list_t list, int argc, char **argv)
+int
+com_prep (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
+  mu_list_t list = cls->lst;
   int rc;
   
-  if (argc == 1)
-    {
-      fprintf (stderr, "add arg?\n");
-      return;
-    }
-
   while (--argc)
     {
       rc = mu_list_prepend (list, strdup (*++argv));
       if (rc)
-	fprintf (stderr, "mu_list_append: %s\n", mu_strerror (rc));
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_list_prepend", *argv, rc);
     }
+  return 0;
 }
 
 static mu_list_t
@@ -150,7 +177,7 @@ read_list (int argc, char **argv)
   rc = mu_list_create (&list);
   if (rc)
     {
-      fprintf (stderr, "creating temp list: %s\n", mu_strerror (rc));
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_create", NULL, rc);
       return NULL;
     }
   mu_list_set_destroy_item (list, mu_list_free_item);
@@ -159,71 +186,55 @@ read_list (int argc, char **argv)
       rc = mu_list_append (list, strdup (*argv));
       if (rc)
 	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_list_append", *argv, rc);
 	  mu_list_destroy (&list);
-	  fprintf (stderr, "adding to temp list: %s\n", mu_strerror (rc));
 	  break;
 	}
     }
   return list;
 }
 
-void
-ins (mu_list_t list, int argc, char **argv)
+int
+com_ins (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  int an;
+  struct listop_closure *cls = env;
+  mu_list_t list = cls->lst;
   int rc;
   char *item;
   int insert_before = 0;
-  
-  if (argc < 3)
-    {
-      fprintf (stderr, "ins [before] item new_item [new_item*]?\n");
-      return;
-    }
 
-  an = 1;
-  if (strcmp (argv[1], "before") == 0)
-    {
-      an++;
-      insert_before = 1;
-    }
-  else if (strcmp (argv[1], "after") == 0)
-    {
-      an++;
-      insert_before = 0;
-    }
+  if (mu_assoc_lookup (options, "before", NULL) == 0)
+    insert_before = 1;
 
-  item = argv[an++];
+  item = argv[1];
   
-  if (an + 1 == argc)
-    rc = mu_list_insert (list, item, strdup (argv[an]), insert_before);
+  if (3 == argc)
+    rc = mu_list_insert (list, item, strdup (argv[2]), insert_before);
   else
     {
-      mu_list_t tmp = read_list (argc - an, argv + an);
+      mu_list_t tmp = read_list (argc - 2, argv + 2);
       if (!tmp)
-	return;
+	return 0;
       rc = mu_list_insert_list (list, item, tmp, insert_before);
       mu_list_destroy (&tmp);
     }
 
   if (rc)
     lperror ("mu_list_insert", rc);
+  return 0;
 }
   
-void
-repl (mu_list_t list, int argc, char **argv)
+int
+com_repl (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
+  mu_list_t list = cls->lst;
   int rc;
   
-  if (argc != 3)
-    {
-      fprintf (stderr, "repl src dst?\n");
-      return;
-    }
-
   rc = mu_list_replace (list, argv[1], strdup (argv[2]));
   if (rc)
-    fprintf (stderr, "mu_list_replace: %s\n", mu_strerror (rc));
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_list_replace", NULL, rc);
+  return 0;
 }
 
 void
@@ -234,14 +245,14 @@ ictl_tell (mu_iterator_t itr, int argc)
 
   if (argc)
     {
-      fprintf (stderr, "ictl tell?\n");
+      mu_error ("ictl tell?");
       return;
     }
   
   rc = mu_iterator_ctl (itr, mu_itrctl_tell, &pos);
   if (rc)
     lperror ("mu_iterator_ctl", rc);
-  printf ("%lu\n", (unsigned long) pos);
+  mu_printf ("%lu\n", (unsigned long) pos);
 }
 
 void
@@ -251,7 +262,7 @@ ictl_del (mu_iterator_t itr, int argc)
 
   if (argc)
     {
-      fprintf (stderr, "ictl del?\n");
+      mu_error ("ictl del?");
       return;
     }
   rc = mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
@@ -259,20 +270,21 @@ ictl_del (mu_iterator_t itr, int argc)
     lperror ("mu_iterator_ctl", rc);
 }
 
-void
+int
 ictl_repl (mu_iterator_t itr, int argc, char **argv)
 {
   int rc;
   
   if (argc != 1)
     {
-      fprintf (stderr, "ictl repl item?\n");
-      return;
+      mu_error ("ictl repl item?");
+      return 0;
     }
 
   rc = mu_iterator_ctl (itr, mu_itrctl_replace, strdup (argv[0]));
   if (rc)
     lperror ("mu_iterator_ctl", rc);
+  return 0;
 }
 
 void
@@ -283,7 +295,7 @@ ictl_dir (mu_iterator_t itr, int argc, char **argv)
   
   if (argc > 1)
     {
-      fprintf (stderr, "ictl dir [backwards|forwards]?\n");
+      mu_error ("ictl dir [backwards|forwards]?");
       return;
     }
   if (argc == 1)
@@ -294,7 +306,7 @@ ictl_dir (mu_iterator_t itr, int argc, char **argv)
 	dir = 0;
       else
 	{
-	  fprintf (stderr, "ictl dir [backwards|forwards]?\n");
+	  mu_error ("ictl dir [backwards|forwards]?");
 	  return;
 	}
       rc = mu_iterator_ctl (itr, mu_itrctl_set_direction, &dir);
@@ -306,8 +318,9 @@ ictl_dir (mu_iterator_t itr, int argc, char **argv)
       rc = mu_iterator_ctl (itr, mu_itrctl_qry_direction, &dir);
       if (rc)
 	lperror ("mu_iterator_ctl", rc);
-      printf ("%s\n", dir ? "backwards" : "forwards");
+      mu_printf ("%s\n", dir ? "backwards" : "forwards");
     }
+  return;
 }
   
 void
@@ -317,7 +330,7 @@ ictl_ins (mu_iterator_t itr, int argc, char **argv)
   
   if (argc < 1)
     {
-      fprintf (stderr, "ictl ins item [item*]?\n");
+      mu_error ("ictl ins item [item*]?");
       return;
     }
 
@@ -332,17 +345,15 @@ ictl_ins (mu_iterator_t itr, int argc, char **argv)
       mu_list_destroy (&tmp);
     }
   if (rc)
-    printf ("%s\n", mu_strerror (rc));
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_iterator_ctl", NULL, rc);
+  return;
 }
 
-void
-ictl (mu_iterator_t itr, int argc, char **argv)
+int
+com_ictl (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  if (argc == 1)
-    {
-      fprintf (stderr, "ictl tell|del|repl|ins?\n");
-      return;
-    }
+  struct listop_closure *cls = env;
+  mu_iterator_t itr = cls->itr[cls->num];
   
   if (strcmp (argv[1], "tell") == 0)
     ictl_tell (itr, argc - 2);
@@ -355,78 +366,88 @@ ictl (mu_iterator_t itr, int argc, char **argv)
   else if (strcmp (argv[1], "dir") == 0)
     ictl_dir (itr, argc - 2, argv + 2);
   else
-    fprintf (stderr, "unknown subcommand\n");
+    mu_error ("unknown subcommand");
+  return 0;
 }
     
-#define NITR 4
-
 int
-iter (int *pnum, int argc, char **argv)
+com_iter (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
   int n;
-  
-  if (argc != 2)
-    {
-      fprintf (stderr, "iter num?\n");
-      return 1;
-    }
 
   n = strtoul (argv[1], NULL, 0);
   if (n < 0 || n >= NITR)
     {
-      fprintf (stderr, "iter [0-3]?\n");
+      mu_error ("iter [0-3]?");
       return 1;
     }
-  *pnum = n;
+
+  if (!cls->itr[n])
+    {
+      int rc = mu_list_get_iterator (cls->lst, &cls->itr[n]);
+      if (rc)
+	lperror ("mu_list_get_iterator", rc);
+      mu_iterator_first (cls->itr[n]);
+    }
+  cls->num = n;
   return 0;
 }
 
-void
-find (mu_iterator_t itr, char *arg)
+int
+com_find (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
+  mu_iterator_t itr = cls->itr[cls->num];
   char *text;
   
-  if (!arg)
-    {
-      fprintf (stderr, "find item?\n");
-      return;
-    }
-
   mu_iterator_current (itr, (void**)&text);
   for (mu_iterator_first (itr); !mu_iterator_is_done (itr); mu_iterator_next (itr))
     {
       char *item;
 
       mu_iterator_current (itr, (void**)&item);
-      if (strcmp (arg, item) == 0)
-	return;
+      if (strcmp (argv[1], item) == 0)
+	return 0;
     }
 
-  fprintf (stderr, "%s not in list\n", arg);
+  mu_error ("%s not in list", argv[1]);
+  return 0;
 }
 
-void
-cur (int num, mu_iterator_t itr)
+int
+com_cur (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
+  mu_iterator_t itr = cls->itr[cls->num];
   char *text;
   size_t pos;
   int rc;
 
-  printf ("%lu:", (unsigned long) num);
+  mu_printf ("%lu:", (unsigned long) cls->num);
   rc = mu_iterator_ctl (itr, mu_itrctl_tell, &pos);
   if (rc == MU_ERR_NOENT)
     {
-      printf ("iterator not initialized\n");
-      return;
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_iterator_ctl", NULL, rc);
+      return 0;
     }
   if (rc)
     lperror ("mu_iterator_ctl", rc);
-  printf ("%lu:", (unsigned long) pos);
+  mu_printf ("%lu:", (unsigned long) pos);
 
   rc = mu_iterator_current (itr, (void**) &text);
   if (rc)
     lperror ("mu_iterator_current", rc);
-  printf ("%s\n", text);
+  mu_printf ("%s\n", text);
+  return 0;
+}
+
+int
+com_first (int argc, char **argv, mu_assoc_t options, void *env)
+{
+  struct listop_closure *cls = env;
+  mu_iterator_first (cls->itr[cls->num]);
+  return 0;
 }
 
 static int
@@ -514,26 +535,17 @@ map_trim (void **itmv, size_t itmc, void *call_data)
 }
 
 int
-map (mu_list_t *plist, int argc, char **argv)
+com_map (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  mu_list_t list = *plist;
+  struct listop_closure *cls = env;
+  mu_list_t list = cls->lst;
   mu_list_t result;
   int rc;
   int replace = 0;
 
-  if (argc > 1 && strcmp (argv[1], "-replace") == 0)
-    {
-      replace = 1;
-      argc--;
-      argv++;
-    }
+  if (mu_assoc_lookup (options, "replace", NULL) == 0)
+    replace = 1;
   
-  if (argc < 2)
-    {
-      fprintf (stderr, "map [-replace] even|odd|concat|keep|trim\n");
-      return 0;
-    }
-
   if (strcmp (argv[1], "even") == 0)
     {
       int n = 0;
@@ -551,7 +563,7 @@ map (mu_list_t *plist, int argc, char **argv)
       
       if (argc < 3 || argc > 4)
 	{
-	  fprintf (stderr, "map concat NUM [DELIM]?\n");
+	  mu_error ("map concat NUM [DELIM]");
 	  return 0;
 	}
       num = atoi (argv[2]);
@@ -566,7 +578,7 @@ map (mu_list_t *plist, int argc, char **argv)
 
       if (argc < 3 || argc > 4)
 	{
-	  fprintf (stderr, "map skip NUM?\n");
+	  mu_error ("map skip NUM");
 	  return 0;
 	}
       td.n = 0;
@@ -579,7 +591,7 @@ map (mu_list_t *plist, int argc, char **argv)
 
       if (argc < 3 || argc > 4)
 	{
-	  fprintf (stderr, "map trim NUM?\n");
+	  mu_error ("map trim NUM");
 	  return 0;
 	}
       td.n = 0;
@@ -588,13 +600,13 @@ map (mu_list_t *plist, int argc, char **argv)
     }
   else
     {
-      mu_error ("unknown map name\n");
+      mu_error ("unknown map name");
       return 0;
     }
   
   if (rc)
     {
-      mu_error ("map failed: %s", mu_strerror (rc));
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_map", NULL, rc);
       return 0;
     }
 
@@ -606,15 +618,15 @@ map (mu_list_t *plist, int argc, char **argv)
       mu_list_count (list, &count[0]);
       mu_list_count (result, &count[1]);
       
-      printf ("%lu in, %lu out\n", (unsigned long) count[0],
-	      (unsigned long) count[1]);
+      mu_printf ("%lu in, %lu out\n", (unsigned long) count[0],
+		 (unsigned long) count[1]);
       mu_list_destroy (&list);
-      *plist = result;
-      return 1;
+      cls->lst = result;
+      listop_invalidate_iterators (cls);
     }
   else
     {
-      print (result);
+      print_list (result);
       mu_list_destroy (&result);
     }
   return 0;
@@ -628,29 +640,20 @@ dup_string (void **res, void *itm, void *closure)
 }
 
 int
-slice (mu_list_t *plist, int argc, char **argv)
+com_slice (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  mu_list_t list = *plist;
+  struct listop_closure *cls = env;
+  mu_list_t list = cls->lst;
   mu_list_t result;
   int rc, i;
   int replace = 0;
   size_t *buf;
   
+  if (mu_assoc_lookup (options, "replace", NULL) == 0)
+    replace = 1;
+
   argc--;
   argv++;
-  
-  if (argc > 0 && strcmp (argv[0], "-replace") == 0)
-    {
-      replace = 1;
-      argc--;
-      argv++;
-    }
-  
-  if (argc < 1)
-    {
-      fprintf (stderr, "slice [-replace] num [num...]\n");
-      return 0;
-    }
 
   buf = calloc (argc, sizeof (buf[0]));
   if (!buf)
@@ -658,11 +661,10 @@ slice (mu_list_t *plist, int argc, char **argv)
   for (i = 0; i < argc; i++)
     buf[i] = atoi (argv[i]);
 
-  rc = mu_list_slice_dup (&result, list, buf, argc,
-			  dup_string, NULL);
+  rc = mu_list_slice_dup (&result, list, buf, argc, dup_string, NULL);
   if (rc)
     {
-      mu_error ("slice failed: %s", mu_strerror (rc));
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_list_slice_dup", NULL, rc);
       return 0;
     }
   if (replace)
@@ -671,54 +673,48 @@ slice (mu_list_t *plist, int argc, char **argv)
       mu_list_count (list, &count[0]);
       mu_list_count (result, &count[1]);
       
-      printf ("%lu in, %lu out\n", (unsigned long) count[0],
-	      (unsigned long) count[1]);
+      mu_printf ("%lu in, %lu out\n", (unsigned long) count[0],
+		 (unsigned long) count[1]);
       mu_list_destroy (&list);
-      *plist = result;
-      return 1;
+      cls->lst = result;
+      listop_invalidate_iterators (cls);
     }
   else
     {
-      print (result);
+      print_list (result);
       mu_list_destroy (&result);
     }
   return 0;  
 }
 
-void
-head (size_t argc, mu_list_t list)
+int
+com_head (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
   int rc;
-  const char *text;
-    
-  if (argc != 1)
-    {
-      fprintf (stderr, "head ?\n");
-      return;
-    }
-  rc = mu_list_head (list, (void**) &text);
+  char *text;
+  
+  rc = mu_list_head (cls->lst, (void**) &text);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_list_head", NULL, rc);
   else
-    printf ("%s\n", text);
+    mu_printf ("%s\n", text);
+  return 0;
 }
 
-void
-tail (size_t argc, mu_list_t list)
+int
+com_tail (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
   int rc;
   const char *text;
     
-  if (argc != 1)
-    {
-      fprintf (stderr, "head ?\n");
-      return;
-    }
-  rc = mu_list_tail (list, (void**) &text);
+  rc = mu_list_tail (cls->lst, (void**) &text);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_list_tail", NULL, rc);
   else
-    printf ("%s\n", text);
+    mu_printf ("%s\n", text);
+  return 0;
 }
 
 static int
@@ -739,267 +735,148 @@ fold_concat (void *item, void *data, void *prev, void **ret)
   return 0;
 }
 
-void
-fold (mu_list_t list)
+int
+com_fold (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
   char *text = NULL;
   int rc;
 
-  rc = mu_list_fold (list, fold_concat, NULL, NULL, &text);
+  rc = mu_list_fold (cls->lst, fold_concat, NULL, NULL, &text);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_list_fold", NULL, rc);
   else if (text)
     {
-      printf ("%s\n", text);
+      mu_printf ("%s\n", text);
       free (text);
     }
   else
-    printf ("NULL\n");
+    mu_printf ("NULL\n");
+  return 0;
 }
 
-void
-rfold (mu_list_t list)
+int
+com_rfold (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
   char *text = NULL;
   int rc;
 
-  rc = mu_list_rfold (list, fold_concat, NULL, NULL, &text);
+  rc = mu_list_rfold (cls->lst, fold_concat, NULL, NULL, &text);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_list_fold", NULL, rc);
   else if (text)
     {
-      printf ("%s\n", text);
+      mu_printf ("%s\n", text);
       free (text);
     }
   else
-    printf ("NULL\n");
+    mu_printf ("NULL\n");
+  return 0;
 }
 
-void
-sort (mu_list_t list)
+int
+com_sort (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  mu_list_sort (list, NULL);
+  struct listop_closure *cls = env;
+  mu_list_sort (cls->lst, NULL);
+  listop_invalidate_iterators (cls);
+  return 0;
 }
 
-void
-push (mu_list_t list, int argc, char **argv)
+int
+com_push (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  if (argc < 2)
-    {
-      fprintf (stderr, "push arg [arg] ?\n");
-      return;
-    }
-
+  struct listop_closure *cls = env;
   while (--argc)
     {
-      int rc = mu_list_push (list, strdup (*++argv));
+      int rc = mu_list_push (cls->lst, strdup (*++argv));
       if (rc)
-	fprintf (stderr, "mu_list_push: %s\n", mu_strerror (rc));
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_list_push", *argv, rc);
     }
+  return 0;
 }
 
-void
-pop (mu_list_t list, int argc, char **argv)
+int
+com_pop (int argc, char **argv, mu_assoc_t options, void *env)
 {
+  struct listop_closure *cls = env;
   char *text;
   int rc;
   
-  if (argc != 1)
-    {
-      fprintf (stderr, "pop ?\n");
-      return;
-    }
-
-  rc = mu_list_pop (list, (void**) &text);
+  rc = mu_list_pop (cls->lst, (void**) &text);
   if (rc)
-    fprintf (stderr, "mu_list_pop: %s\n", mu_strerror (rc));
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_list_pop", NULL, rc);
   else
-    printf ("%s\n", text);
-}
-  
-void
-help ()
-{
-  printf ("count\n");
-  printf ("cur\n");
-  printf ("next [count]\n");
-  printf ("first\n");
-  printf ("find item\n");
-  printf ("del item [item*]\n");
-  printf ("add item [item*]\n");
-  printf ("prep item [item*]\n");
-  printf ("repl old_item new_item\n");
-  printf ("ins [before|after] item new_item [new_item*]\n");
-  printf ("ictl tell\n");
-  printf ("ictl del\n");
-  printf ("ictl repl item\n");
-  printf ("ictl ins item [item*]\n");
-  printf ("ictl dir [backwards|forwards]\n");
-  printf ("map [-replace] NAME [ARGS]\n");
-  printf ("fold\n");
-  printf ("rfold\n");
-  printf ("print\n");
-  printf ("slice [-replace] num [num...]\n");
-  printf ("quit\n");
-  printf ("iter num\n");
-  printf ("help\n");
-  printf ("head\n");
-  printf ("tail\n");
-  printf ("push item\n");
-  printf ("pop\n");
-  printf ("sort\n");
-  printf ("NUMBER\n");
+    mu_printf ("%s\n", text);
+  return 0;
 }
 
-void
-shell (mu_list_t list)
+int
+envinit (int argc, char **argv, mu_assoc_t options, void *env)
 {
-  int num = 0;
-  mu_iterator_t itr[NITR];
-  int rc;
+  struct listop_closure *cls = env;
 
-  memset (&itr, 0, sizeof itr);
-  num = 0;
-  while (1)
+  if (!cls->itr[cls->num])
     {
-      char *text = NULL;
-      char buf[80];
-      struct mu_wordsplit ws;
-      
-      if (!itr[num])
-	{
-	  rc = mu_list_get_iterator (list, &itr[num]);
-	  if (rc)
-	    lperror ("mu_list_get_iterator", rc);
-	  mu_iterator_first (itr[num]);
-	}
-      
-      rc = mu_iterator_current (itr[num], (void**) &text);
+      int rc = mu_list_get_iterator (cls->lst, &cls->itr[cls->num]);
       if (rc)
-	lperror ("mu_iterator_current", rc);
+	lperror ("mu_list_get_iterator", rc);
+      mu_iterator_first (cls->itr[cls->num]);
+    }
+  return 0;
+}
 
-      if (interactive)
-	printf ("%d:(%s)> ", num, text ? text : "NULL");
-      if (fgets (buf, sizeof buf, stdin) == NULL)
-	return;
+int
+get (int argc, char **argv, mu_assoc_t options, void *env)
+{
+  struct listop_closure *cls = env;
+  char *p;
+  size_t n;
 
-      ws.ws_comment = "#";
-      if (mu_wordsplit (buf, &ws, MU_WRDSF_DEFFLAGS|MU_WRDSF_COMMENT))
-	{
-	  mu_error ("cannot split line `%s': %s", buf,
-		    mu_wordsplit_strerror (&ws));
-	  exit (1);
-	}
-
-      if (ws.ws_wordc > 0)
-	{
-	  if (strcmp (ws.ws_wordv[0], "count") == 0)
-	    count (list);
-	  else if (strcmp (ws.ws_wordv[0], "next") == 0)
-	    next (itr[num], ws.ws_wordv[1]);
-	  else if (strcmp (ws.ws_wordv[0], "first") == 0)
-	    mu_iterator_first (itr[num]);
-	  else if (strcmp (ws.ws_wordv[0], "del") == 0)
-	    delete (list, ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "add") == 0)
-	    add (list, ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "prep") == 0)
-	    prep (list, ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "ins") == 0)
-	    ins (list, ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "repl") == 0)
-	    repl (list, ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "ictl") == 0)
-	    ictl (itr[num], ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "print") == 0)
-	    print (list);
-	  else if (strcmp (ws.ws_wordv[0], "cur") == 0)
-	    cur (num, itr[num]);
-	  else if (strcmp (ws.ws_wordv[0], "fold") == 0)
-	    fold (list);
-	  else if (strcmp (ws.ws_wordv[0], "rfold") == 0)
-	    rfold (list);
-	  else if (strcmp (ws.ws_wordv[0], "map") == 0)
-	    {
-	      int i;
-	      
-	      if (map (&list, ws.ws_wordc, ws.ws_wordv))
-		for (i = 0; i < NITR; i++)
-		  mu_iterator_destroy (&itr[i]);
-	    }
-	  else if (strcmp (ws.ws_wordv[0], "slice") == 0)
-	    {
-	      int i;
-	      
-	      if (slice (&list, ws.ws_wordc, ws.ws_wordv))
-		for (i = 0; i < NITR; i++)
-		  mu_iterator_destroy (&itr[i]);
-	    }
-	  else if (strcmp (ws.ws_wordv[0], "quit") == 0)
-	    return;
-	  else if (strcmp (ws.ws_wordv[0], "iter") == 0)
-	    {
-	      int n;
-	      if (iter (&n, ws.ws_wordc, ws.ws_wordv) == 0 && !itr[n])
-		{
-		  rc = mu_list_get_iterator (list, &itr[n]);
-		  if (rc)
-		    lperror ("mu_list_get_iterator", rc);
-		  mu_iterator_first (itr[n]);
-		}
-	      num = n;
-	    }
-	  else if (strcmp (ws.ws_wordv[0], "close") == 0)
-	    {
-	      int n;
-	      if (iter (&n, ws.ws_wordc, ws.ws_wordv) == 0)
-		{
-		  mu_iterator_destroy (&itr[n]);
-		  if (n == num && ++num == NITR)
-		    num = 0;
-		}
-	    }
-	  else if (strcmp (ws.ws_wordv[0], "find") == 0)
-	    find (itr[num], ws.ws_wordv[1]);
-	  else if (strcmp (ws.ws_wordv[0], "help") == 0)
-	    help ();
-	  else if (strcmp (ws.ws_wordv[0], "head") == 0)
-	    head (ws.ws_wordc, list);
-	  else if (strcmp (ws.ws_wordv[0], "tail") == 0)
-	    tail (ws.ws_wordc, list);
-	  else if (strcmp (ws.ws_wordv[0], "push") == 0)
-	    push (list, ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "pop") == 0)
-	    pop (list, ws.ws_wordc, ws.ws_wordv);
-	  else if (strcmp (ws.ws_wordv[0], "sort") == 0)
-	    {
-	      int i;
-	      sort (list);
-
-	      for (i = 0; i < NITR; i++)
-		mu_iterator_destroy (&itr[i]);
-	    }
-	  else if (ws.ws_wordc == 1)
-	    {
-	      char *p;
-	      size_t n = strtoul (ws.ws_wordv[0], &p, 0);
-	      if (*p != 0)
-		fprintf (stderr, "?\n");
-	      else
-		{
-		  rc = mu_list_get (list, n, (void**) &text);
-		  if (rc)
-		    fprintf (stderr, "mu_list_get: %s\n", mu_strerror (rc));
-		  else
-		    printf ("%s\n", text);
-		}
-	    }
-	  else
-	    fprintf (stderr, "?\n");
-	}
-      mu_wordsplit_free (&ws);
+  errno = 0;
+  n = strtoul (argv[0], &p, 0);
+  if (errno || *p != 0)
+    return MU_ERR_PARSE;
+  else
+    {
+      char *text;
+      int rc = mu_list_get (cls->lst, n, (void**) &text);
+      if (rc)
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_list_get", argv[0], rc);
+      else
+	mu_printf ("%s\n", text);
+      return 0;
     }
 }
+
+static struct mu_tesh_command comtab[] = {
+  { "__ENVINIT__", "", envinit },
+  { "__NOCMD__", "", get },
+  { "print", "", com_print },
+  { "count", "", com_count },
+  { "next", "[COUNT]", com_next },
+  { "del", "ITEM ...", com_delete },
+  { "add", "ITEM ...", com_add },
+  { "prep", "ITEM ...", com_prep },
+  { "ins", "[-before] [-after] ITEM NEW_ITEM ...", com_ins },
+  { "repl", "OLD_ITEM NEW_ITEM", com_repl },
+  { "ictl", "tell|del|repl|ins|dir [ARG...]", com_ictl },
+  { "iter", "NUM", com_iter },
+  { "find", "ITEM", com_find },
+  { "cur", "", com_cur },
+  { "map", "[-replace] NAME [ARG...]", com_map },
+  { "slice", "[-replace] NUM ...", com_slice },
+  { "first", "", com_first },
+  { "head", "", com_head },
+  { "tail", "", com_tail },
+  { "fold", "", com_fold },
+  { "rfold", "", com_rfold },
+  { "sort", "", com_sort },
+  { "push", "ITEM ...", com_push },
+  { "pop", "", com_pop },
+  { NULL }
+};
 
 static int
 string_comp (const void *item, const void *value)
@@ -1010,27 +887,29 @@ string_comp (const void *item, const void *value)
 int
 main (int argc, char **argv)
 {
-  mu_list_t list;
+  struct listop_closure cls;
   int rc;
 
+  mu_tesh_init (argv[0]);
+
   interactive = isatty (0);
-  rc = mu_list_create (&list);
+
+  memset (&cls, 0, sizeof cls);
+  
+  rc = mu_list_create (&cls.lst);
   if (rc)
     lperror ("mu_list_create", rc);
-  mu_list_set_comparator (list, string_comp);
-  mu_list_set_destroy_item (list, mu_list_free_item);
+  mu_list_set_comparator (cls.lst, string_comp);
+  mu_list_set_destroy_item (cls.lst, mu_list_free_item);
 
-  argc--;
-  argv++;
-  
-  while (argc--)
+  while (--argc)
     {
-      rc = mu_list_append (list, strdup (*argv++));
+      rc = mu_list_append (cls.lst, strdup (*++argv));
       if (rc)
 	lperror ("mu_list_append", rc);
     }
 
-  shell (list);
+  mu_tesh_read_and_eval (argc, argv, comtab, &cls);
   
   return 0;
 }
