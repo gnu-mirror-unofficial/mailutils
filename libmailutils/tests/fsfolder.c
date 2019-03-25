@@ -31,7 +31,8 @@
 #include <mailutils/registrar.h>
 #include <mailutils/sys/folder.h>
 #include <mailutils/sys/registrar.h>
-#include <mailutils/opt.h>
+#include <mailutils/assoc.h>
+#include <mailutils/iterator.h>
 #include "tesh.h"
 
 int sort_option;
@@ -151,12 +152,96 @@ com_unsubscribe (int argc, char **argv, mu_assoc_t options, void *env)
   return 0;
 }
 
+static mu_record_t
+find_record (char const *scheme)
+{
+  mu_iterator_t itr;
+  mu_record_t result = NULL;
+
+  MU_ASSERT (mu_registrar_get_iterator (&itr));
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
+       mu_iterator_next (itr))
+    {
+      mu_record_t rec;
+      mu_iterator_current (itr, (void **)&rec);
+      if (strcmp (rec->scheme, scheme) == 0)
+	{
+	  result = rec;
+	  break;
+	}
+    }
+  mu_iterator_destroy (&itr);
+  return result;
+}
+
+static int
+com_scan (int argc, char **argv, mu_assoc_t options, void *env)
+{
+  mu_folder_t folder = env;
+  struct mu_folder_scanner scn = MU_FOLDER_SCANNER_INITIALIZER;
+  char *s;
+  int rc;
+
+  if (argc > 1)
+    {
+      scn.refname = argv[1];
+      if (argc == 3)
+	scn.pattern = argv[2];
+    }
+
+  mu_list_create (&scn.result);
+
+  if (mu_assoc_lookup (options, "maxdepth", &s) == 0)
+    {
+      char *p;
+      errno = 0;
+      scn.max_level = strtoul (s, &p, 10);
+      if (errno || *p)
+	{
+	  mu_error ("-maxdepth=%s: invalid depth", s);
+	  return 0;
+	}
+    }
+
+  if (mu_assoc_lookup (options, "type", &s) == 0)
+    {
+      mu_record_t rec = find_record (s);
+
+      if (rec)
+	{
+	  if (!scn.records)
+	    MU_ASSERT (mu_list_create (&scn.records));
+	  MU_ASSERT (mu_list_append (scn.records, rec));
+	}
+      else
+	{
+	  mu_error ("%s: no such record found", s);
+	  mu_list_destroy (&scn.records);
+	  return 0;
+	}
+    }
+
+  rc = mu_folder_scan (folder, &scn);
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_scan", NULL, rc);
+  else
+    {
+      if (sort_option)
+	mu_list_sort (scn.result, compare_response);
+      mu_list_foreach (scn.result, _print_list_entry, &prefix_len);
+      mu_list_destroy (&scn.result);
+    }
+  mu_list_destroy (&scn.records);
+  return 0;
+}
+
 static struct mu_tesh_command comtab[] = {
   { "list", "REF MBX", com_list },
   { "lsub", "REF MBX", com_lsub },
   { "rename", "OLD NEW", com_rename },
   { "subscribe", "MBX", com_subscribe },
   { "unsubscribe", "MBX", com_unsubscribe },
+  { "scan", "[-maxdepth=N] [-type=TYPE] [REF PATTERN]", com_scan },
   { NULL }
 };
 
@@ -201,8 +286,8 @@ _always_is_scheme (mu_record_t record, mu_url_t url, int flags)
 
 static struct _mu_record test_record =
 {
-  0,
-  "file",
+  10,
+  "any",
   MU_RECORD_LOCAL,
   MU_URL_SCHEME | MU_URL_PATH,
   MU_URL_PATH,
@@ -212,6 +297,32 @@ static struct _mu_record test_record =
   _mu_fsfolder_init, /* Folder init.  */
   NULL, /* No need for an back pointer.  */
   _always_is_scheme, /* _is_scheme method.  */
+  NULL, /* _get_url method.  */
+  NULL, /* _get_mailbox method.  */
+  NULL, /* _get_mailer method.  */
+  NULL  /* _get_folder method.  */
+};
+
+static int
+_reg_is_scheme (mu_record_t record, mu_url_t url, int flags)
+{
+  return _always_is_scheme (record, url, flags)
+         & MU_FOLDER_ATTRIBUTE_FILE;
+}
+
+static struct _mu_record reg_record =
+{
+  0,
+  "reg",
+  MU_RECORD_LOCAL,
+  MU_URL_SCHEME | MU_URL_PATH,
+  MU_URL_PATH,
+  mu_url_expand_path, /* URL init.  */
+  NULL, /* Mailbox init.  */
+  NULL, /* Mailer init.  */
+  _mu_fsfolder_init, /* Folder init.  */
+  NULL, /* No need for an back pointer.  */
+  _reg_is_scheme, /* _is_scheme method.  */
   NULL, /* _get_url method.  */
   NULL, /* _get_mailbox method.  */
   NULL, /* _get_mailer method.  */
@@ -229,6 +340,7 @@ main (int argc, char **argv)
 
   mu_tesh_init (argv[0]);
   mu_registrar_record (&test_record);
+  mu_registrar_record (&reg_record);
 
   if (argc == 1)
     {

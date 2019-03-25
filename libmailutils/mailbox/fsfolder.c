@@ -210,7 +210,7 @@ list_helper (struct mu_folder_scanner *scn,
   struct dirent *dp;
   int stop = 0;
     
-  if (scn->max_level && level > scn->max_level)
+  if (scn->max_level && level >= scn->max_level)
     return 0;
 
   dirp = opendir (dirname);
@@ -276,7 +276,7 @@ list_helper (struct mu_folder_scanner *scn,
 		  if (scn->records)
 		    {
 		      int rc;
-		      rc = mu_list_locate (scn->records, &rec, NULL);
+		      rc = mu_list_locate (scn->records, rec, NULL);
 		      if (rc)
 			{
 			  if (rc != MU_ERR_NOENT)
