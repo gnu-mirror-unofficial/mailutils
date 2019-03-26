@@ -36,11 +36,6 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   size_t size;
   char *p;
 
-  if ((resp->type & MU_FOLDER_ATTRIBUTE_FILE)
-      && refinfo->pfx->record
-      && refinfo->pfx->record != resp->format)
-    return 0;
-  
   name = resp->name + refinfo->dirlen;
 
   /* There can be only one INBOX */
@@ -126,6 +121,7 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
   mu_folder_t folder;
   char const *dir;
   mu_url_t url;
+  struct mu_folder_scanner scn = MU_FOLDER_SCANNER_INITIALIZER;
 
   if (!wcard[0])
     {
@@ -192,9 +188,18 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
   if (!*ref &&
       mu_imap_wildmatch_ci (wcard, "INBOX", MU_HIERARCHY_DELIMITER) == 0)
     io_untagged_response (RESP_NONE, "LIST (\\NoInferiors) NIL INBOX");
+
+  scn.pattern = (void*) wcard;
+  scn.enumfun = list_fun;
+  scn.enumdata = &refinfo;
+  if (refinfo.pfx->record)
+    {
+      mu_list_create (&scn.records);
+      mu_list_append (scn.records, refinfo.pfx->record);
+    }
   
-  mu_folder_enumerate (folder, NULL, (void*) wcard, 0, 0, NULL,
-		       list_fun, &refinfo);
+  mu_folder_scan (folder, &scn);
+  mu_list_destroy (&scn.records);
   mu_folder_destroy (&folder);
   free (refinfo.buf);
   return RESP_OK;
