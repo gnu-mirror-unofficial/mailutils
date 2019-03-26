@@ -119,6 +119,8 @@ TESTSUITE_AT = \
  fsfolder00.at\
  fsfolder01.at\
  fsfolder02.at\
+ fsfolder03.at\
+ fsfolder04.at\
  hdrcpy.at\
  hdrflt.at\
  htmlent.at\

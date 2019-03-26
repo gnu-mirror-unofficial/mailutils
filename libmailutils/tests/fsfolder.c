@@ -152,28 +152,6 @@ com_unsubscribe (int argc, char **argv, mu_assoc_t options, void *env)
   return 0;
 }
 
-static mu_record_t
-find_record (char const *scheme)
-{
-  mu_iterator_t itr;
-  mu_record_t result = NULL;
-
-  MU_ASSERT (mu_registrar_get_iterator (&itr));
-  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
-       mu_iterator_next (itr))
-    {
-      mu_record_t rec;
-      mu_iterator_current (itr, (void **)&rec);
-      if (strcmp (rec->scheme, scheme) == 0)
-	{
-	  result = rec;
-	  break;
-	}
-    }
-  mu_iterator_destroy (&itr);
-  return result;
-}
-
 static int
 com_scan (int argc, char **argv, mu_assoc_t options, void *env)
 {
@@ -205,9 +183,9 @@ com_scan (int argc, char **argv, mu_assoc_t options, void *env)
 
   if (mu_assoc_lookup (options, "type", &s) == 0)
     {
-      mu_record_t rec = find_record (s);
-
-      if (rec)
+      mu_record_t rec;
+      rc = mu_registrar_lookup_scheme (s, &rec);
+      if (rc == 0)
 	{
 	  if (!scn.records)
 	    MU_ASSERT (mu_list_create (&scn.records));
@@ -215,7 +193,11 @@ com_scan (int argc, char **argv, mu_assoc_t options, void *env)
 	}
       else
 	{
-	  mu_error ("%s: no such record found", s);
+	  if (rc == MU_ERR_NOENT)
+	    mu_error ("%s: no such record found", s);
+	  else
+	    mu_diag_funcall (MU_DIAG_ERROR, "mu_registrar_lookup_scheme",
+			     NULL, rc);
 	  mu_list_destroy (&scn.records);
 	  return 0;
 	}
@@ -284,7 +266,7 @@ _always_is_scheme (mu_record_t record, mu_url_t url, int flags)
   return res & flags;
 }
 
-static struct _mu_record test_record =
+static struct _mu_record any_record =
 {
   10,
   "any",
@@ -339,7 +321,7 @@ main (int argc, char **argv)
   int glob_option = 0;
 
   mu_tesh_init (argv[0]);
-  mu_registrar_record (&test_record);
+  mu_registrar_record (&any_record);
   mu_registrar_record (&reg_record);
 
   if (argc == 1)

@@ -1,0 +1,44 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2011-2019 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([Maxdepth])
+AT_KEYWORDS([fsfolder maxdepth])
+
+AT_CHECK([mkdir dir
+mkdir dir/a
+mkdir dir/a/b
+mkdir dir/a/b/c
+mkdir dir/a/b/c/d
+mkdir dir/b
+mkdir dir/b/b
+mkdir dir/b/c
+echo maxdepth=1
+fsfolder -name=dir -sort scan -maxdepth=1
+echo maxdepth=2
+fsfolder -name=dir -sort scan -maxdepth=2
+],
+[0],
+[maxdepth=1
+d- /    0 dir/a
+d- /    0 dir/b
+maxdepth=2
+d- /    0 dir/a
+d- /    0 dir/b
+d- /    1 dir/a/b
+d- /    1 dir/b/b
+d- /    1 dir/b/c
+])
+AT_CLEANUP

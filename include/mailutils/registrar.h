@@ -74,7 +74,16 @@ int mu_registrar_lookup_url (mu_url_t url, int flags,
 				    mu_record_t *precord, int *pflags);
 int mu_registrar_record       (mu_record_t);
 int mu_unregistrar_record     (mu_record_t);
+
 int mu_registrar_apply_filter (int (*flt) (mu_record_t, void *), void *data);
+
+struct mu_record_match
+{
+  mu_record_t record;
+  int flags;
+};
+
+int mu_registrar_match_records (char const *name, int flags, mu_list_t *ret);
 
 int mu_record_is_local (mu_record_t);
   

@@ -199,7 +199,97 @@ inode_list_lookup (struct inode_list *list, struct stat *st)
       return 1;
   return 0;
 }
+
+static int
+fold_record_match (void *item, void *data, void *prev, void **ret)
+{
+  struct mu_record_match *cur_match = item;
+  struct mu_record_match *prev_match = prev;
+  if (prev == NULL || cur_match->flags >= prev_match->flags)
+    *ret = cur_match;
+  else
+    *ret = prev_match;
+  return 0;
+}
 
+/* List item comparator for computing an intersection between a list
+   of mu_record_t objects and a list of struct mi_record_match pointers.
+*/
+static int
+mcomp (const void *a, const void *b)
+{
+  struct _mu_record const * r = a;
+  struct mu_record_match const *m = b;
+  return !(m->record == r);
+}
+
+/* Find a record from RECORDS that is the best match for mailbox REFNAME.
+   Return the record found in PREC and mailbox attribute flags (the
+   MU_FOLDER_ATTRIBUTE_* bitmask) in PFLAGS.
+
+   Return 0 on success, MU_ERR_NOENT if no match was found and mailutils
+   error code on error.
+ */
+static int
+best_match (mu_list_t records, char const *refname,
+	    mu_record_t *prec, int *pflags)
+{
+  int rc;
+  mu_list_t mlist, isect;
+  mu_list_comparator_t prev;
+  struct mu_record_match *m;
+
+  rc = mu_registrar_match_records (refname,
+				   MU_FOLDER_ATTRIBUTE_ALL,
+				   &mlist);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+		("%s():%s: %s",
+		 __func__,
+		 "mu_registrar_match_records",
+		 mu_strerror (rc)));
+      return rc;
+    }
+
+  prev = mu_list_set_comparator (records, mcomp);
+  rc = mu_list_intersect (&isect, mlist, records);
+  mu_list_set_comparator (records, prev);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+		("%s():%s: %s",
+		 __func__,
+		 "mu_list_intersect",
+		 mu_strerror (rc)));
+      mu_list_destroy (&mlist);
+      return rc;
+    }
+
+  rc = mu_list_fold (isect, fold_record_match, NULL, NULL, &m);
+  if (rc == 0)
+    {
+      if (m == NULL)
+	rc = MU_ERR_NOENT;
+      else
+	{
+	  *prec = m->record;
+	  *pflags = m->flags;
+	}
+    }
+  else
+    {
+      mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+		("%s():%s: %s",
+		 __func__,
+		 "mu_list_fold",
+		 mu_strerror (rc)));
+    }
+  mu_list_destroy (&mlist);
+  mu_list_destroy (&isect);
+  return rc;
+}
+
 static int
 list_helper (struct mu_folder_scanner *scn,
 	     struct folder_scan_data *data,
@@ -260,6 +350,7 @@ list_helper (struct mu_folder_scanner *scn,
 		  int type = 0;
 		  struct mu_list_response *resp;
 		  mu_record_t rec = NULL;
+		  int rc;
 		  
 		  resp = malloc (sizeof (*resp));
 		  if (resp == NULL)
@@ -270,65 +361,56 @@ list_helper (struct mu_folder_scanner *scn,
 		      free (fname);
 		      continue;
 		    }
-		  
-		  mu_registrar_lookup (refname, MU_FOLDER_ATTRIBUTE_ALL,
-				       &rec, &type);
-		  if (scn->records)
-		    {
-		      int rc;
-		      rc = mu_list_locate (scn->records, rec, NULL);
-		      if (rc)
-			{
-			  if (rc != MU_ERR_NOENT)
-			    mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
-				      ("%s(%s):%s: %s",
-				       __func__, dirname, "mu_list_locate",
-				       mu_strerror (rc)));
-			  continue;
-			}
-		    }
-		  
-		  if (type == 0)
-		    {
-		      free (fname);
-		      free (resp);
-		      continue;
-		    }
-		  
-		  resp->name = fname;
-		  resp->level = level;
-		  resp->separator = '/';
-		  resp->type = type;
-		  resp->format = rec;
-		  
-		  if (scn->enumfun)
-		    {
-		      if (scn->enumfun (data->folder, resp, scn->enumdata))
-			{
-			  free (resp->name);
-			  free (resp);
-			  stop = 1;
-			  break;
-			}
-		    }
-		  
-		  if (scn->result)
-		    {
-		      int rc;
-		      rc = mu_list_append (scn->result, resp);
-		      if (rc)
-			mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
-				  ("%s(%s):%s: %s",
-				   __func__, dirname, "mu_list_append",
-				   mu_strerror (rc)));
 
-		      /* Prevent fname from being freed at the end of the
-			 loop
-		      */
-		      fname = NULL;
+		  if (scn->records)
+		    rc = best_match (scn->records, refname, &rec, &type);
+		  else
+		    rc = mu_registrar_lookup (refname, MU_FOLDER_ATTRIBUTE_ALL,
+					      &rec, &type);
+
+		  if (rc || type == 0)
+		    {
+		      free (resp);
+		      if (f == MU_FOLDER_ATTRIBUTE_DIRECTORY)
+			type = f;
 		    }
 		  else
-		    free (resp);
+		    {
+		      resp->name = fname;
+		      resp->level = level;
+		      resp->separator = '/';
+		      resp->type = type;
+		      resp->format = rec;
+
+		      if (scn->enumfun)
+			{
+			  if (scn->enumfun (data->folder, resp, scn->enumdata))
+			    {
+			      free (resp->name);
+			      free (resp);
+			      stop = 1;
+			      break;
+			    }
+			}
+		  
+		      if (scn->result)
+			{
+			  int rc;
+			  rc = mu_list_append (scn->result, resp);
+			  if (rc)
+			    mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+				      ("%s(%s):%s: %s",
+				       __func__, dirname, "mu_list_append",
+				       mu_strerror (rc)));
+
+			  /* Prevent fname from being freed at the end of the
+			     loop
+			  */
+			  fname = NULL;
+			}
+		      else
+			free (resp);
+		    }
 		  
 		  if ((type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
 		      && !inode_list_lookup (ilist, &st))

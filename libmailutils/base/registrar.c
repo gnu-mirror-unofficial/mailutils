@@ -446,3 +446,66 @@ mu_registrar_apply_filter (int (*flt) (mu_record_t, void *), void *data)
   mu_monitor_unlock (&registrar_monitor);
   return 0;
 }
+
+struct match_closure
+{
+  mu_url_t url;
+  int flags;
+  int err;
+};
+
+static int
+select_match (void **itmv, size_t itmc, void *call_data)
+{
+  struct match_closure *mc = call_data;
+  int rc = mu_record_is_scheme (itmv[0], mc->url, mc->flags);
+  if (rc)
+    {
+      struct mu_record_match *match = malloc (sizeof (*match));
+      if (!match)
+	{
+	  mc->err = errno;
+	  return MU_LIST_MAP_STOP;
+	}
+      match->record = itmv[0];
+      match->flags = rc;
+      itmv[0] = match;
+      return MU_LIST_MAP_OK;
+    }
+  return MU_LIST_MAP_SKIP;
+}
+
+/* Select records matching pathname NAME with given FLAGS
+   (MU_FOLDER_ATTRIBUTE_* bitmask). On success, store each
+   match as a pointer to struct mu_record_match in *RET.
+*/
+int
+mu_registrar_match_records (char const *name, int flags, mu_list_t *ret)
+{
+  int rc;
+  struct match_closure mc;
+  mu_list_t lst;
+
+  rc = mu_url_create (&mc.url, name);
+  if (rc)
+    return rc;
+  mc.flags = flags;
+  mc.err = 0;
+
+  mu_monitor_wrlock (&registrar_monitor);
+  rc = mu_list_map (registrar_list, select_match, &mc, 1, &lst);
+  mu_monitor_unlock (&registrar_monitor);
+  mu_url_destroy (&mc.url);
+  if (rc == 0)
+    {
+      mu_list_set_destroy_item (lst, mu_list_free_item);
+      if (mc.err)
+	{
+	  mu_list_destroy (&lst);
+	  rc = mc.err;
+	}
+    }
+  if (rc == 0)
+    *ret = lst;
+  return rc;
+}

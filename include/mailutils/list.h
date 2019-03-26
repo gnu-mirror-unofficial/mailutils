@@ -317,7 +317,7 @@ typedef int (*mu_list_folder_t) (void *_item, void *_data,
 
        0                   - success,
        EINVAL              - _list or _fold is NULL,
-       MU_ERR_OUT_PTR_NULL - _return_code is NULL
+       MU_ERR_OUT_PTR_NULL - _return_value is NULL
        other value         - non-zero value returned by _fold.
 
      The _fold function is not allowed to alter the list it is being applied
