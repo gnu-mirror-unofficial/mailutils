@@ -82,12 +82,12 @@ Folder :: close ()
 
 List&
 Folder :: list (const std::string& dirname, void* pattern,
-		size_t max_level = 0)
+		size_t max_depth = 0)
 {
   mu_list_t c_list;
 
   int status = mu_folder_list (folder, dirname.c_str (), pattern,
-			       max_level, &c_list);
+			       max_depth, &c_list);
   if (status)
     throw Exception ("Folder::list", status);
 
@@ -96,13 +96,13 @@ Folder :: list (const std::string& dirname, void* pattern,
 
 List&
 Folder :: enumerate (const std::string& name, void* pattern,
-		     int flags, size_t max_level,
+		     int flags, size_t max_depth,
 		     mu_folder_enumerate_fp enumfun, void* enumdata)
 {
   mu_list_t c_list;
 
   int status = mu_folder_enumerate (folder, name.c_str (), pattern,
-				    flags, max_level, &c_list,
+				    flags, max_depth, &c_list,
 				    enumfun, enumdata);
   if (status)
     throw Exception ("Folder::enumerate", status);

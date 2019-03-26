@@ -272,7 +272,7 @@ _mu_imap_folder_list (mu_folder_t folder, struct mu_folder_scanner *scn)
   if (rc)
     return rc;
 
-  if (scn->max_level
+  if (scn->max_depth
       || (scn->match_flags & MU_FOLDER_ATTRIBUTE_ALL) != MU_FOLDER_ATTRIBUTE_ALL)
     {
       /* Filter out the list, eliminating non-matching entries */
@@ -292,7 +292,7 @@ _mu_imap_folder_list (mu_folder_t folder, struct mu_folder_scanner *scn)
 
 	  mu_iterator_current (itr, (void**) &rp);
 	  if (!(rp->type & scn->match_flags)
-	      || (scn->max_level && rp->level > scn->max_level))
+	      || (scn->max_depth && rp->depth > scn->max_depth))
 	    mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
 	}
       mu_iterator_destroy (&itr);

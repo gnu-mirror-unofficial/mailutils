@@ -43,9 +43,9 @@ class Folder
   void open (int flag);
   void close ();
 
-  List& list (const std::string& dirname, void* pattern, size_t max_level);
+  List& list (const std::string& dirname, void* pattern, size_t max_depth);
   List& enumerate (const std::string& name, void* pattern,
-		   int flags, size_t max_level,
+		   int flags, size_t max_depth,
 		   mu_folder_enumerate_fp enumfun, void* enumdata);
 
   Url& get_url ();

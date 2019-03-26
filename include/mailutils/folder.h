@@ -27,9 +27,9 @@ extern "C" {
 struct mu_list_response
 {
   int type;             /* MU_FOLDER_ATTRIBUTE_.* flags */
-  int level;
-  int separator;
-  char *name;
+  int depth;            /* Item depth within the hierarchy */
+  int separator;        /* Directory separator character */
+  char *name;           /* Item name */
   mu_record_t format;   /* Associated mailbox format record */
 };
 
@@ -66,7 +66,8 @@ struct mu_folder_scanner
   char const *refname;     /* Reference name */
   void *pattern;           /* Matching pattern */
   int match_flags;         /* Matching flags */
-  size_t max_level;        /* Max. nesting level to descend */
+  size_t max_depth;        /* Max. depth to descend
+			      (1-based, 0 means 'unlimited') */
   mu_folder_enumerate_fp enumfun; /* Enumeration function */
   void *enumdata;                 /* Data for enumfun */
   mu_list_t records;        /* List of allowed records */

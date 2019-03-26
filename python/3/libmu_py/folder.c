@@ -162,7 +162,7 @@ folderdata_extractor (void *data, PyObject **dst)
 
   *dst = PyTuple_New (4);
   PyTuple_SetItem (*dst, 0, PyUnicode_FromString (attr));
-  PyTuple_SetItem (*dst, 1, PyLong_FromLong (resp->level));
+  PyTuple_SetItem (*dst, 1, PyLong_FromLong (resp->depth));
   PyTuple_SetItem (*dst, 2, PyUnicode_FromString (separator));
   PyTuple_SetItem (*dst, 3, PyUnicode_FromString (resp->name));
   return 0;
@@ -172,21 +172,21 @@ static PyObject *
 api_folder_list (PyObject *self, PyObject *args)
 {
   int status = 0;
-  Py_ssize_t max_level = 0;
+  Py_ssize_t max_depth = 0;
   char *dirname, *pattern;
   PyFolder *py_folder;
   PyObject *py_list;
   mu_list_t c_list = NULL;
 
   if (!PyArg_ParseTuple (args, "O!zs|n", &PyFolderType, &py_folder,
-			 &dirname, &pattern, &max_level))
+			 &dirname, &pattern, &max_depth))
     return NULL;
-  if (max_level < 0)
+  if (max_depth < 0)
     {
       PyErr_SetString (PyExc_RuntimeError, "max level out of range");
       return NULL;
     }
-  status = mu_folder_list (py_folder->folder, dirname, pattern, max_level,
+  status = mu_folder_list (py_folder->folder, dirname, pattern, max_depth,
 			   &c_list);
 
   if (c_list)

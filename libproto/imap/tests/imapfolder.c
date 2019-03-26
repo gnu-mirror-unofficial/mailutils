@@ -37,7 +37,7 @@ _print_list_entry (void *item, void *data)
 	     (resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY) ? 'd' : '-',
 	     (resp->type & MU_FOLDER_ATTRIBUTE_FILE) ? 'f' : '-',
 	     resp->separator ? resp->separator : ' ',
-	     resp->level,
+	     resp->depth,
 	     resp->name);
   return 0;
 }

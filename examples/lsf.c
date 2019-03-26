@@ -29,7 +29,7 @@ enumfun (mu_folder_t folder, struct mu_list_response *resp, void *data)
 	  (resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY) ? 'd' : '-',
 	  (resp->type & MU_FOLDER_ATTRIBUTE_FILE) ? 'f' : '-',
 	  resp->separator,
-	  resp->level,
+	  resp->depth,
 	  resp->name);
   return 0;
 }

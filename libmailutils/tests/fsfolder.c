@@ -44,9 +44,9 @@ compare_response (void const *a, void const *b)
   struct mu_list_response const *ra = a;
   struct mu_list_response const *rb = b;
 
-  if (ra->level < rb->level)
+  if (ra->depth < rb->depth)
     return -1;
-  if (ra->level > rb->level)
+  if (ra->depth > rb->depth)
     return 1;
   return strcmp (ra->name, rb->name);
 }
@@ -60,7 +60,7 @@ _print_list_entry (void *item, void *data)
 	     (resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY) ? 'd' : '-',
 	     (resp->type & MU_FOLDER_ATTRIBUTE_FILE) ? 'f' : '-',
 	     resp->separator ? resp->separator : ' ',
-	     resp->level,
+	     resp->depth,
 	     resp->name + len);
   return 0;
 }
@@ -173,7 +173,7 @@ com_scan (int argc, char **argv, mu_assoc_t options, void *env)
     {
       char *p;
       errno = 0;
-      scn.max_level = strtoul (s, &p, 10);
+      scn.max_depth = strtoul (s, &p, 10);
       if (errno || *p)
 	{
 	  mu_error ("-maxdepth=%s: invalid depth", s);

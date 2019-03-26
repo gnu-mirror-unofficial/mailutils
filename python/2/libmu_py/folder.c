@@ -203,21 +203,21 @@ static PyObject *
 api_folder_list (PyObject *self, PyObject *args)
 {
   int status = 0;
-  Py_ssize_t max_level = 0;
+  Py_ssize_t max_depth = 0;
   char *dirname, *pattern;
   PyFolder *py_folder;
   PyObject *py_list;
   mu_list_t c_list = NULL;
 
   if (!PyArg_ParseTuple (args, "O!zs|n", &PyFolderType, &py_folder,
-			 &dirname, &pattern, &max_level))
+			 &dirname, &pattern, &max_depth))
     return NULL;
-  if (max_level < 0)
+  if (max_depth < 0)
     {
       PyErr_SetString (PyExc_RuntimeError, "max level out of range");
       return NULL;
     }
-  status = mu_folder_list (py_folder->folder, dirname, pattern, max_level,
+  status = mu_folder_list (py_folder->folder, dirname, pattern, max_depth,
 			   &c_list);
 
   if (c_list)

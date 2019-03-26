@@ -189,7 +189,7 @@ nntp_folder_destroy (mu_folder_t folder)
 
 static int
 nntp_folder_list (mu_folder_t folder, const char *ref, void *pat, int flags,
-		  size_t max_level, mu_list_t flist,
+		  size_t max_depth, mu_list_t flist,
 		  mu_folder_enumerate_fp efp, void *edp)
 {
   return ENOTSUP;

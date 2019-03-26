@@ -66,8 +66,8 @@ class Folder:
             raise FolderError (status)
         return url.Url (u)
 
-    def list (self, dirname, pattern, max_level=0):
-        status, lst = folder.list (self.folder, dirname, pattern, max_level)
+    def list (self, dirname, pattern, max_depth=0):
+        status, lst = folder.list (self.folder, dirname, pattern, max_depth)
         if status:
             raise FolderError (status)
         return lst

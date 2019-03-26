@@ -356,18 +356,18 @@ mu_folder_scan (mu_folder_t folder, struct mu_folder_scanner *scn)
 
 int
 mu_folder_list (mu_folder_t folder, const char *dirname, void *pattern,
-		size_t max_level,
+		size_t max_depth,
 		mu_list_t *pflist)
 {
   return mu_folder_enumerate (folder, dirname, pattern,
-			      MU_FOLDER_ATTRIBUTE_ALL, max_level,
+			      MU_FOLDER_ATTRIBUTE_ALL, max_depth,
 			      pflist, NULL, NULL);
 }
 
 int
 mu_folder_enumerate (mu_folder_t folder, const char *name,
 		     void *pattern, int flags,
-		     size_t max_level,
+		     size_t max_depth,
 		     mu_list_t *pflist,
 		     mu_folder_enumerate_fp enumfun, void *enumdata)
 {
@@ -383,7 +383,7 @@ mu_folder_enumerate (mu_folder_t folder, const char *name,
       scn.refname = name;
       scn.pattern = pattern;
       scn.match_flags = flags;
-      scn.max_level = max_level;
+      scn.max_depth = max_depth;
       scn.enumfun = enumfun;
       scn.enumdata = enumdata;
       scn.records = NULL;

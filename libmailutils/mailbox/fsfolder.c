@@ -294,13 +294,13 @@ static int
 list_helper (struct mu_folder_scanner *scn,
 	     struct folder_scan_data *data,
 	     struct inode_list *ilist,
-	     const char *dirname, size_t level)
+	     const char *dirname, size_t depth)
 {
   DIR *dirp;
   struct dirent *dp;
   int stop = 0;
     
-  if (scn->max_level && level >= scn->max_level)
+  if (scn->max_depth && depth >= scn->max_depth)
     return 0;
 
   dirp = opendir (dirname);
@@ -377,7 +377,7 @@ list_helper (struct mu_folder_scanner *scn,
 		  else
 		    {
 		      resp->name = fname;
-		      resp->level = level;
+		      resp->depth = depth;
 		      resp->separator = '/';
 		      resp->type = type;
 		      resp->format = rec;
@@ -421,7 +421,7 @@ list_helper (struct mu_folder_scanner *scn,
 		      idata.dev   = st.st_dev;
 		      idata.next  = ilist;
 		      stop = list_helper (scn, data, &idata, refname,
-					  level + 1);
+					  depth + 1);
 		    }
 		}
 	      else if (S_ISDIR (st.st_mode))
@@ -431,7 +431,7 @@ list_helper (struct mu_folder_scanner *scn,
 		  idata.inode = st.st_ino;
 		  idata.dev   = st.st_dev;
 		  idata.next  = ilist;
-		  stop = list_helper (scn, data, &idata, fname, level + 1);
+		  stop = list_helper (scn, data, &idata, fname, depth + 1);
 		}
 	    }
 	}
@@ -508,7 +508,7 @@ _fsfolder_lsub (mu_folder_t folder, const char *ref, const char *name,
 		  break;
 		}
 	      resp->type = MU_FOLDER_ATTRIBUTE_FILE;
-	      resp->level = 0;
+	      resp->depth = 0;
 	      resp->separator = '/';
 	      rc = mu_list_append (flist, resp);
 	      if (rc)

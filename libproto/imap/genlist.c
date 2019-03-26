@@ -37,14 +37,14 @@ struct list_closure
 };
 
 static int
-count_level (const char *name, int delim)
+count_depth (const char *name, int delim)
 {
-  int level = 0;
+  int depth = 0;
 
   while (*name)
     if (*name++ == delim)
-      level++;
-  return level;
+      depth++;
+  return depth;
 }
 
 static int
@@ -109,14 +109,14 @@ list_untagged_handler (mu_imap_t imap, mu_list_t resp, void *data)
       if (_mu_imap_list_element_is_nil (elt))
 	{
 	  rp->separator = 0;
-	  rp->level = 0;
+	  rp->depth = 0;
 	}
       else if (elt->type != imap_eltype_string)
 	return;
       else
 	{
 	  rp->separator = elt->v.string[0];
-	  rp->level = count_level (rp->name, rp->separator);
+	  rp->depth = count_depth (rp->name, rp->separator);
 	}
       if ((clos->error_code = mu_list_append (clos->retlist, rp)))
 	mu_list_response_free (rp);

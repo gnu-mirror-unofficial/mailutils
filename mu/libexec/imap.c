@@ -1124,7 +1124,7 @@ print_list_item (void *item, void *data)
 		    (resp->type & MU_FOLDER_ATTRIBUTE_FILE) ? 'f' : '-',
 		    resp->separator ?
 		        resp->separator : MU_HIERARCHY_DELIMITER,
-		    resp->level,
+		    resp->depth,
 		    resp->name);
   return 0;
 }
