@@ -100,3 +100,10 @@ four
 .
 EOT
 ])
+
+MU_FILTER_TEST([decode single line],[crlfdot],[decode],[],[-gen],
+[],
+[tocrlf <<EOT
+.
+EOT
+])

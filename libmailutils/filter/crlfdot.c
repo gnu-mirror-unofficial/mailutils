@@ -304,6 +304,7 @@ _crlfdot_encoder (void *xd,
     {
       switch (state->at)
 	{
+	case crlfdot_encode_init:
 	case crlfdot_encode_lf:
 	  if (j + 3 > osize)
 	    result = mu_filter_again;

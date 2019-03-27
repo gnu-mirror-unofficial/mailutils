@@ -56,6 +56,19 @@ AT_CHECK([fltst dot encode read < /dev/null],
 ])
 AT_CLEANUP
 
+AT_SETUP([DOT decode single line input])
+AT_KEYWORDS([DOT one-line])
+AT_CHECK(
+[AT_DATA([input],[
+.
+])
+fltst dot decode read < input
+],
+[0],
+[
+])
+AT_CLEANUP
+
 AT_SETUP([DOT reversibility])
 AT_KEYWORDS([filter dot])
 AT_CHECK([
