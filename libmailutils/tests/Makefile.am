@@ -87,11 +87,11 @@ noinst_PROGRAMS = \
  wsp\
  xscript
 
-fsfolder_LDFLAGS = -lmu_tesh $(LDADD)
+fsfolder_LDADD = libmu_tesh.la $(LDADD)
 
-linetrack_LDFLAGS = -lmu_tesh $(LDADD)
+linetrack_LDADD = libmu_tesh.la $(LDADD)
 
-listop_LDFLAGS = -lmu_tesh $(LDADD)
+listop_LDADD = libmu_tesh.la $(LDADD)
 
 LDADD = ${MU_LIB_MAILUTILS}
 
