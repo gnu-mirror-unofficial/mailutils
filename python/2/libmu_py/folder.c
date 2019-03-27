@@ -193,7 +193,7 @@ folderdata_extractor (void *data, PyObject **dst)
 
   *dst = PyTuple_New (4);
   PyTuple_SetItem (*dst, 0, PyString_FromString (attr));
-  PyTuple_SetItem (*dst, 1, PyInt_FromLong (resp->level));
+  PyTuple_SetItem (*dst, 1, PyInt_FromLong (resp->depth));
   PyTuple_SetItem (*dst, 2, PyString_FromString (separator));
   PyTuple_SetItem (*dst, 3, PyString_FromString (resp->name));
   return 0;
