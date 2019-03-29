@@ -44,4 +44,4 @@ noinst_HEADERS = mudbm.h
 
 libmu_dbm_la_LIBADD = ${MU_LIB_MAILUTILS} @MU_AUTHLIBS@ @DBMLIBS@ @LTLIBINTL@
 libmu_dbm_la_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
-libmu_dbm_la_DEPENDENCIES = @DBMLIB_DEPENDENCY@ 
+

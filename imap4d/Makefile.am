@@ -86,13 +86,3 @@ if MU_COND_UNISTRING
 else
   imap4d_SOURCES += unistr_c.c
 endif
-
-## This kludge is necessary to correctly establish imap4d -> MU_AUTHLIBS
-## dependencies. Automake stupidly refuses to include them.
-## The same kludge appears in pop3d/Makefile.am and auth/Makefile.am
-## Think about better approach         --gray
-imap4d_DEPENDENCIES = \
- @MU_AUTHLIBS_DEPENDENCY@\
- ../lib/libmuaux.la\
- ${MU_LIB_MBOX}\
- ${MU_LIB_MAILUTILS}

@@ -160,11 +160,7 @@ AC_ARG_ENABLE([experimental],
 # Initialize authlibs
 
 AC_SUBST(MU_AUTHLIBS)
-AC_SUBST(MU_AUTHLIBS_DEPENDENCY)
 AC_SUBST(MU_AUTHINCS)
-
-MU_AUTHLIBS=
-MU_AUTHLIBS_DEPENDENCY=../libmu_auth/libmu_auth.la
 
 dnl Check for arguments
 AC_ARG_ENABLE([pam],
@@ -351,7 +347,6 @@ AH_BOTTOM(
 # DBM Support
 ##################################
 AC_SUBST(DBMLIBS)
-AC_SUBST(DBMLIB_DEPENDENCY)
 AC_SUBST(DBMINCLUDES)
 
 enable_dbm=
@@ -792,7 +787,6 @@ AC_SUBST(SQL_LTLIBOBJS)
 BUILD_SQL=
 AC_SUBST(BUILD_SQL)
 AC_SUBST(SQLLIB)
-AC_SUBST(SQLLIB_DEPENDENCY)
 
 SQL_LOADABLE_MODULES=
 AC_SUBST(SQL_LOADABLE_MODULES)
@@ -938,7 +932,6 @@ if test -n "$SQL_MODULES"; then
   AC_DEFINE(USE_SQL)
   BUILD_SQL=libsql.la
   SQLLIB=../sql/libsql.la
-  SQLLIB_DEPENDENCY=$SQLLIB
 
   for module in $SQL_MODULES
   do

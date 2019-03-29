@@ -68,10 +68,3 @@ popauth_LDADD = \
  ${LIBMU_DBM}\
  @DBMLIBS@
 
-pop3d_DEPENDENCIES = \
- @MU_AUTHLIBS_DEPENDENCY@ \
- ../lib/libmuaux.la \
- ${MU_LIB_LOCAL_MAILBOX}\
- ${MU_LIB_MAILUTILS}\
- ${LIBMU_DBM}
-
