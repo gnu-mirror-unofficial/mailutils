@@ -119,7 +119,7 @@ void
 mu_diag_vprintf (int level, const char *fmt, va_list ap)
 {
   mu_diag_init ();
-  mu_stream_printf (mu_strerr, "\033<%d>", level);
+  mu_stream_printf (mu_strerr, "\033s<%d>", level);
   mu_stream_vprintf (mu_strerr, fmt, ap);
 }
 

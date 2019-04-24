@@ -38,6 +38,9 @@ struct lib_descr {
   int flags;
 } lib_descr[] = {
   { "mbox",    "-lmu_mbox", 0 },
+#ifdef ENABLE_DOTMAIL
+  { "dotmail", "-lmu_dotmail", 0 },
+#endif
 #ifdef ENABLE_MH
   { "mh",      "-lmu_mh",   0 },
 #endif

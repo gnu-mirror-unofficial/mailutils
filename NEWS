@@ -11,7 +11,7 @@ Version 3.6.90 (git)
 Dotmail is a replacement for traditional mbox format, proposed by
 Kurt Hackenberg. A dotmail mailbox is a single disk file, where
 messages are stored sequentially. Each message ends with a single
-dot (similar to the dormat used in the SMTP DATA command). Any dot
+dot (similar to the format used in the SMTP DATA command). Any dot
 appearing at the start of the line is doubled, to prevent it from
 being interpreted as end of message marker.
 
