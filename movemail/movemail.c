@@ -1052,7 +1052,8 @@ main (int argc, char **argv)
 	{
 	  struct mu_uidl *uidl;
 	  mu_message_t msg;
-	  
+	  mu_header_t hdr;
+
 	  mu_iterator_current (itr, (void **)&uidl);
 
 	  if ((rc = mu_mailbox_get_message (source, uidl->msgno, &msg)) != 0)
@@ -1061,6 +1062,40 @@ main (int argc, char **argv)
 			(unsigned long) uidl->msgno, mu_strerror (rc));
 	      get_err_count++;
 	      continue;
+	    }
+
+	  /* Check if the downloaded message has X-UIDL header. If not,
+	     add one. This check should disappear one mailutils implements
+	     alternative storage for mailbox meta-data. */
+	  if ((rc = mu_message_get_header (msg, &hdr)))
+	    {
+	      mu_error (_("%lu: cannot get header: %s"),
+			(unsigned long) uidl->msgno, mu_strerror (rc));
+	    }
+	  else
+	    {
+	      char const *suidl = NULL;
+
+	      if ((rc = mu_header_sget_value (hdr, MU_HEADER_X_UIDL, &suidl)))
+		{
+		  if (rc != MU_ERR_NOENT)
+		    mu_error (_("%lu: cannot get %s: %s"),
+			      (unsigned long) uidl->msgno, MU_HEADER_X_UIDL,
+			      mu_strerror (rc));
+		}
+	      else if (strcmp (suidl, uidl->uidl))
+		{
+		  mu_error (_("%lu: stored and reported UIDL differ; fixing"),
+			    (unsigned long) uidl->msgno);
+		  suidl = NULL;
+		}
+
+	      if ((rc = mu_header_set_value (hdr, MU_HEADER_X_UIDL,
+					     uidl->uidl, 1)))
+		{
+		  mu_error (_("%lu: cannot set header: %s"),
+			    (unsigned long) uidl->msgno, mu_strerror (rc));
+		}
 	    }
 	  progress_mark (itr);
 	  if (movemail (dest, msg, uidl->msgno))
