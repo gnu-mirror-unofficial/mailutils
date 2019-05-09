@@ -551,7 +551,7 @@ main (int argc, char *argv[])
   /* Parse command line */
 
   mu_cli_capa_register (&mu_cli_capa_sieve);
-  mu_cli (argc, argv, &cli, capa, NULL, &argc, &argv);
+  mu_cli (argc, argv, &cli, capa, server, &argc, &argv);
 
   current_uid = getuid ();
 
