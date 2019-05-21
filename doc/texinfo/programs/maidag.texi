@@ -102,7 +102,7 @@ maidag:
 MeTA1 (@uref{http://meta1.org}) communicates with the delivery agent
 using @acronym{LMTP}.
 
-LMTP mode is enabled in @command{maidag} by the @samp{lmtp yes}
+LMTP mode is enabled in @command{maidag} by the @samp{delivery-mode lmtp}
 statement.  The socket to listen on must be specified using
 @code{server} statement (@pxref{Server Settings}).  For the purposes of
 this section, let's suppose @command{maidag} will listen on a
@@ -111,7 +111,7 @@ following (minimal) @command{maidag} configuration will do the job:
 
 @example
 # @r{Start in LMTP mode.}
-lmtp yes;
+delivery-mode lmtp;
 # @r{Run as daemon.}
 mode daemon;
 # @r{Switch to this group after startup.}
@@ -488,6 +488,8 @@ For example:
 $ maidag --url maildir:///home/smith/Mail
 @end example
 
+The same effect has the @samp{delivery-mode url} configuration statement.
+
 @node Remote Mailbox Delivery
 @subsection Remote Mailbox Delivery
 @command{Maidag} can be used to deliver mail to remote mailboxes, such
@@ -587,6 +589,11 @@ statements:
 @item tcp-wrappers  @tab @xref{tcp-wrappers statement}.
 @end multitable
 
+@deffn {Maidag Config} delivery-mode @var{mode}
+Configure delivery mode. The argument is one of: @samp{mda} (default),
+@samp{url}, or @samp{lmtp}.
+@end deffn
+
 @deffn {Maidag Config} ex-multiple-delivery-success @var{bool}
 In case of multiple delivery, exit with code 0 if at least one
 delivery has succeeded.
@@ -646,10 +653,6 @@ Process forward file @var{file}.  @xref{Forwarding}.
 @deffn {Maidag Config} forward-file-checks @var{list}
 Configure safety checks for the forward file.
 @xref{Forwarding, forward-file-checks}.
-@end deffn
-
-@deffn {Maidag Config} lmtp @var{bool}
-Run in @acronym{LMTP} mode.
 @end deffn
 
 @deffn {Maidag Config} group @var{list}
