@@ -37,11 +37,13 @@ _tls_io_read (struct _mu_stream *stream, char *buf, size_t bufsize,
 	      size_t *pnread)
 {
   struct _mu_tls_io_stream *sp = (struct _mu_tls_io_stream *) stream;
-  int rc;
+  ssize_t rc;
   
   if (sp->up->state != state_open)
     return EINVAL;
-  rc = gnutls_record_recv (sp->up->session, buf, bufsize);
+  do
+    rc = gnutls_record_recv (sp->up->session, buf, bufsize);
+  while (rc == GNUTLS_E_AGAIN || rc == GNUTLS_E_INTERRUPTED);
   if (rc >= 0)
     {
       *pnread = rc;
@@ -56,7 +58,7 @@ _tls_io_write (struct _mu_stream *stream, const char *buf, size_t bufsize,
 	    size_t *pnwrite)
 {
   struct _mu_tls_io_stream *sp = (struct _mu_tls_io_stream *) stream;
-  int rc;
+  ssize_t rc;
   
   if (sp->up->state != state_open)
     return EINVAL;
