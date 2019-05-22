@@ -34,8 +34,8 @@
 
 /* General accessors: */
 #define AC2(a,b) a ## b
-#define METHOD(pfx,part) AC2(pfx,part)
 #define AC4(a,b,c,d) a ## b ## c ## d
+#define METHOD(pfx,part) AC2(pfx,part)
 #define ACCESSOR(action,field) AC4(mu_url_,action,_,field)
 
 /* Define a `static get' accessor */
@@ -123,6 +123,17 @@ ACCESSOR(aget, URL_PART) (mu_url_t url, char **buf)
   return status;
 }
 
+#ifndef URL_PART_CMP
+# ifndef URL_PART_CMP_ICASE
+#  define URL_PART_CMP_ICASE 0
+# endif
+# if URL_PART_CMP_ICASE
+#  define URL_PART_CMP mu_c_strcasecmp
+# else 
+#  define URL_PART_CMP strcmp
+# endif
+#endif
+
 /* Define a comparator */
 int
 ACCESSOR(is_same,URL_PART) (mu_url_t url1, mu_url_t url2)
@@ -139,5 +150,5 @@ ACCESSOR(is_same,URL_PART) (mu_url_t url1, mu_url_t url2)
 
   if (status1 || status2)
     return status1 == status2; /* Both fields are missing */
-  return mu_c_strcasecmp (s1, s2) == 0;
+  return URL_PART_CMP (s1, s2) == 0;
 }
