@@ -175,14 +175,13 @@ mu_list_t folder_info_list; /* Memory storage for folder info */
 
 size_t message_count;             /* Total number of messages */
 
-int name_prefix_len;              /* Length of the mu_path_folder_dir */
-
 void
-install_folder_info (const char *name, struct folder_info const *info)
+install_folder_info (const char *name, struct folder_info const *info,
+		     size_t skip_prefix_len)
 {
   struct folder_info *new_info = mu_alloc (sizeof (*new_info));
   *new_info = *info;
-  new_info->name = mu_strdup (new_info->name + name_prefix_len);
+  new_info->name = mu_strdup (new_info->name + skip_prefix_len);
   mu_list_append (folder_info_list, new_info);
   message_count += info->message_count;
 }
@@ -210,7 +209,7 @@ read_seq_file (struct folder_info *info, const char *prefix, const char *name)
 }
 
 static void
-_scan (const char *name, size_t depth)
+_scan (const char *name, size_t depth, size_t skip_prefix_len)
 {
   DIR *dir;
   struct dirent *entry;
@@ -248,7 +247,7 @@ _scan (const char *name, size_t depth)
 	{
 	  memset (&info, 0, sizeof (info));
 	  info.name = (char*) name;
-	  install_folder_info (name, &info);
+	  install_folder_info (name, &info, skip_prefix_len);
 	  closedir (dir);
 	  return;
 	}
@@ -277,7 +276,7 @@ _scan (const char *name, size_t depth)
 	  else if (S_ISDIR (st.st_mode))
 	    {
 	      info.others++;
-	      _scan (p, depth+1);
+	      _scan (p, depth+1, skip_prefix_len);
 	    }
 	  else
 	    {
@@ -306,7 +305,23 @@ _scan (const char *name, size_t depth)
     }
   closedir (dir);
   if (depth > 0)
-    install_folder_info (name, &info);
+    install_folder_info (name, &info, skip_prefix_len);
+}
+
+static void
+folder_scan (const char *name, size_t depth)
+{
+  const char *folder_dir = mu_folder_directory ();
+  size_t skip_prefix_len;
+
+  skip_prefix_len = strlen (folder_dir);
+  if (folder_dir[skip_prefix_len - 1] == '/')
+    skip_prefix_len++;
+  if (strncmp (name, folder_dir, skip_prefix_len) == 0)
+    skip_prefix_len++;  /* skip past the slash */
+  else
+    skip_prefix_len = 0;
+  _scan (name, depth, skip_prefix_len);
 }
 
 static int
@@ -376,24 +391,18 @@ print_fast (void)
 static int
 action_print (void)
 {
-  const char *folder_dir = mu_folder_directory ();
   mh_seq_name = mh_global_profile_get ("mh-sequences", MH_SEQUENCES_FILE);
-
-  name_prefix_len = strlen (folder_dir);
-  if (folder_dir[name_prefix_len - 1] == '/')
-    name_prefix_len++;
-  name_prefix_len++;  /* skip past the slash */
 
   mu_list_create (&folder_info_list);
 
   if (show_all)
     {
-      _scan (folder_dir, 0);
+      folder_scan (mu_folder_directory (), 0);
     }
   else
     {
       char *p = mh_expand_name (NULL, mh_current_folder (), NAME_ANY);
-      _scan (p, 1);
+      folder_scan (p, 1);
       free (p);
     }
   
