@@ -49,6 +49,7 @@ static struct format_record format_table[] = {
   { "mbox", &mu_mbox_record },
   { "mh",   &mu_mh_record },
   { "maildir", &mu_maildir_record },
+  { "dotmail", &mu_dotmail_record },
   { "pop",  &mu_pop_record },
   { "pops",  &mu_pops_record },
   { "imap", &mu_imap_record },

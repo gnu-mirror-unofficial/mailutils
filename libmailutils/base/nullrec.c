@@ -46,6 +46,10 @@ mu_record_t mu_mh_record = NULL;
 mu_record_t mu_maildir_record = NULL;
 #endif
 
+#ifndef ENABLE_DOTMAIL
+mu_record_t mu_dotmail_record = NULL;
+#endif
+
 #ifndef WITH_TLS
 mu_record_t mu_smtps_record = NULL;
 #endif

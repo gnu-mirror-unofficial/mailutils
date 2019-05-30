@@ -1271,14 +1271,14 @@ MU_ENABLE_SUPPORT(cxx,
 # Note: 1. Support for mbox type is always enabled.
 #       2. Only local mailbox types are allowed for MU_DEFAULT_SCHEME
 AC_ARG_VAR([MU_DEFAULT_SCHEME],
-           [Default mailbox record. Allowed values are: mbox (default), mh, and maildir.])
+           [Default mailbox record. Allowed values are: mbox (default), dotmail, mh, and maildir.])
 if test -z "$MU_DEFAULT_SCHEME"; then
   MU_DEFAULT_SCHEME=mbox
 fi  
 case $MU_DEFAULT_SCHEME in
 mbox)
    ;;
-mh|maildir)
+mh|maildir|dotmail)
    eval testval=\$mu_cv_enable_$MU_DEFAULT_SCHEME
    if test "$testval" != yes; then
      AC_MSG_ERROR([Cannot set default mailbox record type: support for $MU_DEFAULT_SCHEME is disabled])
@@ -1427,6 +1427,7 @@ IMAP .......................... $status_imap
 POP ........................... $status_pop
 MH ............................ $status_mh
 maildir ....................... $status_maildir
+dotmail ....................... $status_dotmail
 
 Mailers:
 
@@ -1470,6 +1471,7 @@ status_imap=$mu_cv_enable_imap
 status_pop=$mu_cv_enable_pop
 status_mh=$mu_cv_enable_mh
 status_maildir=$mu_cv_enable_maildir
+status_dotmail=$mu_cv_enable_dotmail
 status_smtp=$mu_cv_enable_smtp
 status_sendmail=$mu_cv_enable_sendmail
 status_ipv6=$status_ipv6
