@@ -8,7 +8,7 @@
 #   Main Makefile from the Mailutils top-level source directory must be
 #   included atop of this one.
 #
-CFLOW_FLAGS=-i^s --brief \
+CFLOW_FLAGS=-i^s --brief --all\
  --define '__attribute__\(c\)'\
  --symbol __inline:=inline\
  --symbol __inline__:=inline\
