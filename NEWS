@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-03-06
+GNU mailutils NEWS -- history of user-visible changes. 2019-06-21
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -14,6 +14,37 @@ messages are stored sequentially. Each message ends with a single
 dot (similar to the format used in the SMTP DATA command). Any dot
 appearing at the start of the line is doubled, to prevent it from
 being interpreted as end of message marker.
+
+* Improve automatic mailbox format detection
+
+This release introduces a notion of accuracy level for the purpose of
+mailbox format detection.
+
+Selecting the accuracy level allows the user to achieve the desired
+balance between the speed of the folder scan and accuracy of mailbox
+format detection.
+
+The accuracy level can be set either from the configuration file,
+using the mailbox.accuracy-level statement, or from the environment,
+via the MU_AUTODETECT_ACCURACY variable.
+
+The default accuracy level 1 discerns valid mbox and dotmail mailboxes
+providing reasonable scan speed.
+
+Level 0 (previous default) does not discern them, but provides maximal
+speed.
+
+Level 2 and higher provide better accuracy at the price of speed.
+
+* Bugfixes
+
+** mh - correctly parse +/abs/path folder specification
+** tls - fix handle interruptions in read routine
+** URL parser: use case-insensitive comparison for auth and host parts
+** maidag: fix coredump in daemon mode
+** movemail: make sure UIDLs are properly stored.
+** mail: force mime mode if at least one attachment was given
+(see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=918806)
 
 
 Version 3.6 - 2019-02-23
