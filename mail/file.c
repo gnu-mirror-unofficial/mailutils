@@ -141,7 +141,7 @@ mail_file (int argc, char **argv)
       mbox = newbox;
       mu_mailbox_messages_count (mbox, &total);
       set_cursor (1);
-      if (mailvar_is_true ("header"))
+      if (mailvar_is_true (mailvar_name_header))
 	{
 	  util_do_command ("summary");
 	  util_do_command ("headers");

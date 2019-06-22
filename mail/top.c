@@ -28,7 +28,7 @@ top0 (msgset_t *mspec, mu_message_t msg, void *data)
   size_t size = 0, n;
   int lines;
   
-  if (mailvar_get (&lines, "toplines", mailvar_type_number, 1)
+  if (mailvar_get (&lines, mailvar_name_toplines, mailvar_type_number, 1)
       || lines < 0)
     return 1;
 

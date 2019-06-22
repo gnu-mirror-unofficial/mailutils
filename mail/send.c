@@ -556,7 +556,7 @@ add_attachments (compose_env_t *env, mu_message_t *pmsg)
   
   inmsg = *pmsg;
 
-  if (mailvar_is_true ("mime") && add_body (inmsg, env))
+  if (mailvar_is_true (mailvar_name_mime) && add_body (inmsg, env))
     return 1;
   
   if (mu_list_is_empty (env->attlist))
@@ -639,10 +639,10 @@ add_attachments (compose_env_t *env, mu_message_t *pmsg)
 static void
 read_cc_bcc (compose_env_t *env)
 {
-  if (mailvar_is_true ("askcc"))
+  if (mailvar_is_true (mailvar_name_askcc))
     compose_header_set (env, MU_HEADER_CC,
 			ml_readline_with_intr ("Cc: "), COMPOSE_REPLACE);
-  if (mailvar_is_true ("askbcc"))
+  if (mailvar_is_true (mailvar_name_askbcc))
     compose_header_set (env, MU_HEADER_BCC,
 			ml_readline_with_intr ("Bcc: "), COMPOSE_REPLACE);
 }
@@ -675,7 +675,7 @@ mail_send (int argc, char **argv)
       if (interactive)
 	compose_header_set (&env, MU_HEADER_TO, ml_readline_with_intr ("To: "),
 			    COMPOSE_REPLACE);
-      else if (mailvar_is_true ("editheaders"))
+      else if (mailvar_is_true (mailvar_name_editheaders))
 	{
 	  if (parse_headers (mu_strin, &env) != parse_headers_ok)
 	    {
@@ -730,10 +730,10 @@ mail_send (int argc, char **argv)
 
   if (interactive)
     {
-      if (!mailvar_is_true ("mailx"))
+      if (!mailvar_is_true (mailvar_name_mailx))
 	read_cc_bcc (&env);
 
-      if (mailvar_is_true ("asksub"))
+      if (mailvar_is_true (mailvar_name_asksub))
 	compose_header_set (&env, MU_HEADER_SUBJECT,
 			    ml_readline_with_intr ("Subject: "),
 			    COMPOSE_REPLACE);
@@ -879,7 +879,8 @@ compose_header_set (compose_env_t *env, const char *name,
   switch (mode)
     {
     case COMPOSE_REPLACE:
-      if (is_address_field (name) && mailvar_is_true ("inplacealiases"))
+      if (is_address_field (name)
+	  && mailvar_is_true (mailvar_name_inplacealiases))
 	{
 	  char *exp = alias_expand (value);
 	  status = mu_header_set_value (env->header, name, exp ? exp : value, 1);
@@ -890,7 +891,8 @@ compose_header_set (compose_env_t *env, const char *name,
       break;
 
     case COMPOSE_APPEND:
-      if (is_address_field (name) && mailvar_is_true ("inplacealiases"))
+      if (is_address_field (name)
+	  && mailvar_is_true (mailvar_name_inplacealiases))
 	{
 	  char *exp = alias_expand (value);
 	  status = mu_header_append (env->header, name, exp ? exp : value);
@@ -904,7 +906,8 @@ compose_header_set (compose_env_t *env, const char *name,
       if (mu_header_aget_value (env->header, name, &old_value) == 0
 	  && old_value[0])
 	{
-	  if (is_address_field (name) && mailvar_is_true ("inplacealiases"))
+	  if (is_address_field (name)
+	      && mailvar_is_true (mailvar_name_inplacealiases))
 	    {
 	      char *exp = alias_expand (value);
 	      status = util_merge_addresses (&old_value, exp ? exp : value);
@@ -988,10 +991,11 @@ fill_body (mu_message_t msg, mu_stream_t instr)
   
   if (n == 0)
     {
-      if (mailvar_is_true ("nullbody"))
+      if (mailvar_is_true (mailvar_name_nullbody))
 	{
 	  char *str;
-	  if (mailvar_get (&str, "nullbodymsg", mailvar_type_string, 0) == 0)
+	  if (mailvar_get (&str, mailvar_name_nullbodymsg,
+			   mailvar_type_string, 0) == 0)
 	    mu_error ("%s", _(str));
 	}
       else
@@ -1004,7 +1008,7 @@ fill_body (mu_message_t msg, mu_stream_t instr)
 static int
 save_dead_message_env (compose_env_t *env)
 {
-  if (mailvar_is_true ("save"))
+  if (mailvar_is_true (mailvar_name_save))
     {
       mu_stream_t dead_letter, str;
       int rc;
@@ -1022,7 +1026,7 @@ save_dead_message_env (compose_env_t *env)
 	  mu_error (_("Cannot open file %s: %s"), name, strerror (rc));
 	  return 1;
 	}
-      if (mailvar_is_true ("appenddeadletter"))
+      if (mailvar_is_true (mailvar_name_appenddeadletter))
 	mu_stream_seek (dead_letter, 0, MU_SEEK_END, NULL);
       else
 	mu_stream_truncate (dead_letter, 0);
@@ -1055,7 +1059,7 @@ save_dead_message_env (compose_env_t *env)
 static int
 save_dead_message (mu_message_t msg)
 {
-  if (mailvar_is_true ("save"))
+  if (mailvar_is_true (mailvar_name_save))
     {
       mu_stream_t dead_letter, str;
       int rc;
@@ -1073,7 +1077,7 @@ save_dead_message (mu_message_t msg)
 	  mu_error (_("Cannot open file %s: %s"), name, strerror (rc));
 	  return 1;
 	}
-      if (mailvar_is_true ("appenddeadletter"))
+      if (mailvar_is_true (mailvar_name_appenddeadletter))
 	mu_stream_seek (dead_letter, 0, MU_SEEK_END, NULL);
       else
 	mu_stream_truncate (dead_letter, 0);
@@ -1104,7 +1108,8 @@ send_message (mu_message_t msg)
   char *sendmail;
   int status;
   
-  if (mailvar_get (&sendmail, "sendmail", mailvar_type_string, 0) == 0)
+  if (mailvar_get (&sendmail, mailvar_name_sendmail,
+		   mailvar_type_string, 0) == 0)
     {
       if (sendmail[0] == '/')
 	status = msg_to_pipe (sendmail, msg);
@@ -1118,7 +1123,7 @@ send_message (mu_message_t msg)
 	      const char *return_address_str;
 	      mu_address_t return_address = NULL;
 	      
-	      if (mailvar_get (&return_address_str, "return-address",
+	      if (mailvar_get (&return_address_str, mailvar_name_return_address,
 			       mailvar_type_string, 0) == 0)
 		{
 		  status = mu_address_create (&return_address,
@@ -1132,7 +1137,7 @@ send_message (mu_message_t msg)
 		    }
 		} 
 
-	      if (mailvar_is_true ("verbose"))
+	      if (mailvar_is_true (mailvar_name_verbose))
 		{
 		  mu_debug_set_category_level (MU_DEBCAT_MAILER,
 					  MU_DEBUG_LEVEL_UPTO (MU_DEBUG_PROT));
@@ -1167,7 +1172,7 @@ send_message (mu_message_t msg)
    If the variable "record" is set, the outgoing message is
    saved after being sent. If "save_to" argument is non-zero,
    the name of the save file is derived from "to" argument. Otherwise,
-   it is taken from the value of "record" variable.
+   it is taken from the value of the "record" variable.
 
    sendmail
 
@@ -1203,7 +1208,7 @@ mail_send0 (compose_env_t *env, int save_to)
 
       if (ml_got_interrupt ())
 	{
-	  if (mailvar_is_true ("ignore"))
+	  if (mailvar_is_true (mailvar_name_ignore))
 	    {
 	      mu_printf ("@\n");
 	    }
@@ -1220,9 +1225,9 @@ mail_send0 (compose_env_t *env, int save_to)
 
       if (!buf)
 	{
-	  if (interactive && mailvar_is_true ("ignoreeof"))
+	  if (interactive && mailvar_is_true (mailvar_name_ignoreeof))
 	    {
-	      mu_error (mailvar_is_true ("dot") 
+	      mu_error (mailvar_is_true (mailvar_name_dot) 
                           ?  _("Use \".\" to terminate letter.") 
                           : _("Use \"~.\" to terminate letter."));
 	      continue;
@@ -1233,9 +1238,10 @@ mail_send0 (compose_env_t *env, int save_to)
 
       int_cnt = 0;
 
-      if (strcmp (buf, ".") == 0 && mailvar_is_true ("dot"))
+      if (strcmp (buf, ".") == 0 && mailvar_is_true (mailvar_name_dot))
 	done = 1;
-      else if (mailvar_get (&escape, "escape", mailvar_type_string, 0) == 0
+      else if (mailvar_get (&escape, mailvar_name_escape,
+			    mailvar_type_string, 0) == 0
 	       && buf[0] == escape[0])
 	{
 	  if (buf[1] == buf[0])
@@ -1289,11 +1295,11 @@ mail_send0 (compose_env_t *env, int save_to)
 
   /* In mailx compatibility mode, ask for Cc and Bcc after editing
      the body of the message */
-  if (mailvar_is_true ("mailx"))
+  if (mailvar_is_true (mailvar_name_mailx))
     read_cc_bcc (env);
 
   /* Prepare the header */
-  if (mailvar_is_true ("xmailer"))
+  if (mailvar_is_true (mailvar_name_xmailer))
     mu_header_set_value (env->header, MU_HEADER_X_MAILER, program_version, 1);
 
   if (util_header_expand (&env->header) == 0)

@@ -69,7 +69,7 @@ escape_check_args (int argc, char **argv, int minargs, int maxargs)
   if (argc < minargs)
     {
       minargs--;
-      mailvar_get (&escape, "escape", mailvar_type_string, 0);
+      mailvar_get (&escape, mailvar_name_escape, mailvar_type_string, 0);
       mu_error (ngettext ("%c%s requires at least %d argument",
 			  "%c%s requires at least %d arguments",
 			  minargs), escape[0], argv[0], minargs);
@@ -78,7 +78,7 @@ escape_check_args (int argc, char **argv, int minargs, int maxargs)
   if (maxargs > 1 && argc > maxargs)
     {
       maxargs--;
-      mailvar_get (&escape, "escape", mailvar_type_string, 0);
+      mailvar_get (&escape, mailvar_name_escape, mailvar_type_string, 0);
       mu_error (ngettext ("%c%s accepts at most %d argument",
 			  "%c%s accepts at most %d arguments",
 			  maxargs), escape[0], argv[0], maxargs);
@@ -144,7 +144,9 @@ escape_sign (int argc MU_ARG_UNUSED, char **argv, compose_env_t *env)
 {
   char *p;
 
-  if (mailvar_get (&p, mu_isupper (argv[0][0]) ? "Sign" : "sign",
+  if (mailvar_get (&p,
+		   mu_isupper (argv[0][0])
+		      ? mailvar_name_Sign : mailvar_name_sign,
 		   mailvar_type_string, 1) == 0)
     {
       mu_stream_printf (env->compstr, "-- \n");
@@ -272,7 +274,7 @@ escape_run_editor (char *ed, int argc, char **argv, compose_env_t *env)
     }
 
   mu_stream_seek (env->compstr, 0, MU_SEEK_SET, NULL);
-  if (mailvar_is_true ("editheaders"))
+  if (mailvar_is_true (mailvar_name_editheaders))
     {
       dump_headers (tempstream, env);
 
@@ -407,7 +409,7 @@ quote0 (msgset_t *mspec, mu_message_t mesg, void *data)
   mu_printf (_("Interpolating: %lu\n"),
 		    (unsigned long) mspec->msg_part[0]);
 
-  mailvar_get (&prefix, "indentprefix", mailvar_type_string, 0);
+  mailvar_get (&prefix, mailvar_name_indentprefix, mailvar_type_string, 0);
 
   argv[0] = "INLINE-COMMENT";
   argv[1] = prefix;

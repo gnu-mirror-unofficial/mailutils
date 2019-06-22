@@ -35,7 +35,7 @@ mail_print_msg (msgset_t *mspec, mu_message_t mesg, void *data)
   int status;
   
   mu_message_lines (mesg, &lines);
-  if (mailvar_is_true ("showenvelope"))
+  if (mailvar_is_true (mailvar_name_showenvelope))
     lines++;
   
   /* If it is POP or IMAP the lines number is not known, so try
@@ -56,7 +56,7 @@ mail_print_msg (msgset_t *mspec, mu_message_t mesg, void *data)
 
   out = open_pager (lines);
 
-  if (mailvar_is_true ("showenvelope"))
+  if (mailvar_is_true (mailvar_name_showenvelope))
     print_stream_envelope (out, mspec, mesg, "From");
   
   if (*(int *) data) /* print was called with a lowercase 'p' */

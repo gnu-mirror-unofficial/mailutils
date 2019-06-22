@@ -147,7 +147,7 @@ alias_expand (const char *name)
   mu_list_t al;
   mu_list_t list;
   
-  if (mailvar_is_true ("recursivealiases"))
+  if (mailvar_is_true (mailvar_name_recursivealiases))
     {
       char *s;
       mu_list_t origlist;

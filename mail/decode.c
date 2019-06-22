@@ -244,7 +244,7 @@ display_submessage (struct mime_descend_closure *closure, void *data)
 {
   char *tmp;
   
-  if (mailvar_get (&tmp, "metamail", mailvar_type_string, 0) == 0)
+  if (mailvar_get (&tmp, mailvar_name_metamail, mailvar_type_string, 0) == 0)
     {
       /* If `metamail' is set to a string, treat it as command line
 	 of external metamail program. */
@@ -280,11 +280,11 @@ display_submessage (struct mime_descend_closure *closure, void *data)
       
       /* If `metamail' is set to true, enable internal mailcap
 	 support */
-      if (mailvar_is_true ("metamail"))
+      if (mailvar_is_true (mailvar_name_metamail))
 	{
 	  char *no_ask = NULL;
 	  
-	  mailvar_get (&no_ask, "mimenoask", mailvar_type_string, 0);
+	  mailvar_get (&no_ask, mailvar_name_mimenoask, mailvar_type_string, 0);
 	  builtin_display = display_stream_mailcap (NULL, stream, hdr, no_ask,
 						    interactive, 0,
 						    MU_DEBCAT_APP);
@@ -400,7 +400,8 @@ run_metamail (const char *mailcap_cmd, mu_message_t mesg)
 	  char *no_ask;
 	  
 	  setenv ("METAMAIL_PAGER", getenv ("PAGER"), 0);
-	  if (mailvar_get (&no_ask, "mimenoask", mailvar_type_string, 0))
+	  if (mailvar_get (&no_ask, mailvar_name_mimenoask,
+			   mailvar_type_string, 0))
 	    setenv ("MM_NOASK", no_ask, 1);
 	  
 	  status = mu_message_get_streamref (mesg, &stream);

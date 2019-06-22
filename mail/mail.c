@@ -319,7 +319,8 @@ mail_cmdline (void *closure, int cont MU_ARG_UNUSED)
 
   while (1)
     {
-      if (mailvar_is_true ("autoinc") && !mu_mailbox_is_updated (mbox))
+      if (mailvar_is_true (mailvar_name_autoinc)
+	  && !mu_mailbox_is_updated (mbox))
 	{
 	  mu_mailbox_messages_count (mbox, &total);
 	  page_invalidate (0);
@@ -334,7 +335,7 @@ mail_cmdline (void *closure, int cont MU_ARG_UNUSED)
 	  continue;
 	}
 
-      if (!rc && mailvar_is_true ("ignoreeof"))
+      if (!rc && mailvar_is_true (mailvar_name_ignoreeof))
 	{
 	  mu_error (_("Use \"quit\" to quit."));
 	  continue;
@@ -482,7 +483,7 @@ main (int argc, char **argv)
     util_do_command ("set columns=%d", util_getcols ());
 
   /* Set the default mailer to sendmail.  */
-  mailvar_set ("sendmail",
+  mailvar_set (mailvar_name_sendmail,
 	       mu_strdup ("sendmail:" PATH_SENDMAIL), mailvar_type_string,
 	       MOPTF_OVERWRITE);
 
@@ -537,7 +538,7 @@ main (int argc, char **argv)
 
 
   /* read system-wide mail.rc and user's .mailrc */
-  if (mailvar_is_true ("rc"))
+  if (mailvar_is_true (mailvar_name_rc))
     util_do_command ("source %s", SITE_MAIL_RC);
   if ((p = getenv ("MAILRC")) && *p)
     util_do_command ("source %s", getenv ("MAILRC"));
@@ -566,7 +567,7 @@ main (int argc, char **argv)
     }
 
   /* how should we be running? */
-  if (mailvar_get (&mode, "mode", mailvar_type_string, 1))
+  if (mailvar_get (&mode, mailvar_name_mode, mailvar_type_string, 1))
     exit (EXIT_FAILURE);
 
   /* Interactive mode */
@@ -582,7 +583,7 @@ main (int argc, char **argv)
 
       mu_argcv_string (argc, argv, &buf);
       rc = util_do_command ("mail %s", buf);
-      return mailvar_is_true ("mailx") ? 0 : rc;
+      return mailvar_is_true (mailvar_name_mailx) ? 0 : rc;
     }
   /* Or acting as a normal reader */
   else
@@ -652,13 +653,14 @@ main (int argc, char **argv)
 	  else if (strcmp (mode, "read"))
 	    {
 	      mu_error (_("Unknown mode `%s'"), mode);
-	      util_do_command ("quit");
+	      util_do_command (mailvar_name_quit);
 	      return 1;
 	    }
 	}
 
       if (total == 0
-	  && (strcmp (mode, "read") || !mailvar_is_true ("emptystart")))
+	  && (strcmp (mode, "read")
+	      || !mailvar_is_true (mailvar_name_emptystart)))
 	{
 	  if (secondary_url)
 	    mail_summary (0, NULL);
@@ -668,16 +670,16 @@ main (int argc, char **argv)
 	}
 
       /* initial commands */
-      if (mailvar_is_true ("header"))
+      if (mailvar_is_true (mailvar_name_header))
 	{
 	  util_do_command ("summary");
 	  util_do_command ("headers");
 	}
 
-      mailvar_get (&prompt, "prompt", mailvar_type_string, 0);
+      mailvar_get (&prompt, mailvar_name_prompt, mailvar_type_string, 0);
       mail_mainloop (mail_cmdline, (void*) prompt, 1);
       mu_printf ("\n");
-      util_do_command ("quit");
+      util_do_command (mailvar_name_quit);
       return 0;
     }
   /* We should never reach this point */

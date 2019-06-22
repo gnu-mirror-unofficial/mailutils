@@ -77,12 +77,13 @@ mail_execute (int shell, char *progname, int argc, char **argv)
   xargv = mu_calloc (xargc + 1, sizeof (xargv[0]));
   
   /* Expand arguments if required */
-  if (mailvar_is_true ("bang"))
+  if (mailvar_is_true (mailvar_name_bang))
     {
       int i;
       char *last = NULL;
       
-      mailvar_get (&last, "gnu-last-command", mailvar_type_string, 0);
+      mailvar_get (&last, mailvar_name_gnu_last_command,
+		   mailvar_type_string, 0);
       expand_bang (xargv, progname, last);
       for (i = 1; i < argc; i++)
 	expand_bang (xargv + i, argv[i], last);
@@ -101,7 +102,7 @@ mail_execute (int shell, char *progname, int argc, char **argv)
      Important: use argc (not xargc)!
   */
   mu_argcv_string (argc, xargv, &buf);
-  mailvar_set ("gnu-last-command", buf, mailvar_type_string, 
+  mailvar_set (mailvar_name_gnu_last_command, buf, mailvar_type_string, 
 	       MOPTF_QUIET | MOPTF_OVERWRITE);
 
   if (shell)

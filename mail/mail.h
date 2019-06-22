@@ -132,7 +132,7 @@ struct mail_escape_entry
   const char *synopsis;
   int (*escfunc) (int, char **, compose_env_t *);
 };
-
+
 enum mailvar_type
   {
     mailvar_type_whatever,
@@ -156,6 +156,81 @@ struct mailvar_variable
   union mailvar_value value;
 };
 
+/* Internal variable names */
+#define mailvar_name_allnet                     "allnet"
+#define mailvar_name_append                     "append"
+#define mailvar_name_appenddeadletter           "appenddeadletter"
+#define mailvar_name_askbcc                     "askbcc"
+#define mailvar_name_askcc                      "askcc"
+#define mailvar_name_ask                        "ask"
+#define mailvar_name_asksub                     "asksub"
+#define mailvar_name_autoinc                    "autoinc"
+#define mailvar_name_autoprint                  "autoprint"
+#define mailvar_name_byname                     "byname"
+#define mailvar_name_bang                       "bang"
+#define mailvar_name_charset                    "charset"
+#define mailvar_name_cmd                        "cmd"
+#define mailvar_name_columns                    "columns"
+#define mailvar_name_crt                        "crt"
+#define mailvar_name_datefield                  "datefield"
+#define mailvar_name_debug                      "debug"
+#define mailvar_name_decode_fallback            "decode-fallback"
+#define mailvar_name_dot                        "dot"
+#define mailvar_name_editheaders                "editheaders"
+#define mailvar_name_emptystart                 "emptystart"
+#define mailvar_name_escape                     "escape"
+#define mailvar_name_flipr                      "flipr"
+#define mailvar_name_folder                     "folder"
+#define mailvar_name_fromfield                  "fromfield"
+#define mailvar_name_gnu_last_command           "gnu-last-command"
+#define mailvar_name_header                     "header"
+#define mailvar_name_headline                   "headline"
+#define mailvar_name_hold                       "hold"
+#define mailvar_name_ignore                     "ignore"
+#define mailvar_name_ignoreeof                  "ignoreeof"
+#define mailvar_name_indentprefix               "indentprefix"
+#define mailvar_name_inplacealiases             "inplacealiases"
+#define mailvar_name_keep                       "keep"
+#define mailvar_name_keepsave                   "keepsave"
+#define mailvar_name_mailx                      "mailx"
+#define mailvar_name_metamail                   "metamail"
+#define mailvar_name_metoo                      "metoo"
+#define mailvar_name_mimenoask                  "mimenoask"
+#define mailvar_name_mode                       "mode"
+#define mailvar_name_nullbody                   "nullbody"
+#define mailvar_name_nullbodymsg                "nullbodymsg"
+#define mailvar_name_outfolder                  "outfolder"
+#define mailvar_name_page                       "page"
+#define mailvar_name_prompt                     "prompt"
+#define mailvar_name_quit                       "quit"
+#define mailvar_name_rc                         "rc"
+#define mailvar_name_readonly                   "readonly"
+#define mailvar_name_record                     "record"
+#define mailvar_name_recursivealiases           "recursivealiases"
+#define mailvar_name_regex                      "regex"
+#define mailvar_name_replyprefix                "replyprefix"
+#define mailvar_name_replyregex                 "replyregex"
+#define mailvar_name_return_address             "return-address"
+#define mailvar_name_save                       "save"
+#define mailvar_name_screen                     "screen"
+#define mailvar_name_sendmail                   "sendmail"
+#define mailvar_name_sendwait                   "sendwait"
+#define mailvar_name_sign                       "sign"
+#define mailvar_name_Sign                       "Sign"
+#define mailvar_name_showenvelope               "showenvelope"
+#define mailvar_name_showto                     "showto"
+#define mailvar_name_toplines                   "toplines"
+#define mailvar_name_variable_pretty_print      "variable-pretty-print"
+#define mailvar_name_varpp                      "varpp"
+#define mailvar_name_variable_strict            "variable-strict"
+#define mailvar_name_varstrict                  "varstrict"
+#define mailvar_name_verbose                    "verbose"
+#define mailvar_name_xmailer                    "xmailer"
+#define mailvar_name_mime                       "mime"
+#define mailvar_name_onehop                     "onehop"
+#define mailvar_name_quiet                      "quiet"
+#define mailvar_name_PID                        "PID"  
+
 typedef struct message_set msgset_t;
 
 struct message_set

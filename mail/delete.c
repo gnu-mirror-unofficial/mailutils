@@ -37,7 +37,7 @@ mail_delete (int argc, char **argv)
   int rc = util_foreach_msg (argc, argv, MSG_NODELETED|MSG_SILENT,
 			     mail_delete_msg, NULL);
 
-  if (mailvar_is_true ("autoprint"))
+  if (mailvar_is_true (mailvar_name_autoprint))
     util_do_command("print");
 
   return rc;

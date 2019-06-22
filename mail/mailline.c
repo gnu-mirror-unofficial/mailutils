@@ -33,7 +33,7 @@ sig_handler (int signo)
   switch (signo)
     {
     case SIGINT:
-      if (mailvar_is_true ("quit"))
+      if (mailvar_is_true (mailvar_name_quit))
 	exit (0);
       _interrupted++;
       break;

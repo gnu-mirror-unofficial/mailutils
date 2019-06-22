@@ -31,7 +31,7 @@ mail_pipe (int argc, char **argv)
 
   if (argc > 1)
     cmd = argv[--argc];
-  else if (mailvar_get (&cmd, "cmd", mailvar_type_string, 1))
+  else if (mailvar_get (&cmd, mailvar_name_cmd, mailvar_type_string, 1))
     return 1;
 
   if (msgset_parse (argc, argv, MSG_NODELETED|MSG_SILENT, &list))
@@ -54,7 +54,7 @@ mail_pipe (int argc, char **argv)
 	  mu_message_get_streamref (msg, &stream);
 	  mu_stream_copy (outstr, stream, 0, NULL);
 	  mu_stream_destroy (&stream);
-	  if (mailvar_is_true ("page"))
+	  if (mailvar_is_true (mailvar_name_page))
 	    mu_stream_write (outstr, "\f\n", 2, NULL);
 	}
       util_mark_read (msg);

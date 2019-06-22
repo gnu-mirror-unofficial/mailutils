@@ -38,7 +38,7 @@ mail_mbox_close ()
   if (!mbox)
     return 0;
 
-  if (!mailvar_is_true ("readonly"))
+  if (!mailvar_is_true (mailvar_name_readonly))
     {
       if (mail_mbox_commit ())
 	return 1;
@@ -66,8 +66,8 @@ mail_mbox_commit ()
   int saved_count = 0;
   mu_message_t msg;
   mu_attribute_t attr;
-  int keepsave = mailvar_is_true ("keepsave");
-  int hold = mailvar_is_true ("hold");
+  int keepsave = mailvar_is_true (mailvar_name_keepsave);
+  int hold = mailvar_is_true (mailvar_name_hold);
   mu_url_t url;
   int is_user_mbox;
 
@@ -104,8 +104,10 @@ mail_mbox_commit ()
 		  && ((mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED)
 		       && keepsave)
 		      || (!mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED)
-			  && (mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SHOWN)
-			      || mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_TOUCHED)))))))
+			  && (mu_attribute_is_userflag (attr,
+							MAIL_ATTRIBUTE_SHOWN)
+			      || mu_attribute_is_userflag (attr,
+						   MAIL_ATTRIBUTE_TOUCHED)))))))
 	{
 	  int status;
 	  
@@ -120,7 +122,8 @@ mail_mbox_commit ()
 		  return 1;
 		}
               if ((status = mu_mailbox_open (dest_mbox,
-			   	          MU_STREAM_WRITE | MU_STREAM_CREAT))!=0)
+					     MU_STREAM_WRITE | MU_STREAM_CREAT))
+		  != 0)
 		{
 		  mu_error (_("Cannot open mailbox %s: %s"), name,
                               mu_strerror (status));

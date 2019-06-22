@@ -89,7 +89,7 @@ util_do_command (const char *fmt, ...)
 	  /* Special case: a number alone implies "print" */
 	  if (argc == 1
 	      && ((strtoul (argv[0], &p, 10) > 0 && *p == 0)
-		  || (argv[0][1] == 0 && strchr("^$", argv[0][0]))))
+		  || (argv[0][1] == 0 && strchr ("^$", argv[0][0]))))
 	    {
 	      /* Use the extra slot for "print" command */
 	      argc++;
@@ -102,7 +102,7 @@ util_do_command (const char *fmt, ...)
 	}
     }
   else
-    entry = mail_find_command ("quit");
+    entry = mail_find_command (mailvar_name_quit);
 
   if (!entry)
     {
@@ -376,7 +376,7 @@ util_screen_lines ()
   int screen;
   size_t n;
 
-  if (mailvar_get (&screen, "screen", mailvar_type_number, 0) == 0)
+  if (mailvar_get (&screen, mailvar_name_screen, mailvar_type_number, 0) == 0)
     return screen;
   n = util_getlines();
   util_do_command ("set screen=%lu", (unsigned long) n);
@@ -389,7 +389,7 @@ util_screen_columns ()
   int cols;
   size_t n;
 
-  if (mailvar_get (&cols, "columns", mailvar_type_number, 0) == 0)
+  if (mailvar_get (&cols, mailvar_name_columns, mailvar_type_number, 0) == 0)
     return cols;
   n = util_getcols();
   util_do_command ("set columns=%lu", (unsigned long) n);
@@ -401,9 +401,9 @@ util_get_crt ()
 {
   int lines;
 
-  if (mailvar_get (&lines, "crt", mailvar_type_number, 0) == 0)
+  if (mailvar_get (&lines, mailvar_name_crt, mailvar_type_number, 0) == 0)
     return lines;
-  else if (mailvar_is_true ("crt"))
+  else if (mailvar_is_true (mailvar_name_crt))
     return util_getlines ();
   return 0;
 }
@@ -412,7 +412,7 @@ const char *
 util_reply_prefix ()
 {
   char *prefix = "Re: ";
-  mailvar_get (&prefix, "replyprefix", mailvar_type_string, 0);
+  mailvar_get (&prefix, mailvar_name_replyprefix, mailvar_type_string, 0);
   return prefix;
 }
 
@@ -469,7 +469,7 @@ util_folder_path (const char *name)
   char *folder;
   int rc;
 
-  if (mailvar_get (&folder, "folder", mailvar_type_string, 1))
+  if (mailvar_get (&folder, mailvar_name_folder, mailvar_type_string, 1))
     return NULL;
 
   if (!name)
@@ -533,7 +533,8 @@ util_slist_print (mu_list_t list, int nl)
   if (!list || mu_list_get_iterator (list, &itr))
     return;
 
-  for (mu_iterator_first (itr); !mu_iterator_is_done (itr); mu_iterator_next (itr))
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
+       mu_iterator_next (itr))
     {
       mu_iterator_current (itr, (void **)&name);
       mu_printf ("%s%c", name, nl ? '\n' : ' ');
@@ -551,7 +552,8 @@ util_slist_lookup (mu_list_t list, const char *str)
   if (!list || mu_list_get_iterator (list, &itr))
     return 0;
 
-  for (mu_iterator_first (itr); !mu_iterator_is_done (itr); mu_iterator_next (itr))
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
+       mu_iterator_next (itr))
     {
       mu_iterator_current (itr, (void **)&name);
       if (mu_c_strcasecmp (name, str) == 0)
@@ -665,7 +667,8 @@ util_outfolder_name (char *str)
       break;
 
     default:
-      if (mailvar_get (&outfolder, "outfolder", mailvar_type_string, 0) == 0)
+      if (mailvar_get (&outfolder, mailvar_name_outfolder,
+		       mailvar_type_string, 0) == 0)
 	{
 	  char *s = mu_make_file_name (outfolder, str);
 	  rc = mu_mailbox_expand_name (s, &exp);
@@ -693,7 +696,7 @@ util_save_outgoing (mu_message_t msg, char *savefile)
 {
   char *record;
 
-  if (mailvar_get (&record, "record", mailvar_type_string, 0) == 0)
+  if (mailvar_get (&record, mailvar_name_record, mailvar_type_string, 0) == 0)
     {
       int rc;
       mu_mailbox_t outbox;
@@ -930,7 +933,7 @@ util_header_expand (mu_header_t *phdr)
 	      mu_address_t new_addr;
 	      char *p = ws.ws_wordv[j];
 
-	      if (mailvar_is_true ("inplacealiases"))
+	      if (mailvar_is_true (mailvar_name_inplacealiases))
 		/* If inplacealiases was set, the value was already expanded */
 		exp = p;
 	      else
@@ -940,7 +943,8 @@ util_header_expand (mu_header_t *phdr)
 		{
 		  errcnt++;
 		  if (exp)
-		    mu_error (_("Cannot parse address `%s' (while expanding `%s'): %s"),
+		    mu_error (_("Cannot parse address `%s'"
+				" (while expanding `%s'): %s"),
 				exp, p, mu_strerror (rc));
 		  else
 		    mu_error (_("Cannot parse address `%s': %s"),
@@ -1048,7 +1052,7 @@ util_get_charset (void)
 {
   char *charset;
 
-  if (mailvar_get (&charset, "charset", mailvar_type_string, 0))
+  if (mailvar_get (&charset, mailvar_name_charset, mailvar_type_string, 0))
     return NULL;
 
   if (mu_c_strcasecmp (charset, "auto") == 0)
@@ -1089,7 +1093,7 @@ util_rfc2047_decode (char **value)
 
   if (rc)
     {
-      if (mailvar_is_true ("verbose"))
+      if (mailvar_is_true (mailvar_name_verbose))
 	mu_error (_("Cannot decode line `%s': %s"), *value, mu_strerror (rc));
     }
   else
