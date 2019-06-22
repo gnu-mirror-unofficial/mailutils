@@ -919,7 +919,7 @@ static struct mu_cfg_param dot_server_cfg_param[] = {
     NULL, mu_offsetof (struct _mu_m_server,mode), _cb_daemon_mode,
     N_("Set operation mode."),
     /* TRANSLATORS: Words to the right of : are keywords. */
-    N_("mode: inetd|interactive|daemom") },
+    N_("mode: inetd|interactive|daemon") },
   { "foreground", mu_c_bool,
     NULL, mu_offsetof (struct _mu_m_server, foreground), NULL,
     N_("Run in foreground.") },

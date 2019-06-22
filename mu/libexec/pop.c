@@ -559,7 +559,7 @@ struct mutool_command pop_comtab[] = {
     N_("send a \"no operation\"") },
   { "pass",       1, 2, 0, com_pass,
     N_("[PASSWORD]"),
-    N_("send password") },
+    N_("user password") },
   { "connect",    1, 4, 0, com_connect,
     /* TRANSLATORS: --tls is a keyword. */
     N_("[-tls] HOSTNAME [PORT]"),

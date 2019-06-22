@@ -40,7 +40,7 @@ static struct mu_option query_options[] = {
     N_("set program name for configuration lookup"),
     mu_c_string, &progname },
   { "path", 0, NULL, MU_OPTION_DEFAULT,
-    N_("display parameters as paths"),
+    N_("display setting names as paths"),
     mu_c_bool, &path_option },
   { "verbose", 'v', NULL, MU_OPTION_DEFAULT,
     N_("increase output verbosity"),
