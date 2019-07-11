@@ -25,7 +25,7 @@ enum mu_dotmail_hdr
     mu_dotmail_hdr_x_imapbase,
     mu_dotmail_hdr_x_uid,
     MU_DOTMAIL_HDR_MAX
-  } status;
+  };
 
 struct mu_dotmail_message
 {
