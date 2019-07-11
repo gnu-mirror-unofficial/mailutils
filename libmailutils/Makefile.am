@@ -80,3 +80,9 @@ libmailutils_la_LIBADD = \
 
 libmailutils_la_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 
+EXTRA_DIST =\
+ wordsplit/wordsplit.c\
+ wordsplit/wordsplit.h\
+ wordsplit/wordsplit.at\
+ wordsplit/wsp.c
+

@@ -62,7 +62,8 @@ sysinclude_HEADERS = \
  temp_file_stream.h\
  tls-stream.h\
  url.h\
- xscript-stream.h
+ xscript-stream.h\
+ $(top_srcdir)/libmailutils/wordsplit/wordsplit.h
 
 BUILT_SOURCES = debcat.h
 

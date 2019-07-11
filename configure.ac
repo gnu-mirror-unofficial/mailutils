@@ -16,7 +16,7 @@ dnl You should have received a copy of the GNU General Public License along
 dnl with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.63)
-AC_INIT([GNU Mailutils], [3.7], [bug-mailutils@gnu.org], [mailutils],
+AC_INIT([GNU Mailutils], [3.7.90], [bug-mailutils@gnu.org], [mailutils],
         [http://mailutils.org])
 AC_CONFIG_SRCDIR([libmailutils/mailbox/mailbox.c])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -114,6 +114,8 @@ AC_CHECK_TYPE(iconv_t,:,
 # To make it accessible for the libraries, it is linked to include/.
 #
 AC_CONFIG_LINKS(include/gettext.h:lib/gnu/gettext.h)
+
+AC_CONFIG_LINKS(include/mailutils/sys/wordsplit.h:libmailutils/wordsplit/wordsplit.h)
 
 AH_BOTTOM([
 #define DEFAULT_TEXT_DOMAIN PACKAGE

@@ -7,3 +7,6 @@
 [submodule "gnulib"]
 	path = gnulib
 	url = git://git.sv.gnu.org/gnulib.git
+[submodule "libmailutils/wordsplit"]
+	path = libmailutils/wordsplit
+	url = git://git.gnu.org.ua/wordsplit.git

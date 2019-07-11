@@ -38,7 +38,7 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 ## Non-installable programs
 ## -------------------------- ##
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@
 
 noinst_LTLIBRARIES = libmu_tesh.la
 libmu_tesh_la_SOURCES = tesh.c tesh.h
@@ -193,7 +193,6 @@ TESTSUITE_AT = \
  url-comp.at\
  xml.at\
  wicket.at\
- wordsplit.at\
  wordwrap00.at\
  wordwrap01.at\
  wordwrap02.at\
@@ -205,7 +204,11 @@ M4=m4
 
 AUTOTEST = $(AUTOM4TE) --language=autotest
 $(TESTSUITE): package.m4 $(TESTSUITE_AT) $(top_srcdir)/testsuite/testsuite.inc
-	$(AM_V_GEN)$(AUTOTEST) -I $(srcdir) -I $(top_srcdir)/testsuite testsuite.at -o $@.tmp
+	$(AM_V_GEN)$(AUTOTEST) \
+              -I $(srcdir)\
+              -I $(top_srcdir)/testsuite\
+              -I $(top_srcdir)/libmailutils/wordsplit\
+              testsuite.at -o $@.tmp
 	$(AM_V_at)mv $@.tmp $@
 
 atconfig: $(top_builddir)/config.status
@@ -214,11 +217,35 @@ atconfig: $(top_builddir)/config.status
 clean-local:
 	@test ! -f $(TESTSUITE) || $(SHELL) $(TESTSUITE) --clean
 
-check-local: atconfig atlocal $(TESTSUITE) 
+check-local: atconfig atlocal $(TESTSUITE)
 	@$(SHELL) $(TESTSUITE)
 
 # Run the test suite on the *installed* tree.
 #installcheck-local:
 #	$(SHELL) $(TESTSUITE) AUTOTEST_PATH=$(exec_prefix)/bin
 
+# ###########################
+# Wordsplit testsuite
+# ###########################
+
+# The wordsplit-version.h header is to supply the version string to
+# wsp and to force it to use the mailutils version of the wordsplit.h
+# header.
+EXTRA_DIST += wordsplit-version.h
+$(srcdir)/wordsplit-version.h: $(top_srcdir)/configure.ac
+	$(AM_V_GEN){\
+	  if test -e $(top_srcdir)/libmailutils/wordsplit/.git; then \
+	      wsversion=$$(cd $(top_srcdir)/libmailutils/wordsplit; git describe); \
+	  else \
+              wsversion="unknown"; \
+	  fi;\
+	  echo "#define WORDSPLIT_VERSION \"$wsversion\"";\
+          echo '#include <mailutils/wordsplit.h>'; } \
+         > $(srcdir)/wordsplit-version.h
+
+noinst_PROGRAMS += wsp
+wsp_SOURCES = 
+nodist_wsp_SOURCES = wsp.c
+wsp.o: $(srcdir)/wordsplit-version.h
+VPATH += $(top_srcdir)/libmailutils/wordsplit
 
