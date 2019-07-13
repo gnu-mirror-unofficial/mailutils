@@ -25,11 +25,11 @@ AT_KEYWORDS([copy copy03])
 AT_CHECK([
 MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
 mkdir folder
-MBOX=`pwd`/MBOX
+MBOX=`pwd`/COPY
 export MBOX
 echo 'copy 1 &' | dnl
  MUT_MAIL_CMD -N -E "set folder=\"$folder\"" -f ./mbox  | dnl
- sed 's/  *$//;/^Held 1 message/d;s|'$MBOX'|MBOX|'
+ sed -e 's/  *$//' -e '/^Held 1 message/d' -e "s|$MBOX|MBOX|"
 test -f $MBOX || exit 1 
 cmp $MBOX $abs_top_srcdir/testsuite/spool/mbox
 ],

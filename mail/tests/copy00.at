@@ -17,15 +17,29 @@
 AT_SETUP([copy to stdout])
 AT_KEYWORDS([copy copy00])
 
-# Description: Check if COLUMNS setting is honored
+# Description: Check if copying to /dev/stdout works.
 # Reported-By: Dan Jacobson <jidanni@jidanni.org>
-# References: <87vbgemcc7.fsf@jidanni.org>,
-#    http://lists.gnu.org/archive/html/bug-mailutils/2015-04/msg00002.html
+# References: <87wq0tazcr.fsf@jidanni.org>,
+#    https://lists.gnu.org/archive/html/bug-mailutils/2015-05/msg00002.html
 
 AT_CHECK([
 test -f /dev/stdout || AT_SKIP_TEST
 MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
-echo 'copy 1 /dev/stdout' | MUT_MAIL_CMD -N -E 'set readonly' -f ./mbox | sed 's/  *$//;/^Held 1 message/d';
+echo 'copy 1 /dev/stdout' | \
+  MUT_MAIL_CMD -N -E 'set readonly' -f ./mbox 2>err | \
+  sed 's/  *$//;/^Held 1 message/d'
+
+if test -s err; then
+  # On OSX. /dev/stdout cannot be locked.
+  # Reported by Chris Weichenberger on Thu, 11 Jul 2019 18:04:06 +0200
+  # in private correspondence.  See <20190711160406.picxk2geuqxjh2mx@X>
+  sed -e '/Cannot lock \/dev\/stdout/d' err >err2
+  if test -s err2; then
+    cat err2 >&2
+  else
+    AT_SKIP_TEST
+  fi
+fi
 ],
 [0],
 [From gray@example.net Tue Jul 16 12:11:35 2002
