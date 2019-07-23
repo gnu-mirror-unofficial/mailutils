@@ -284,8 +284,13 @@ moderator_action (mu_sieve_machine_t mach)
       mu_sieve_abort (mach);
     }
 
-  mu_message_get_num_parts (msg, &nparts);
-
+  rc = mu_message_get_num_parts (msg, &nparts);
+  if (rc)
+    {
+      mu_sieve_error (mach, "mu_message_get_num_parts: %s", mu_strerror (rc));
+      mu_sieve_abort (mach);
+    }
+  
   if (nparts != 3) /* Mailman moderation requests have three parts */
     {
       mu_sieve_error (mach, _("expected 3 parts, but found %lu"),

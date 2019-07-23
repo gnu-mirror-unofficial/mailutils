@@ -172,7 +172,6 @@ mime_descend (struct mime_descend_closure *closure,
 	      mime_descend_fn fun, void *data)
 {
   int status = 0;
-  size_t nparts = 0;
   mu_header_t hdr = NULL;
   char *type;
   char *encoding;
@@ -195,23 +194,31 @@ mime_descend (struct mime_descend_closure *closure,
   if (ismime)
     {
       unsigned int j;
-
-      mu_message_get_num_parts (closure->message, &nparts);
-
-      for (j = 1; j <= nparts; j++)
+      size_t nparts;
+      
+      status = mu_message_get_num_parts (closure->message, &nparts);
+      if (status)
 	{
-	  mu_message_t message = NULL;
-
-	  if (mu_message_get_part (closure->message, j, &message) == 0)
+	  mu_diag_funcall (MU_DIAG_ERR, "mu_message_get_num_parts", NULL,
+			   status);
+	}
+      else
+	{
+	  for (j = 1; j <= nparts; j++)
 	    {
-	      msgset_t *set = msgset_expand (msgset_dup (closure->msgset),
-					     msgset_make_1 (j));
-	      subclosure.msgset = set;
-	      subclosure.message = message;
-	      status = mime_descend (&subclosure, fun, data);
-	      msgset_free (set);
-	      if (status)
-		break;
+	      mu_message_t message = NULL;
+
+	      if (mu_message_get_part (closure->message, j, &message) == 0)
+		{
+		  msgset_t *set = msgset_expand (msgset_dup (closure->msgset),
+						 msgset_make_1 (j));
+		  subclosure.msgset = set;
+		  subclosure.message = message;
+		  status = mime_descend (&subclosure, fun, data);
+		  msgset_free (set);
+		  if (status)
+		    break;
+		}
 	    }
 	}
     }

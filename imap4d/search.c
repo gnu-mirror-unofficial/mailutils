@@ -1019,17 +1019,23 @@ _match_multipart (struct parsebuf *pb, mu_message_t msg, char *text)
     {
       size_t i, nparts;
 
-      mu_message_get_num_parts (msg, &nparts);
-
-      for (i = 1; i <= nparts; i++)
+      rc = mu_message_get_num_parts (msg, &nparts);
+      if (rc)
 	{
-	  mu_message_t submsg = NULL;
-
-	  if (mu_message_get_part (msg, i, &submsg) == 0)
+	  mu_diag_funcall (MU_DIAG_ERR, "mu_message_get_num_parts", NULL, rc);
+	}
+      else
+	{
+	  for (i = 1; i <= nparts; i++)
 	    {
-	      result = _match_multipart (pb, submsg, text);
-	      if (result)
-		break;
+	      mu_message_t submsg = NULL;
+	      
+	      if (mu_message_get_part (msg, i, &submsg) == 0)
+		{
+		  result = _match_multipart (pb, submsg, text);
+		  if (result)
+		    break;
+		}
 	    }
 	}
     }

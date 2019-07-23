@@ -491,7 +491,6 @@ bodystructure (mu_message_t msg, int extension)
 static int
 fetch_bodystructure0 (mu_message_t message, int extension)
 {
-  size_t nparts = 1;
   size_t i;
   int is_multipart = 0;
   
@@ -500,20 +499,27 @@ fetch_bodystructure0 (mu_message_t message, int extension)
     {
       mu_content_type_t ct;
       mu_header_t header = NULL;
+      size_t nparts;
       int rc;
       
-      mu_message_get_num_parts (message, &nparts);
-
-      /* Get all the sub messages.  */
-      for (i = 1; i <= nparts; i++)
-        {
-          mu_message_t msg = NULL;
-          mu_message_get_part (message, i, &msg);
-          io_sendf ("(");
-          fetch_bodystructure0 (msg, extension);
-          io_sendf (")");
-        } /* for () */
-
+      rc = mu_message_get_num_parts (message, &nparts);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERR, "mu_message_get_num_parts", NULL, rc);
+	}
+      else
+	{
+	  /* Get all the sub messages.  */
+	  for (i = 1; i <= nparts; i++)
+	    {
+	      mu_message_t msg = NULL;
+	      mu_message_get_part (message, i, &msg);
+	      io_sendf ("(");
+	      fetch_bodystructure0 (msg, extension);
+	      io_sendf (")");
+	    } /* for () */
+	}
+      
       mu_message_get_header (message, &header);
 
       /* The subtype.  */

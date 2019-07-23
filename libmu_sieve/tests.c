@@ -176,17 +176,24 @@ sieve_test_header (mu_sieve_machine_t mach)
   v = mu_sieve_get_arg_untyped (mach, 1);
 
   clos.message = mach->msg;
+  clos.nparts = 0;
   
   if (mu_sieve_get_tag (mach, "mime", SVT_VOID, NULL))
     {
       int ismime = 0;
 
-      mu_message_is_multipart (mach->msg, &ismime);
+      rc = mu_message_is_multipart (mach->msg, &ismime);
+      if (rc)
+	mu_diag_funcall (MU_DIAG_ERR, "mu_message_is_multipart",
+			 NULL, rc);
       if (ismime)
-	mu_message_get_num_parts (mach->msg, &clos.nparts);
+	{
+	  rc = mu_message_get_num_parts (mach->msg, &clos.nparts);
+	  if (rc)
+	    mu_diag_funcall (MU_DIAG_ERR, "mu_message_get_num_parts",
+			     NULL, rc);
+	}
     }
-  else
-    clos.nparts = 0;
   
   rc = mu_sieve_vlist_compare (mach, h, v, retrieve_header, NULL, &clos);
   return rc;

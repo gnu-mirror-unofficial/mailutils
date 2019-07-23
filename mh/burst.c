@@ -75,8 +75,14 @@ int
 burst_mime (mu_message_t msg)
 {
   size_t i, nparts;
+  int rc;
   
-  mu_message_get_num_parts (msg, &nparts);
+  rc = mu_message_get_num_parts (msg, &nparts);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERR, "mu_message_get_num_parts", NULL, rc);
+      return rc;
+    }
 
   for (i = 1; i <= nparts; i++)
     {

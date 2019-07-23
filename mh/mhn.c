@@ -1047,9 +1047,15 @@ handle_message (mu_message_t msg, msg_part_t part, msg_handler_t fun, void *data
   if (ismime)
     {
       size_t i, nparts;
-
-      mu_message_get_num_parts (msg, &nparts);
-
+      int rc;
+      
+      rc = mu_message_get_num_parts (msg, &nparts);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERR, "mu_message_get_num_parts", NULL, rc);
+	  return rc;
+	}
+	
       msg_part_incr (part);
       for (i = 1; i <= nparts; i++)
 	{
