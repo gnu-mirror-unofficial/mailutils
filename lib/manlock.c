@@ -126,6 +126,19 @@ mailbox_open_and_lock (mu_mailbox_t mbox, int flags)
       return MU_ERR_FAILURE;
     }
 
+  if (lock)
+    {
+      status = mu_locker_get_flags (lock, &flags);
+      if (status)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_locker_get_flags", urlstr,
+			   status);
+	  return MU_ERR_FAILURE;
+	}
+      if (flags & MU_LOCKER_NULL)
+	lock = NULL;
+    }
+  
   if (!lock && manlock_mandatory_locking && manlock_lock_dir)
     {
       char *fname = NULL;
