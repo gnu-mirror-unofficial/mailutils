@@ -231,6 +231,12 @@ static struct mu_cfg_param pop3d_cfg_param[] = {
     N_("arg: list") },  
     
   { "tls", mu_cfg_section, &global_tls_conf },
+  { "tls-mode", mu_cfg_callback,
+    &global_tls_mode, 0, cb_tls,
+    N_("Kind of TLS encryption to use for the inetd server"
+       " and all server blocks that lack the tls-mode statement."),
+    /* TRANSLATORS: words to the right of : are keywords - do not translate */
+    N_("arg: false|true|ondemand|stls|requred|connection") },
   
 #ifdef ENABLE_LOGIN_DELAY
   { "login-delay", mu_c_time, &login_delay, 0, NULL,
@@ -530,7 +536,30 @@ main (int argc, char **argv)
     {
       struct pop3d_srv_config cfg;
       memset (&cfg, 0, sizeof cfg);
-      cfg.tls_mode = tls_no;
+
+      switch (stls_server_check (&cfg, "<inetd>"))
+	{
+	case MU_TLS_CONFIG_OK:
+	  if (mu_init_tls_libs ())
+	    status = EX_OK;
+	  else
+	    {
+	      mu_error (_("TLS is not configured, but requested in the "
+			  "configuration"));
+	      exit (EX_CONFIG);
+	    }
+	  break;
+
+	case MU_TLS_CONFIG_NULL:
+	  break;
+
+	case MU_TLS_CONFIG_UNSAFE:
+	  exit (EX_CONFIG);
+
+	default:
+	  exit (EX_UNAVAILABLE);
+	}
+
       /* Make sure we are in the root directory.  */
       chdir ("/");
       status = pop3d_mainloop (MU_STDIN_FD, MU_STDOUT_FD, &cfg);

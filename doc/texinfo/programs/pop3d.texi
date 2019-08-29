@@ -213,6 +213,34 @@ The following configuration file statements affect the behavior of
 @item tcp-wrappers  @tab @xref{tcp-wrappers statement}.
 @end multitable
 
+@deffn {Pop3d Conf} tls-mode @var{mode}
+Configure the use of TLS encryption for inetd mode.
+
+In daemon mode, this statement sets the type of TLS encryption to
+use in all server blocks that lack the @code{tls-mode} statement
+(@pxref{Server Statement}).
+
+Allowed values for @var{mode} are:
+
+@table @asis
+@item no
+TLS is not used.  The @command{STLS} command won't be available even if
+the TLS configuration is otherwise complete.
+
+@item ondemand
+TLS is initiated when the user issues the appropriate command.
+This is the default when TLS is configured.
+
+@item required
+Same as above, but the use of TLS is mandatory.  The authentication
+state is entered only after TLS negotiation has succeeded.
+
+@item connection
+TLS is always forced when the connection is established (POP3S
+protocol).
+@end table
+@end deffn
+
 @deffn {Pop3d Conf} undelete @var{bool}
 On startup, clear deletion marks from all the messages.
 @end deffn
@@ -225,11 +253,6 @@ days.  @xref{Auto-expire}, for a detailed description.
 @deffn {Pop3d Conf} delete-expired @var{bool}
 Delete expired messages upon closing the mailbox.  @xref{Auto-expire},
 for a detailed description.
-@end deffn
-
-@deffn {Pop3d Conf} tls-required @var{bool}
-Always require @code{STLS} command before entering authentication
-phase.
 @end deffn
 
 @deffn {Pop3d Conf} login-delay @var{duration}

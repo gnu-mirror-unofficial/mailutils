@@ -248,6 +248,7 @@ extern uid_t apop_database_owner;
 extern int apop_database_owner_set;
 
 extern struct mu_tls_config global_tls_conf;
+extern int global_tls_mode;
 
 /* Safety checks for group-rw database files, such as stat and bulletin
    databases */
@@ -291,6 +292,7 @@ extern RETSIGTYPE pop3d_child_signal  (int);
 
 extern int pop3d_stls           (char *, struct pop3d_session *);
 int stls_preflight (mu_m_server_t msrv);
+int stls_server_check (struct pop3d_srv_config *cfg, char const *srvid);
 
 extern void pop3d_outf          (const char *fmt, ...) MU_PRINTFLIKE(1,2);
 

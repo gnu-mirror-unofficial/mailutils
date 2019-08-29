@@ -1,10 +1,28 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-06-21
+GNU mailutils NEWS -- history of user-visible changes. 2019-08-29
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 Version 3.7.90 (git)
+
+* Use of TLS in pop3d run from inetd
+
+New global configuration statement "tls-mode" configures the TLS for
+use in inetd mode.
+    
+The certificate and key files are configured by the global "tls"
+compound statement.
+    
+Example configuration (pop3s server):
+    
+  mode inetd;
+  tls-mode connection;
+  tls {
+      ssl-key-file /etc/ssl/key.pem;
+      ssl-certificate-file /etc/ssl/cert.pem;
+  }
+
 
 Version 3.7 - 2019-06-21
 
