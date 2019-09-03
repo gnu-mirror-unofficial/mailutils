@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-08-29
+GNU mailutils NEWS -- history of user-visible changes. 2019-09-03
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -23,6 +23,11 @@ Example configuration (pop3s server):
       ssl-certificate-file /etc/ssl/cert.pem;
   }
 
+* comsatd --test
+
+The --test option takes optional argument: name of the tty or file to
+use for reporting.
+  
 
 Version 3.7 - 2019-06-21
 

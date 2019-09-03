@@ -5,8 +5,9 @@
 @pindex comsatd
 
 Comsatd is the server which receives reports of incoming mail and
-notifies users, wishing to get this service.  It can be started
-either from @file{inetd.conf} or as a standalone daemon.
+notifies users about it.  By default, it prints subject, sender
+name and email, followed by first five lines of each newly arrived message
+to the tty of the recipient user.  Users can customize this behavior.
 
 @menu
 * Starting comsatd::       Invocation.
@@ -33,14 +34,31 @@ comsatd -c /etc/comsat.conf
 
 This is the default operation mode.
 
-@item -t
-@itemx --test
+@item -t[@var{file}]
+@itemx --test[=@var{file}]
 Test mode.  In this mode, @command{comsatd} takes two arguments:
 @acronym{URL} of a mailbox and @acronym{QID} of the message from that
-mailbox, e.g.:
+mailbox and prints the notification to the current user tty
+(@file{/dev/tty}), or @var{file}, if it is supplied.  If the
+@file{~/.biffrc} file exists, it will be used.  For example:
 
 @example
 $ comsatd --test /var/mail/root 34589
+@end example
+
+Notice, that @var{file} is an optional argument.  When supplied, it
+should follow the short option form immediately, or the long option
+form after the equals sign, e.g.:
+
+@example
+$ comsatd --test=logfile /var/mail/root 34589
+@end example
+
+@noindent
+or
+
+@example
+$ comsatd -tlogfile /var/mail/root 34589
 @end example
 
 @item --foreground

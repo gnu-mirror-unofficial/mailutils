@@ -18,6 +18,7 @@
 #include "mailutils/syslog.h"
 #include "mailutils/cli.h"
 #include "mailutils/sockaddr.h"
+#include "mailutils/alloc.h"
 
 #ifndef PATH_DEV
 # define PATH_DEV "/dev"
@@ -59,7 +60,7 @@ typedef struct utmp UTMP;
 
 const char *program_version = "comsatd (" PACKAGE_STRING ")";
 
-int test_mode;
+char *test_mode;
 char *biffrc = BIFF_RC;
 mu_m_server_t server;
 
@@ -69,7 +70,26 @@ set_inetd_mode (struct mu_parseopt *po, struct mu_option *opt,
 {
   mu_m_server_set_mode (server, MODE_INTERACTIVE);
 }
-  
+
+static void
+set_test_mode (struct mu_parseopt *po, struct mu_option *opt,
+	       char const *arg)
+{
+  if (arg)
+    {
+      if (arg[0] != '/')
+	{
+	  test_mode = mu_make_file_name (mu_getcwd (), arg);
+	  if (!test_mode)
+	    mu_alloc_die ();
+	}
+      else
+	test_mode = mu_strdup (arg);
+    }
+  else
+    test_mode = mu_strdup ("/dev/tty");
+}
+    
 static void
 set_daemon_mode (struct mu_parseopt *po, struct mu_option *opt,
 		 char const *arg)
@@ -97,9 +117,9 @@ set_foreground (struct mu_parseopt *po, struct mu_option *opt,
 }
 
 static struct mu_option comsat_options[] = {
-  { "test", 't', NULL, MU_OPTION_DEFAULT,
-    N_("run in test mode"),
-    mu_c_bool, &test_mode },
+  { "test", 't', N_("FILE"), MU_OPTION_ARG_OPTIONAL,
+    N_("run in test mode; use FILE as tty (default: /dev/tty)"),
+    mu_c_string, &test_mode, set_test_mode },
   { "foreground",  0, NULL, MU_OPTION_DEFAULT,
     N_("remain in foreground"),
     mu_c_bool, NULL, set_foreground },
@@ -605,7 +625,7 @@ main (int argc, char **argv)
 	  free (cwd);
 	}
       
-      notify_user (user, "/dev/tty", argv[0], argv[1]);
+      notify_user (user, test_mode, argv[0], argv[1]);
       exit (0);
     }
   
