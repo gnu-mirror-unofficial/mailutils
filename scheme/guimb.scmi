@@ -46,8 +46,8 @@ exec ${GUILE-guile} -l $0 -c "(apply $main (list (command-line)))" "$@"
   (exit 0))
 
 (define (guimb-help)
-  (format #t "usage: guimb [OPTIONS] [MAILBOX [MAILBOX...]]
-guimb applies a scheme function to each message from a set of input mailboxes
+  (format #t "Usage: guimb [OPTIONS] [MAILBOX [MAILBOX...]]
+guimb -- apply a scheme function to each message in mailboxes
 
 The following options stop argument processing, and pass the remaining
 arguments to the guimb-getopt function, if it is defined in the module:
