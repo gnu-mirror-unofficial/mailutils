@@ -49,6 +49,7 @@ TESTSUITE_AT =\
  copy03.at\
  copy04.at\
  nohome.at\
+ hold.at\
  testsuite.at\
  version.at
 

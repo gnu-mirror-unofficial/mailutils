@@ -27,7 +27,7 @@ test -f /dev/stdout || AT_SKIP_TEST
 MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
 echo 'copy 1 /dev/stdout' | \
   MUT_MAIL_CMD -N -E 'set readonly' -f ./mbox 2>err | \
-  sed 's/  *$//;/^Held 1 message/d'
+  sed -e 's/  *$//' -e '/^Held 1 message/d'
 
 if test -s err; then
   # On OSX. /dev/stdout cannot be locked.

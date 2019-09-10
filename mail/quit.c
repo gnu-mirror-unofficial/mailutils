@@ -30,7 +30,7 @@ mail_quit (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED)
 }
 
 int
-mail_mbox_close ()
+mail_mbox_close (void)
 {
   mu_url_t url = NULL;
   size_t held_count = 0;
@@ -58,8 +58,36 @@ mail_mbox_close ()
   return 0;
 }
 
+enum mailbox_class
+  {
+    MBX_SYSTEM,
+    MBX_MBOX,
+    MBX_USER
+  };
+
+static enum mailbox_class
+mailbox_classify (void)
+{
+  mu_url_t url;
+
+  mu_mailbox_get_url (mbox, &url);
+  if (strcmp (util_url_to_string (url), getenv ("MBOX")) == 0)
+    return MBX_MBOX;
+  else
+    {
+      mu_mailbox_t mb;
+      mu_url_t u;
+      mu_mailbox_create_default (&mb, NULL);
+      mu_mailbox_get_url (mb, &u);
+      if (strcmp (mu_url_to_string (u), mu_url_to_string (url)) == 0)
+	return MBX_SYSTEM;
+    }
+
+  return MBX_USER;
+}
+
 int
-mail_mbox_commit ()
+mail_mbox_commit (void)
 {
   unsigned int i;
   mu_mailbox_t dest_mbox = NULL;
@@ -68,49 +96,54 @@ mail_mbox_commit ()
   mu_attribute_t attr;
   int keepsave = mailvar_is_true (mailvar_name_keepsave);
   int hold = mailvar_is_true (mailvar_name_hold);
-  mu_url_t url;
-  int is_user_mbox;
 
-  mu_mailbox_get_url (mbox, &url);
-  is_user_mbox = strcmp (util_url_to_string (url), getenv ("MBOX")) == 0;
-
-  {
-    mu_mailbox_t mb;
-    mu_url_t u;
-    mu_mailbox_create_default (&mb, NULL);
-    mu_mailbox_get_url (mb, &u);
-    if (strcmp (mu_url_to_string (u), mu_url_to_string (url)) != 0)
-      {
-	/* The mailbox we are closing is not a system one (%). Raise
-	   hold flag */
-	hold = 1;
-	keepsave = 1;
-      }
-    mu_mailbox_destroy (&mb);
-  }
+  enum mailbox_class class = mailbox_classify ();
+  if (class != MBX_SYSTEM)
+    {
+      /* The mailbox we are closing is not a system one (%). Stay on the
+	 safe side: retain both read and saved messages in the mailbox. */
+      hold = 1;
+      keepsave = 1;
+    }
 
   for (i = 1; i <= total; i++)
     {
+      int status;
+      enum { ACT_KEEP, ACT_MBOX, ACT_DELETE } action = ACT_KEEP;
+
       if (util_get_message (mbox, i, &msg))
 	return 1;
 
       mu_message_get_attribute (msg, &attr);
+      if (mu_attribute_is_deleted (attr))
+	continue;
 
-      if (!is_user_mbox
-	  && (mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_MBOXED)
-	      || (!hold
-		  && !mu_attribute_is_deleted (attr)
-		  && !mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_PRESERVED)
-		  && ((mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED)
-		       && keepsave)
-		      || (!mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED)
-			  && (mu_attribute_is_userflag (attr,
-							MAIL_ATTRIBUTE_SHOWN)
-			      || mu_attribute_is_userflag (attr,
-						   MAIL_ATTRIBUTE_TOUCHED)))))))
+      if (mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_PRESERVED))
+	action = ACT_KEEP;
+      else if (mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_MBOXED))
+	action = ACT_MBOX;
+      else if (class == MBX_SYSTEM)
 	{
-	  int status;
-	  
+	  if (mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SHOWN
+					      | MAIL_ATTRIBUTE_TOUCHED))
+	    action = hold ? ACT_KEEP : ACT_MBOX;
+	  else if (mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED))
+	    {
+	      if (keepsave)
+		action = hold ? ACT_KEEP : ACT_MBOX;
+	      else
+		action = ACT_DELETE;
+	    }
+	}
+
+      switch (action)
+	{
+	case ACT_KEEP:
+	  if (mu_attribute_is_read (attr))
+	    mu_attribute_set_seen (attr);
+	  break;
+
+	case ACT_MBOX:
 	  if (!dest_mbox)
 	    {
 	      char *name = getenv ("MBOX");
@@ -139,15 +172,12 @@ mail_mbox_commit ()
 	      mu_attribute_set_deleted (attr);
 	      saved_count++;
 	    }
+	  break;
+
+	case ACT_DELETE:
+	  mu_attribute_set_deleted (attr);
+	  break;
 	}
-      else if (mu_attribute_is_deleted (attr))
-	/* Skip this one */;
-      else if (!keepsave
-	       && !mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_PRESERVED)
-	       && mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED))
-	mu_attribute_set_deleted (attr);
-      else if (mu_attribute_is_read (attr))
-	mu_attribute_set_seen (attr);
     }
 
   if (saved_count)

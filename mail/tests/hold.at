@@ -1,0 +1,349 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2015-2019 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+dnl             1      2      3       4       5 
+dnl MAIL_TEST([NAME],[MBOX],[CODE],[INPUT],[OUTPUT])
+m4_pushdef([MAIL_TEST],
+ [AT_SETUP($1)
+AT_CHECK(
+ [AT_DATA([inbox],[$2])
+AT_DATA([rc],[$4])
+export MAIL=inbox
+export MBOX=mbox
+> $MBOX
+CWD=$(pwd)
+MUT_MAIL_CMD -N -E "set folder=$CWD" < rc | sed -e 's/  *$//' -e "s|$CWD/||"
+$3
+],
+[0],
+[$5])
+AT_CLEANUP])
+
+m4_pushdef([MAILBOX_CONTENT],
+[From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+
+I don't see any wine
+
+])
+
+AT_BANNER([hold and keepsave variables])
+
+MAIL_TEST([read (nohold)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+],
+[set nohold nokeepsave
+1
+quit
+],
+[From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+Saved 1 message in mbox
+Held 1 message in inbox
+== inbox ==
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox ==
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+])
+
+MAIL_TEST([read (hold)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+],
+[set hold
+1
+quit
+],
+[From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+Held 2 messages in inbox
+== inbox ==
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Status: OR
+
+Have some wine
+
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox ==
+])
+
+MAIL_TEST([touch (nohold)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+],
+[set nohold
+touch 1
+quit
+],
+[Saved 1 message in mbox
+Held 1 message in inbox
+== inbox ==
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox ==
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+])
+
+MAIL_TEST([touch (hold)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+],
+[set hold
+touch 1
+quit
+],
+[Held 2 messages in inbox
+== inbox ==
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Status: O
+
+Have some wine
+
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox ==
+])
+
+MAIL_TEST([save (nohold nokeepsave)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+echo == dest ==
+catmbox dest
+],
+[set nohold nokeepsave
+save 1 +dest
+quit
+],
+["dest"   7/152
+Held 1 message in inbox
+== inbox ==
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox ==
+== dest == 
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+])
+ 
+MAIL_TEST([save (nohold keepsave)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+echo == dest ==
+catmbox dest
+],
+[set nohold keepsave
+save 1 +dest
+quit
+],
+["dest"   7/152
+Saved 1 message in mbox
+Held 1 message in inbox
+== inbox ==
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox == 
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+== dest == 
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+]) 
+ 
+MAIL_TEST([save (hold keepsave)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+echo == dest ==
+catmbox dest
+],
+[set hold keepsave
+save 1 +dest
+quit
+],
+["dest"   7/152
+Held 2 messages in inbox
+== inbox ==
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Status: O
+
+Have some wine
+
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox ==
+== dest ==
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+]) 
+
+MAIL_TEST([save (hold nokeepsave)],
+[MAILBOX_CONTENT],
+[echo == inbox ==
+catmbox inbox
+echo == mbox ==
+catmbox mbox
+echo == dest ==
+catmbox dest
+],
+[set hold nokeepsave
+save 1 +dest
+quit
+],
+["dest"   7/152
+Held 1 message in inbox
+== inbox ==
+From alice@wonder.land Mon Jul 29 22:00:09 2002
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Status: O
+
+I don't see any wine
+
+== mbox ==
+== dest == 
+From hare@wonder.land Mon Jul 29 22:00:08 2002
+From: March Hare  <hare@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+
+Have some wine
+
+])
+
+m4_popdef([MAILBOX_CONTENT])
+m4_popdef([MAIL_TEST])

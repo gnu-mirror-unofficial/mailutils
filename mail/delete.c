@@ -27,6 +27,7 @@ mail_delete_msg (msgset_t *mspec, mu_message_t msg, void *data)
 
   mu_message_get_attribute (msg, &attr);
   mu_attribute_set_deleted (attr);
+  mu_attribute_unset_userflag (attr, MAIL_ATTRIBUTE_PRESERVED);
   cond_page_invalidate (mspec->msg_part[0]);
   return 0;
 }
