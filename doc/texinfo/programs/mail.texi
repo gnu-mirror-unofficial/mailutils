@@ -205,37 +205,34 @@ The program also understands the common mailutils options
 @node Reading Mail
 @subsection Reading Mail
 
-To read messages from a given mailbox, use one of the following ways of
-invoking @command{mail}:
+@cindex system mailbox, @command{mail}
+@cindex personal mailbox, @command{mail}
+@cindex secondary mailbox, @command{mail}
+@cindex mailbox, @command{mail}
+@kwindex MBOX, environment variable
+The @command{mail} utility operates on three kinds of mailboxes.  The
+@dfn{user system mailbox} is the mailbox where the incoming mail for
+the user is stored.  Its location is system-dependent and is
+determined using the common mailutils rules (@pxref{mailbox
+statement}).  The @dfn{personal mailbox} (or @dfn{mbox}, for short) is
+the default location for saving messages that have been read.  By
+default it is @file{$HOME/mbox} or whatever file specified by the
+@env{MBOX} environment variable.  Any other mailboxes are called
+@dfn{secondary mailboxes}.
 
-@table @code
-@item mail
-Read messages from your system mailbox.
+@xopindex{file, @command{mail} option}
+When called without arguments, @command{mail} opens the system mailbox
+for the invoking user.  The @option{--file} (@option{-f}) used without
+arguments instructs @command{mail} to operate on the personal mailbox
+instead.  When this option and a single command line argument are used
+together, @command{mail} treats the argument as the pathname of the
+secondary mailbox to operate upon.
 
-@item mail -f
-@itemx mail --file
-
-Read messages from your mailbox (@file{$HOME/mbox}).  If the
-@option{--user} option (see below) is also given, read messages
-from that user's @file{mbox}.
-
-@item mail -f @var{path_to_mailbox}
-@itemx mail --file @var{path_to_mailbox}
-Read messages from the specified mailbox.
-
-@item mail -u @var{user}
-@itemx mail --user=@var{user}
-Read messages from the system mailbox belonging to @var{user}.
-@end table
-
-@emph{Please note}, that usual mailbox permissions won't allow you
-to use the last variant of invocation, unless you are a super-user.
-Similarly, the last but one variant is also greatly affected by the
-permissions the target mailbox has.
-
-Notice that @var{path_to_mailbox} is not an argument to
-@option{--file} (@option{-f}) option, but rather the first
-non-optional argument on the command line.  Therefore, the
+Notice that this argument is not an argument to the 
+@option{--file} (@option{-f}) option itself, but rather the first
+non-optional argument on the command line.  This means that any
+number of additional options are allowed between the @option{--file}
+option and the mailbox file name.  For example, the
 following three invocations are equivalent:
 
 @example
@@ -252,6 +249,26 @@ following form is also accepted:
 $ mail --file=mymbox -i -n
 @end example
 
+@xopindex{user, @command{mail} option}
+The @option{--user} (@option{-u}) option allows the system
+administrator to assume another user identity for operating on this
+user's mailboxes.  Obviously, it is available only to system
+administrators.  For example:
+
+@example
+mail --user=tom
+@end example
+
+@noindent
+reads mail from the system mailbox of the user @samp{tom}, and
+
+@example
+mail --user=tom --file
+@end example
+
+@noindent
+reads mail from the personal mailbox of this user.
+
 Unless you have started mail with @option{--norc} command line option,
 it will read the contents of the system-wide configuration file.
 Then it will read the contents of user configuration file, if it exists.
@@ -265,19 +282,20 @@ process is continued until @command{mail} receives any of the commands
 @samp{quit}, @samp{exit} or the end-of-file character (ASCII 4, or
 @kbd{C-D}).
 
+@anchor{mail message states}
 Each message in the mailbox has a state that affects how it is
-retained or deleted upon termination of the program.  The state is
-reflected in the header listing and can be changed during the session.
-The states are:
+retained or deleted upon closing the mailbox when terminating the
+program (@pxref{the quit command}) or when switching to another mailbox
+(@pxref{the file command}).  The state is reflected in the header
+listing and can be changed during the session.  The states are:
 
 @table @dfn
 @item new
 The message is present in the system mailbox and has not been read
 by the user or moved to any other state.  When @command{mail}
 terminates, messages in this state are retained in the system
-mailbox.  If @command{mail} was exited using the @code{quit} command,
-such messages are moved to the @samp{unread} state.  If @code{exit}
-command was used, their state is not changed.
+mailbox.  If the mailbox is closed, such messages are moved to the
+@samp{unread} state.
 
 @item unread
 The message has been present in the system mailbox for more than one
@@ -285,6 +303,7 @@ invocation of @command{mail} and has not been read by the user or
 moved to any other state.  When @command{mail} terminates, messages in
 this state are retained in the system mailbox.
 
+@anchor{read messages}
 @item read
 The message has been read by the user, i.e. processed by one of the
 following commands: @code{copy}, @code{mbox}, @code{next},
@@ -294,31 +313,44 @@ following escapes (in message compose mode): @code{~f}, @code{~m},
 @code{~F}, @code{~M}.
 
 When @command{mail} terminates, messages in this state are handled
-depending on the mailbox they are in.  Read messages in the system
-mailbox are saved in the @samp{mbox}, unless the internal variable
-@samp{hold} is set.  Read messages in @samp{mbox} or in any other
-mailbox, excepting the system one, will be retained in their current
-location. 
+depending on the mailbox they are in. 
+
+If @command{mail} was operating on the user system mailbox, all
+messages in state @samp{read} are preserved.  The location where
+they are preserved is determined by the @code{hold} variable
+(@pxref{Mail Variables}).  If it is not set (the default), the
+messages are moved to the user's @file{mbox}.  If @code{hold} is set,
+the messages are held in the system mailbox instead.
+
+The @samp{read} messages in any other mailbox will be retained in
+their current location. 
 
 @item deleted
 The message has been processed by one of the following commands:
 @samp{delete}, @samp{dp}, @samp{dt}.  Messages in this state are
 ignored by any command, excepting @samp{undelete}, which changes their
-state back to @samp{read}.  Upon quitting the program, deleted
+state back to @samp{read}.  When closing the mailbox, deleted
 messages are permanently removed from the mailbox.
 
 @item preserved
 The message has been processed by the @code{preserve} (@code{hold})
-command.  When @command{mail} quits, such messages are retained in
+command.  When closing the mailbox, such messages are retained in
 the mailbox.
 
+@anchor{saved messages}
 @item saved
 The message has been processed by one of the following commands:
-@code{save}, @code{write}.  When @command{mail} quits, saved messages
-will be removed from the mailbox, unless the @samp{keepsave} variable
-is set.  When operating on the system mailbox, messages in this state
-are deleted, when the @command{quit} or @command{file} command is used
-to exit the current mailbox.
+@code{save}, @code{write}.  When @command{mail} terminates, messages
+in this state are handled depending on the mailbox they are in. 
+
+If @command{mail} was operating on the user system mailbox, the
+default behavior for @samp{saved} messages is to remove them 
+from the system mailbox.  If, however, the @code{keepsave} variable
+is set, they are preserved using the same rules as for @samp{read}
+messages (see above).
+
+Saved messages in non-system mailboxes are retained in their current
+location.
 @end table
 
 Unless the mailbox is empty, exactly one of its messages will be
@@ -469,19 +501,38 @@ Part 2 of the multipart message 10.
 
 Following commands quit the program:
 
+@anchor{the quit command}
 @deffn {Mail command} quit
-Terminates the session.  If @command{mail} was operating upon user's system
-mailbox, then all undeleted and unsaved messages that have been read and
-are not marked with hold flag are saved to the user's mbox file
-(@file{$HOME/mbox}).  The messages, marked with @code{delete} are removed.
-The program exits to the Shell, unless saving the mailbox fails, in
+Terminates the session.  The messages, marked with @code{delete} are
+removed.  The messages in state @samp{read} and @samp{saved} are
+processed depending on the mailbox they are in.
+
+If @command{mail} was operating on the user system mailbox, all
+messages in state @samp{read} are preserved.  The location where
+they are preserved is determined by the @code{hold} variable.  If
+it is not set (the default), the messages are moved to the user's
+@file{mbox}.  If @code{hold} is set, the messages are held in the
+system mailbox instead.
+
+The default behavior for @samp{saved} messages is to remove them
+from the system mailbox.  If, however, the @code{keepsave} variable
+is set, they are preserved using the same rules as for @samp{read}
+messages.
+
+For non-system mailboxes, both @samp{read} and @samp{saved} messages
+are retained in their current location.
+
+The same rules are followed when the mailbox is switched using the
+@code{file} command.
+
+The program exits to the shell, unless saving the mailbox fails, in
 which case user can escape with the exit command.
 @end deffn
 
 @deffn {Mail command} exit
 @deffnx {Mail command} ex
 @deffnx {Mail command} xit
-Program exits to the Shell without modifying the mailbox it operates
+Program exits to the shell without modifying the mailbox it operates
 upon.
 @end deffn
 
@@ -546,14 +597,30 @@ Change to the specified directory.  If @var{dir} is omitted, @env{$HOME} is
 assumed.
 @end deffn
 
+@anchor{the file command}
 @deffn {Mail command} file [@var{mailbox}]
 @deffnx {Mail command} fi [@var{mailbox}]
 @deffnx {Mail command} folder [@var{mailbox}]
 @deffnx {Mail command} fold [@var{mailbox}]
+When used without argument, prints the information about the current
+mailbox: the mailbox file name (or URL), total number of messages and
+the number of unread messages, e.g.:
+
+@example
+@cartouche
+? fold
+"/var/spool/mail/gray": 23 messages 22 unread
+@end cartouche
+@end example
+
+Otherwise, closes the current mailbox and opens the mailbox named
+by the @var{mailbox} argument.  When closing the current mailbox,
+its messages are processed according to their state (@pxref{mail
+message states}).
+
 @anchor{Mailbox shortcuts}
-Read in the contents of the specified @var{mailbox}.  It can be either
-the name of the existing file, a mailbox URL (@pxref{Mailbox}), or
-any of the following shortcuts:
+The @var{mailbox} argument can be the name of the existing file, a
+mailbox URL (@pxref{Mailbox}), or any of the following shortcuts:
 
 @table @asis
 @item %
@@ -566,7 +633,7 @@ The system mailbox for @var{user}.
 The previous file.
 
 @item &
-The current @samp{mbox}.
+The user's personal mailbox.
 
 @item @@
 Secondary mailbox, given using the @option{-f} command line option.
@@ -574,17 +641,6 @@ Secondary mailbox, given using the @option{-f} command line option.
 @item +@var{file}
 The named @var{file} in the folder directory. @xref{folder variable}.
 @end table
-
-The current mailbox is updated as if @code{quit} command has been issued.
-If @var{mailbox} is omitted, the command prints the current mailbox
-name followed by the summary information regarding it, e.g.:
-
-@example
-@cartouche
-? fold
-"/var/spool/mail/gray": 23 messages 22 unread
-@end cartouche
-@end example
 @end deffn
 
 @node Controlling Header Display
@@ -847,11 +903,18 @@ header) is saved.
 
 @deffn {Mail command} mbox [@var{msglist}]
 @deffnx {Mail command} mb [@var{msglist}]
-@deffnx {Mail command} touch [@var{msglist}]
+Mark list of messages to be saved in the user's personal mailbox
+(@pxref{Reading Mail, personal mailbox}) upon exiting via @code{quit}
+command.  This is the default action for all read messages, unless you
+have variable @code{hold} set. 
+@end deffn
+
+@deffn {Mail command} touch [@var{msglist}]
 @deffnx {Mail command} tou [@var{msglist}]
-Mark list of messages to be saved in the user's mailbox (@file{$HOME/mbox})
-upon exiting via @code{quit} command.  This is the default action for
-all read messages, unless you have variable @code{hold} set.
+Touch the specified messages.  If any message in @var{msglist} is not
+specifically deleted nor saved in a file, upon normal termination it
+will be acted upon as if it had been read (@pxref{mail message
+states}).
 @end deffn
 
 @deffn {Mail command} copy [[@var{msglist}] @var{file}]
@@ -1848,9 +1911,10 @@ Following variables control the behavior of GNU @command{mail}:
 @*Default: True
 @vrindex append, mail variable
 
-Messages saved in mbox are appended to the end rather than prepended.
-This is the default and cannot be changed.  This variable exists only
-for compatibility with other @command{mailx} implementations.
+Messages saved in @file{mbox} are appended to the end rather than
+prepended. This is the default and cannot be changed.  This variable
+exists only for compatibility with other @command{mailx}
+implementations.
 
 @kwindex appenddeadletter
 @item appenddeadletter
@@ -2262,15 +2326,23 @@ A @samp{%} character.
 
 @kwindex hold
 @item hold
+@anchor{the hold variable}
 @*Type: Boolean.
 @*Default: False.
 @vrindex hold, mail variable
 
-When set, all messages marked as read will be retained in the system
-mailbox.
+Determines the location where to store the messages in state
+@samp{read} and (if the @code{keepsave} is also set) @samp{saved}.
+When set, these messages will be retained in the system mailbox.
 
 When not set (the default), such messages will be stored in the
-user's secondary mailbox (@file{$HOME/mbox}).
+user's personal mailbox.
+
+@xref{read messages}, and @xref{saved messages}, for a
+detailed information on how such messages are processed 
+when the mailbox is being closed.
+
+@xref{keepsave}, for the discussion of the @code{keepsave} variable.
 
 @kwindex ignore 
 @item ignore
@@ -2320,14 +2392,21 @@ removing it.  This is the default and cannot be changed.  This variable
 exists only for compatibility with other @command{mailx} implementations.
 
 @kwindex keepsave
+@anchor{keepsave}
 @item keepsave
 @*Type: Boolean.
 @*Default: False.
 @vrindex keepsave, mail variable
 
-Controls whether saved messages should be kept in system mailbox too.
-This variable is in effect only when operating upon a user's system
+Controls whether saved messages should be retained.  The location
+where they will be retained is controlled by the @code{hold} variable
+(@pxref{the hold variable}).
+
+This variable is in effect only when operating upon the user's system
 mailbox.
+
+@xref{saved messages}, for a detailed information on how
+the saved messages are processed when the mailbox is being closed.
 
 @kwindex mailx
 @item mailx
