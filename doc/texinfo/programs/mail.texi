@@ -1528,7 +1528,7 @@ $ mail --content-type=text/html --attach=in.html \
        --content-type=text/plain
 @end example
 
-@nointent
+@noindent
 This example adds two attachments with different content types and
 switched back to the @samp{text/plain} content type for the message
 body.
