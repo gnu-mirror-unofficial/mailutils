@@ -371,7 +371,6 @@ compl_concat (char **a, char **b)
   return ret;
 }
 
-static char *msgtype_generator (const char *text, int state);
 static char *header_generator (const char *text, int state);
 
 /* Internal completion generator for commands that take a message list
@@ -683,34 +682,6 @@ folder_generator (const char *text, int state)
 	return NULL;
     }
   return filegen_next (&fg);
-}
-
-static char *
-msgtype_generator (const char *text, int state)
-{
-  /* Allowed message types, plus '/'. The latter can folow a colon,
-     meaning body lookup */
-  static char types[] = "dnorsTtu/";
-  static int i;
-  char c;
-
-  if (!state)
-    {
-      i = 0;
-    }
-  while ((c = types[i]))
-    {
-      i++;
-      if (!text[1] || text[1] == c)
-	{
-	  char *s = mu_alloc (3);
-	  s[0] = ':';
-	  s[1] = c;
-	  s[2] = 0;
-	  return s;
-	}
-    }
-  return NULL;
 }
 
 static char *

@@ -40,7 +40,6 @@ static msgset_t *msgset_select (int (*sel) (mu_message_t, void *),
 				     unsigned int max_matches);
 static int select_header (mu_message_t msg, void *closure);
 static int select_body (mu_message_t msg, void *closure);
-static int select_type (mu_message_t msg, void *closure);
 static int select_sender (mu_message_t msg, void *closure);
 static int select_deleted (mu_message_t msg, void *closure);
 static int check_set (msgset_t **pset);
@@ -52,6 +51,9 @@ static int msgset_flags = MSG_NODELETED;
 static size_t message_count;
 static msgset_t *result;
 static mu_opool_t tokpool;
+
+typedef int (*message_selector_t) (mu_message_t, void *);
+static message_selector_t find_type_selector (int type);
 %}
 
 %union {
@@ -166,12 +168,13 @@ msg      : header REGEXP /* /.../ */
 	   }
          | TYPE  /* :n, :d, etc */
            {
-	     if (strchr ("dnorsTtu", $1) == NULL)
+	     message_selector_t sel = find_type_selector ($1);
+	     if (!sel)
 	       {
 		 yyerror (_("unknown message type"));
 		 YYERROR;
 	       }
-	     $$ = msgset_select (select_type, (void *)&$1, 0, 0);
+	     $$ = msgset_select (sel, NULL, 0, 0);
 	     if (!$$)
 	       {
 		 mu_error (_("No messages satisfy :%c"), $1);
@@ -573,7 +576,7 @@ msgset_expand (msgset_t *set, msgset_t *expand_by)
 }
 
 msgset_t *
-msgset_select (int (*sel) (mu_message_t, void *), void *closure, int rev,
+msgset_select (message_selector_t sel, void *closure, int rev,
 	       unsigned int max_matches)
 {
   size_t i, match_count = 0;
@@ -727,37 +730,147 @@ select_sender (mu_message_t msg, void *closure)
   free (sender);
   return status;
 }
-
-int
-select_type (mu_message_t msg, void *closure)
+
+static int
+select_type_d (mu_message_t msg, void *unused MU_ARG_UNUSED)
 {
-  int type = *(int*) closure;
-  mu_attribute_t attr= NULL;
+  mu_attribute_t attr;
 
-  mu_message_get_attribute (msg, &attr);
-
-  switch (type)
-    {
-    case 'd':
-      return mu_attribute_is_deleted (attr);
-    case 'n':
-      return mu_attribute_is_recent (attr);
-    case 'o':
-      return mu_attribute_is_seen (attr);
-    case 'r':
-      return mu_attribute_is_read (attr);
-    case 's':
-      return mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED);
-    case 't':
-      return mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_TAGGED);
-    case 'T':
-      return !mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_TAGGED);
-    case 'u':
-      return !mu_attribute_is_read (attr);
-    }
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return mu_attribute_is_deleted (attr);
   return 0;
 }
 
+static int
+select_type_n (mu_message_t msg, void *unused MU_ARG_UNUSED)
+{
+  mu_attribute_t attr;
+
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return mu_attribute_is_recent (attr);
+  return 0;
+}
+
+static int
+select_type_o (mu_message_t msg, void *unused MU_ARG_UNUSED)
+{
+  mu_attribute_t attr;
+
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return mu_attribute_is_seen (attr);
+  return 0;
+}
+
+static int
+select_type_r (mu_message_t msg, void *unused MU_ARG_UNUSED)
+{
+  mu_attribute_t attr;
+
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return mu_attribute_is_read (attr);
+  return 0;
+}
+
+static int
+select_type_s (mu_message_t msg, void *unused MU_ARG_UNUSED)
+{
+  mu_attribute_t attr;
+
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED);
+  return 0;
+}
+
+static int
+select_type_t (mu_message_t msg, void *unused MU_ARG_UNUSED)
+{
+  mu_attribute_t attr;
+
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_TAGGED);
+  return 0;
+}
+
+static int
+select_type_T (mu_message_t msg, void *unused MU_ARG_UNUSED)
+{
+  mu_attribute_t attr;
+
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return !mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_TAGGED);
+  return 0;
+}
+
+static int
+select_type_u (mu_message_t msg, void *unused MU_ARG_UNUSED)
+{
+  mu_attribute_t attr;
+
+  if (mu_message_get_attribute (msg, &attr) == 0)
+    return !mu_attribute_is_read (attr);
+  return 0;
+}
+
+struct type_selector
+{
+  int letter;
+  message_selector_t func;
+};
+
+static struct type_selector type_selector[] = {
+  { 'd', select_type_d },
+  { 'n', select_type_n },
+  { 'o', select_type_o },
+  { 'r', select_type_r },
+  { 's', select_type_s },
+  { 't', select_type_t },
+  { 'T', select_type_T },
+  { 'u', select_type_u },
+  { '/', NULL }, /* A pseudo-entry needed for msgtype_generator only */
+  { 0 }
+};
+
+static message_selector_t
+find_type_selector (int type)
+{
+  struct type_selector *p;
+  for (p = type_selector; p->func; p++)
+    {
+      if (p->letter == type)
+	return p->func;
+    }
+  return NULL;
+}
+
+#ifdef WITH_READLINE
+char *
+msgtype_generator (const char *text, int state)
+{
+  /* Allowed message types, plus '/'. The latter can folow a colon,
+     meaning body lookup */
+  static int i;
+  char c;
+
+  if (!state)
+    {
+      i = 0;
+    }
+  while ((c = type_selector[i].letter))
+    {
+      i++;
+      if (!text[1] || text[1] == c)
+	{
+	  char *s = mu_alloc (3);
+	  s[0] = ':';
+	  s[1] = c;
+	  s[2] = 0;
+	  return s;
+	}
+    }
+  return NULL;
+}
+#endif
+
 int
 select_deleted (mu_message_t msg, void *closure MU_ARG_UNUSED)
 {

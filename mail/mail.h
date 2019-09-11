@@ -402,7 +402,6 @@ int msgset_parse (const int argc, char **argv, int flags, msgset_t **mset);
 int msgset_member (msgset_t *set, size_t n);
 msgset_t *msgset_negate (msgset_t *set);
 size_t msgset_count (msgset_t *set);
-
 
 #define MDHINT_SELECTED_HEADERS 0x1
 
@@ -580,6 +579,7 @@ char **alias_compl (int argc, char **argv, int ws);
 char **mailvar_set_compl (int argc, char **argv, int ws);
 char **exec_compl (int argc, char **argv, int ws);
 char **shell_compl (int argc, char **argv, int ws);
+char *msgtype_generator (const char *text, int state);
 #else
 # define file_compl NULL
 # define no_compl NULL
