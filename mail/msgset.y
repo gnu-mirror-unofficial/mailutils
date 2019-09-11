@@ -166,7 +166,7 @@ msg      : header REGEXP /* /.../ */
 	   }
          | TYPE  /* :n, :d, etc */
            {
-	     if (strchr ("dnorTtu", $1) == NULL)
+	     if (strchr ("dnorsTtu", $1) == NULL)
 	       {
 		 yyerror (_("unknown message type"));
 		 YYERROR;
@@ -746,12 +746,14 @@ select_type (mu_message_t msg, void *closure)
       return mu_attribute_is_seen (attr);
     case 'r':
       return mu_attribute_is_read (attr);
-    case 'u':
-      return !mu_attribute_is_read (attr);
+    case 's':
+      return mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_SAVED);
     case 't':
       return mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_TAGGED);
     case 'T':
       return !mu_attribute_is_userflag (attr, MAIL_ATTRIBUTE_TAGGED);
+    case 'u':
+      return !mu_attribute_is_read (attr);
     }
   return 0;
 }

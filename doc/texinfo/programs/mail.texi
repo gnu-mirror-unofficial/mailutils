@@ -432,18 +432,20 @@ All messages of type @var{t}, where @var{t} can be any of:
 @table @samp
 @item d
 Deleted messages.
-@item :n
+@item n
 New messages.
-@item :o
+@item o
 Old messages (any message not in state @samp{read} or @samp{new}).
-@item :r
+@item r
 Messages in state @samp{read}.
-@item :u
+@item u
 Messages in state @samp{unread}.
-@item :t
+@item t
 Selects all tagged messages.
-@item :T
+@item T
 Selects all untagged messages.
+@item s
+Selects all messages in state @samp{saved}.
 @end table
 
 @item [@var{header}:]/@var{string}[/]

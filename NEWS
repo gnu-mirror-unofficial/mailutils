@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-09-03
+GNU mailutils NEWS -- history of user-visible changes. 2019-09-11
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -27,7 +27,15 @@ Example configuration (pop3s server):
 
 The --test option takes optional argument: name of the tty or file to
 use for reporting.
-  
+
+* mail
+
+** fix the semantics of 'hold' and 'keepsave' variables
+
+** New message type specification ":s"
+
+Selects messages in state 'saved'.
+
 
 Version 3.7 - 2019-06-21
 

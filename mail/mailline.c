@@ -690,7 +690,7 @@ msgtype_generator (const char *text, int state)
 {
   /* Allowed message types, plus '/'. The latter can folow a colon,
      meaning body lookup */
-  static char types[] = "dnorTtu/";
+  static char types[] = "dnorsTtu/";
   static int i;
   char c;
 
