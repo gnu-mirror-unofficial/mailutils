@@ -1443,7 +1443,7 @@ the old contents of your message.
 @subsection Composing Multipart Messages
 
 Multipart messages (or MIME, for short) can be used to send text in
-character set other than ASCII, attach non-text files, send multiple
+character sets other than ASCII, attach non-text files, send multiple
 parts in alternative formats, etc.
 
 Technically speaking, the boolean variable @code{mime}
@@ -1516,7 +1516,22 @@ $ mail --content-type=text/html --attach=in.html \
        --content-type=application/x-tar --attach=archive.tar
 @end example
 
-Similarly, the encoding to use is set up by the @option{--encoding}
+To change the content type of the message body when sending a message
+with attachments, use the trailing @option{--content-type} option,
+i.e. the option not followed by another @option{--attach} option:
+
+@example
+$ mail --content-type=text/html --attach=in.html \
+       --content-type=application/x-tar --attach=archive.tar \
+       --content-type=text/plain
+@end example
+
+@nointent
+This example adds two attachments with different content types and
+switched back to the @samp{text/plain} content type for the message
+body.
+
+The encoding to use is set up by the @option{--encoding}
 option.  As well as @option{--content-type}, this option affects all
 attachments supplied after it in the command line as well as the
 message body read from the standard input, until changed by
@@ -1529,6 +1544,9 @@ $ mail --content-type=text/html --encoding=quoted-printable \
        --content-type=application/x-tar --encoding=base64 \
        --attach=archive.tar
 @end example
+
+A trailing @option{--encoding} option sets the encoding of the message
+body.
 
 Each attachment can also be assigned a @dfn{description} and a
 @dfn{file name}.  Normally, these are the same as the file name
