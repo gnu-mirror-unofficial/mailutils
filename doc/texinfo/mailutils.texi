@@ -141,7 +141,9 @@ Mailutils Programs
 * sieve::             Mail Filtering Utility.
 * guimb::             Mailbox Scanning and Processing Language.
 
-* maidag::            General-purpose Mail Delivery Agent.
+* mda::               Local Mail Delivery Agent.
+* lmtpd::             LMTP Daemon.
+* putmail::           Incorporate a Message to a Mailbox.
 
 * mimeview::          Universal File Viewer.
 
@@ -202,28 +204,12 @@ Debugging
 @command{mail} --- Send and Receive Mail
 
 * Invoking Mail::            Command Line Options.
+* Reading Mail::             Reading Mail.
 * Composing Mail::           Composing Mail.
 * MIME::                     How to Attach Files.
-* Reading Mail::             Reading Mail.
 * Scripting::                Scripting.
 * Mail Variables::           How to Alter the Behavior of @command{mail}.
 * Mail Configuration Files:: Personal and System-wide Configuration Files.
-
-Composing Mail
-
-* Quitting Compose Mode::
-* Getting Help on Compose Escapes::
-* Editing the Message::
-* Modifying the Headers::
-* Enclosing Another Message::
-* Adding a File to the Message::
-* Attaching a File to the Message::
-* Printing And Saving the Message::
-* Signing the Message::
-* Printing Another Message::
-* Inserting Value of a Mail Variable::
-* Executing Other Mail Commands::
-* Executing Shell Commands::
 
 Reading Mail
 
@@ -244,6 +230,22 @@ Reading Mail
 * Controlling Sender Fields::
 * Incorporating New Mail::
 * Shell Escapes::
+
+Composing Mail
+
+* Quitting Compose Mode::
+* Getting Help on Compose Escapes::
+* Editing the Message::
+* Modifying the Headers::
+* Enclosing Another Message::
+* Adding a File to the Message::
+* Attaching a File to the Message::
+* Printing And Saving the Message::
+* Signing the Message::
+* Printing Another Message::
+* Inserting Value of a Mail Variable::
+* Executing Other Mail Commands::
+* Executing Shell Commands::
 
 @command{movemail} --- Moves Mail from the User Maildrop to the Local File
 
@@ -274,28 +276,27 @@ A Sieve Interpreter
 * Passing Options to Scheme::
 * Command Line Option Summary::
 
-maidag
+mda
 
-* Sendmail-maidag::         Using @command{maidag} with Sendmail.
-* Exim-maidag::             Using @command{maidag} with Exim.
-* MeTA1-maidag::            Using @command{maidag} with MeTA1.
+* Sendmail-mda::         Using @command{mda} with Sendmail.
+* Exim-mda::             Using @command{mda} with Exim.
+* MeTA1-mda::            Using @command{mda} with MeTA1.
 * Mailbox Quotas::
-* Maidag Scripting::
+* MDA Scripting::
 * Forwarding::
-* Url-mode::                Delivering Messages to a URL.
-* Remote Mailbox Delivery::
-* Conf-maidag::             Maidag Configuration File Summary
+* Conf-mda::             @command{mda} Configuration File Summary.
+* Mailing lists::        How to implement Mailing Lists with @command{mda}.
 
 Mailbox Quotas
 
 * DBM Quotas::          Keeping Quotas in DBM File.
 * SQL Quotas::          Keeping Quotas in SQL Database.
 
-Maidag Scripting
+Scripting in @command{mda}
 
-* Sieve Maidag Filters::
-* Scheme Maidag Filters::
-* Python Maidag Filters::
+* Sieve MDA Filters::
+* Scheme MDA Filters::
+* Python MDA Filters::
 
 mimeview
 

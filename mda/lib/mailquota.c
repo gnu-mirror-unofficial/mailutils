@@ -14,16 +14,43 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include "maidag.h"
+#include "libmda.h"
+#include <mailutils/dbm.h>
 
-#if defined (USE_MAILBOX_QUOTAS)
+static char *quotadbname;
+#ifdef USE_SQL
+static char *quota_query;
+#endif
+
+static int ex_quota_tempfail;
+
+int
+ex_quota ()
+{
+  return (ex_quota_tempfail ? EX_TEMPFAIL : EX_UNAVAILABLE);
+}
+
+
+struct mu_cfg_param mda_mailquota_cfg[] = {
+  { "database", mu_c_string, &quotadbname, 0, NULL,
+    N_("Name of DBM quota database file."),
+    N_("file") },
+#ifdef USE_SQL
+  { "sql-query", mu_c_string, &quota_query, 0, NULL,
+    N_("SQL query to retrieve mailbox quota."),
+    N_("query") },
+#endif
+  { "exit-tempfail", mu_c_bool, &ex_quota_tempfail, 0, NULL,
+    N_("Indicate temporary failure if the recipient is over his mail quota.")
+  },
+  { NULL }
+};
 
 #define DEFRETVAL MQUOTA_UNLIMITED
 
 mu_off_t groupquota = 5*1024*1024UL;
-static int get_size (char *, mu_off_t *, char **);
 
-int
+static int
 get_size (char *str, mu_off_t *size, char **endp)
 {
   mu_off_t s;
@@ -52,19 +79,14 @@ get_size (char *str, mu_off_t *size, char **endp)
   return 0;
 }
 
-#define RETR_OK        0
-#define RETR_UNLIMITED -1
-#define RETR_FAILURE   1
-
-int
-fail_retrieve_quota (char *name, mu_off_t *quota)
-{
-  mu_error (_("no quota retrieving mechanism"));
-  return RETR_FAILURE;
-}
+enum {
+	RETR_OK,
+	RETR_UNLIMITED,
+	RETR_FAILURE
+};
 
 #ifdef ENABLE_DBM
-int
+static int
 dbm_retrieve_quota (char *name, mu_off_t *quota)
 {
   mu_dbm_file_t db;
@@ -111,7 +133,7 @@ dbm_retrieve_quota (char *name, mu_off_t *quota)
       /* User not in database, try default quota */
       mu_dbm_datum_free (&named);
       named.mu_dptr = "DEFAULT";
-      named.mu_dsize = strlen ("DEFAULT");
+      named.mu_dsize = strlen (named.mu_dptr);
       rc = mu_dbm_fetch (db, &named, &contentd);
       if (rc == MU_ERR_NOENT)
 	{
@@ -158,16 +180,19 @@ dbm_retrieve_quota (char *name, mu_off_t *quota)
 
 # define default_retrieve_quota dbm_retrieve_quota
 #else
-# define default_retrieve_quota fail_retrieve_quota
+static int
+default_retrieve_quota (char *name, mu_off_t *quota)
+{
+  mu_error (_("no quota retrieving mechanism"));
+  return RETR_FAILURE;
+}
 #endif
 
 #ifdef USE_SQL
 #include <mailutils/sql.h>
-
-/* FIXME: defined in libmu_auth/sql.c */
 #include <libmu_auth/sql.h>
 
-int
+static int
 sql_retrieve_quota (char *name, mu_off_t *quota)
 {
   mu_sql_connection_t conn;
@@ -270,7 +295,6 @@ sql_retrieve_quota (char *name, mu_off_t *quota)
 }
 #endif
 
-
 static int
 retrieve_quota (struct mu_auth_data *auth, mu_off_t *quota)
 {
@@ -290,7 +314,7 @@ retrieve_quota (struct mu_auth_data *auth, mu_off_t *quota)
 }
 
 int
-check_quota (struct mu_auth_data *auth, mu_off_t size, mu_off_t *rest)
+mda_check_quota (struct mu_auth_data *auth, mu_off_t size, mu_off_t *rest)
 {
   mu_off_t quota;
 
@@ -315,5 +339,3 @@ check_quota (struct mu_auth_data *auth, mu_off_t size, mu_off_t *rest)
   
   return MQUOTA_OK;
 }
-  
-#endif /* USE_MAIL_QUOTA */

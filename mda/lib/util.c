@@ -14,26 +14,21 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include "maidag.h"
+#include "libmda.h"
+
+int exit_code;
 
 void
-close_fds ()
+mda_close_fds (void)
 {
   int i;
-  long fdlimit = MAXFD;
-
-#if defined (HAVE_SYSCONF) && defined (_SC_OPEN_MAX)
-  fdlimit = sysconf (_SC_OPEN_MAX);
-#elif defined (HAVE_GETDTABLESIZE)
-  fdlimit = getdtablesize ();
-#endif
-
+  long fdlimit = sysconf (_SC_OPEN_MAX);
   for (i = 3; i < fdlimit; i++)
     close (i);
 }
 
 int
-switch_user_id (struct mu_auth_data *auth, int user)
+mda_switch_user_id (struct mu_auth_data *auth, int user)
 {
   int rc;
   uid_t uid;
@@ -56,30 +51,12 @@ switch_user_id (struct mu_auth_data *auth, int user)
 # error "No way to reset user privileges?"
 #endif
   if (rc < 0)
-    maidag_error ("setreuid(0, %d): %s (r=%d, e=%d)",
-		  uid, strerror (errno), getuid (), geteuid ());
+    mda_error ("setreuid(0, %d): %s (r=%d, e=%d)",
+	       uid, strerror (errno), getuid (), geteuid ());
   return rc;
 }
 
-void
-maidag_error (const char *fmt, ...)
-{
-  va_list ap;
-
-  guess_retval (errno);
-  va_start (ap, fmt);
-  if (!mu_log_syslog)
-    {
-      vfprintf (stderr, fmt, ap);
-      fputc ('\n', stderr);
-    }
-  va_end (ap);
-  va_start (ap, fmt);
-  mu_verror (fmt, ap);
-  va_end (ap);
-}
-
-int temp_errors[] = {
+static int temp_errors[] = {
 #ifdef EAGAIN
   EAGAIN, /* Try again */
 #endif
@@ -154,8 +131,7 @@ int temp_errors[] = {
 #endif
 };
   
-
-void
+static void
 guess_retval (int ec)
 {
   int i;
@@ -165,7 +141,7 @@ guess_retval (int ec)
 #ifdef EDQUOT
   if (ec == EDQUOT)
     {
-      exit_code = EX_QUOTA();
+      exit_code = EX_QUOTA;
       return;
     }
 #endif
@@ -177,4 +153,33 @@ guess_retval (int ec)
 	return;
       }
   exit_code = EX_UNAVAILABLE;
+}
+
+void
+mda_error (const char *fmt, ...)
+{
+  va_list ap;
+  guess_retval (errno);
+  va_start (ap, fmt);
+  mu_verror (fmt, ap);
+  va_end (ap);
+}
+
+static struct mu_cli_capa mda_cli_capa[] = {
+  { "forward", NULL, mda_forward_cfg },
+  { "deliver", mda_deliver_options, mda_deliver_cfg },
+#ifdef USE_MAILBOX_QUOTAS
+  { "quota", NULL, mda_mailquota_cfg },
+#endif
+  { "script", mda_script_options, mda_script_cfg },
+  { NULL }
+};
+
+void
+mda_cli_capa_init (void)
+{
+  size_t i;
+
+  for (i = 0; mda_cli_capa[i].name; i++)
+    mu_cli_capa_register (&mda_cli_capa[i]);
 }

@@ -14,19 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_include([testsuite.inc])
+AT_SETUP([putmail])
+AT_KEYWORDS([putmail])
 
-m4_define([MAIDAG_OPTIONS],[dnl
-MUT_DEFAULT_OPTIONS dnl
---set '|mailbox|mailbox-pattern='`pwd`/spool/'${user}' dnl
---set .auth.authorization=system dnl
---stderr])
+AT_CHECK([
+echo ENVELOPE > expout
+cat $INPUT_MSG >> expout
+echo "" >> expout
+mkdir spool
 
-AT_INIT
-AT_TESTED([maidag])
-MUT_VERSION(maidag)
-m4_include([mda.at])
-m4_include([lmtp.at])
-m4_include([url-mbox.at])
-m4_include([forward.at])
+putmail MDA_OPTIONS --from 'gulliver@example.net' mbox:spool/out < dnl
+ $INPUT_MSG || exit $?
+sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/out
+],
+[0],
+[expout])
 
+AT_CLEANUP
+ 

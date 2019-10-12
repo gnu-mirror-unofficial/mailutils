@@ -36,7 +36,9 @@ programs_TEXINFOS = \
  programs/readmsg.texi\
  programs/sieve.texi\
  programs/guimb.texi\
- programs/maidag.texi\
+ programs/mda.texi\
+ programs/lmtpd.texi\
+ programs/putmail.texi\
  programs/mimeview.texi\
  programs/pop3d.texi\
  programs/imap4d.texi\

@@ -13,25 +13,40 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-SUBDIRS = . tests
+SUBDIRS = lib . tests
+sbin_PROGRAMS = mda lmtpd
+bin_PROGRAMS = putmail
 
-sbin_PROGRAMS=maidag
-maidag_SOURCES=\
- deliver.c\
- forward.c\
- lmtp.c\
- maidag.c\
- maidag.h\
- mailquota.c\
- script.c\
- util.c
+mda_SOURCES = mda.c
+lmtpd_SOURCES = lmtpd.c
+putmail_SOURCES = putmail.c
 
 if MU_COND_DBM
- LIBMU_DBM=../libmu_dbm/libmu_dbm.la
+ LIBMU_DBM=${top_builddir}/libmu_dbm/libmu_dbm.la
 endif
 
-maidag_LDADD = \
- ../lib/libmuscript.a\
+LDADD = \
+ lib/libmda.a\
+ ${top_builddir}/lib/libmuscript.a\
+ ${MU_APP_LIBRARIES}\
+ ${MU_LIB_SIEVE}\
+ ${MU_LIB_MAILBOX}\
+ ${MU_LIB_AUTH}\
+ ${MU_LIB_MAILER}\
+ @MU_AUTHLIBS@\
+ ${MU_LIB_MAILUTILS} \
+ @MU_COMMON_LIBRARIES@\
+ @LIBMU_SCM@\
+ @LIBMU_SCM_DEPS@\
+ @MU_LIB_PY@\
+ $(LIBMU_DBM)\
+ @GUILE_LIBS@\
+ @PYTHON_LIBS@\
+ @DBMLIBS@
+
+lmtpd_LDADD = \
+ lib/libmda.a\
+ ${top_builddir}/lib/libmuscript.a\
  ${MU_APP_LIBRARIES}\
  ${MU_LIB_SIEVE}\
  ${MU_LIB_MAILBOX}\
@@ -49,11 +64,9 @@ maidag_LDADD = \
  @DBMLIBS@\
  @MU_TCPWRAP_LIBRARIES@
 
-AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ @GUILE_INCLUDES@ \
- @PYTHON_INCLUDES@
+AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ -Ilib
 
 install-exec-hook:
-	for i in $(sbin_PROGRAMS); do\
-		chown root:mail $(DESTDIR)$(sbindir)/$$i;\
-		chmod 4755 $(DESTDIR)$(sbindir)/$$i;\
-	done
+	chown root:mail $(DESTDIR)$(sbindir)/mda
+	chmod 4755 $(DESTDIR)$(sbindir)/mda
+

@@ -1,0 +1,83 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex putmail
+The @command{putmail} utility reads a message from its standard input
+and delivers it to the specified mailbox URL.  The usage is:
+
+@example
+putmail @var{URL}
+@end example
+
+For example, to deliver mail to a local mailbox
+@file{/var/spool/mail/test}:
+
+@example
+putmail /var/spool/mail/test
+@end example
+
+Of course, this would work only it the @file{test} mailbox is writable
+for the user invoking @command{putmail}.
+
+The @code{smtp} mailbox scheme can be used for remote delivery.  For
+example:
+
+@example
+putmail 'smtp://mail.example.org;to=ovr'
+@end example
+
+The program will initiate SMTP dialog with the server
+@samp{mail.example.org} and will send the message from its standard
+input to the user @samp{ovr} on that server.
+
+@menu
+* putmail options::
+* putmail configuration::
+@end menu
+
+@node putmail options
+@subsection putmail options
+
+@table @option
+@item -f @var{email}
+@itemx -r @var{email}
+@itemx --from=@var{email}
+Specify the sender address.  If not used, the current user name
+will be used.
+
+@item -l @var{name}
+@itemx --language=@var{name}
+Define scripting language for the next @option{--script} option.
+Valid arguments are @samp{sieve}, @samp{scheme} and @samp{python}.
+
+@item --message-id-header=@var{header}
+Use this header to identify messages when logging Sieve actions
+
+@item -s @var{name}
+@itemx --script=@var{name}
+Set the name of the user-defined mail filter.  @xref{MDA Scripting},
+for a detailed discussion of the scripting feature.
+@end table
+
+@node putmail configuration
+@subsection putmail configuration
+
+The behavior of @command{putmail} is affected by the following configuration
+statements:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug         @tab @xref{debug statement}.
+@item mailbox       @tab @xref{mailbox statement}.
+@item locking       @tab @xref{locking statement}.
+@item pam           @tab @xref{pam statement}.
+@item sql           @tab @xref{sql statement}.
+@item virtdomain    @tab @xref{virtdomain statement}.
+@item radius        @tab @xref{radius statement}.
+@item ldap          @tab @xref{ldap statement}.
+@item auth          @tab @xref{auth statement}.
+@item mailer        @tab @xref{mailer statement}.
+@end multitable
+
+The utility also accepts all MDA configuration statements: @xref{Conf-mda}.

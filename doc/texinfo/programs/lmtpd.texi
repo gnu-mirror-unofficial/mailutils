@@ -1,0 +1,66 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 1999-2019 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex lmtpd
+The @acronym{LMTP} is a local mail transport protocol defined in RFC
+2033.  GNU Mailutils is shipped with @command{lmtpd} - a daemon for
+delivering messages using this protocol.
+
+The daemon shares most of its codebase and configuration with
+@command{mda} and consequently provides the same features.
+@xref{mda}, for a detailed description of these.
+
+The behavior of @command{lmtpd} is affected by the following configuration
+statements:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item server        @tab @xref{Server Settings}
+@item acl           @tab @xref{acl statement}.
+@item tcp-wrappers  @tab @xref{tcp-wrappers statement}.
+@item debug         @tab @xref{debug statement}.
+@item mailbox       @tab @xref{mailbox statement}.
+@item locking       @tab @xref{locking statement}.
+@item pam           @tab @xref{pam statement}.
+@item sql           @tab @xref{sql statement}.
+@item virtdomain    @tab @xref{virtdomain statement}.
+@item radius        @tab @xref{radius statement}.
+@item ldap          @tab @xref{ldap statement}.
+@item auth          @tab @xref{auth statement}.
+@item mailer        @tab @xref{mailer statement}.
+@end multitable
+
+@menu
+* MeTA1-lmtpd:: Using @command{lmtpd} with MeTA1.
+@end menu
+
+@node MeTA1-lmtpd
+@subsection Using @command{lmtpd} with MeTA1.
+MeTA1 (@uref{http://meta1.org}) communicates with the delivery agent
+using @acronym{LMTP}.
+
+The socket to listen for LMTP requests must be specified using the
+@code{server} statement (@pxref{Server Settings}).  For the purposes of
+this section, let's suppose @command{lmtpd} will listen on a
+@acronym{UNIX} socket @file{/var/spool/meta1/lmtpsock}.  Then, the
+following (minimal) @command{lmtpd} configuration will do the job:
+
+@example
+# @r{Run as daemon.}
+mode daemon;
+# @r{Switch to this group after startup.}
+group meta1c;
+# @r{Configure server:}
+server unix:///var/spool/meta1/lmtpsock @{
+  transcript no;
+@};
+@end example
+  
+To configure MeTA1 to use this socket, add the following statement to
+the @samp{smtpc} section in @file{/etc/meta1/meta1.conf}:
+
+@example
+  LMTP_socket="lmtpsock";
+@end example
+

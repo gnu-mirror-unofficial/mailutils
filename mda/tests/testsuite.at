@@ -14,37 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_SETUP([MDA mode])
-AT_KEYWORDS([maidag mda0])
+m4_include([testsuite.inc])
 
-AT_CHECK([
-echo ENVELOPE > expout
-cat $abs_top_srcdir/maidag/tests/input.msg >> expout
-echo "" >> expout
-mkdir spool
-maidag MAIDAG_OPTIONS --mda --from gulliver@example.net root < dnl
- $abs_top_srcdir/maidag/tests/input.msg || exit $?
-sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/root
-],
-[0],
-[expout])
+m4_define([MDA_OPTIONS],[dnl
+MUT_DEFAULT_OPTIONS dnl
+--set '|mailbox|mailbox-pattern='`pwd`/spool/'${user}' dnl
+--set .auth.authorization=system])
 
-AT_CLEANUP
+AT_INIT
+AT_TESTED([lmtpd])
+MUT_VERSION(lmtpd)
+m4_include([lmtpd.at])
 
-#
-AT_SETUP([MDA mode, explicit envelope])
-AT_KEYWORDS([maidag mda1])
+AT_TESTED([putmail])
+MUT_VERSION(putmail)
+m4_include([putmail.at])
 
-AT_CHECK([
-echo "From gulliver Thu Oct  7 19:10:57 2010" > expout
-cat $abs_top_srcdir/maidag/tests/input.msg >> expout
-mkdir spool
-maidag MAIDAG_OPTIONS --mda --from gulliver@example.net root < expout || exit $?
-echo "" >> expout
-cat spool/root
-],
-[0],
-[expout])
-
-AT_CLEANUP
 

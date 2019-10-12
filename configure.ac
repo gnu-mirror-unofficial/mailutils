@@ -933,7 +933,7 @@ if test -n "$SQL_MODULES"; then
   USE_SQL=1
   AC_DEFINE(USE_SQL)
   BUILD_SQL=libsql.la
-  SQLLIB=../sql/libsql.la
+  SQLLIB='${top_builddir}/sql/libsql.la'
 
   for module in $SQL_MODULES
   do
@@ -957,7 +957,6 @@ if test -n "$SQL_MODULES"; then
                         SQL_MODULES="$SQL_MODULES"
                       fi])
 fi
-
 
 # LDAP support
 AC_ARG_WITH(ldap,
@@ -978,6 +977,10 @@ if test $status_ldap = maybe; then
    MU_AUTHLIBS="$MU_AUTHLIBS -lldap"],
    [status_ldap=no])
 fi
+
+
+# Mailbox quota support
+AM_CONDITIONAL([MU_COND_MAILBOX_QUOTA],[test -n "$status_dbm$status_mysql"])
 
 
 # Virtual domain support
@@ -1182,7 +1185,7 @@ GINT_INIT([gint],[2.2.0 with-guile],
 	   if test -z "$GUILE_BINDIR"; then
 	       GUILE_BINDIR="`guile-config info prefix`/bin"
 	   fi
-           LIBMU_SCM=../libmu_scm/libmu_scm.la
+           LIBMU_SCM='${top_builddir}/libmu_scm/libmu_scm.la'
            LIBMU_SCM_DEPS='${MU_LIB_MAILBOX} ${MU_LIB_MAILER}'
            MU_GUILE_SIEVE_MOD_DIR='$(GUILE_SITE)/$(PACKAGE)/sieve-modules'
            GINT_INCLUDES='${MU_APP_COMMON_INCLUDES}'
@@ -1324,7 +1327,7 @@ MU_ENABLE_BUILD(imap4d,,,["$mu_build_servers" = yes],,[server_list])
 MU_ENABLE_BUILD(comsat,,,["$mu_build_servers" = yes],,[server_list])
 
 MU_ENABLE_BUILD(frm,,,["$mu_build_clients" = yes],,[client_list])
-MU_ENABLE_BUILD(maidag,,,["$mu_build_clients" = yes],,[client_list])
+MU_ENABLE_BUILD(mda,,,["$mu_build_clients" = yes],,[client_list])
 
 MU_ENABLE_BUILD(mail,,,["$mu_build_clients" = yes],,[client_list])
 AC_SUBST([MAILBINDIR],'${bindir}')
@@ -1363,7 +1366,7 @@ AC_CONFIG_FILES([testsuite/Makefile testsuite/atlocal])
 
 MU_CONFIG_TESTSUITE(libmailutils)
 MU_CONFIG_TESTSUITE(frm)
-MU_CONFIG_TESTSUITE(maidag)
+MU_CONFIG_TESTSUITE(mda)
 MU_CONFIG_TESTSUITE(mail)
 MU_CONFIG_TESTSUITE(messages)
 MU_CONFIG_TESTSUITE(readmsg)
@@ -1518,7 +1521,8 @@ AC_CONFIG_FILES([
  libproto/Makefile
  libproto/mbox/Makefile
  libproto/mailer/Makefile
- maidag/Makefile
+ mda/Makefile
+ mda/lib/Makefile
  mail/Makefile
  mail/testsuite/Makefile
  libmailutils/auth/Makefile

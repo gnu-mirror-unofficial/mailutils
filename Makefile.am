@@ -32,8 +32,8 @@ if MU_COND_IMAP4D
   IMAP4D_DIR = imap4d
 endif
 
-if MU_COND_MAIDAG
-  MAIDAG_DIR = maidag
+if MU_COND_MDA
+  MDA_DIR = mda
 endif
 
 if MU_COND_MAIL
@@ -105,7 +105,7 @@ SUBDIRS = . \
  $(FRM_DIR)\
  $(POP3D_DIR)\
  $(IMAP4D_DIR)\
- $(MAIDAG_DIR)\
+ $(MDA_DIR)\
  $(MAIL_DIR)\
  $(SIEVE_DIR)\
  $(MESSAGES_DIR)\

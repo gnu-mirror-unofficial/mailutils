@@ -14,9 +14,46 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-/* ".forward" support for GNU Maidag */
+/* ".forward" support for GNU MDA */
 
-#include "maidag.h"
+#include "libmda.h"
+
+static char *forward_file;
+
+#define FORWARD_FILE_PERM_CHECK (				\
+			   MU_FILE_SAFETY_OWNER_MISMATCH |	\
+			   MU_FILE_SAFETY_GROUP_WRITABLE |	\
+			   MU_FILE_SAFETY_WORLD_WRITABLE |	\
+			   MU_FILE_SAFETY_LINKED_WRDIR |	\
+			   MU_FILE_SAFETY_DIR_IWGRP |		\
+			   MU_FILE_SAFETY_DIR_IWOTH )
+
+static int forward_file_checks = FORWARD_FILE_PERM_CHECK;
+
+
+static int
+cb2_forward_file_checks (const char *name, void *data)
+{
+  if (mu_file_safety_compose (data, name, FORWARD_FILE_PERM_CHECK))
+    mu_error (_("unknown keyword: %s"), name);
+  return 0;
+}
+
+static int
+cb_forward_file_checks (void *data, mu_config_value_t *arg)
+{
+  return mu_cfg_string_value_cb (arg, cb2_forward_file_checks,
+				 &forward_file_checks);
+}
+
+struct mu_cfg_param mda_forward_cfg[] = {
+  { "file", mu_c_string, &forward_file, 0, NULL,
+    N_("Process forward file.") },
+  { "file-checks", mu_cfg_callback, NULL, 0, cb_forward_file_checks,
+    N_("Configure safety checks for the forward file."),
+    N_("arg: list") },
+  { NULL }
+};
 
 /* Auxiliary functions */
 
@@ -44,7 +81,7 @@ forward_to_email (mu_message_t msg, mu_address_t from,
 }
 
 /* Create a mailer if it does not already exist.*/
-int
+static int
 forward_mailer_create (mu_mailer_t *pmailer)
 {
   int rc;
@@ -61,7 +98,6 @@ forward_mailer_create (mu_mailer_t *pmailer)
 	  return 1;
 	}
 
-  
       rc = mu_mailer_open (*pmailer, 0);
       if (rc)
 	{
@@ -110,14 +146,14 @@ create_from_address (mu_message_t msg, mu_address_t *pfrom)
 
 /* Forward message MSG as requested by file FILENAME.
    MYNAME gives local user name. */
-enum maidag_forward_result
+static enum mda_forward_result
 process_forward (mu_message_t msg, char *filename, const char *myname)
 {
   int rc;
   mu_stream_t file;
   size_t size = 0, n;
   char *buf = NULL;
-  enum maidag_forward_result result = maidag_forward_ok;
+  enum mda_forward_result result = mda_forward_ok;
   mu_mailer_t mailer = NULL;
   mu_address_t from = NULL;
 
@@ -126,7 +162,7 @@ process_forward (mu_message_t msg, char *filename, const char *myname)
     {
       mu_error (_("%s: cannot open forward file: %s"),
 		filename, mu_strerror (rc));
-      return maidag_forward_error;
+      return mda_forward_error;
     }
 
   while (mu_stream_getline (file, &buf, &size, &n) == 0 && n > 0)
@@ -143,7 +179,7 @@ process_forward (mu_message_t msg, char *filename, const char *myname)
 	      if (create_from_address (msg, &from)
 		  || forward_mailer_create (&mailer)
 		  || forward_to_email (msg, from, mailer, p))
-		result = maidag_forward_error;
+		result = mda_forward_error;
 	    }
 	  else 
 	    {
@@ -151,11 +187,11 @@ process_forward (mu_message_t msg, char *filename, const char *myname)
 		p++;
 	      if (strcmp (p, myname) == 0)
 		{
-		  if (result == maidag_forward_ok)
-		    result = maidag_forward_metoo;
+		  if (result == mda_forward_ok)
+		    result = mda_forward_metoo;
 		}
-	      else if (deliver_to_user (msg, p, NULL))
-		result = maidag_forward_error;
+	      else if (mda_deliver_to_user (msg, p, NULL))
+		result = mda_forward_error;
 	    }
 	}
     }
@@ -176,15 +212,18 @@ static mu_list_t idlist;
 
 /* Check if the forward file FWFILE for user given by AUTH exists, and if
    so, use to to forward message MSG. */
-enum maidag_forward_result
-maidag_forward (mu_message_t msg, struct mu_auth_data *auth, char *fwfile)
+enum mda_forward_result
+mda_forward (mu_message_t msg, struct mu_auth_data *auth)
 {
   struct stat st;
   char *filename;
-  enum maidag_forward_result result = maidag_forward_none;
+  enum mda_forward_result result = mda_forward_none;
   int rc;
+
+  if (!forward_file)
+    return mda_forward_none;
   
-  if (fwfile[0] != '/')
+  if (forward_file[0] != '/')
     {
       if (stat (auth->dir, &st))
 	{
@@ -195,17 +234,17 @@ maidag_forward (mu_message_t msg, struct mu_auth_data *auth, char *fwfile)
 	  else
 	    mu_error (_("%s: cannot stat directory: %s"),
 		      auth->dir, mu_strerror (errno));
-	  return maidag_forward_none;
+	  return mda_forward_none;
 	}
-      filename = mu_make_file_name (auth->dir, fwfile);
+      filename = mu_make_file_name (auth->dir, forward_file);
     }
   else
-    filename = strdup (fwfile);
+    filename = strdup (forward_file);
   
   if (!filename)
     {
       mu_error ("%s", mu_strerror (errno));
-      return maidag_forward_error;
+      return mda_forward_error;
     }
 
   if (!idlist)

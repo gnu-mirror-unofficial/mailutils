@@ -32,7 +32,9 @@ syntax.
 * sieve::             Mail Filtering Utility.
 * guimb::             Mailbox Scanning and Processing Language.
 
-* maidag::            General-purpose Mail Delivery Agent.
+* mda::               Local Mail Delivery Agent.
+* lmtpd::             LMTP Daemon.
+* putmail::           Incorporate a Message to a Mailbox.
 
 * mimeview::          Universal File Viewer.
 
@@ -2890,9 +2892,19 @@ Show payload information
 @include programs/guimb.texi
 
 @page
-@node maidag
-@section maidag
-@include programs/maidag.texi
+@node mda
+@section mda
+@include programs/mda.texi
+
+@page
+@node lmtpd
+@section lmtpd
+@include programs/lmtpd.texi
+
+@page
+@node putmail
+@section putmail
+@include programs/putmail.texi
 
 @page
 @node mimeview

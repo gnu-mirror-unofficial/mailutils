@@ -14,7 +14,52 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include "maidag.h"
+#include "libmda.h"
+
+static char *default_domain;
+int multiple_delivery;     /* Don't return errors when delivering to multiple
+			      recipients */
+static char *sender_address = NULL;       
+
+static void
+set_sender_address (struct mu_parseopt *po, struct mu_option *opt,
+		    char const *arg)
+{
+  if (sender_address != NULL)
+    {
+      mu_parseopt_error (po, _("multiple --from options"));
+      exit (po->po_exit_error);
+    }
+  else
+    {
+      char *errmsg;
+      int rc = mu_str_to_c (arg, opt->opt_type, opt->opt_ptr, &errmsg);
+      if (rc)
+	{
+	  mu_parseopt_error (po, _("can't set sender address: %s"),
+			     errmsg ? errmsg : mu_strerror (rc));
+	  exit (po->po_exit_error);
+	}
+    }
+}
+
+struct mu_cfg_param mda_deliver_cfg[] = {
+  { "domain", mu_c_string, &default_domain, 0, NULL,
+    N_("Default email domain") },
+  { "exit-multiple-delivery-success", mu_c_bool, &multiple_delivery, 0, NULL,
+    N_("In case of multiple delivery, exit with code 0 if at least one "
+       "delivery succeeded.") },
+  { NULL }
+};
+
+struct mu_option mda_deliver_options[] = {
+  MU_OPTION_GROUP (N_("Delivery options")),
+  { "from", 'f', N_("EMAIL"), MU_OPTION_DEFAULT,
+    N_("specify the sender's name"),
+    mu_c_string, &sender_address, set_sender_address },
+  { NULL,   'r', NULL, MU_OPTION_ALIAS },
+  MU_OPTION_END
+};
 
 static mu_message_t
 make_tmp (const char *from)
@@ -24,76 +69,76 @@ make_tmp (const char *from)
   char *buf = NULL;
   size_t size = 0, n;
   mu_message_t mesg;
-  
+
   rc = mu_stdio_stream_create (&in, MU_STDIN_FD, MU_STREAM_READ);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stdio_stream_create",
-		       "MU_STDIN_FD", rc);
+                       "MU_STDIN_FD", rc);
       exit (EX_TEMPFAIL);
-    } 
+    }
 
   rc = mu_temp_file_stream_create (&out, NULL, 0);
   if (rc)
     {
-      maidag_error (_("unable to open temporary file: %s"), mu_strerror (rc));
+      mda_error (_("unable to open temporary file: %s"), mu_strerror (rc));
       exit (EX_TEMPFAIL);
     }
 
   rc = mu_stream_getline (in, &buf, &size, &n);
   if (rc)
     {
-      maidag_error (_("read error: %s"), mu_strerror (rc));
+      mda_error (_("read error: %s"), mu_strerror (rc));
       mu_stream_destroy (&in);
       mu_stream_destroy (&out);
       exit (EX_TEMPFAIL);
     }
   if (n == 0)
     {
-      maidag_error (_("unexpected EOF on input"));
+      mda_error (_("unexpected EOF on input"));
       mu_stream_destroy (&in);
       mu_stream_destroy (&out);
       exit (EX_TEMPFAIL);
-    } 
+    }
 
   if (n >= 5 && memcmp (buf, "From ", 5))
     {
       struct mu_auth_data *auth = NULL;
       if (!from)
-	{
-	  auth = mu_get_auth_by_uid (getuid ());
-	  if (auth)
-	    from = auth->name;
-	}
+        {
+          auth = mu_get_auth_by_uid (getuid ());
+          if (auth)
+            from = auth->name;
+        }
       if (from)
-	{
-	  time_t t;
-	  struct tm *tm;
-	  
-	  time (&t);
-	  tm = gmtime (&t);
-	  mu_stream_printf (out, "From %s ", from);
-	  mu_c_streamftime (out, "%c%n", tm, NULL);
-	}
+        {
+          time_t t;
+          struct tm *tm;
+
+          time (&t);
+          tm = gmtime (&t);
+          mu_stream_printf (out, "From %s ", from);
+          mu_c_streamftime (out, "%c%n", tm, NULL);
+        }
       else
-	{
-	  maidag_error (_("cannot determine sender address"));
-	  mu_stream_destroy (&in);
-	  mu_stream_destroy (&out);
-	  exit (EX_TEMPFAIL);
-	}
+        {
+          mda_error (_("cannot determine sender address"));
+          mu_stream_destroy (&in);
+          mu_stream_destroy (&out);
+          exit (EX_TEMPFAIL);
+        }
       if (auth)
-	mu_auth_data_free (auth);
+        mu_auth_data_free (auth);
     }
 
   mu_stream_write (out, buf, n, NULL);
   free (buf);
-  
+
   rc = mu_stream_copy (out, in, 0, NULL);
   mu_stream_destroy (&in);
   if (rc)
     {
-      maidag_error (_("copy error: %s"), mu_strerror (rc));
+      mda_error (_("copy error: %s"), mu_strerror (rc));
       mu_stream_destroy (&out);
       exit (EX_TEMPFAIL);
     }
@@ -102,8 +147,8 @@ make_tmp (const char *from)
   mu_stream_destroy (&out);
   if (rc)
     {
-      maidag_error (_("error creating temporary message: %s"),
-		    mu_strerror (rc));
+      mda_error (_("error creating temporary message: %s"),
+                    mu_strerror (rc));
       exit (EX_TEMPFAIL);
     }
 
@@ -111,10 +156,10 @@ make_tmp (const char *from)
 }
 
 int
-maidag_stdio_delivery (maidag_delivery_fn delivery_fun, int argc, char **argv)
+mda_run_delivery (mda_delivery_fn delivery_fun, int argc, char **argv)
 {
   mu_message_t mesg = make_tmp (sender_address);
-  
+
   if (multiple_delivery)
     multiple_delivery = argc > 1;
 
@@ -122,12 +167,12 @@ maidag_stdio_delivery (maidag_delivery_fn delivery_fun, int argc, char **argv)
     {
       delivery_fun (mesg, *argv, NULL);
       if (multiple_delivery)
-	exit_code = EX_OK;
+        exit_code = EX_OK;
     }
   return exit_code;
 }
 
-int
+static int
 deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
 		    struct mu_auth_data *auth,
 		    char **errp)
@@ -137,14 +182,15 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
   mu_url_t url = NULL;
   mu_locker_t lock;
   int failed = 0;
-  
+  int exit_code = EX_OK;
+
   mu_mailbox_get_url (mbox, &url);
   path = (char*) mu_url_to_string (url);
 
   status = mu_mailbox_open (mbox, MU_STREAM_APPEND|MU_STREAM_CREAT);
   if (status != 0)
     {
-      maidag_error (_("cannot open mailbox %s: %s"), 
+      mda_error (_("cannot open mailbox %s: %s"), 
                     path, mu_strerror (status));
       return EX_TEMPFAIL;
     }
@@ -159,9 +205,8 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
 
       if (status)
 	{
-	  maidag_error (_("cannot lock mailbox `%s': %s"), path,
+	  mda_error (_("cannot lock mailbox `%s': %s"), path,
 		        mu_strerror (status));
-	  exit_code = EX_TEMPFAIL;
 	  return EX_TEMPFAIL;
 	}
     }
@@ -175,7 +220,7 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
       
       if ((status = mu_mailbox_get_size (mbox, &mbsize)))
 	{
-	  maidag_error (_("cannot get size of mailbox %s: %s"),
+	  mda_error (_("cannot get size of mailbox %s: %s"),
 			path, mu_strerror (status));
 	  if (status == ENOSYS)
 	    mbsize = 0; /* Try to continue anyway */
@@ -183,15 +228,15 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
 	    return EX_TEMPFAIL;
 	}
     
-      switch (check_quota (auth, mbsize, &n))
+      switch (mda_check_quota (auth, mbsize, &n))
 	{
 	case MQUOTA_EXCEEDED:
-	  maidag_error (_("%s: mailbox quota exceeded for this recipient"),
+	  mda_error (_("%s: mailbox quota exceeded for this recipient"),
 			auth->name);
 	  if (errp)
 	    mu_asprintf (errp, "%s: mailbox quota exceeded for this recipient",
 		         auth->name);
-	  exit_code = EX_QUOTA();
+	  exit_code = EX_QUOTA;
 	  failed++;
 	  break;
 	  
@@ -201,14 +246,14 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
 	default:
 	  if ((status = mu_message_size (msg, &msg_size)))
 	    {
-	      maidag_error (_("cannot get message size (input message %s): %s"),
+	      mda_error (_("cannot get message size (input message %s): %s"),
 			    path, mu_strerror (status));
 	      exit_code = EX_UNAVAILABLE;
 	      failed++;
 	    }
 	  else if (msg_size > n)
 	    {
-	      maidag_error (_("%s: message would exceed maximum mailbox size for "
+	      mda_error (_("%s: message would exceed maximum mailbox size for "
 			      "this recipient"),
 			    auth->name);
 	      if (errp)
@@ -216,7 +261,7 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
 			     "%s: message would exceed maximum mailbox size "
 			     "for this recipient",
 			     auth->name);
-	      exit_code = EX_QUOTA();
+	      exit_code = EX_QUOTA;
 	      failed++;
 	    }
 	  break;
@@ -229,7 +274,7 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
       status = mu_mailbox_append_message (mbox, msg);
       if (status)
 	{
-	  maidag_error (_("error writing to mailbox %s: %s"),
+	  mda_error (_("error writing to mailbox %s: %s"),
 		        path, mu_strerror (status));
 	  failed++;
 	}
@@ -238,7 +283,7 @@ deliver_to_mailbox (mu_mailbox_t mbox, mu_message_t msg,
 	  status = mu_mailbox_sync (mbox);
 	  if (status)
 	    {
-	      maidag_error (_("error flushing mailbox %s: %s"),
+	      mda_error (_("error flushing mailbox %s: %s"),
 			    path, mu_strerror (status));
 	      failed++;
 	    }
@@ -276,7 +321,7 @@ do_delivery (mu_url_t url, mu_message_t msg, const char *name, char **errp)
       auth = mu_get_auth_by_name (name);
       if (!auth)
 	{
-	  maidag_error (_("%s: no such user"), name);
+	  mda_error (_("%s: no such user"), name);
 	  if (errp)
 	    mu_asprintf (errp, "%s: no such user", name);
 	  exit_code = EX_NOUSER;
@@ -287,36 +332,37 @@ do_delivery (mu_url_t url, mu_message_t msg, const char *name, char **errp)
       if (status)
 	mu_error (_("%s: invalid email: %s"), name, mu_strerror (status));
       
-      if (current_uid)
+      if (getuid ())
 	auth->change_uid = 0;
 
-      if (switch_user_id (auth, 1))
-	return EX_TEMPFAIL;
-      status = script_apply (msg, auth);
-      if (switch_user_id (auth, 0))
-	return EX_TEMPFAIL;
-      if (status)
+      switch (mda_filter_message (msg, auth))
 	{
+	case MDA_FILTER_OK:
+	  break;
+
+	case MDA_FILTER_FILTERED:
 	  exit_code = EX_OK;
 	  mu_auth_data_free (auth);
 	  return 0;
+
+	case MDA_FILTER_FAILURE:
+	  return exit_code = EX_TEMPFAIL;
 	}
  
-      if (forward_file)
-	switch (maidag_forward (msg, auth, forward_file))
-	  {
-	  case maidag_forward_none:
-	  case maidag_forward_metoo:
-	    break;
+      switch (mda_forward (msg, auth))
+	{
+	case mda_forward_none:
+	case mda_forward_metoo:
+	  break;
 	    
-	  case maidag_forward_ok:
-	    mu_auth_data_free (auth);
-	    return 0;
+	case mda_forward_ok:
+	  mu_auth_data_free (auth);
+	  return 0;
 
-	  case maidag_forward_error:
-	    mu_auth_data_free (auth);
-	    return exit_code = EX_TEMPFAIL;
-	  }
+	case mda_forward_error:
+	  mu_auth_data_free (auth);
+	  return exit_code = EX_TEMPFAIL;
+	}
     }
   else
     mu_set_user_email (NULL);
@@ -326,7 +372,7 @@ do_delivery (mu_url_t url, mu_message_t msg, const char *name, char **errp)
       status = mu_url_create (&url, auth->mailbox);
       if (status)
 	{
-	  maidag_error (_("cannot create URL for %s: %s"),
+	  mda_error (_("cannot create URL for %s: %s"),
 			auth->mailbox, mu_strerror (status));
 	  return exit_code = EX_UNAVAILABLE;
 	}
@@ -336,7 +382,7 @@ do_delivery (mu_url_t url, mu_message_t msg, const char *name, char **errp)
 
   if (status)
     {
-      maidag_error (_("cannot open mailbox %s: %s"),
+      mda_error (_("cannot open mailbox %s: %s"),
 		    mu_url_to_string (url),
 		    mu_strerror (status));
       mu_url_destroy (&url);
@@ -353,10 +399,10 @@ do_delivery (mu_url_t url, mu_message_t msg, const char *name, char **errp)
   /* Actually open the mailbox. Switch to the user's euid to make
      sure the maildrop file will have right privileges, in case it
      will be created */
-  if (switch_user_id (auth, 1))
+  if (mda_switch_user_id (auth, 1))
     return EX_TEMPFAIL;
   status = deliver_to_mailbox (mbox, msg, auth, errp);
-  if (switch_user_id (auth, 0))
+  if (mda_switch_user_id (auth, 0))
     return EX_TEMPFAIL;
 
   mu_auth_data_free (auth);
@@ -366,7 +412,7 @@ do_delivery (mu_url_t url, mu_message_t msg, const char *name, char **errp)
 }
 
 int
-deliver_to_url (mu_message_t msg, char *dest_id, char **errp)
+mda_deliver_to_url (mu_message_t msg, char *dest_id, char **errp)
 {
   int status;
   const char *name;
@@ -375,7 +421,7 @@ deliver_to_url (mu_message_t msg, char *dest_id, char **errp)
   status = mu_url_create (&url, dest_id);
   if (status)
     {
-      maidag_error (_("%s: cannot create url: %s"), dest_id,
+      mda_error (_("%s: cannot create url: %s"), dest_id,
 		    mu_strerror (status));
       return EX_NOUSER;
     }
@@ -384,7 +430,7 @@ deliver_to_url (mu_message_t msg, char *dest_id, char **errp)
     name = NULL;
   else if (status)
     {
-      maidag_error (_("%s: cannot get user name from url: %s"),
+      mda_error (_("%s: cannot get user name from url: %s"),
 		    dest_id, mu_strerror (status));
       mu_url_destroy (&url);
       return EX_NOUSER;
@@ -393,7 +439,7 @@ deliver_to_url (mu_message_t msg, char *dest_id, char **errp)
 }
   
 int
-deliver_to_user (mu_message_t msg, char *dest_id, char **errp)
+mda_deliver_to_user (mu_message_t msg, char *dest_id, char **errp)
 {
   return do_delivery (NULL, msg, dest_id, errp);
 }

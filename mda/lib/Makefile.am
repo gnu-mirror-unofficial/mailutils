@@ -1,5 +1,4 @@
-# This file is part of GNU Mailutils. -*- Autotest -*-
-# Copyright (C) 2010-2019 Free Software Foundation, Inc.
+# Copyright (C) 2007-2019 Free Software Foundation, Inc.
 #
 # GNU Mailutils is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -14,21 +13,22 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_SETUP([URL mode])
-AT_KEYWORDS([maidag url-mbox url])
+noinst_LIBRARIES = libmda.a
+libmda_a_SOURCES = \
+ deliver.c\
+ forward.c\
+ script.c\
+ util.c
 
-AT_CHECK([
-echo ENVELOPE > expout
-cat $abs_top_srcdir/maidag/tests/input.msg >> expout
-echo "" >> expout
-mkdir spool
+noinst_HEADERS = libmda.h
 
-maidag MAIDAG_OPTIONS --from 'gulliver@example.net' --url mbox:spool/out < dnl
- $abs_top_srcdir/maidag/tests/input.msg || exit $?
-sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/out
-],
-[0],
-[expout])
+# # FIXME @MU_TCPWRAP_LIBRARIES@
 
-AT_CLEANUP
- 
+AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ @GUILE_INCLUDES@ \
+ @PYTHON_INCLUDES@
+
+if MU_COND_MAILBOX_QUOTA
+  libmda_a_SOURCES += mailquota.c
+  AM_CPPFLAGS += "-DUSE_MAILBOX_QUOTAS=1"
+endif
+

@@ -1472,14 +1472,14 @@ and @code{:body} control what parts of the message to pipe to the
 command.
 
 @*Example:
-The example below uses the @command{maidag} utility
-(@pxref{maidag}) to forward the message to user @samp{gray} on
+The example below uses the @command{putmail} utility
+(@pxref{putmail}) to forward the message to user @samp{gray} on
 the machine @samp{mail.gnu.org}.
 
 @smallexample
 require "pipe";
 
-pipe "/usr/sbin/maidag --url smtp://gray@@mail.gnu.org"
+pipe "/usr/bin/putmail smtp://gray@@mail.gnu.org"
 @end smallexample
 @end deftypefn
 

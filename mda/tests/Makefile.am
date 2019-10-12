@@ -39,11 +39,9 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 ## ------------ ##
 
 TESTSUITE_AT = \
- forward.at\
- lmtp.at\
- mda.at\
- testsuite.at\
- url-mbox.at
+ lmtpd.at\
+ putmail.at\
+ testsuite.at
 
 TESTSUITE = $(srcdir)/testsuite
 M4=m4
