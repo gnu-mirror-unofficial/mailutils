@@ -252,23 +252,23 @@ static struct mu_option mu_no_config_option = {
 
 /* These options are always available for utilities that use at least
    one of default configuration files */
-static struct mu_option mu_config_options[] = {
-  { "config-file",    0,  N_("FILE"),  MU_OPTION_IMMEDIATE,
-    N_("load this configuration file; implies --no-config"),
-    mu_c_string, NULL, config_file },
-  
+static struct mu_option mu_config_lint_options[] = {
   { "config-verbose", 0,  NULL,        MU_OPTION_IMMEDIATE,
     N_("verbosely log parsing of the configuration files"),
     mu_c_string, NULL, config_verbose },
-  
   { "config-lint",    0,  NULL,        MU_OPTION_IMMEDIATE,
     N_("check configuration file syntax and exit"),
     mu_c_string, NULL, config_lint },
+  MU_OPTION_END  
+};
 
+static struct mu_option mu_config_override_options[] = {
+  { "config-file",    0,  N_("FILE"),  MU_OPTION_IMMEDIATE,
+    N_("load this configuration file; implies --no-config"),
+    mu_c_string, NULL, config_file },
   { "set",            0,  N_("PARAM=VALUE"), MU_OPTION_IMMEDIATE,
     N_("set configuration parameter"),
     mu_c_string, NULL, param_set },
-
   MU_OPTION_END  
 };
 
@@ -425,28 +425,32 @@ init_options (mu_opool_t pool,
   if (hints->flags & CONFIG_ENABLED)
     {
       opool_add_option (pool, &mu_config_option_header);
-      opool_add_options (pool, mu_config_options);
-      if (hints->flags & MU_CFHINT_SITE_FILE)
+      opool_add_options (pool, mu_config_lint_options);
+      if (!(hints->flags & MU_CFHINT_NO_CONFIG_OVERRIDE))
 	{
-	  opool_add_options (pool, mu_site_config_options);
-	  if (hints->flags & MU_CFHINT_PER_USER_FILE)
+	  opool_add_options (pool, mu_config_override_options);
+	  if (hints->flags & MU_CFHINT_SITE_FILE)
 	    {
-	      opool_add_options (pool, mu_user_config_options);
-	      opool_add_option (pool, &mu_no_config_option);
+	      opool_add_options (pool, mu_site_config_options);
+	      if (hints->flags & MU_CFHINT_PER_USER_FILE)
+		{
+		  opool_add_options (pool, mu_user_config_options);
+		  opool_add_option (pool, &mu_no_config_option);
+		}
+	      else
+		{
+		  struct mu_option opt = mu_no_config_option;
+		  opt.opt_flags = MU_OPTION_ALIAS;
+		  opool_add_option (pool, &opt);
+		}
 	    }
-	  else
+	  else if (hints->flags & MU_CFHINT_PER_USER_FILE)
 	    {
 	      struct mu_option opt = mu_no_config_option;
+	      opool_add_options (pool, mu_user_config_options);
 	      opt.opt_flags = MU_OPTION_ALIAS;
 	      opool_add_option (pool, &opt);
 	    }
-	}
-      else if (hints->flags & MU_CFHINT_PER_USER_FILE)
-	{
-	  struct mu_option opt = mu_no_config_option;
-	  opool_add_options (pool, mu_user_config_options);
-	  opt.opt_flags = MU_OPTION_ALIAS;
-	  opool_add_option (pool, &opt);
 	}
       mu_list_append (oplist, opool_end_option (pool));
     }

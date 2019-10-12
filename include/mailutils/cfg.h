@@ -83,31 +83,34 @@ struct mu_cfg_parse_hints
 
 /* Bit constants for the flags field of struct mu_cfg_parse_hints */
 /* Parse site-wide configuration file hints.site_file */
-#define MU_CFHINT_SITE_FILE        0x0001
+#define MU_CFHINT_SITE_FILE          0x0001
 /* Parse custom configuration file hints.custom_file */
-#define MU_CFHINT_CUSTOM_FILE      0x0002
+#define MU_CFHINT_CUSTOM_FILE        0x0002
 /* The hints.program field is set.  The "program PROGNAME" section
    will be processed, if PROGNAME is the same as hints.program.
    If include statement is used with the directory name DIR as its
    argument, the file DIR/PROGNAME will be looked up and read in,
    if it exists. */
-#define MU_CFHINT_PROGRAM          0x0004
+#define MU_CFHINT_PROGRAM            0x0004
 
 /* If MU_CFHINT_PROGRAM is set, look for the file ~/.PROGNAME after parsing
    site-wide configuration */
-#define MU_CFHINT_PER_USER_FILE    0x0008
-  
+#define MU_CFHINT_PER_USER_FILE      0x0008
+
+/* Don't allow to overide configuration settings from the command line. */
+#define MU_CFHINT_NO_CONFIG_OVERRIDE 0x0010
+	
 /* Verbosely log files being processed */
-#define MU_CF_VERBOSE              0x0010
+#define MU_CF_VERBOSE                0x0100
 /* Dump the pare tree on stderr */
-#define MU_CF_DUMP                 0x0020
+#define MU_CF_DUMP                   0x0200
 
 /* Format location of the statement */
-#define MU_CF_FMT_LOCUS            0x0100
+#define MU_CF_FMT_LOCUS              0x1000
 /* Print only value */
-#define MU_CF_FMT_VALUE_ONLY       0x0200
+#define MU_CF_FMT_VALUE_ONLY         0x2000
 /* Print full parameter path */
-#define MU_CF_FMT_PARAM_PATH       0x0400
+#define MU_CF_FMT_PARAM_PATH         0x4000
   
 struct mu_cfg_tree
 {
