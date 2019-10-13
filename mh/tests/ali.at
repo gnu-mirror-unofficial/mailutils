@@ -85,9 +85,9 @@ ali -a ./mh_aliases korzen | tr -d ' '
 [expout])
 
 MH_CHECK([ali: group id],[ali05 ali-group-id ali-gid],[
-cat /etc/passwd | awk -F : '/^#/ { next } $4==0 { print $1 }' > expout
+awk -F : '/^#/ { next } $4==0 { print $1 } /etc/passwd' > expout
 test -s expout || AT_SKIP_TEST
-name=`awk -F : '/^#/ { next } $3==0 { print $1 }' /etc/group < /dev/null`
+name=`awk -F : '/^#/ { next } $3==0 { print $1 }' /etc/group`
 test -z "$name" && AT_SKIP_TEST
 
 echo "korzen: +$name" > mh_aliases

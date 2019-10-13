@@ -1,7 +1,7 @@
-eval '(exit $?0)' && eval 'exec perl -wS "$0" "$@"'
-  & eval 'exec perl -wS "$0" $argv:q'
+#!/bin/sh
+#! -*-perl-*-
+eval 'exec perl -x -wS $0 ${1+"$@"}'
     if 0;
-
 # This file is part of GNU Mailutils.
 # Copyright (C) 2017-2019 Free Software Foundation, Inc.
 #
@@ -32,7 +32,7 @@ use Pod::Find qw(pod_where);
 
 my @append_files;
 my $force;
-my $verbose;
+my $verbose = 0;
 my $changelog_file = 'ChangeLog';
 my $since_date;
 my $until_date;
@@ -606,6 +606,3 @@ EOT
     close $fd;
 }   
 
-# Local Variables:
-# mode: perl
-# End:
