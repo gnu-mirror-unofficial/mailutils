@@ -64,9 +64,9 @@ lmtpd_LDADD = \
  @DBMLIBS@\
  @MU_TCPWRAP_LIBRARIES@
 
-AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ -Ilib
+AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ -I${srcdir}/lib
 
 install-exec-hook:
-	chown root:mail $(DESTDIR)$(sbindir)/mda
+	-chown root:mail $(DESTDIR)$(sbindir)/mda &&\
 	chmod 4755 $(DESTDIR)$(sbindir)/mda
 

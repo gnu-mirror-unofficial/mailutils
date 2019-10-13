@@ -57,12 +57,13 @@ libmu_sieve/extensions/vacation.c
 # libproto/imap/folder.c
 libproto/mbox/mbox.c
 
-maidag/maidag.c
-maidag/deliver.c
-maidag/lmtp.c
-maidag/maidag.c
-maidag/mailquota.c
-maidag/script.c
+mda/mda.c
+mda/lmtpd.c
+mda/putmail.c
+mda/lib/deliver.c
+mda/lib/forward.c
+mda/lib/mailquota.c
+mda/lib/script.c
 
 mail/alias.c
 mail/alt.c
