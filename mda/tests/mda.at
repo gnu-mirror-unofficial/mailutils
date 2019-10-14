@@ -14,26 +14,46 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_include([testsuite.inc])
+m4_pushdef([TESTMDA_CONF],[cat > testmda.conf <<EOF
+mailbox {
+  mailbox-pattern "$(pwd)/spool/\${user}";
+}  
+EOF
+])
 
-m4_define([MDA_OPTIONS],[dnl
-MUT_DEFAULT_OPTIONS dnl
---set '|mailbox|mailbox-pattern='`pwd`/spool/'${user}' dnl
---set .auth.authorization=system])
+AT_SETUP([mda])
+AT_KEYWORDS([mda mda0])
 
-AT_INIT
-AT_TESTED([lmtpd])
-MUT_VERSION(lmtpd)
-m4_include([lmtpd.at])
+AT_CHECK([
+echo ENVELOPE > expout
+cat $INPUT_MSG >> expout
+echo "" >> expout
+mkdir spool
+TESTMDA_CONF
+testmda --from gulliver@example.net root < $INPUT_MSG || exit $?
+sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/root
+],
+[0],
+[expout])
 
-AT_TESTED([putmail])
-MUT_VERSION(putmail)
-m4_include([putmail.at])
+AT_CLEANUP
 
-AT_TESTED([mda])
-MUT_VERSION(testmda)
-m4_include([mda.at])
-m4_include([forward.at])
+#
+AT_SETUP([mda, explicit envelope])
+AT_KEYWORDS([mda mda1])
 
+AT_CHECK([
+echo "From gulliver Thu Oct  7 19:10:57 2010" > expout
+cat $INPUT_MSG >> expout
+mkdir spool
+TESTMDA_CONF
+testmda  --from gulliver@example.net root < expout || exit $?
+echo "" >> expout
+cat spool/root
+],
+[0],
+[expout])
 
+AT_CLEANUP
 
+m4_popdef([TESTMDA_CONF])

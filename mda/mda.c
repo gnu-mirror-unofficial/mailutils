@@ -73,6 +73,17 @@ struct mu_cli_setup cli = {
   N_("[recipient...]"),
 };
 
+static void
+version_hook (struct mu_parseopt *po, mu_stream_t stream)
+{
+  mu_version_hook (po, stream);
+#if defined(TESTSUITE_CONFIG_FILE)
+  mu_stream_printf (stream, "%s\n",
+		    _("THIS BINARY IS COMPILED ONLY FOR TESTING MAILUTILS."
+		      "  DON'T USE IT IN PRODUCTION!"));
+#endif
+}
+
 int
 main (int argc, char **argv)
 {
@@ -119,13 +130,19 @@ main (int argc, char **argv)
   pohint.po_extra_info = mu_general_help_text;
   pohint.po_flags |= MU_PARSEOPT_EXTRA_INFO;
 
-  pohint.po_version_hook = mu_version_hook;
+  pohint.po_version_hook = version_hook;
   pohint.po_flags |= MU_PARSEOPT_VERSION_HOOK;
 
   pohint.po_negation = "no-";
   pohint.po_flags |= MU_PARSEOPT_NEGATION;
   
+#if defined(TESTSUITE_CONFIG_FILE)
+  /* This is for test version (see the tests directory) */
+  cfhint.site_file = TESTSUITE_CONFIG_FILE;
+  mu_log_syslog = 0;
+#else
   cfhint.site_file = mu_site_config_file ();
+#endif
   cfhint.flags = MU_CFHINT_SITE_FILE | MU_CFHINT_NO_CONFIG_OVERRIDE;
   
   mu_cli_ext (argc, argv, &cli, &pohint, &cfhint,
