@@ -92,6 +92,16 @@ set_script_pattern (struct mu_parseopt *po, struct mu_option *opt,
   exit (po->po_exit_error);
 }
 
+static void
+set_debug (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  if (mu_script_debug_flags (arg, (char**)&arg))
+    {
+      mu_parseopt_error (po, _("%c is not a valid debug flag"), *arg);
+      exit (po->po_exit_error);
+    }
+}
+
 struct mu_option mda_script_options[] = {
   MU_OPTION_GROUP (N_("Scripting options")),
   { "language", 'l', N_("STRING"), MU_OPTION_DEFAULT,
@@ -103,6 +113,13 @@ struct mu_option mda_script_options[] = {
   { "message-id-header", 0, N_("STRING"), MU_OPTION_DEFAULT,
     N_("use this header to identify messages when logging Sieve actions"),
     mu_c_string, &message_id_header },
+  { "script-debug", 'x', N_("FLAGS"), MU_OPTION_DEFAULT,
+    N_("enable script debugging; FLAGS are:\n\
+g - guile stack traces\n\
+t - sieve trace (MU_SIEVE_DEBUG_TRACE)\n\
+i - sieve instructions trace (MU_SIEVE_DEBUG_INSTR)\n\
+l - sieve action logs"),
+    mu_c_string, NULL, set_debug },
   MU_OPTION_END
 };
 
@@ -141,6 +158,21 @@ cb_script_pattern (void *data, mu_config_value_t *val)
   return 0;
 }
 
+static int
+cb_debug (void *data, mu_config_value_t *val)
+{
+  char *p;
+  
+  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
+    return 1;
+  if (mu_script_debug_flags (val->v.string, &p))
+    {
+      mu_error (_("%c is not a valid debug flag"), *p);
+      return 1;
+    }
+  return 0;
+}
+
 struct mu_cfg_param mda_script_cfg[] = {
   { "language", mu_cfg_callback, NULL, 0, cb_script_language,
     N_("Set script language."),
@@ -149,6 +181,14 @@ struct mu_cfg_param mda_script_cfg[] = {
   { "pattern", mu_cfg_callback, NULL, 0, cb_script_pattern,
     N_("Set script pattern."), 
     N_("arg: glob") },
+  { "debug", mu_cfg_callback, NULL, 0, cb_debug,
+    N_("Set scripting debug level.  Argument is one or more "
+       "of the following letters:\n"
+       "  g - guile stack traces\n"
+       "  t - sieve trace (MU_SIEVE_DEBUG_TRACE)\n"
+       "  i - sieve instructions trace (MU_SIEVE_DEBUG_INSTR)\n"
+       "  l - sieve action logs\n"),
+    N_("arg: string") },
   { NULL }
 };
 
