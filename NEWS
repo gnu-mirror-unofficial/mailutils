@@ -1,10 +1,56 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-09-11
+GNU mailutils NEWS -- history of user-visible changes. 2019-11-06
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.7.90 (git)
+Version 3.8 - 2019-11-06
+
+* The maidag utility is withdrawn
+
+The main purpose of this utility was to work as local mail delivery
+agent (MDA), a program responsible for final delivery of email messages
+to the recipient's mailbox.  As such it required suid privileges.
+
+In parallel with its main purpose, it also was able to work in two
+other modes: the 'url' mode, designed to deliver mails to arbitrary
+mailbox URLs, and 'lmtp' mode, in which it acted as local mail
+transport daemon.  Neither of these needed suid privileges.
+
+The unfortunate design decision to combine the three modes in a single
+versatile tool resulted in local privilege escalation threat in 'url'
+mode.
+
+To fix this, maidag has been replaced by three different utilities,
+each one with a precisely defined purpose and carefully designed
+privileges: mda, lmtpd, and putmail.
+
+* mda
+
+GNU Mail Delivery Agent, the program used by mail transport agent for
+local mail delivery.  MTA starts it with non-root privileges, so it
+needs the setuid bit in order to be able to assume the recipient's
+identity when delivering mail.  User input is limited to the actual
+message, which is read from the standard input.  The usual flexible
+mailutils configuration subsystem is disabled in this utility, all
+settings being read from the main configuration file only.  This file
+is writable only for root.  Configuration settings cannot be altered
+from the command line.
+
+The command line usage is mostly compatible with the maidag, which
+facilitates transition to mda.
+
+* lmtpd
+
+GNU Local Mail Transfer Protocol daemon.  Normally it is started by
+root and remains in the background serving LMTP connections from the
+MTA.
+
+* putmail
+
+A user tool for delivering messages to the specified mailbox URL.
+Runs with user privileges.  This provides the functionality of 'maidag
+--url', without any security implications.
 
 * Use of TLS in pop3d run from inetd
 
