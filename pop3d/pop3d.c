@@ -193,7 +193,7 @@ static struct mu_cfg_param pop3d_srv_param[] = {
     NULL, mu_offsetof (struct pop3d_srv_config, tls_mode), cb_tls,
     N_("Kind of TLS encryption to use for this server"),
     /* TRANSLATORS: words to the right of : are keywords - do not translate */
-    N_("arg: false|true|ondemand|stls|requred|connection") },
+    N_("arg: false|true|ondemand|stls|required|connection") },
   { "tls", mu_cfg_section,
     NULL, mu_offsetof (struct pop3d_srv_config, tls_conf) },
   { NULL }
@@ -236,7 +236,7 @@ static struct mu_cfg_param pop3d_cfg_param[] = {
     N_("Kind of TLS encryption to use for the inetd server"
        " and all server blocks that lack the tls-mode statement."),
     /* TRANSLATORS: words to the right of : are keywords - do not translate */
-    N_("arg: false|true|ondemand|stls|requred|connection") },
+    N_("arg: false|true|ondemand|stls|required|connection") },
   
 #ifdef ENABLE_LOGIN_DELAY
   { "login-delay", mu_c_time, &login_delay, 0, NULL,

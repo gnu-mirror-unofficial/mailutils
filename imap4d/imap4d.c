@@ -500,7 +500,7 @@ static struct mu_cfg_param imap4d_srv_param[] = {
     NULL, mu_offsetof (struct imap4d_srv_config, tls_mode), cb_tls,
     N_("Kind of TLS encryption to use for this server"),
     /* TRANSLATORS: translate only arg:, the rest are keywords */
-    N_("arg: false|true|ondemand|stls|requred|connection") },
+    N_("arg: false|true|ondemand|stls|required|connection") },
   { "tls", mu_cfg_section,
     NULL, mu_offsetof (struct imap4d_srv_config, tls_conf) },
   { NULL }
