@@ -113,11 +113,12 @@ pkginclude_HEADERS = \
  syslog.h\
  sql.h\
  tls.h\
- types.h\
  url.h\
  version.h\
  wordsplit.h\
  yyloc.h
+
+nodist_pkginclude_HEADERS = types.h
 
 if MU_COND_SUPPORT_CXX
   CPP_DIR = cpp

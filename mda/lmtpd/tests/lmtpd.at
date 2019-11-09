@@ -30,16 +30,14 @@ AT_DATA([session_end],[.
 QUIT
 ])
 
-echo ENVELOPE > expout
-cat $INPUT_MSG >> expout
-echo "" >> expout
+cat $INPUT_MSG > expout
 
 cat session_start $INPUT_MSG session_end | tocrlf > session || exit $?
 
 mkdir spool
 lmtpd MDA_OPTIONS --stderr --set 'group=()' < session > transcript || exit $?
 
-sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/root
+dumpmail spool/root
 cat transcript | tr -d '\r' | sed '/...-/d;s/ .*//' >&2
 ],
 [0],

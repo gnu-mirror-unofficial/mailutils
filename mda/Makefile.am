@@ -25,4 +25,4 @@ if MU_COND_PUTMAIL
   SUBDIRS += putmail
 endif
 
-EXTRA_DIST = tests/input.msg tests/mda.inc
+EXTRA_DIST = tests/input.msg tests/mda.inc tests/mda.sh

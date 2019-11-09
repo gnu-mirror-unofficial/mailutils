@@ -32,11 +32,12 @@ define fullcheck_tmpl
 check-$(fmt): fullcheck_dist fullcheckdir-$(fmt)
 	cd $(FULLCHECKDIR)/$(fmt) && \
 	tar xf ../../$(DISTNAME).tar.gz && \
-	cd $(DISTNAME) && \
-	mkdir .build && \
-	cd .build && \
-	../configure MU_DEFAULT_SCHEME=$(fmt) && \
+	chmod -R a-w $(DISTNAME) && \
+	mkdir _build && \
+	cd _build && \
+	../$(DISTNAME)/configure MU_DEFAULT_SCHEME=$(fmt) && \
 	make check
+	chmod -R u+w $(FULLCHECKDIR)/$(fmt)
 	rm -rf $(FULLCHECKDIR)/$(fmt) 
 endef
 
