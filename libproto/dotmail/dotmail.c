@@ -329,6 +329,9 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
   int i, j;
   int force_init_uids = 0;
 
+  if (!(mailbox->flags & MU_STREAM_READ))
+    return 0;
+
   rc = mu_streamref_create (&stream, mailbox->stream);
   if (rc)
     {
@@ -590,6 +593,9 @@ dotmail_rescan (mu_mailbox_t mailbox, mu_off_t offset)
   if (!dmp)
     return EINVAL;
 
+  if (!(mailbox->flags & MU_STREAM_READ))
+    return 0;
+      
   mu_monitor_wrlock (mailbox->monitor);
 #ifdef WITH_PTHREAD
   pthread_cleanup_push (dotmail_cleanup, (void *)mailbox);
