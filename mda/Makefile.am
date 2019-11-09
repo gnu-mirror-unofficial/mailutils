@@ -13,60 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-SUBDIRS = lib . tests
-sbin_PROGRAMS = mda lmtpd
-bin_PROGRAMS = putmail
+SUBDIRS = lib 
 
-mda_SOURCES = mda.c
-lmtpd_SOURCES = lmtpd.c
-putmail_SOURCES = putmail.c
-
-if MU_COND_DBM
- LIBMU_DBM=${top_builddir}/libmu_dbm/libmu_dbm.la
+if MU_COND_MDA
+  SUBDIRS += mda
+endif
+if MU_COND_LMTPD
+  SUBDIRS += lmtpd
+endif
+if MU_COND_PUTMAIL
+  SUBDIRS += putmail
 endif
 
-LDADD = \
- lib/libmda.a\
- ${top_builddir}/lib/libmuscript.a\
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_SIEVE}\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- ${MU_LIB_MAILER}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS} \
- @MU_COMMON_LIBRARIES@\
- @LIBMU_SCM@\
- @LIBMU_SCM_DEPS@\
- @MU_LIB_PY@\
- $(LIBMU_DBM)\
- @GUILE_LIBS@\
- @PYTHON_LIBS@\
- @DBMLIBS@
-
-lmtpd_LDADD = \
- lib/libmda.a\
- ${top_builddir}/lib/libmuscript.a\
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_SIEVE}\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- ${MU_LIB_MAILER}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS} \
- @MU_COMMON_LIBRARIES@\
- @LIBMU_SCM@\
- @LIBMU_SCM_DEPS@\
- @MU_LIB_PY@\
- $(LIBMU_DBM)\
- @GUILE_LIBS@\
- @PYTHON_LIBS@\
- @DBMLIBS@\
- @MU_TCPWRAP_LIBRARIES@
-
-AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ -I${srcdir}/lib
-
-install-exec-hook:
-	-chown root:mail $(DESTDIR)$(sbindir)/mda &&\
-	chmod 4755 $(DESTDIR)$(sbindir)/mda
-
+EXTRA_DIST = tests/input.msg tests/mda.inc

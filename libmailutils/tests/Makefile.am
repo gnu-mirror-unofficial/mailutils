@@ -14,25 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-EXTRA_DIST = $(TESTSUITE_AT) testsuite package.m4 
-DISTCLEANFILES       = atconfig $(check_SCRIPTS)
-MAINTAINERCLEANFILES = Makefile.in $(TESTSUITE)
-
-## ------------ ##
-## package.m4.  ##
-## ------------ ##
-
-$(srcdir)/package.m4: $(top_srcdir)/configure.ac
-	$(AM_V_GEN){                                      \
-	  echo '# Signature of the current package.'; \
-	  echo 'm4_define([AT_PACKAGE_NAME],      [@PACKAGE_NAME@])'; \
-	  echo 'm4_define([AT_PACKAGE_TARNAME],   [@PACKAGE_TARNAME@])'; \
-	  echo 'm4_define([AT_PACKAGE_VERSION],   [@PACKAGE_VERSION@])'; \
-	  echo 'm4_define([AT_PACKAGE_STRING],    [@PACKAGE_STRING@])'; \
-	  echo 'm4_define([AT_PACKAGE_BUGREPORT], [@PACKAGE_BUGREPORT@])'; \
-        } >$(srcdir)/package.m4
-
-#
+include $(top_srcdir)/testsuite/testsuite.am
+AUTOTEST_INCLUDES += -I $(top_srcdir)/libmailutils/wordsplit
 
 ## -------------------------- ##
 ## Non-installable programs
@@ -97,11 +80,7 @@ LDADD = ${MU_LIB_MAILUTILS}
 
 EXTRA_DIST += Encode Decode Wicketfile
 
-## ------------ ##
-## Test suite.  ##
-## ------------ ##
-
-TESTSUITE_AT = \
+TESTSUITE_AT += \
  address.at\
  base64d.at\
  base64e.at\
@@ -188,7 +167,6 @@ TESTSUITE_AT = \
  strin.at\
  strout.at\
  strtoc.at\
- testsuite.at\
  url.at\
  url-comp.at\
  xml.at\
@@ -198,31 +176,6 @@ TESTSUITE_AT = \
  wordwrap02.at\
  wordwrap03.at\
  xscript.at
-
-TESTSUITE = $(srcdir)/testsuite
-M4=m4
-
-AUTOTEST = $(AUTOM4TE) --language=autotest
-$(TESTSUITE): package.m4 $(TESTSUITE_AT) $(top_srcdir)/testsuite/testsuite.inc
-	$(AM_V_GEN)$(AUTOTEST) \
-              -I $(srcdir)\
-              -I $(top_srcdir)/testsuite\
-              -I $(top_srcdir)/libmailutils/wordsplit\
-              testsuite.at -o $@.tmp
-	$(AM_V_at)mv $@.tmp $@
-
-atconfig: $(top_builddir)/config.status
-	cd $(top_builddir) && ./config.status tests/$@
-
-clean-local:
-	@test ! -f $(TESTSUITE) || $(SHELL) $(TESTSUITE) --clean
-
-check-local: atconfig atlocal $(TESTSUITE)
-	@$(SHELL) $(TESTSUITE)
-
-# Run the test suite on the *installed* tree.
-#installcheck-local:
-#	$(SHELL) $(TESTSUITE) AUTOTEST_PATH=$(exec_prefix)/bin
 
 # ###########################
 # Wordsplit testsuite

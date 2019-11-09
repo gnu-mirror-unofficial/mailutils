@@ -10,6 +10,7 @@
 *.pyo
 *.so
 *~
+*.bak
 .bootstrap
 .deps
 .emacs*
@@ -39,3 +40,5 @@ stamp-h1
 tmp/
 /patch/
 .gdbinit
+conf.*.sh
+_fullcheck

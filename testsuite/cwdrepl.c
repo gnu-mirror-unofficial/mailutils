@@ -39,7 +39,7 @@ DESCRIPTION
    line.  Each pair instructs the tool to replace every occurrence of DIR
    with REPL on output.  Note that these pairs take precedence over the
    default ones, so running "cwdrepl $PWD 'PWD'" will replace occurrences
-   of the logical current working directory name with the string PWS, instead
+   of the logical current working directory name with the string PWD, instead
    of the default dot.
 
 */

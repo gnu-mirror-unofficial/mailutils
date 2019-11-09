@@ -8,9 +8,10 @@
 #
 FORMATS  = mbox dotmail mh maildir
 DISTNAME = $(PACKAGE)-$(PACKAGE_VERSION)
+FULLCHECKDIR = _fullcheck
 
 fullcheck: $(foreach fmt,$(FORMATS),check-$(fmt))
-	@rmdir fullcheck
+	@rmdir $(FULLCHECKDIR)
 	@text="$(DISTNAME) passed all tests";\
 	echo $$text | sed -e 's/./=/g';\
 	echo $$text;\
@@ -23,20 +24,20 @@ $(DISTNAME).tar.gz: ChangeLog
 
 define fullcheckdir_tmpl
 fullcheckdir-$(1):
-	rm -rf fullcheckdir/$(1)
-	mkdir -p fullcheckdir/$(1)
+	rm -rf $(FULLCHECKDIR)/$(1)
+	mkdir -p $(FULLCHECKDIR)/$(1)
 endef
 
 define fullcheck_tmpl
 check-$(fmt): fullcheck_dist fullcheckdir-$(fmt)
-	cd fullcheckdir/$(fmt) && \
+	cd $(FULLCHECKDIR)/$(fmt) && \
 	tar xf ../../$(DISTNAME).tar.gz && \
 	cd $(DISTNAME) && \
 	mkdir .build && \
 	cd .build && \
 	../configure MU_DEFAULT_SCHEME=$(fmt) && \
 	make check
-	rm -rf fullcheckdir/$(fmt) 
+	rm -rf $(FULLCHECKDIR)/$(fmt) 
 endef
 
 $(foreach fmt,$(FORMATS),$(eval $(call fullcheckdir_tmpl,$(fmt))))

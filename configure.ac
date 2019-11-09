@@ -1326,8 +1326,12 @@ MU_ENABLE_BUILD(pop3d,,,["$mu_build_servers" = yes],,[server_list])
 MU_ENABLE_BUILD(imap4d,,,["$mu_build_servers" = yes],,[server_list])
 MU_ENABLE_BUILD(comsat,,,["$mu_build_servers" = yes],,[server_list])
 
+MU_ENABLE_BUILD(mda,[mu_build_mda_tools=yes],,["$mu_build_servers" = yes],,[server_list])
+MU_ENABLE_BUILD(lmtpd,[mu_build_mda_tools=yes],,["$mu_build_servers" = yes],,[server_list])
+MU_ENABLE_BUILD(putmail,[mu_build_mda_tools=yes],,["$mu_build_clients" = yes],,[client_list])
+AM_CONDITIONAL([MU_COND_MDA_TOOLS],[test "$mu_build_mda_tools" = yes])
+
 MU_ENABLE_BUILD(frm,,,["$mu_build_clients" = yes],,[client_list])
-MU_ENABLE_BUILD(mda,,,["$mu_build_clients" = yes],,[client_list])
 
 MU_ENABLE_BUILD(mail,,,["$mu_build_clients" = yes],,[client_list])
 AC_SUBST([MAILBINDIR],'${bindir}')
@@ -1364,9 +1368,12 @@ test -z "$client_list" && client_list=" [NONE]"
 AC_CONFIG_TESTDIR(testsuite)
 AC_CONFIG_FILES([testsuite/Makefile testsuite/atlocal])
 
+AC_CONFIG_FILES([testsuite/package.m4])
 MU_CONFIG_TESTSUITE(libmailutils)
 MU_CONFIG_TESTSUITE(frm)
-MU_CONFIG_TESTSUITE(mda)
+MU_CONFIG_TESTSUITE(mda/lmtpd)
+MU_CONFIG_TESTSUITE(mda/mda)
+MU_CONFIG_TESTSUITE(mda/putmail)
 MU_CONFIG_TESTSUITE(mail)
 MU_CONFIG_TESTSUITE(messages)
 MU_CONFIG_TESTSUITE(readmsg)
@@ -1523,6 +1530,9 @@ AC_CONFIG_FILES([
  libproto/mailer/Makefile
  mda/Makefile
  mda/lib/Makefile
+ mda/lmtpd/Makefile
+ mda/mda/Makefile
+ mda/putmail/Makefile
  mail/Makefile
  mail/testsuite/Makefile
  libmailutils/auth/Makefile

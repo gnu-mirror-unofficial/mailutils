@@ -14,25 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-EXTRA_DIST = $(TESTSUITE_AT) testsuite package.m4 mhed movemsg
-DISTCLEANFILES       = atconfig $(check_SCRIPTS)
-MAINTAINERCLEANFILES = Makefile.in $(TESTSUITE)
-
-## ------------ ##
-## package.m4.  ##
-## ------------ ##
-
-$(srcdir)/package.m4: $(top_srcdir)/configure.ac
-	$(AM_V_GEN){                                      \
-	  echo '# Signature of the current package.'; \
-	  echo 'm4_define([AT_PACKAGE_NAME],      [@PACKAGE_NAME@])'; \
-	  echo 'm4_define([AT_PACKAGE_TARNAME],   [@PACKAGE_TARNAME@])'; \
-	  echo 'm4_define([AT_PACKAGE_VERSION],   [@PACKAGE_VERSION@])'; \
-	  echo 'm4_define([AT_PACKAGE_STRING],    [@PACKAGE_STRING@])'; \
-	  echo 'm4_define([AT_PACKAGE_BUGREPORT], [@PACKAGE_BUGREPORT@])'; \
-	} >$(srcdir)/package.m4
-
-#
+include $(top_srcdir)/testsuite/testsuite.am
+EXTRA_DIST += mhed movemsg
 
 ## -------------------------- ##
 ## Non-installable programs   ##
@@ -41,11 +24,7 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@
 noinst_PROGRAMS = lu
 
-## ------------ ##
-## Test suite.  ##
-## ------------ ##
-
-TESTSUITE_AT = \
+TESTSUITE_AT += \
  ali.at\
  anno.at\
  burst.at\
@@ -70,28 +49,7 @@ TESTSUITE_AT = \
  refile.at\
  repl.at\
  rmf.at\
- rmm.at\
- testsuite.at
+ rmm.at
 
-TESTSUITE = $(srcdir)/testsuite
-M4=m4
-
-AUTOTEST = $(AUTOM4TE) --language=autotest
-$(TESTSUITE): package.m4 $(TESTSUITE_AT) $(top_srcdir)/testsuite/testsuite.inc
-	$(AM_V_GEN)$(AUTOTEST) -I $(srcdir) -I $(top_srcdir)/testsuite testsuite.at -o $@.tmp
-	$(AM_V_at)mv $@.tmp $@
-
-atconfig: $(top_builddir)/config.status
-	cd $(top_builddir) && ./config.status tests/$@
-
-clean-local:
-	@test ! -f $(TESTSUITE) || $(SHELL) $(TESTSUITE) --clean
-
-check-local: atconfig atlocal $(TESTSUITE) 
-	@$(SHELL) $(TESTSUITE)
-
-# Run the test suite on the *installed* tree.
-#installcheck-local:
-#	$(SHELL) $(TESTSUITE) AUTOTEST_PATH=$(exec_prefix)/bin
 
 

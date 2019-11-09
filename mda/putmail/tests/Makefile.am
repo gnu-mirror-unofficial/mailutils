@@ -15,36 +15,6 @@
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 include $(top_srcdir)/testsuite/testsuite.am
-EXTRA_DIST += moderator.mbox
-TESTSUITE_AT += \
-  action.at\
-  addheader.at\
-  address.at\
-  allof.at\
-  anyof.at\
-  delheader.at\
-  compile.at\
-  enc-char.at\
-  envelope.at\
-  environment.at\
-  exists.at\
-  ext.at\
-  false.at\
-  header.at\
-  i-casemap.at\
-  i-numeric.at\
-  i-octet.at\
-  list.at\
-  moderator.at\
-  mul-addr.at\
-  not.at\
-  pipeact.at\
-  pipetest.at\
-  redirect.at\
-  reject.at\
-  relational.at\
-  size.at\
-  true.at\
-  vacation.at\
-  variables.at\
-  version.at
+AUTOTEST_INCLUDES += -I $(srcdir)/../../tests
+TESTSUITE_AT += putmail.at
+

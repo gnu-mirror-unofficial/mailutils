@@ -1,4 +1,3 @@
-# This file is part of GNU Mailutils.
 # Copyright (C) 2007-2019 Free Software Foundation, Inc.
 #
 # GNU Mailutils is free software; you can redistribute it and/or
@@ -14,37 +13,36 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-include $(top_srcdir)/testsuite/testsuite.am
-EXTRA_DIST += moderator.mbox
-TESTSUITE_AT += \
-  action.at\
-  addheader.at\
-  address.at\
-  allof.at\
-  anyof.at\
-  delheader.at\
-  compile.at\
-  enc-char.at\
-  envelope.at\
-  environment.at\
-  exists.at\
-  ext.at\
-  false.at\
-  header.at\
-  i-casemap.at\
-  i-numeric.at\
-  i-octet.at\
-  list.at\
-  moderator.at\
-  mul-addr.at\
-  not.at\
-  pipeact.at\
-  pipetest.at\
-  redirect.at\
-  reject.at\
-  relational.at\
-  size.at\
-  true.at\
-  vacation.at\
-  variables.at\
-  version.at
+SUBDIRS = . tests
+
+sbin_PROGRAMS = lmtpd
+
+lmtpd_SOURCES = lmtpd.c
+
+AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ -I${srcdir}/../lib
+
+if MU_COND_DBM
+ LIBMU_DBM=${top_builddir}/libmu_dbm/libmu_dbm.la
+endif
+
+lmtpd_LDADD = \
+ ../lib/libmda.a\
+ ${top_builddir}/lib/libmuscript.a\
+ ${MU_APP_LIBRARIES}\
+ ${MU_LIB_SIEVE}\
+ ${MU_LIB_MAILBOX}\
+ ${MU_LIB_AUTH}\
+ ${MU_LIB_MAILER}\
+ @MU_AUTHLIBS@\
+ ${MU_LIB_MAILUTILS} \
+ @MU_COMMON_LIBRARIES@\
+ @LIBMU_SCM@\
+ @LIBMU_SCM_DEPS@\
+ @MU_LIB_PY@\
+ $(LIBMU_DBM)\
+ @GUILE_LIBS@\
+ @PYTHON_LIBS@\
+ @DBMLIBS@\
+ @MU_TCPWRAP_LIBRARIES@
+
+

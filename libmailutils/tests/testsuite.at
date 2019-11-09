@@ -182,6 +182,9 @@ m4_include([xscript.at])
 
 m4_include([list.at])
 m4_include([address.at])
+
+AT_BANNER(Wordsplit)
+
 m4_include([wordsplit.at])
 m4_include([exp.at])
 m4_include([url.at])

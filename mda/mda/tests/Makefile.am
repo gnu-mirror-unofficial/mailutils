@@ -15,19 +15,41 @@
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 include $(top_srcdir)/testsuite/testsuite.am
+AUTOTEST_INCLUDES += -I $(srcdir)/../../tests
+TESTSUITE_AT += mda.at forward.at
 
-TESTSUITE_AT +=\
- D.at\
- align.at\
- cols00.at\
- cols01.at\
- copy00.at\
- copy01.at\
- copy02.at\
- copy03.at\
- copy04.at\
- nohome.at\
- hold.at\
- testsuite.at\
- version.at
+noinst_PROGRAMS = testmda
+testmda_SOURCES = testmda.c
+testmda.c: ${srcdir}/../mda.c
+	cp ${srcdir}/../mda.c testmda.c
+BUILT_SOURCES = testmda.c
+if MU_COND_DBM
+ LIBMU_DBM=${top_builddir}/libmu_dbm/libmu_dbm.la
+endif
+LDADD = \
+ ${builddir}/../../lib/libmda.a\
+ ${top_builddir}/lib/libmuscript.a\
+ ${MU_APP_LIBRARIES}\
+ ${MU_LIB_SIEVE}\
+ ${MU_LIB_MAILBOX}\
+ ${MU_LIB_AUTH}\
+ ${MU_LIB_MAILER}\
+ @MU_AUTHLIBS@\
+ ${MU_LIB_MAILUTILS} \
+ @MU_COMMON_LIBRARIES@\
+ @LIBMU_SCM@\
+ @LIBMU_SCM_DEPS@\
+ @MU_LIB_PY@\
+ $(LIBMU_DBM)\
+ @GUILE_LIBS@\
+ @PYTHON_LIBS@\
+ @DBMLIBS@
+
+AM_CPPFLAGS = \
+ -I${top_srcdir}\
+ @MU_APP_COMMON_INCLUDES@\
+ -I${srcdir}/../../lib\
+ -DTESTSUITE_CONFIG_FILE=\"testmda.conf\"
+
+
 

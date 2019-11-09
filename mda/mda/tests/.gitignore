@@ -5,3 +5,4 @@ testsuite
 testsuite.dir
 testsuite.log
 testmda
+testmda.c

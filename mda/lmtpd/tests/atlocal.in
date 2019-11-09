@@ -1,0 +1,6 @@
+# @configure_input@                                     -*- shell-script -*-
+# Configurable variable values for Mailutils test suite.
+# Copyright (C) 2004-2019 Free Software Foundation, Inc.
+
+PATH=@abs_builddir@/..:$PATH
+INPUT_MSG=$abs_top_srcdir/mda/tests/input.msg
