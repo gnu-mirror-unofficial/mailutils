@@ -50,9 +50,7 @@ cat > experr <<EOT
 testmda: notice: skipping forward file $forward: already processed
 EOT
 
-echo ENVELOPE > expout.0
-cat $INPUT_MSG >> expout.0
-echo "" >> expout.0
+cat $INPUT_MSG > expout.0
 
 echo "ENVELOPE FROM: gulliver@example.net" > expout.1
 echo "ENVELOPE TO: <foo@bar.baz>" >> expout.1
@@ -67,12 +65,8 @@ testmda --from gulliver@example.net $1 < $INPUT_MSG || exit $?
 
 for name in $namelist
 do
-  if test -f spool/$name; then
-    sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/$name | \
+  dumpmail spool/$name | \
       cmp expout.0 - >/dev/null || echo "$name mailbox mismatch" >&2
-  else
-    echo "$name missed message" >&2
-  fi
 done
 
 if test -f mta.diag; then

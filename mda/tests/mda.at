@@ -25,13 +25,11 @@ AT_SETUP([mda])
 AT_KEYWORDS([mda mda0])
 
 AT_CHECK([
-echo ENVELOPE > expout
-cat $INPUT_MSG >> expout
-echo "" >> expout
+cat $INPUT_MSG > expout
 mkdir spool
 TESTMDA_CONF
 testmda --from gulliver@example.net root < $INPUT_MSG || exit $?
-sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/root
+dumpmail spool/root
 ],
 [0],
 [expout])
@@ -43,13 +41,29 @@ AT_SETUP([mda, explicit envelope])
 AT_KEYWORDS([mda mda1])
 
 AT_CHECK([
-echo "From gulliver Thu Oct  7 19:10:57 2010" > expout
-cat $INPUT_MSG >> expout
+date="Thu Oct  7 19:10:57 2010"
+envelope="From gulliver $date"
+echo $envelope > msg
+cat $INPUT_MSG >> msg
+cat $INPUT_MSG > expout
 mkdir spool
 TESTMDA_CONF
-testmda  --from gulliver@example.net root < expout || exit $?
-echo "" >> expout
-cat spool/root
+testmda  --from gulliver@example.net root < msg || exit $?
+dumpmail spool/root
+case $MU_DEFAULT_SCHEME in
+mbox)
+    head -1 spool/root
+    echo $envelope >> expout
+    ;;
+mh)    
+    sed -n -e '/^X-Envelope-Date: */s///p' spool/root/1
+    echo $date >> expout
+    ;;
+maildir)
+    sed -n -e '/^X-Envelope-Date: */s///p' $(find spool/root/new -type f | head -n 1)
+    echo $date >> expout
+    ;;
+esac
 ],
 [0],
 [expout])
