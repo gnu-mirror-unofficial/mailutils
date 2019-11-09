@@ -19,7 +19,7 @@ AM_CPPFLAGS = @MU_APP_COMMON_INCLUDES@
 sbin_PROGRAMS = pop3d
 bin_PROGRAMS = @POPAUTH@
 EXTRA_PROGRAMS = popauth
-SUBDIRS = testsuite
+SUBDIRS = . testsuite
 
 pop3d_SOURCES =\
  apop.c\

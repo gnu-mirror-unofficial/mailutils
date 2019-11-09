@@ -15,7 +15,7 @@
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 AM_CPPFLAGS = @MU_APP_COMMON_INCLUDES@ @MU_AUTHINCS@ @SERV_AUTHINCS@ 
-SUBDIRS = tests
+SUBDIRS = . tests
 
 sbin_PROGRAMS =	imap4d
 
