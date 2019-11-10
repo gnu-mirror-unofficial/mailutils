@@ -81,8 +81,8 @@ struct _mu_msgset;
 struct mu_sockaddr; /* defined in mailutils/sockaddr.h */  
 struct mu_cidr;     /* defined in mailutils/cidr.h */  
   
-typedef _MU_OFF_TYPE_ mu_off_t;
-#define MU_PRI_OFF_T "_MU_PRI_OFF_T_"
+typedef @MU_OFF_TYPE@ mu_off_t;
+#define MU_PRI_OFF_T "@MU_PRI_OFF_T@"
   
 typedef struct mu_address *mu_address_t;
 typedef struct _mu_attribute *mu_attribute_t;
@@ -152,7 +152,7 @@ mu_prstr (char const *s)
   return s ? s : "";
 }
   
-#define MU_DEFAULT_RECORD _MU_DEFAULT_RECORD_
+#define MU_DEFAULT_RECORD @MU_DEFAULT_RECORD@
 
 #ifdef __cplusplus
 }

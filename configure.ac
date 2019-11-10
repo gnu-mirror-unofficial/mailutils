@@ -1362,7 +1362,10 @@ AC_ARG_WITH([mh-bindir],
 
 test -z "$server_list" && server_list=" [NONE]"
 test -z "$client_list" && client_list=" [NONE]"
-		    
+
+# Create the installable types.h
+AC_CONFIG_FILES([include/mailutils/types.h:include/mailutils/types.hin])
+
 # Initialize the (autotest) test suite.
 
 AC_CONFIG_TESTDIR(testsuite)
