@@ -107,20 +107,11 @@ enum mu_buffer_type
 #define MU_IOCTL_LOGSTREAM_GET_SEVERITY 0
 #define MU_IOCTL_LOGSTREAM_SET_SEVERITY 1
 
-  /* The following two subcommands are deprecated and provided for
-     backward compatibility.  Please use the MU_IOCTL_LOGSTREAM_GET_LOCUS_RANGE
-     and MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE instead. */
-  /* Get or set locus.
-     Arg: struct mu_locus_DEPRECATED *
+  /* Codes 2 and 3 are unused now.
+     For their prior use, see
+      http://mailutils.org/wiki/Source_location_API#Deprecated_interface
   */
-#define MU_IOCTL_LOGSTREAM_GET_LOCUS_DEPRECATED    2
-#define MU_IOCTL_LOGSTREAM_SET_LOCUS_DEPRECATED    3
 
-int mu_ioctl_logstream_get_locus_deprecated (void) MU_DEPRECATED;
-#define MU_IOCTL_LOGSTREAM_GET_LOCUS mu_ioctl_logstream_get_locus_deprecated ()
-int mu_ioctl_logstream_set_locus_deprecated (void) MU_DEPRECATED;
-#define MU_IOCTL_LOGSTREAM_SET_LOCUS mu_ioctl_logstream_set_locus_deprecated ()
-  
   /* Get or set log mode.
      Arg: int *
   */

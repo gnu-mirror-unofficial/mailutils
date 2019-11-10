@@ -154,25 +154,6 @@ mu_prstr (char const *s)
   
 #define MU_DEFAULT_RECORD _MU_DEFAULT_RECORD_
 
-/* This structure used to be called mu_locus in mailutils up to
-   3.2.91-46 [release-3.2-71-g719e64a].  It is superseded by
-   structs mu_locus_point and mu_locus_range, defined in
-   <mailutils/locus.h>. 
-
-   This definition is provided for backward compatibility.  Authors are
-   urged to switch to the new API as soon as their time permits.
-
-   Please see http://mailutils.org/wiki/Source_location_API#Deprecated_interface
-   for detailed guidelines.
-*/
-struct mu_locus_DEPRECATED
-{
-  char *mu_file;
-  unsigned mu_line;
-  unsigned mu_col;
-};
-#define mu_locus mu_locus_DEPRECATED  
-
 #ifdef __cplusplus
 }
 #endif
