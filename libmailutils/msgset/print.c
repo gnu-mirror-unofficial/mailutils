@@ -104,10 +104,4 @@ mu_stream_msgset_format (mu_stream_t str, struct mu_msgset_format const *fmt,
     return rc;
   return mu_list_foreach (mset->list, _msgrange_printer, &env);
 }
-
-int
-mu_msgset_print (mu_stream_t str, mu_msgset_t mset)
-{
-  return mu_stream_msgset_format (str, mu_msgset_fmt_imap, mset);
-}
     
