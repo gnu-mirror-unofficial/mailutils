@@ -480,39 +480,6 @@ mu_address_sget_email (mu_address_t addr, size_t no, char const **sptr)
 DECL_GET(email)
 DECL_AGET(email)
 
-size_t
-mu_address_format_string (mu_address_t addr, char *buf, size_t buflen)
-{
-  mu_stream_t str;
-  int rc;
-  
-  if (!buf)
-    rc = mu_nullstream_create (&str, MU_STREAM_WRITE);
-  else
-    rc = mu_fixed_memory_stream_create (&str, buf, buflen, MU_STREAM_WRITE);
-  if (rc == 0)
-    {
-      size_t size;
-      
-      mu_stream_stat_buffer statbuf;
-      mu_stream_set_stat (str, MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUT),
-			  statbuf);
-      rc = mu_stream_format_address (str, addr);
-      mu_stream_destroy (&str);
-      if (rc)
-	return 0;
-      size = statbuf[MU_STREAM_STAT_OUT];
-      if (buf)
-	{
-	  if (size + 1 >= buflen)
-	    size = buflen - 1;
-	  buf[size] = 0;
-	}
-      return size;
-    }
-  return 0;
-}
-
 static int
 _address_is_group (mu_address_t addr)
 {
@@ -629,12 +596,6 @@ mu_address_get_printable (mu_address_t addr, char *buf, size_t len, size_t *n)
 	*n = i;
     }
   return rc;
-}
-
-int
-mu_address_to_string (mu_address_t addr, char *buf, size_t len, size_t *n)
-{
-  return mu_address_get_printable (addr, buf, len, n);
 }
 
 int

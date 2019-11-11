@@ -133,7 +133,6 @@ extern int mu_message_set_header (mu_message_t, mu_header_t, void *);
 extern int mu_message_get_body (mu_message_t, mu_body_t *);
 extern int mu_message_set_body (mu_message_t, mu_body_t, void *);
 
-extern int mu_message_get_stream (mu_message_t, mu_stream_t *) MU_DEPRECATED;
 extern int mu_message_get_streamref (mu_message_t, mu_stream_t *);
 
 extern int mu_message_set_stream (mu_message_t, mu_stream_t, void *);

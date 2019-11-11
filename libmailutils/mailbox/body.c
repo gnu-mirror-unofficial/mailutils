@@ -346,13 +346,6 @@ body_get_stream (mu_body_t body, mu_stream_t *pstream, int ref)
 }
 
 int
-mu_body_get_stream (mu_body_t body, mu_stream_t *pstream)
-{
-  /* FIXME: Deprecation warning */
-  return body_get_stream (body, pstream, 0);
-}
-
-int
 mu_body_get_streamref (mu_body_t body, mu_stream_t *pstream)
 {
   return body_get_stream (body, pstream, 1);

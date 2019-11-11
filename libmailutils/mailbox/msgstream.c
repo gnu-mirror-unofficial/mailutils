@@ -314,39 +314,6 @@ mkoutstream (mu_message_t msg)
   return status;
 }
 
-
-int
-mu_message_get_stream (mu_message_t msg, mu_stream_t *pstream)
-{
-  int status;
-
-  if (msg == NULL)
-    return EINVAL;
-  if (pstream == NULL)
-    return MU_ERR_OUT_PTR_NULL;
-
-  /* FIXME: Deprecation warning */
-
-  if (msg->rawstream == NULL)
-    {
-      if (msg->_get_stream)
-	{
-	  status = msg->_get_stream (msg, &msg->rawstream);
-	  if (status)
-	    return status;
-	}
-      else
-	{
-	  status = mkoutstream (msg);
-	  if (status)
-	    return status;
-	  status = mu_streamref_create (&msg->rawstream, msg->outstream);
-	}
-    }
-  *pstream = msg->rawstream;
-  return 0;
-}
-
 int
 mu_message_get_streamref (mu_message_t msg, mu_stream_t *pstream)
 {

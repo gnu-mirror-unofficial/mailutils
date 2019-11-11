@@ -70,7 +70,6 @@ extern int  mu_mailbox_messages_recent (mu_mailbox_t, size_t *);
 extern int  mu_mailbox_message_unseen  (mu_mailbox_t, size_t *);
 extern int  mu_mailbox_expunge         (mu_mailbox_t);
 extern int  mu_mailbox_sync            (mu_mailbox_t);  
-extern int  mu_mailbox_save_attributes (mu_mailbox_t) MU_DEPRECATED;
 
 extern int  mu_mailbox_attach_ticket (mu_mailbox_t mbox);
 

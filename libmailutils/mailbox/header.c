@@ -1214,8 +1214,8 @@ header_size (mu_stream_t str, mu_off_t *psize)
   return status;
 }
 
-static int
-_header_get_stream (mu_header_t header, mu_stream_t *pstream, int ref)
+int
+mu_header_get_streamref (mu_header_t header, mu_stream_t *pstream)
 {
   if (header == NULL)
     return EINVAL;
@@ -1238,25 +1238,7 @@ _header_get_stream (mu_header_t header, mu_stream_t *pstream, int ref)
       str->hdr = header;
       header->stream = (mu_stream_t) str;
     }
-  if (!ref)
-    {
-      *pstream = header->stream;
-      return 0;
-    }
   return mu_streamref_create (pstream, header->stream);
-}
-
-int
-mu_header_get_stream (mu_header_t header, mu_stream_t *pstream)
-{
-  /* FIXME: Deprecation warning */
-  return _header_get_stream (header, pstream, 0);
-}
-
-int
-mu_header_get_streamref (mu_header_t header, mu_stream_t *pstream)
-{
-  return _header_get_stream (header, pstream, 1);
 }
 
 

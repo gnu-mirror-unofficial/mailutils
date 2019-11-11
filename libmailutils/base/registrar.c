@@ -94,20 +94,6 @@ _registrar_get_list (mu_list_t *plist)
   return status;
 }
 
-/* Provided for backward compatibility */
-int
-mu_registrar_get_list (mu_list_t *plist)
-{
-  static int warned;
-
-  if (!warned)
-    {
-      mu_error (_("program uses mu_registrar_get_list(), which is deprecated"));
-      warned = 1;
-    }
-  return _registrar_get_list (plist);
-}
-
 int
 mu_registrar_get_iterator (mu_iterator_t *pitr)
 {

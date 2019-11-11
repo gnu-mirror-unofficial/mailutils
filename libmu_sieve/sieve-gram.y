@@ -1585,19 +1585,4 @@ mu_sieve_compile_text (mu_sieve_machine_t mach,
   return with_machine (mach, sieve_compile_strbuf, &buf);
 }
 
-int
-mu_sieve_compile_buffer (mu_sieve_machine_t mach,
-			 const char *buf, int bufsize,
-			 const char *fname, int line)
-{
-  int rc;
-  struct mu_locus_point loc = MU_LOCUS_POINT_INITIALIZER;
-  mu_locus_point_set_file (&loc, fname);
-  loc.mu_line = line;
-  rc = mu_sieve_compile_text (mach, buf, bufsize, &loc);
-  mu_locus_point_deinit (&loc);
-  return rc;
-}
-
-
 

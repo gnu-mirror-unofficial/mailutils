@@ -732,18 +732,6 @@ mu_mailer_set_stream (mu_mailer_t mailer, mu_stream_t stream)
 }
 
 int
-mu_mailer_get_stream (mu_mailer_t mailer, mu_stream_t * pstream)
-{
-  /* FIXME: Deprecation warning */
-  if (mailer == NULL)
-    return EINVAL;
-  if (pstream == NULL)
-    return MU_ERR_OUT_PTR_NULL;
-  *pstream = mailer->stream;
-  return 0;
-}
-
-int
 mu_mailer_get_streamref (mu_mailer_t mailer, mu_stream_t * pstream)
 {
   if (mailer == NULL)

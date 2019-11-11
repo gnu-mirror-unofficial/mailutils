@@ -85,8 +85,6 @@ int mu_msgset_parse_imap (mu_msgset_t set, int mode, const char *s,
 int mu_stream_msgset_format (mu_stream_t str,
 			     struct mu_msgset_format const *fmt,
 			     mu_msgset_t mset);
-int mu_msgset_print (mu_stream_t str, mu_msgset_t msgset)
-  MU_DEPRECATED;
 
 static inline int
 mu_msgset_imap_print (mu_stream_t str, mu_msgset_t mset)

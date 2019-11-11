@@ -146,16 +146,6 @@ extern int mu_address_union (mu_address_t *a, mu_address_t b);
   
 extern int mu_stream_format_address (mu_stream_t str, mu_address_t addr);
 
-  /* Deprecated calls */
-  
-extern int mu_address_to_string (mu_address_t, char *, size_t, size_t *)
-  MU_DEPRECATED; /* Use mu_address_get_printable, if you really have to */
-  
-extern size_t mu_address_format_string (mu_address_t addr, char *buf,
-					size_t buflen)
-  MU_DEPRECATED; /* Use mu_stream_format_address, or any of the
-		    _get_printable functions */
-
 extern int mu_validate_email (mu_address_t subaddr);
 
   

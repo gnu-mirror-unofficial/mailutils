@@ -569,12 +569,6 @@ mu_mailbox_sync (mu_mailbox_t mbox)
 
 /* Historic alias: */
 int
-mu_mailbox_save_attributes (mu_mailbox_t mbox)
-{
-  return mu_mailbox_sync (mbox);
-}
-
-int
 mu_mailbox_expunge (mu_mailbox_t mbox)
 {
   _MBOX_CHECK_Q (mbox, _expunge);
