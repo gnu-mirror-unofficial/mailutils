@@ -64,7 +64,7 @@ get_received_date (mu_message_t msg, struct tm *tm, struct mu_timezone *tz)
 		  ; years, are prohibited in SMTP and MUST NOT be used.
   */
   p = strchr (val, ';');
-  if (*p)
+  if (p)
     {
       p = mu_str_skip_class (p + 1, MU_CTYPE_SPACE);
       if (*p && mu_scan_datetime (p, MU_DATETIME_SCAN_RFC822, tm, tz, NULL) == 0)
