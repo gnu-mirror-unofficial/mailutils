@@ -405,9 +405,13 @@ _smtp_set_rcpt (struct _smtp_mailer *smp, mu_message_t msg, mu_address_t to)
       
       if (smp->rcpt_to)
 	mu_address_get_count (smp->rcpt_to, &rcpt_cnt);
-      
+      else
+        rcpt_cnt = 0;
+
       if (smp->rcpt_bcc)
 	mu_address_get_count (smp->rcpt_bcc, &bcc_cnt);
+      else
+        bcc_cnt = 0;
 
       if (rcpt_cnt + bcc_cnt == 0)
 	status = MU_ERR_MAILER_NO_RCPT_TO;

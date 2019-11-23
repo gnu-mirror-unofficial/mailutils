@@ -32,7 +32,7 @@ static int print_stream (mu_stream_t, mu_stream_t);
 static int display_message (mu_message_t, msgset_t *msgset, void *closure);
 static int display_submessage (struct mime_descend_closure *closure,
 			       void *data);
-static int get_content_encoding (mu_header_t hdr, char **value);
+static void get_content_encoding (mu_header_t hdr, char **value);
 static void run_metamail (const char *mailcap, mu_message_t mesg);
 
 int
@@ -180,8 +180,6 @@ mime_descend (struct mime_descend_closure *closure,
 
   mu_message_get_header (closure->message, &hdr);
   util_get_hdr_value (hdr, MU_HEADER_CONTENT_TYPE, &type);
-  if (type == NULL)
-    type = mu_strdup ("text/plain");
   get_content_encoding (hdr, &encoding);
 
   closure->type = type;
@@ -339,10 +337,10 @@ print_stream (mu_stream_t stream, mu_stream_t out)
   return 0;
 }
 
-static int
+static void
 get_content_encoding (mu_header_t hdr, char **value)
 {
-  char *encoding = NULL;
+  char *encoding;
   util_get_hdr_value (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING, &encoding);
   if (encoding == NULL || *encoding == '\0')
     {
@@ -351,7 +349,6 @@ get_content_encoding (mu_header_t hdr, char **value)
       encoding = mu_strdup ("7bit"); /* Default.  */
     }
   *value = encoding;
-  return 0;
 }
 
 /* Run `metamail' program MAILCAP_CMD on the message MESG */

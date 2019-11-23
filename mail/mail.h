@@ -485,8 +485,8 @@ int util_tempfile (char **namep);
 void util_msgset_iterate (msgset_t *msgset, 
 			  int (*fun) (mu_message_t, msgset_t *, void *), 
 			  void *closure);
-int util_get_content_type (mu_header_t hdr, char **value, char **args);
-int util_get_hdr_value (mu_header_t hdr, const char *name, char **value);
+void util_get_content_type (mu_header_t hdr, char **value, char **args);
+void util_get_hdr_value (mu_header_t hdr, const char *name, char **value);
 int util_merge_addresses (char **addr_str, const char *value);
 int util_header_expand (mu_header_t *hdr);
 int util_get_message (mu_mailbox_t mbox, size_t msgno, mu_message_t *msg);

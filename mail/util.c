@@ -793,7 +793,7 @@ util_msgset_iterate (msgset_t *msgset,
     }
 }
 
-int
+void
 util_get_content_type (mu_header_t hdr, char **value, char **args)
 {
   char *type = NULL;
@@ -816,16 +816,21 @@ util_get_content_type (mu_header_t hdr, char **value, char **args)
 	}
     }
   *value = type;
-  return 0;
 }
 
-int
+void
 util_get_hdr_value (mu_header_t hdr, const char *name, char **value)
 {
   int status = mu_header_aget_value_unfold (hdr, name, value);
   if (status == 0)
     mu_rtrim_class (*value, MU_CTYPE_SPACE);
-  return status;
+  else
+    {
+      if (status != MU_ERR_NOENT)
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_header_aget_value_unfold", name,
+			 status);
+      *value = NULL;
+    }
 }
 
 int
