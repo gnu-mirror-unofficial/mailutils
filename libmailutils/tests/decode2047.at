@@ -21,7 +21,8 @@ dnl
 m4_pushdef([TESTDEC2047],[
 m4_pushdef([MU_TEST_GROUP],[Decode 2047])
 m4_pushdef([MU_TEST_KEYWORDS],[decode2047 decode])
-m4_pushdef([MU_TEST_COMMAND],[decode2047 -p])
+m4_pushdef([MU_TEST_COMMAND],[decode2047 -p -c]dnl
+ m4_bpatsubst([$3],[=\?\([^?]+\)\?.*],[\1]))
 MU_GENERIC_TEST([$1],[$2],[$3],[],[$4],[$5])
 m4_popdef([MU_TEST_COMMAND])
 m4_popdef([MU_TEST_KEYWORDS])
