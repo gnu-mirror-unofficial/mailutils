@@ -692,6 +692,7 @@ run_user_action (const char *device, mu_message_t msg)
 	  env.locus.beg.mu_file = "<default>";
 	  env.locus.beg.mu_line = 1;
 	  env.locus.beg.mu_col = 0;
+	  memset (&env.locus.end, 0, sizeof env.locus.end);
 	  eval_biffrc (&env);
 	  mu_stream_destroy (&env.input);
 	}
