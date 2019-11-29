@@ -66,7 +66,13 @@ transcmp (const void *a, const void *b)
 {
   struct dirtrans const *trans1 = a;
   struct dirtrans const *trans2 = b;
-  return strcmp (trans1->dir, trans2->dir);
+  size_t l1 = strlen (trans1->dir);
+  size_t l2 = strlen (trans2->dir);
+  if (l1 < l2)
+    return 1;
+  else if (l1 > l2)
+    return -1;
+  return strcmp (trans2->dir, trans1->dir);
 }
 
 static void
@@ -128,6 +134,8 @@ main (int argc, char **argv)
   newdir (getenv ("PWD"), ".");
   newdir (mu_getcwd (), ".");
 
+  mu_list_sort (translist, NULL);
+  
   MU_ASSERT (mu_list_get_iterator (translist, &itr));
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {

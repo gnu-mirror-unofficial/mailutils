@@ -25,7 +25,7 @@ export MAIL=inbox
 export MBOX=mbox
 > $MBOX
 CWD=$(pwd)
-MUT_MAIL_CMD -N -E "set folder=$CWD" < rc | sed -e 's/  *$//' -e "s|$CWD/||"
+MUT_MAIL_CMD -N -E "set folder=$CWD" < rc | cwdrepl | sed -e 's/  *$//' 
 $3
 ],
 [0],
@@ -67,8 +67,8 @@ To: Alice  <alice@wonder.land>
 Subject: Invitation
 
 Have some wine
-Saved 1 message in mbox
-Held 1 message in inbox
+Saved 1 message in ./mbox
+Held 1 message in ./inbox
 == inbox ==
 From alice@wonder.land Mon Jul 29 22:00:09 2002
 From: Alice  <alice@wonder.land>
@@ -104,7 +104,7 @@ To: Alice  <alice@wonder.land>
 Subject: Invitation
 
 Have some wine
-Held 2 messages in inbox
+Held 2 messages in ./inbox
 == inbox ==
 From hare@wonder.land Mon Jul 29 22:00:08 2002
 From: March Hare  <hare@wonder.land>
@@ -136,8 +136,8 @@ catmbox mbox
 touch 1
 quit
 ],
-[Saved 1 message in mbox
-Held 1 message in inbox
+[Saved 1 message in ./mbox
+Held 1 message in ./inbox
 == inbox ==
 From alice@wonder.land Mon Jul 29 22:00:09 2002
 From: Alice  <alice@wonder.land>
@@ -168,7 +168,7 @@ catmbox mbox
 touch 1
 quit
 ],
-[Held 2 messages in inbox
+[Held 2 messages in ./inbox
 == inbox ==
 From hare@wonder.land Mon Jul 29 22:00:08 2002
 From: March Hare  <hare@wonder.land>
@@ -202,8 +202,8 @@ catmbox dest
 save 1 +dest
 quit
 ],
-["dest"   7/152
-Held 1 message in inbox
+["./dest"   7/152
+Held 1 message in ./inbox
 == inbox ==
 From alice@wonder.land Mon Jul 29 22:00:09 2002
 From: Alice  <alice@wonder.land>
@@ -237,9 +237,9 @@ catmbox dest
 save 1 +dest
 quit
 ],
-["dest"   7/152
-Saved 1 message in mbox
-Held 1 message in inbox
+["./dest"   7/152
+Saved 1 message in ./mbox
+Held 1 message in ./inbox
 == inbox ==
 From alice@wonder.land Mon Jul 29 22:00:09 2002
 From: Alice  <alice@wonder.land>
@@ -280,8 +280,8 @@ catmbox dest
 save 1 +dest
 quit
 ],
-["dest"   7/152
-Held 2 messages in inbox
+["./dest"   7/152
+Held 2 messages in ./inbox
 == inbox ==
 From hare@wonder.land Mon Jul 29 22:00:08 2002
 From: March Hare  <hare@wonder.land>
@@ -323,8 +323,8 @@ catmbox dest
 save 1 +dest
 quit
 ],
-["dest"   7/152
-Held 1 message in inbox
+["./dest"   7/152
+Held 1 message in ./inbox
 == inbox ==
 From alice@wonder.land Mon Jul 29 22:00:09 2002
 From: Alice  <alice@wonder.land>
