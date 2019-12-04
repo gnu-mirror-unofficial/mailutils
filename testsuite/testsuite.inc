@@ -69,3 +69,12 @@ fi
 m4_popdef([__basename])
 m4_popdef([__dst])
 ])
+
+m4_divert_text(PREPARE_TESTS,
+[# This setting is needed on FreeBSD to ensure the LD_LIBRARY_PATH overrides
+# the DT_RPATH tag in ELF header.  See
+# https://debbugs.gnu.org/cgi/bugreport.cgi?bug=27510
+# for details.
+LD_LIBRARY_PATH_RPATH=y
+export LD_LIBRARY_PATH_RPATH
+])
