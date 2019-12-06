@@ -1371,7 +1371,6 @@ AC_CONFIG_FILES([include/mailutils/types.h:include/mailutils/types.hin])
 AC_CONFIG_TESTDIR(testsuite)
 AC_CONFIG_FILES([testsuite/Makefile testsuite/atlocal])
 
-AC_CONFIG_FILES([testsuite/package.m4])
 MU_CONFIG_TESTSUITE(libmailutils)
 MU_CONFIG_TESTSUITE(frm)
 MU_CONFIG_TESTSUITE(mda/lmtpd)

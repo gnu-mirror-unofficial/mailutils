@@ -16,10 +16,8 @@
 
 include $(srcdir)/testsuite.am
 
-DISTCLEANFILES       += package.m4
 EXTRA_DIST += \
  package.m4 \
- package.m4.in \
  testsuite.inc\
  testsuite.am\
  lib\
@@ -28,6 +26,20 @@ EXTRA_DIST += \
  folder\
  maildir\
  mh 
+
+## ------------ ##
+## package.m4.  ##
+## ------------ ##
+
+$(srcdir)/package.m4: $(top_srcdir)/configure.ac
+	$(AM_V_GEN){                                      \
+          echo '# Signature of the current package.'; \
+          echo 'm4_define([AT_PACKAGE_NAME],      [@PACKAGE_NAME@])'; \
+          echo 'm4_define([AT_PACKAGE_TARNAME],   [@PACKAGE_TARNAME@])'; \
+          echo 'm4_define([AT_PACKAGE_VERSION],   [@PACKAGE_VERSION@])'; \
+          echo 'm4_define([AT_PACKAGE_STRING],    [@PACKAGE_STRING@])'; \
+          echo 'm4_define([AT_PACKAGE_BUGREPORT], [@PACKAGE_BUGREPORT@])'; \
+        } >$(srcdir)/package.m4
 
 ## -------------------------- ##
 ## Non-installable programs
