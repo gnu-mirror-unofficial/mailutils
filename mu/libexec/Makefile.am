@@ -38,7 +38,7 @@ mailutils_cflags_CPPFLAGS = $(AM_CPPFLAGS)\
 mailutils_ldflags_SOURCES=ldflags.c
 mailutils_ldflags_CPPFLAGS = $(AM_CPPFLAGS)\
   -DLINK_FLAGS="\"-L$(libdir)\"" \
-  -DLINK_POSTFLAGS="\"$(MU_LINK_POSTFLAGS)\"" \
+  -DLINK_POSTFLAGS="\"$(MU_COMMON_LIBRARIES)\"" \
   -DAUTHLIBS="\"$(MU_AUTHLIBS)\"" \
   -DGUILE_LIBS="\"$(GUILE_LIBS)\"" \
   -DPYTHON_LIBS="\"$(PYTHON_LIBS)\"" \
@@ -49,7 +49,7 @@ if MU_COND_DBM
  pkglibexec_PROGRAMS += mailutils-dbm
  mailutils_dbm_SOURCES = dbm.c
  mailutils_dbm_LDFLAGS = \
- ${MU_APP_LIBRARIES}\
+ $(MU_APP_LIBRARIES)\
  ../../libmu_dbm/libmu_dbm.la\
  @DBMLIBS@\
  $(MUTOOL_LIBRARIES_TAIL)
@@ -60,12 +60,12 @@ if MU_COND_SUPPORT_POP
  mailutils_pop_SOURCES = pop.c
  mailutils_pop_CPPFLAGS = \
  $(AM_CPPFLAGS)\
- @MU_AUTHINCS@
+ $(MU_AUTHINCS)
  mailutils_pop_LDADD =\
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_POP}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_POP)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
  $(MUTOOL_LIBRARIES_TAIL)
 endif
 
@@ -74,53 +74,53 @@ if MU_COND_SUPPORT_IMAP
  mailutils_imap_SOURCES = imap.c
  mailutils_imap_CPPFLAGS = \
  $(AM_CPPFLAGS)\
- @MU_AUTHINCS@
+ $(MU_AUTHINCS)
  mailutils_imap_LDADD =\
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_IMAP}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_IMAP)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
  $(MUTOOL_LIBRARIES_TAIL)
 endif
 
 mailutils_send_SOURCES = send.c
 mailutils_send_CPPFLAGS = \
  $(AM_CPPFLAGS)\
- @MU_AUTHINCS@
+ $(MU_AUTHINCS)
 mailutils_send_LDADD = \
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
  $(MUTOOL_LIBRARIES_TAIL)
 
 mailutils_stat_SOURCES = stat.c
 mailutils_stat_LDADD = \
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
  $(MUTOOL_LIBRARIES_TAIL)
 
 mailutils_smtp_SOURCES = smtp.c
 mailutils_smtp_CPPFLAGS = \
  $(AM_CPPFLAGS)\
- @MU_AUTHINCS@
+ $(MU_AUTHINCS)
 mailutils_smtp_LDADD = \
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
  $(MUTOOL_LIBRARIES_TAIL)
 
 MUTOOL_LIBRARIES_TAIL = \
  ./libmutool.a\
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_MAILUTILS}\
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_MAILUTILS)\
  @READLINE_LIBS@\
- @MU_COMMON_LIBRARIES@
+ $(MU_COMMON_LIBRARIES)
 
-LDADD = ${MU_APP_LIBRARIES} $(MUTOOL_LIBRARIES_TAIL)
+LDADD = $(MU_APP_LIBRARIES) $(MUTOOL_LIBRARIES_TAIL)
 
 AM_CPPFLAGS = \
- @MU_APP_COMMON_INCLUDES@
+ $(MU_APP_COMMON_INCLUDES)

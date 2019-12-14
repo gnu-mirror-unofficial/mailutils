@@ -51,7 +51,7 @@ libstring_la_SOURCES = \
 EXTRA_DIST=to_sn.c to_un.c
 
 AM_CPPFLAGS = \
- @MU_LIB_COMMON_INCLUDES@\
- -I${srcdir}\
- -I${top_srcdir}/libmailutils\
- -I${top_srcdir}/libmailutils/wordsplit
+ $(MU_LIB_COMMON_INCLUDES)\
+ -I$(srcdir)\
+ -I$(top_srcdir)/libmailutils\
+ -I$(top_srcdir)/libmailutils/wordsplit

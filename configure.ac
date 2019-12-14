@@ -76,11 +76,11 @@ gl_EARLY
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_LN_S
-AC_LIBTOOL_DLOPEN
-AC_PROG_LIBTOOL
 MU_PROG_BISON
 MU_PROG_FLEX
-AM_PROG_LIBTOOL
+
+LT_PREREQ([2.4.6])
+LT_INIT
 
 ## Predefine several variables used to display configuration status
 status_pam=no
@@ -120,9 +120,6 @@ AC_CONFIG_LINKS(include/mailutils/sys/wordsplit.h:libmailutils/wordsplit/wordspl
 AH_BOTTOM([
 #define DEFAULT_TEXT_DOMAIN PACKAGE
 ])
-
-AC_SUBST(MU_LINK_POSTFLAGS,[`for opt in $LTLIBICONV; do case $opt in -[[lL]]*) echo $opt;; esac; done|tr '\n' ' '`])
-
 
 # Check for large file support
 AC_SYS_LARGEFILE
@@ -243,43 +240,30 @@ AC_ARG_WITH([gssapi],
             AC_HELP_STRING([--with-gssapi@<:@=PATH@:>@],
                            [use GSSAPI authentication]),
             [status_gssapi=$withval],
-            [status_gssapi=no])
+            [status_gssapi=probe])
 
-if test "x$status_gssapi" != "xno"; then
+if test "$status_gssapi" != "no"; then
   MU_CHECK_GSSAPI($status_gssapi)
   if test "$GSSAPI_IMPL" = "none"; then
     AC_CACHE_SAVE
     AC_MSG_RESULT([GSSAPI libraries not found])
+    if test "$status_gssapi" = probe; then
+      status_gssapi=no
+    else
+      AC_MSG_FAILURE([The requested GSSAPI library not found or is unusable])
+    fi
   else
-    # Output produced by `krb5-config --libs' may contain `-Wl,-rpath -Wl,DIR'
-    # options. Once they are added to SERV_AUTHLIBS, libtool, when creating
-    # relink command line in wrapper files for executables, places them at the
-    # beginnig of the option list and adds its own -rpath directives at
-    # the end. Executables created by such command will look for the runtime
-    # libraries first in DIR and then in the local tree subdirectories. Thus,
-    # if DIR contains libraries from a previous installation of Mailutils, the
-    # programs will use old libraries.
-    #
-    # Obviously, libtool should be fixed to place user-added -rpath directives
-    # after the ones added by it. For the time being I work around this bug by
-    # removing any -Wl directives from GSSAPI_LIBS.
-    #
-    for arg in $GSSAPI_LIBS
-    do
-      case $arg in
-      -Wl,*) ;;
-      *)     SERV_AUTHLIBS="$SERV_AUTHLIBS $arg"
-      esac
-    done
-    SERV_AUTHINCS="$SERV_AUTHINCS $GSSAPI_CFLAGS"
+    SERV_AUTHLIBS="${SERV_AUTHLIBS}${SERV_AUTHLIBS:+ }$GSSAPI_LIBS"
+    SERV_AUTHINCS="${SERV_AUTHINCS}${SERV_AUTHINCS:+ }$GSSAPI_CFLAGS"
     AC_DEFINE(WITH_GSSAPI,1,[Define if mailutils is using GSSAPI])
+    status_gssapi=yes
   fi
 fi
 AM_CONDITIONAL([MU_COND_GSSAPI],[test "$status_gssapi" = "yes"])
 
 MU_CHECK_GSASL(0.2.3, [
     AC_DEFINE(WITH_GSASL,1,[Define if mailutils is using GNU SASL])
-    MU_AUTHLIBS="$MU_AUTHLIBS $GSASL_LIBS"
+    MU_AUTHLIBS="${MU_AUTHLIBS}${MU_AUTHLIBS:+ }$GSASL_LIBS"
     status_gsasl=yes])
 AM_CONDITIONAL([MU_COND_GSASL],[test "$status_gsasl" = "yes"])
 
@@ -295,7 +279,7 @@ AC_ARG_WITH(cram-passwd,
             esac])
 
 MU_CHECK_GNUTLS([1.2.1],[
-  MU_AUTHLIBS="$MU_AUTHLIBS $TLS_LIBS"
+  MU_AUTHLIBS="${MU_AUTHLIBS}${MU_AUTHLIBS:+ }$TLS_LIBS"
   AC_DEFINE(WITH_GNUTLS,1,[Define if mailutils is using GNU TLS])
   AC_DEFINE(WITH_TLS,1,[Define if mailutils is using TLS])
   status_gnutls=yes
@@ -797,7 +781,7 @@ AC_DEFUN([MU_SQL_LDADD],[
   if test "$USE_LOADABLE_MODULES" = yes; then
     $1=$2
   else
-    SQLLIB="$SQLLIB $2" 
+    SQLLIB="${SQLLIB}${SQLLIB:+ }$2" 
   fi 			
 ])
 
@@ -939,9 +923,9 @@ if test -n "$SQL_MODULES"; then
   do
     ${module:-dummy}_init
     if test $USE_LOADABLE_MODULES = yes; then
-      SQL_LOADABLE_MODULES="$SQL_LOADABLE_MODULES ${module}.la"
+      SQL_LOADABLE_MODULES="${SQL_LOADABLE_MODULES}${SQL_LOADABLE_MODULES:+ }${module}.la"
     else
-      SQL_LIBOBJS="$SQL_LIBOBJS ${module}.o"
+      SQL_LIBOBJS="${SQL_LIBOBJS}${SQL_LIBOBJS:+ }${module}.o"
     fi
   done
   S=`echo "$SQL_LIBOBJS" |
@@ -974,7 +958,7 @@ if test $status_ldap = maybe; then
   AC_CHECK_LIB(ldap, ldap_bind,[
    status_ldap=yes
    AC_DEFINE(WITH_LDAP, 1, [Define to 1 if you want to use -lldap])
-   MU_AUTHLIBS="$MU_AUTHLIBS -lldap"],
+   MU_AUTHLIBS="${MU_AUTHLIBS}${MU_AUTHLIBS:+ }-lldap"],
    [status_ldap=no])
 fi
 
@@ -1020,7 +1004,7 @@ MU_ENABLE_SUPPORT(prog)
 # FIXME: Should be --with-radius 
 MU_ENABLE_SUPPORT(radius,
                   [AM_GNU_RADIUS(1.6,
-		                 [MU_AUTHLIBS="$MU_AUTHLIBS -lgnuradius"
+		                 [MU_AUTHLIBS="${MU_AUTHLIBS}${MU_AUTHLIBS:+ }-lgnuradius"
 				  mu_cv_enable_radius=yes],
 				 [mu_cv_enable_radius=no])]) 
 
@@ -1029,7 +1013,7 @@ if test x"$testpam" = x"yes"; then
 	if test x"$ac_cv_header_security_pam_appl_h" = x"yes"; then
 		AC_CHECK_LIB(dl, dlopen, [LDL=-ldl], [LDL=])
 		AC_CHECK_LIB(pam, pam_start,
-			[MU_AUTHLIBS="$MU_AUTHLIBS -lpam $LDL"
+			[MU_AUTHLIBS="${MU_AUTHLIBS}${MU_AUTHLIBS:+ }-lpam $LDL"
                          ac_cv_have_libpam="yes"],, $LDL)
 		AC_DEFINE(USE_LIBPAM,1,[Enable use of PAM])
 		status_pam=yes
@@ -1326,9 +1310,12 @@ MU_ENABLE_BUILD(pop3d,,,["$mu_build_servers" = yes],,[server_list])
 MU_ENABLE_BUILD(imap4d,,,["$mu_build_servers" = yes],,[server_list])
 MU_ENABLE_BUILD(comsat,,,["$mu_build_servers" = yes],,[server_list])
 
-MU_ENABLE_BUILD(mda,[mu_build_mda_tools=yes],,["$mu_build_servers" = yes],,[server_list])
-MU_ENABLE_BUILD(lmtpd,[mu_build_mda_tools=yes],,["$mu_build_servers" = yes],,[server_list])
-MU_ENABLE_BUILD(putmail,[mu_build_mda_tools=yes],,["$mu_build_clients" = yes],,[client_list])
+MU_ENABLE_BUILD(mda,[mu_build_mda_tools=yes],,
+                ["$mu_build_servers" = yes],,[server_list])
+MU_ENABLE_BUILD(lmtpd,[mu_build_mda_tools=yes],,
+                ["$mu_build_servers" = yes],,[server_list])
+MU_ENABLE_BUILD(putmail,[mu_build_mda_tools=yes],,
+                ["$mu_build_clients" = yes],,[client_list])
 AM_CONDITIONAL([MU_COND_MDA_TOOLS],[test "$mu_build_mda_tools" = yes])
 
 MU_ENABLE_BUILD(frm,,,["$mu_build_clients" = yes],,[client_list])

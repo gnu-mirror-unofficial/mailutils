@@ -42,8 +42,8 @@ pythonsite_PYTHON=\
 pythonexecdir=@PYTHON_EXEC_DIR@
 pythonexec_LTLIBRARIES = c_api.la
 c_api_la_LDFLAGS = -avoid-version -module -rpath $(pythonexecdir)
-c_api_la_LIBADD = $(PYTHON_LIBS) ${MU_LIB_PY}
+c_api_la_LIBADD = $(PYTHON_LIBS) $(MU_LIB_PY)
 c_api_la_SOURCES = c_api.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ @PYTHON_INCLUDES@\
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) @PYTHON_INCLUDES@\
  -I$(top_srcdir)/python/$(PYTHON_MAJOR)/libmu_py

@@ -39,5 +39,5 @@ libfilter_la_SOURCES =\
  qpflt.c\
  xml.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I${top_srcdir}/libmailutils
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I$(top_srcdir)/libmailutils
 

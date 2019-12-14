@@ -19,7 +19,7 @@ sbin_PROGRAMS = comsatd
 
 comsatd_SOURCES = action.c comsat.c comsat.h biff.rc.h
 AM_CPPFLAGS = \
- @MU_APP_COMMON_INCLUDES@\
+ $(MU_APP_COMMON_INCLUDES)\
  -DSYSCONFDIR=\"$(sysconfdir)\"
 
 BUILT_SOURCES=biff.rc.h
@@ -30,8 +30,8 @@ biff.rc.h: $(top_srcdir)/comsat/biff.rc
 	  $(top_srcdir)/comsat/biff.rc > biff.rc.h
 
 comsatd_LDADD = \
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_MAILUTILS}\
- @MU_COMMON_LIBRARIES@
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_MAILUTILS)\
+ $(MU_APP_LIBRARIES)\
+ $(MU_COMMON_LIBRARIES)
 

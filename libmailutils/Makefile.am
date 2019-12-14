@@ -50,7 +50,7 @@ lib_LTLIBRARIES = libmailutils.la
 libmailutils_la_SOURCES =  
 
 libmailutils_la_LIBADD = \
- @MU_COMMON_LIBRARIES@\
+ $(MU_COMMON_LIBRARIES)\
  auth/libauth.la\
  base/libbase.la\
  address/libaddress.la\

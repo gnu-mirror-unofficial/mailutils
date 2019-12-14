@@ -48,7 +48,7 @@ if MU_COND_SUPPORT_MAILDIR
   MU_FEATURES += -DMU_SUPPORT_MAILDIR
 endif
 
-mailutils.scm: mailutils.scm.in
+mailutils.scm: mailutils.scm.in $(top_builddir)/config.status
 	$(AM_V_GEN)m4 $(MU_FEATURES) $(srcdir)/mailutils.scm.in > $@
 
 

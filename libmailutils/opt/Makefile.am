@@ -23,4 +23,4 @@ libopt_la_SOURCES = \
  progname.c
 
 AM_CPPFLAGS = \
-  @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+  $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

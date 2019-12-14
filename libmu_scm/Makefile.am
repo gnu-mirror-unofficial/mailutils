@@ -16,7 +16,7 @@
 
 SUBDIRS = . mailutils tests
 
-AM_CPPFLAGS = -I. @MU_LIB_COMMON_INCLUDES@ @GUILE_INCLUDES@
+AM_CPPFLAGS = -I. $(MU_LIB_COMMON_INCLUDES) @GUILE_INCLUDES@
 
 lib_LTLIBRARIES=libmu_scm.la
 
@@ -42,9 +42,9 @@ libmu_scm_la_SOURCES=\
 
 libmu_scm_la_LDFLAGS = -rpath $(libdir) -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 libmu_scm_la_LIBADD = \
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_MAILUTILS}\
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_MAILUTILS)\
  @GUILE_LIBS@
 
 DOT_X_FILES=\

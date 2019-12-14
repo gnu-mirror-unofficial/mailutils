@@ -14,14 +14,14 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AM_CPPFLAGS = @MU_APP_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_APP_COMMON_INCLUDES) 
 
 bin_PROGRAMS = dotlock
 
 dotlock_LDADD = \
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_MAILUTILS}\
- @MU_COMMON_LIBRARIES@
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_MAILUTILS)\
+ $(MU_COMMON_LIBRARIES)
 
 install-exec-hook:
 	for i in $(bin_PROGRAMS); do\

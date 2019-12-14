@@ -14,12 +14,12 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-YLWRAP = @MU_YLWRAP@
+YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS = -dtv
 #AM_LEXFLAGS=-dvp
 AM_CPPFLAGS =\
- @MU_LIB_COMMON_INCLUDES@\
- -DMU_SIEVE_MODDIR=\"@MU_SIEVE_MODDIR@\"
+ $(MU_LIB_COMMON_INCLUDES)\
+ -DMU_SIEVE_MODDIR=\"$(MU_SIEVE_MODDIR)\"
 
 SUBDIRS = . extensions
 
@@ -45,7 +45,7 @@ libmu_sieve_la_SOURCES = \
  tests.c\
  util.c\
  variables.c
-libmu_sieve_la_LIBADD = ${MU_LIB_MAILUTILS} @LTDL_LIB@
+libmu_sieve_la_LIBADD = $(MU_LIB_MAILUTILS) @LTDL_LIB@
 libmu_sieve_la_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 
 noinst_HEADERS = sieve-priv.h sieve-gram.h

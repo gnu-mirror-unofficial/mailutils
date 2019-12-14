@@ -21,7 +21,7 @@ EXTRA_DIST += mhed movemsg
 ## Non-installable programs   ##
 ## -------------------------- ##
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES)
 noinst_PROGRAMS = lu
 
 TESTSUITE_AT += \

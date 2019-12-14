@@ -14,10 +14,10 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-YLWRAP = @MU_YLWRAP@
+YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS=-vt
 AM_CPPFLAGS = \
- @MU_APP_COMMON_INCLUDES@ @MU_AUTHINCS@\
+ $(MU_APP_COMMON_INCLUDES) $(MU_AUTHINCS)\
  -DSITE_MAIL_RC=\"@SITE_MAIL_RC@\"
 
 mailbindir=@MAILBINDIR@
@@ -25,13 +25,13 @@ mailbindir=@MAILBINDIR@
 mailbin_PROGRAMS = mail
 
 mail_LDADD = \
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}\
- @READLINE_LIBS@ @MU_COMMON_LIBRARIES@
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)\
+ @READLINE_LIBS@ $(MU_COMMON_LIBRARIES)
 
 EXTRA_DIST = msgset.c
 

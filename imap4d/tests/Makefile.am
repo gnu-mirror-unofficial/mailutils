@@ -20,9 +20,9 @@ include $(top_srcdir)/testsuite/testsuite.am
 ## Non-installable programs
 ## -------------------------- ##
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 noinst_PROGRAMS = ckiconv
-LDADD = ${MU_LIB_MAILUTILS}
+LDADD = $(MU_LIB_MAILUTILS)
 
 TESTSUITE_AT += \
  anystate.at\

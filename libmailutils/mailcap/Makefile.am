@@ -39,4 +39,4 @@ libmailcap_la_SOURCES = \
  parse.c\
  parsefile.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

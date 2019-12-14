@@ -14,11 +14,10 @@ AC_DEFUN([MU_CHECK_GSSAPI],
   GSSAPI_PREFIX=[$1]
   GSSAPI_IMPL="none"
   # First try krb5-config
-  if test "$GSSAPI_PREFIX" != "yes"; then
-    krb5_path="$GSSAPI_PREFIX/bin"
-  else
-    krb5_path="$PATH"
-  fi
+  case $GSSAPI_PREFIX in
+  yes|probe) krb5_path="$PATH";;
+  *)   krb5_path="$GSSAPI_PREFIX/bin"
+  esac
   AC_PATH_PROG(KRB5CFGPATH, krb5-config, none, $krb5_path)
   AC_CHECK_HEADER(gss.h, [wantgss=yes], [wantgss=no])
   if test $wantgss != no; then
@@ -47,12 +46,14 @@ int main() { return gss_check_version ("0.0.9") == (char*) 0; }],
     saved_CPPFLAGS="$CPPFLAGS"
     saved_LDFLAGS="$LDFLAGS"
     saved_LIBS="$LIBS"
-    if test "$GSSAPI_PREFIX" != "yes"; then
+    case $GSSAPI_PREFIX in
+    yes|probe) ;;
+    *)
       GSSAPI_CFLAGS="-I$GSSAPI_PREFIX/include"
       GSSAPI_LDFLAGS="-L$GSSAPI_PREFIX/lib"
       CPPFLAGS="$CPPFLAGS $GSSAPI_CFLAGS"
       LDFLAGS="$LDFLAGS $GSSAPI_LDFLAGS"
-    fi
+    esac
 
     ## Check for new MIT kerberos V support
     AC_CHECK_LIB(gssapi_krb5, gss_init_sec_context,

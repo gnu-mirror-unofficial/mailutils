@@ -20,7 +20,7 @@ include $(top_srcdir)/testsuite/testsuite.am
 ## Non-installable programs
 ## -------------------------- ##
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 noinst_PROGRAMS = \
  dm_mesg\
  dm_qget\
@@ -28,7 +28,7 @@ noinst_PROGRAMS = \
 dm_mesg_LDADD = -L$(top_builddir)/libmailutils/tests -lmu_tesh $(LDADD)
 dm_mesg_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/libmailutils/tests
 
-LDADD = ${MU_LIB_DOTMAIL} ${MU_LIB_MAILUTILS}
+LDADD = $(MU_LIB_DOTMAIL) $(MU_LIB_MAILUTILS)
 
 ## ------------ ##
 ## Test suite.  ##

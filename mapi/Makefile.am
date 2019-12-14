@@ -14,7 +14,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES)
 
 SUBDIRS = include
 
@@ -23,7 +23,7 @@ lib_LTLIBRARIES = libmapi.la
 /* FIXME:  This should be part of the default includes.  */
 EXTRA_DIST = mapi.h
 
-libmapi_LDADD = ../lib/libmuaux.la ${MU_LIB_MAILUTILS} 
+libmapi_LDADD = ../lib/libmuaux.la $(MU_LIB_MAILUTILS) 
 
 libmapi_la_SOURCES = \
  MAPIAddress.c \

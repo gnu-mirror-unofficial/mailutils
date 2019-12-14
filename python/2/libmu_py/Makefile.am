@@ -14,7 +14,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ $(PYTHON_INCLUDES)
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) $(PYTHON_INCLUDES)
 
 lib_LTLIBRARIES=libmu_py.la
 libmu_py_la_SOURCES = \
@@ -47,11 +47,13 @@ libmu_py_la_SOURCES = \
 libmu_py_la_LDFLAGS = -rpath $(libdir) \
  -export-symbols-regex '^(mu_py_|Py).*' \
  -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
-libmu_py_la_LIBADD = $(PYTHON_LIBS) @MU_COMMON_LIBRARIES@ \
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_SIEVE}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}
+libmu_py_la_LIBADD = \
+ $(PYTHON_LIBS) \
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_SIEVE)\
+ $(MU_AUTHLIBS)\
+ $(MU_COMMON_LIBRARIES) \
+ $(MU_LIB_MAILUTILS)
 

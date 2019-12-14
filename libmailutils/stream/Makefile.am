@@ -42,4 +42,4 @@ libstream_la_SOURCES = \
  wordwrap.c\
  xscript-stream.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

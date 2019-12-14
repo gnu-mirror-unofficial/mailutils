@@ -56,77 +56,77 @@ EXTRA_PROGRAMS = nntpclient
 ## will not create a shared library and `make check' will fail in
 ## sieve. Pity.
 ## -Sergey
-moddir=@MU_SIEVE_MODDIR@
+moddir=$(MU_SIEVE_MODDIR)
 mod_LTLIBRARIES = numaddr.la
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 
 LDADD = \
  ../lib/libmuaux.la\
- ${MU_LIB_MAILUTILS}\
- @MU_COMMON_LIBRARIES@
+ $(MU_LIB_MAILUTILS)\
+ $(MU_COMMON_LIBRARIES)
 
 numaddr_la_SOURCES = numaddr.c
-numaddr_la_LIBADD = ${MU_LIB_SIEVE}
+numaddr_la_LIBADD = $(MU_LIB_SIEVE)
 numaddr_la_LDFLAGS = -module -avoid-version -no-undefined -rpath '$(moddir)'
 
 msg_send_LDADD =\
  ../lib/libmuaux.la\
- ${MU_LIB_MAILER}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILER)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)
 
-mta_CPPFLAGS=@MU_LIB_COMMON_INCLUDES@ -I${top_srcdir}/lib -I${top_builddir}/lib
+mta_CPPFLAGS=$(MU_LIB_COMMON_INCLUDES) -I$(top_srcdir)/lib -I$(top_builddir)/lib
 mta_LDADD =\
  ../lib/libmuaux.la\
- ${MU_LIB_MBOX}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MBOX)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_MAILUTILS)
 
 sfrom_LDADD =\
  ../lib/libmuaux.la\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)
 
 mboxsize_LDADD =\
  ../lib/libmuaux.la\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)
 
 nntpclient_LDADD = \
  ../lib/libmuaux.la\
- ${MU_LIB_NNTP}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}\
+ $(MU_LIB_NNTP)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)\
  @READLINE_LIBS@
 
 lsf_LDADD = \
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@ \
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS) \
+ $(MU_LIB_MAILUTILS)
 
-muauth_CPPFLAGS = @MU_APP_COMMON_INCLUDES@
+muauth_CPPFLAGS = $(MU_APP_COMMON_INCLUDES)
 muauth_LDADD = \
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@ \
- ${MU_LIB_MAILUTILS}
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS) \
+ $(MU_LIB_MAILUTILS)
 
-muemail_CPPFLAGS = @MU_APP_COMMON_INCLUDES@
+muemail_CPPFLAGS = $(MU_APP_COMMON_INCLUDES)
 muemail_LDADD = \
- ${MU_APP_LIBRARIES} \
- ${MU_LIB_MAILUTILS}
+ $(MU_APP_LIBRARIES) \
+ $(MU_LIB_MAILUTILS)
 
-mboxidx_CPPFLAGS = @MU_APP_COMMON_INCLUDES@
+mboxidx_CPPFLAGS = $(MU_APP_COMMON_INCLUDES)
 mboxidx_LDADD=\
  ../lib/libmuaux.la\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@ \
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS) \
+ $(MU_LIB_MAILUTILS)

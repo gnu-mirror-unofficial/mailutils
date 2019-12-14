@@ -32,6 +32,6 @@ libdatetime_la_SOURCES = \
  utcoff.c\
  yd.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
-YLWRAP = @MU_YLWRAP@
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils
+YLWRAP = $(MU_YLWRAP)
 EXTRA_DIST = gylwrap.conf

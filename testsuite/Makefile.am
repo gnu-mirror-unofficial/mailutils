@@ -45,7 +45,7 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 ## Non-installable programs
 ## -------------------------- ##
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 noinst_PROGRAMS = \
  bs\
  cwdrepl\
@@ -58,18 +58,18 @@ noinst_PROGRAMS = \
  ufms
 
 LDADD = \
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)
 
 smtpsend_LDADD = \
- ${MU_LIB_MAILER} \
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILER) \
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)
 
-cwdrepl_LDADD = ${MU_LIB_MAILUTILS}
+cwdrepl_LDADD = $(MU_LIB_MAILUTILS)
 
 ## ------------ ##
 ## Test suite.  ##

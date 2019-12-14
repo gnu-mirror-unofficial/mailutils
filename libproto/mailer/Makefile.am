@@ -14,11 +14,11 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES)
 
 lib_LTLIBRARIES = libmu_mailer.la
 libmu_mailer_la_LDFLAGS=-version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
-libmu_mailer_la_LIBADD = ${MU_LIB_AUTH} ${MU_LIB_MAILUTILS} @INTLLIBS@
+libmu_mailer_la_LIBADD = $(MU_LIB_AUTH) $(MU_LIB_MAILUTILS) $(LTLIBINTL)
 
 if MU_COND_GSASL
   SMTP_GSASL=smtp_gsasl.c

@@ -25,7 +25,7 @@ libcfg_la_SOURCES = \
 
 localedir = $(datadir)/locale
 AM_CPPFLAGS = \
- @MU_LIB_COMMON_INCLUDES@ -I/libmailutils\
+ $(MU_LIB_COMMON_INCLUDES) -I/libmailutils\
  -DSYSCONFDIR=\"$(sysconfdir)\"\
  -DLOCALEDIR=\"$(localedir)\"
 
@@ -37,7 +37,7 @@ EXTRA_DIST = \
 
 BUILT_SOURCES = parser.c parser.h lexer.c
 
-YLWRAP = @MU_YLWRAP@
+YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS=-vdt
 AM_LFLAGS=-dp
 

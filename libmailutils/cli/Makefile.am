@@ -24,4 +24,4 @@ libcli_la_SOURCES = \
  stdcapa.c
 
 AM_CPPFLAGS = \
-  @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+  $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

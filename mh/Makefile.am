@@ -100,24 +100,24 @@ EXTRA_DIST = gylwrap.conf
 mhlibdir = $(pkgdatadir)/mh
 
 AM_CPPFLAGS =\
- @MU_APP_COMMON_INCLUDES@\
+ $(MU_APP_COMMON_INCLUDES)\
  -D_GNU_SOURCE -DMHLIBDIR=\"$(mhlibdir)\"\
  -DMHBINDIR=\"$(bindir)\"
 
 mh_LIBS = \
  ./libmh.a\
  ../lib/libmuaux.la\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}\
- @MU_COMMON_LIBRARIES@
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)\
+ $(MU_COMMON_LIBRARIES)
 LDADD = $(mh_LIBS)
 scan_LDADD = $(mh_LIBS) @CURSES_LIBS@
 pick_SOURCES = pick.c pick.h pick-gram.y pick-gram.h
 
-YLWRAP = @MU_YLWRAP@
+YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS=-vt
 
 inc_LDADD = \
@@ -126,14 +126,14 @@ inc_LDADD = \
  ../lib/libmuscript.a\
  @LIBMU_SCM@ @GUILE_LIBS@\
  @LIBMU_SCM_DEPS@\
- @MU_LIB_PY@ @PYTHON_LIBS@\
- ${MU_LIB_SIEVE}\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_AUTH}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}\
- @MU_COMMON_LIBRARIES@
+ $(MU_LIB_PY) @PYTHON_LIBS@\
+ $(MU_LIB_SIEVE)\
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_AUTH)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)\
+ $(MU_COMMON_LIBRARIES)
 
 install-exec-hook: 
 	@here=`pwd`; \

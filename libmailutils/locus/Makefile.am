@@ -27,5 +27,5 @@ liblocus_la_SOURCES = \
 
 EXTRA_DIST = genprloc.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils
 

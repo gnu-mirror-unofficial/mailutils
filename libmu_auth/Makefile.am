@@ -15,7 +15,7 @@
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 AM_CPPFLAGS = \
- @MU_LIB_COMMON_INCLUDES@\
+ $(MU_LIB_COMMON_INCLUDES)\
  -DSITE_VIRTUAL_PWDDIR=\"@SITE_VIRTUAL_PWDDIR@\" \
  -DSITE_CRAM_MD5_PWD=\"@SITE_CRAM_MD5_PWD@\"
 
@@ -40,5 +40,5 @@ else
   libmu_auth_la_SOURCES += notls.c
 endif
 
-libmu_auth_la_LIBADD = ${MU_LIB_MAILUTILS} @MU_AUTHLIBS@ @SQLLIB@ @LTLIBINTL@
+libmu_auth_la_LIBADD = $(MU_LIB_MAILUTILS) $(MU_AUTHLIBS) @SQLLIB@ @LTLIBINTL@
 libmu_auth_la_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@

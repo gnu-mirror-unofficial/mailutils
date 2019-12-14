@@ -27,4 +27,4 @@ libproperty_la_SOURCES = \
  propinv.c\
  propset.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

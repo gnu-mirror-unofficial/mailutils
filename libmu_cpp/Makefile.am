@@ -14,7 +14,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 
 lib_LTLIBRARIES = libmu_cpp.la
 
@@ -41,6 +41,6 @@ libmu_cpp_la_SOURCES = \
  stream.cc\
  url.cc
 
-libmu_cpp_la_LIBADD = @MU_COMMON_LIBRARIES@
+libmu_cpp_la_LIBADD = $(MU_COMMON_LIBRARIES)
 libmu_cpp_la_LDFLAGS = -rpath $(libdir)  -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 

@@ -14,7 +14,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-moddir=@MU_SIEVE_MODDIR@
+moddir=$(MU_SIEVE_MODDIR)
 mod_LTLIBRARIES = \
  editheader.la\
  list.la\
@@ -24,7 +24,7 @@ mod_LTLIBRARIES = \
  timestamp.la\
  vacation.la
 
-AM_CPPFLAGS = @MU_APP_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_APP_COMMON_INCLUDES) 
 
 AM_LDFLAGS = -module -avoid-version -no-undefined -rpath '$(moddir)' 
 

@@ -17,9 +17,9 @@
 SUBDIRS = gnu .
 
 AM_CPPFLAGS = \
- @MU_LIB_COMMON_INCLUDES@\
- -I${top_srcdir}/lib/gnu\
- -I${top_builddir}/lib/gnu\
+ $(MU_LIB_COMMON_INCLUDES)\
+ -I$(top_srcdir)/lib/gnu\
+ -I$(top_builddir)/lib/gnu\
  @GUILE_INCLUDES@\
  @PYTHON_INCLUDES@
 

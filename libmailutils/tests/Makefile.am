@@ -21,7 +21,7 @@ AUTOTEST_INCLUDES += -I $(top_srcdir)/libmailutils/wordsplit
 ## Non-installable programs
 ## -------------------------- ##
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES)
 
 noinst_LTLIBRARIES = libmu_tesh.la
 libmu_tesh_la_SOURCES = tesh.c tesh.h
@@ -76,7 +76,7 @@ linetrack_LDADD = libmu_tesh.la $(LDADD)
 
 listop_LDADD = libmu_tesh.la $(LDADD)
 
-LDADD = ${MU_LIB_MAILUTILS}
+LDADD = $(MU_LIB_MAILUTILS)
 
 EXTRA_DIST += Encode Decode Wicketfile
 

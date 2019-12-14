@@ -22,7 +22,7 @@ libwicket_la_SOURCES = \
 
 localedir = $(datadir)/locale
 AM_CPPFLAGS = \
-  @MU_LIB_COMMON_INCLUDES@ -I/libmailutils\
+  $(MU_LIB_COMMON_INCLUDES) -I/libmailutils\
  -DSYSCONFDIR=\"$(sysconfdir)\"\
  -DSITE_VIRTUAL_PWDDIR=\"@SITE_VIRTUAL_PWDDIR@\"\
  -DLOCALEDIR=\"$(localedir)\"

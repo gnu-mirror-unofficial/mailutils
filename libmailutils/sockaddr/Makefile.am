@@ -29,4 +29,4 @@ libsockaddr_la_SOURCES = \
  unlink.c\
  url.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

@@ -19,30 +19,30 @@ sbin_PROGRAMS = mda
 
 mda_SOURCES = mda.c
 
-AM_CPPFLAGS = -I${top_srcdir} @MU_APP_COMMON_INCLUDES@ -I${srcdir}/../lib
+AM_CPPFLAGS = -I$(top_srcdir) $(MU_APP_COMMON_INCLUDES) -I$(srcdir)/../lib
 
 if MU_COND_DBM
- LIBMU_DBM=${top_builddir}/libmu_dbm/libmu_dbm.la
+ LIBMU_DBM=$(top_builddir)/libmu_dbm/libmu_dbm.la
 endif
 
 LDADD = \
  ../lib/libmda.a\
- ${top_builddir}/lib/libmuscript.a\
- ${MU_APP_LIBRARIES}\
- ${MU_LIB_SIEVE}\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- ${MU_LIB_MAILER}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS} \
- @MU_COMMON_LIBRARIES@\
+ $(top_builddir)/lib/libmuscript.a\
+ $(MU_APP_LIBRARIES)\
+ $(MU_LIB_SIEVE)\
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_LIB_MAILER)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS) \
  @LIBMU_SCM@\
  @LIBMU_SCM_DEPS@\
- @MU_LIB_PY@\
+ $(MU_LIB_PY)\
  $(LIBMU_DBM)\
  @GUILE_LIBS@\
  @PYTHON_LIBS@\
- @DBMLIBS@
+ @DBMLIBS@\
+ $(MU_COMMON_LIBRARIES)
 
 install-exec-hook:
 	-chown root:mail $(DESTDIR)$(sbindir)/mda &&\

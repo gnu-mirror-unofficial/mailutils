@@ -23,4 +23,4 @@ libmime_la_SOURCES = \
  mimehdr.c\
  mimehdrset.c
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ -I/libmailutils
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

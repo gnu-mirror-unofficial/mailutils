@@ -28,15 +28,15 @@ MU_CXX_EXAMPLES_LIST = \
  url-parse
 
 EXTRA_PROGRAMS=$(MU_CXX_EXAMPLES_LIST)
-noinst_PROGRAMS = @MU_CXX_EXAMPLES_BUILD@
+noinst_PROGRAMS = $(MU_CXX_EXAMPLES_BUILD)
 
-AM_CPPFLAGS = @MU_LIB_COMMON_INCLUDES@ 
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 
 AM_LDFLAGS = \
  ../../lib/libmuaux.la\
  ../../libmu_cpp/libmu_cpp.la\
- ${MU_LIB_MAILUTILS}\
- @MU_COMMON_LIBRARIES@
+ $(MU_LIB_MAILUTILS)\
+ $(MU_COMMON_LIBRARIES)
 
 addr_SOURCES = addr.cc
 http_SOURCES = http.cc
@@ -53,9 +53,9 @@ url_parse_SOURCES = url-parse.cc
 LDADD =\
  ../../lib/libmuaux.la\
  ../../libmu_cpp/libmu_cpp.la\
- ${MU_LIB_MAILBOX}\
- ${MU_LIB_AUTH}\
- ${MU_LIB_MAILER}\
- ${MU_LIB_SIEVE}\
- @MU_AUTHLIBS@\
- ${MU_LIB_MAILUTILS}
+ $(MU_LIB_MAILBOX)\
+ $(MU_LIB_AUTH)\
+ $(MU_LIB_MAILER)\
+ $(MU_LIB_SIEVE)\
+ $(MU_AUTHLIBS)\
+ $(MU_LIB_MAILUTILS)
