@@ -135,13 +135,14 @@ mail_sendheader (int argc, char **argv)
 /* Attachments */
 struct atchinfo
 {
-  char *id;
-  char *encoding;
-  char *content_type;
-  char *name;
-  char *filename;
-  mu_stream_t source;
-  int skip_empty;
+  char *id;            /* Attachment id (for listing) */
+  char *encoding;      /* Encoding the attachment uses */
+  char *content_type;  /* Full content type (type/subtype[; attrs]) */
+  char *name;          /* Attachment name */
+  char *filename;      /* Attachment file name */
+  mu_stream_t source;  /* Attachment source stream */
+  int skip_empty;      /* Skip this attachment if it is empty */
+  int disp_inline;     /* Inline content disposition */
 };
 
 static void
@@ -194,7 +195,7 @@ static void
 attlist_add (mu_list_t attlist, char *id, char const *encoding,
 	     char const *content_type, char const *content_name,
 	     char const *content_filename,
-	     mu_stream_t stream, int skip_empty)
+	     mu_stream_t stream, int skip_empty, int disp_inline)
 {
   struct atchinfo *aptr;
   int rc;
@@ -212,6 +213,7 @@ attlist_add (mu_list_t attlist, char *id, char const *encoding,
   if (stream)
     mu_stream_ref (stream);
   aptr->skip_empty = skip_empty;
+  aptr->disp_inline = disp_inline;
   rc = mu_list_append (attlist, aptr);
   if (rc)
     {
@@ -311,7 +313,7 @@ attlist_attach_file (mu_list_t *attlist_ptr,
     
   attlist_add (attlist, id, encoding, content_type,
 	       content_name, content_filename,
-	       stream, skip_empty_attachments);
+	       stream, skip_empty_attachments, 0);
   if (stream)
     mu_stream_unref (stream);
   free (id);
@@ -325,7 +327,8 @@ attlist_helper (void *item, void *data)
   struct atchinfo *aptr = item;
   mu_list_t list = data;
   attlist_add (list, aptr->id, aptr->encoding, aptr->content_type,
-	       aptr->name, aptr->filename, aptr->source, aptr->skip_empty);
+	       aptr->name, aptr->filename, aptr->source, aptr->skip_empty,
+	       aptr->disp_inline);
   return 0;
 }
 
@@ -452,26 +455,13 @@ escape_remove_attachment (int argc, char **argv, compose_env_t *env)
 }
 
 static int
-saveatt (void *item, void *data)
+save_attachment (struct atchinfo *aptr, compose_env_t *env, mu_message_t part)
 {
-  struct atchinfo *aptr = item;
-  compose_env_t *env = data;
-  mu_message_t part;
   mu_header_t hdr;
   int rc;
   size_t nparts;
   char *p;
-
-  rc = mu_attachment_create (&part, aptr->content_type, aptr->encoding,
-			     aptr->name,
-			     aptr->filename);
-  if (rc)
-    {
-      mu_error (_("can't create attachment %s: %s"),
-		aptr->id, mu_strerror (rc));
-      return 1;
-    }
-
+  
   rc = mu_attachment_copy_from_stream (part, aptr->source);
   if (rc)
     {
@@ -506,8 +496,17 @@ saveatt (void *item, void *data)
   mu_header_set_value (hdr, MU_HEADER_CONTENT_ID, p, 1);
   free (p);
 
+  if (aptr->disp_inline)
+    {
+      rc = mu_header_set_value (hdr, MU_HEADER_CONTENT_DISPOSITION,
+				"inline",
+				1);
+      if (rc)
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_header_set_value",
+			 MU_HEADER_CONTENT_DISPOSITION, rc);
+    }
+  
   rc = mu_mime_add_part (env->mime, part);
-  mu_message_unref (part);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_add_part", aptr->filename, rc);
@@ -515,6 +514,29 @@ saveatt (void *item, void *data)
     }
 
   return 0;
+}
+
+static int
+saveatt (void *item, void *data)
+{
+  struct atchinfo *aptr = item;
+  compose_env_t *env = data;
+  mu_message_t part;
+  int rc;
+  
+  rc = mu_attachment_create (&part, aptr->content_type, aptr->encoding,
+			     aptr->name,
+			     aptr->filename);
+  if (rc)
+    {
+      mu_error (_("can't create attachment %s: %s"),
+		aptr->id, mu_strerror (rc));
+      return 1;
+    }
+  
+  rc = save_attachment (aptr, env, part);
+  mu_message_unref (part);
+  return rc;
 }
 
 static int
@@ -529,7 +551,7 @@ add_body (mu_message_t inmsg, compose_env_t *env)
   mu_body_get_streamref (body, &str);
 
   aptr = mu_alloc (sizeof (*aptr));
-  aptr->id = NULL;
+  mu_asprintf (&aptr->id, "(body)");
   aptr->encoding = default_encoding ? mu_strdup (default_encoding) : NULL;
   attach_set_content_type (aptr, default_content_type);
   aptr->name = NULL;
@@ -538,6 +560,7 @@ add_body (mu_message_t inmsg, compose_env_t *env)
   if (str)
     mu_stream_ref (str);
   aptr->skip_empty = skip_empty_attachments || multipart_alternative;
+  aptr->disp_inline = 1;
   if (!env->attlist)
     env->attlist = attlist_new ();
   rc = mu_list_prepend (env->attlist, aptr);
