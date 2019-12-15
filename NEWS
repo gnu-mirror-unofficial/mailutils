@@ -1,10 +1,85 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-11-08
+GNU mailutils NEWS -- history of user-visible changes. 2019-12-15
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
 Version 3.8.90 (git)
+
+* dotmail: fix opening mailbox in append-only mode
+
+* Fix mda testsuite
+
+The tests don't depend on the selected default mailbox format.
+
+* New options to configure:
+
+    --disable-build-mda     do not build mda
+    --disable-build-lmtpd   do not build lmtpd
+    --disable-build-putmail do not build putmail
+
+* Remove deprecated functions
+
+The following deprecated functions have been removed:
+
+    . mu_body_get_stream
+    . mu_message_get_stream
+    . mu_mailer_get_stream
+    . mu_header_get_stream
+       These functions should not be used at all.
+       They will reappear within a couple of releases as synonyms
+       for the corresponding _get_streamref functions, after which
+       the latter will be gradually removed. Thus, at the end of
+       the transition perion _get_streamref's will be replaced by
+       _get_stream.
+    
+    . mu_sieve_compile_buffer
+       Replaced by mu_sieve_compile_text.
+       Old code:
+         rc = mu_sieve_compile_buffer (mach, buf, bufsize, fname, line);
+       New code:
+         struct mu_locus_point loc = MU_LOCUS_POINT_INITIALIZER;
+         mu_locus_point_set_file (&loc, fname);
+         loc.mu_line = line;
+         rc = mu_sieve_compile_text (mach, buf, bufsize, &loc);
+         mu_locus_point_deinit (&loc);
+    
+    . mu_address_to_string
+       Use mu_address_get_printable instead.
+    
+    . mu_address_format_string
+       Use mu_stream_format_address instead. E.g. to print to a string:
+    
+         char buf[100];
+         stream_t str;
+         mu_fixed_memory_stream_create (&str, buf, sizeof(buf), MU_STREAM_WRITE);
+         rc = mu_stream_format_address (str, addr);
+    
+    . mu_registrar_get_list
+       Should not be used.  Use mu_registrar_get_iterator if you need to
+       iterate over the list.
+    
+    . mu_mailbox_save_attributes
+       Replaced by mu_mailbox_sync.
+    
+    . mu_msgset_print
+       Use mu_stream_msgset_format.
+       Old code:
+         rc = mu_msgset_print (mu_stream_t str, mu_msgset_t mset);
+       New code:
+         rc = mu_stream_msgset_format (str, mu_msgset_fmt_imap, mset);
+
+* Remove deprecated ioctls
+
+The following ioctl codes have been removed: MU_IOCTL_LOGSTREAM_GET_LOCUS,
+and MU_IOCTL_LOGSTREAM_SET_LOCUS.
+
+* mail: when sending attachments, make sure message body has inline disposition
+
+* Fix build on FreeBSD
+
+* Fix detection of Kerberos libraries
+
 
 Version 3.8 - 2019-11-06
 
