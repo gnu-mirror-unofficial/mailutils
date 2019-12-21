@@ -61,16 +61,16 @@ at_hdr (mu_header_t hdr, const char *content_type, const char *encoding,
   int rc;
   char *val, *str;
 
+  if (filename)
+    {
+      str = strrchr (filename, '/');
+      if (str)
+	filename = str + 1;
+    }
+  
   if (!name)
     {
-      if (filename)
-	{
-	  name = strrchr (filename, '/');
-	  if (name)
-	    name++;
-	  else
-	    name = filename;
-	}
+      name = filename;
     }
 
   if (name)
@@ -220,19 +220,12 @@ mu_message_create_attachment (const char *content_type, const char *encoding,
 			      const char *filename, mu_message_t *newmsg)
 {
   int rc;
-  char const *name;
   mu_message_t att;
   
   if (content_type == NULL)
     content_type = "text/plain";
 
-  name = strrchr (filename, '/');
-  if (name)
-    name++;
-  else
-    name = filename;
-
-  rc = mu_attachment_create (&att, content_type, encoding, name, filename);
+  rc = mu_attachment_create (&att, content_type, encoding, NULL, filename);
   if (rc == 0)
     {
       rc = mu_attachment_copy_from_file (att, filename);

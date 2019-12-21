@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-12-15
+GNU mailutils NEWS -- history of user-visible changes. 2019-12-21
 Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
@@ -74,7 +74,12 @@ The following deprecated functions have been removed:
 The following ioctl codes have been removed: MU_IOCTL_LOGSTREAM_GET_LOCUS,
 and MU_IOCTL_LOGSTREAM_SET_LOCUS.
 
-* mail: when sending attachments, make sure message body has inline disposition
+* mail: fix composing MIME messages
+
+- Make sure message body has inline disposition (fixes bug #54992).
+- When building the "filename" parameter of the Content-Disposition
+  header, and the "name" parameter of the Content-Type header, strip
+  directory components off the original file name (fixes bug #57431).
 
 * Fix build on FreeBSD
 
