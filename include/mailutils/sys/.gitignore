@@ -1,3 +1,4 @@
 Makefile
 Makefile.in
 debcat.h
+wordsplit.h
