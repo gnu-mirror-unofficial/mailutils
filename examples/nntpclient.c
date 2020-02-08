@@ -2,7 +2,7 @@
    GNU Mailutils nntp functions.  This application interactively allows users
    to contact a nntp server.
 
-   Copyright (C) 2003-2019 Free Software Foundation, Inc.
+   Copyright (C) 2003-2020 Free Software Foundation, Inc.
 
    GNU Mailutils is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

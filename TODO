@@ -1,5 +1,5 @@
 GNU mailutils TODO list. 2010-12-21
-Copyright (C) 2001-2019 Free Software Foundation, Inc.
+Copyright (C) 2001-2020 Free Software Foundation, Inc.
 
 * Provide a generic way to store UID, UIDNEXT and UIDVALIDITY in mailboxes.
 
