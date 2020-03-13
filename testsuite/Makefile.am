@@ -41,6 +41,8 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
           echo 'm4_define([AT_PACKAGE_BUGREPORT], [@PACKAGE_BUGREPORT@])'; \
         } >$(srcdir)/package.m4
 
+noinst_DATA = package.m4
+
 ## -------------------------- ##
 ## Non-installable programs
 ## -------------------------- ##
