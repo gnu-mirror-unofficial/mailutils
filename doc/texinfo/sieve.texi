@@ -1889,7 +1889,7 @@ This is an example loadable extension.  @ref{External Tests, numaddr}.
 The @code{editheader} extension complies with @cite{RFC 5293}.  It
 provides the following actions:
 
-@deftypefn Action {} addheader [:last] @var{field-name}(string) @var{value}(string
+@deftypefn Action {} addheader [:last] @var{field-name}(string) @var{value}(string)
 Adds a header field to the existing message header.  By default the
 header is inserted at the beginning of the header list.  If the tag
 @code{:last} is specified, it is appended at the end.

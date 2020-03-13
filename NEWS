@@ -1,12 +1,12 @@
-GNU mailutils NEWS -- history of user-visible changes. 2019-12-21
-Copyright (C) 2002-2020 Free Software Foundation, Inc.
+GNU mailutils NEWS -- history of user-visible changes. 2020-03-13
+Copyright (C) 2002-2019 Free Software Foundation, Inc.
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.8.90 (git)
+Version 3.9, 2020-03-13
 
-* dotmail: fix opening mailbox in append-only mode
+* dotmail: fix mailbox opening in append-only mode
 
 * Fix mda testsuite
 
@@ -20,7 +20,9 @@ The tests don't depend on the selected default mailbox format.
 
 * Remove deprecated functions
 
-The following deprecated functions have been removed:
+Following is a complete list of deprecated functions.  For the record,
+each function name is followed by a short instruction on how to
+replace eventual use of this function in old code.
 
     . mu_body_get_stream
     . mu_message_get_stream
@@ -84,6 +86,8 @@ and MU_IOCTL_LOGSTREAM_SET_LOCUS.
 * Fix build on FreeBSD
 
 * Fix detection of Kerberos libraries
+
+* Fix build with Python 3.8 (bug #57318)
 
 
 Version 3.8 - 2019-11-06

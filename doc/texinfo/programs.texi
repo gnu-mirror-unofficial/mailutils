@@ -2069,7 +2069,7 @@ The @code{radius} block statement configures @acronym{RADIUS
 authentication} and authorization.
 
 Mailutils uses GNU Radius library, which is configured via
-@file{raddb/client.conf} file (@pxref{client.conf, Client Configuration,
+@file{raddb/client.conf} file (@pxref{client, Client Configuration,
 Client Configuration, radius, GNU Radius Reference Manual}).  Its exact
 location depends on configuration settings that were used while
 compiling GNU Radius.  Usually it is @file{/usr/local/etc}, or
