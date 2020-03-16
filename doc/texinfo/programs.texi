@@ -2835,7 +2835,7 @@ extremely copious and reveals sender private and security-sensitive
 data.  If you wish to trace SMTP session flow, use @samp{mailer.=prot}
 or at least @samp{mailer.prot,!trace6}. 
 
-@item serve
+@item server
 This category provides debugging information for Mailutils IP
 server objects.  It supports the @samp{error} and @samp{trace0} levels. 
 
