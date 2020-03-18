@@ -17,8 +17,6 @@
 SUBDIRS = libexec
 
 bin_PROGRAMS = mailutils
-bin_SCRIPTS = mailutils-config
-EXTRA_DIST = mailutils-config
 
 mailutils_SOURCES = mu.c
 mailutils_CPPFLAGS = $(MU_APP_COMMON_INCLUDES) -DMAILUTILSDIR=\"$(pkglibexecdir)\"

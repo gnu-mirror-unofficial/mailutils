@@ -23,20 +23,7 @@ mod_LTLIBRARIES = \
  spamd.la\
  timestamp.la\
  vacation.la
-
 AM_CPPFLAGS = $(MU_APP_COMMON_INCLUDES) 
-
 AM_LDFLAGS = -module -avoid-version -no-undefined -rpath '$(moddir)' 
-
-list_la_SOURCES = list.c
 LIBS = ../libmu_sieve.la 
 
-moderator_la_SOURCES = moderator.c
-
-spamd_la_SOURCES = spamd.c
-
-timestamp_la_SOURCES = timestamp.c
-
-vacation_la_SOURCES = vacation.c
-
-pipe_la_SOURCES = pipe.c

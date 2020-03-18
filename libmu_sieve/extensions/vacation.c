@@ -44,7 +44,6 @@
 #include <signal.h>
 #include <regex.h>
 #include <mailutils/sieve.h>
-#include <mailutils/mu_auth.h>
 
 /* Build a mime response message from original message MSG. TEXT
    is the message text.
