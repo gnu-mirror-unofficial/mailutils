@@ -1218,8 +1218,8 @@ if test "$status_python" = yes; then
       esac
 
       # See https://docs.python.org/dev/whatsnew/3.8.html#debug-build-uses-the-same-abi-as-release-build
-      PYTHON_LIBS=`python-config --libs --embed 2>/dev/null` || \
-         PYTHON_LIBS=`python-config --libs`
+      PYTHON_LIBS=`$PYTHON_CONFIG --libs --embed 2>/dev/null` || \
+         PYTHON_LIBS=`$PYTHON_CONFIG --libs`
       PYTHON_INCLUDES=`$PYTHON_CONFIG --includes`
     else
       status_python=no     
