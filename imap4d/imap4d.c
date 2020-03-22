@@ -533,6 +533,12 @@ static struct mu_cfg_param imap4d_cfg_param[] = {
     N_("Retain these supplementary groups when switching to user privileges"),
     N_("groups: list of string") },
   { "tls", mu_cfg_section, &global_tls_conf },
+  { "tls-mode", mu_cfg_callback,
+    &global_tls_mode, 0, cb_tls,
+    N_("Kind of TLS encryption to use for the inetd server"
+       " and all server blocks that lack the tls-mode statement."),
+    /* TRANSLATORS: words to the right of : are keywords - do not translate */
+    N_("arg: false|true|ondemand|stls|requred|connection") },
   { "preauth", mu_cfg_callback, NULL, 0, cb_preauth,
     N_("Configure PREAUTH mode.  <value> is one of:\n"
        "  prog:///<full-program-name: string>\n"
@@ -936,12 +942,6 @@ main (int argc, char **argv)
   if (login_disabled)
     imap4d_capability_add (IMAP_CAPA_LOGINDISABLED);
 
-  if (mu_gsasl_enabled ())
-    {
-      auth_gssapi_init ();
-      auth_gsasl_init ();
-    }
-
 #ifdef USE_LIBPAM
   if (!mu_pam_service)
     mu_pam_service = "gnu-imap4d";
@@ -1009,6 +1009,12 @@ main (int argc, char **argv)
   /* Actually run the daemon.  */
   if (mu_m_server_mode (server) == MODE_DAEMON)
     {
+      if (mu_gsasl_enabled ())
+	{
+	  auth_gssapi_init ();
+	  auth_gsasl_init ();
+	}
+
       mu_m_server_begin (server);
       status = mu_m_server_run (server);
       mu_m_server_end (server);
@@ -1018,7 +1024,36 @@ main (int argc, char **argv)
     {
       struct imap4d_srv_config cfg;
       memset (&cfg, 0, sizeof cfg);
-      cfg.tls_mode = tls_no;
+
+      if (mu_gsasl_enabled ())
+	{
+	  auth_gssapi_init ();
+	  auth_gsasl_init ();
+	}
+
+      switch (starttls_server_check (&cfg, "<inetd>"))
+	{
+	case MU_TLS_CONFIG_OK:
+	  if (mu_init_tls_libs ())
+	    status = EX_OK;
+	  else
+	    {
+	      mu_error (_("TLS is not configured, but requested in the "
+			  "configuration"));
+	      exit (EX_CONFIG);
+	    }
+	  break;
+
+	case MU_TLS_CONFIG_NULL:
+	  break;
+
+	case MU_TLS_CONFIG_UNSAFE:
+	  exit (EX_CONFIG);
+
+	default:
+	  exit (EX_UNAVAILABLE);
+	}
+
       /* Make sure we are in the root directory.  */
       chdir ("/");
       status = imap4d_mainloop (MU_STDIN_FD, MU_STDOUT_FD, &cfg);

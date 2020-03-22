@@ -225,7 +225,8 @@ extern int imap4d_argc;
 extern char **imap4d_argv;
 extern jmp_buf child_jmp;
 extern struct mu_tls_config global_tls_conf;
-  
+extern int global_tls_mode;
+
 extern int test_mode;
 extern int silent_expunge;
 
@@ -345,6 +346,7 @@ extern int  imap4d_select_status (void);
 extern int  imap4d_starttls (struct imap4d_session *,
 			     struct imap4d_command *, imap4d_tokbuf_t);
 int starttls_init (mu_m_server_t msrv);
+int starttls_server_check (struct imap4d_srv_config *cfg, char const *srvid);
 void tls_encryption_on (struct imap4d_session *);
 extern int  imap4d_status (struct imap4d_session *,
 			   struct imap4d_command *, imap4d_tokbuf_t);

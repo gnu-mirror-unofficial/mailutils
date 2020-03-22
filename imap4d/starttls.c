@@ -16,6 +16,8 @@
 
 #include "imap4d.h"
 
+static int global_conf_status = -1;
+int global_tls_mode;
 struct mu_tls_config global_tls_conf;
 
 /*
@@ -68,6 +70,70 @@ tls_encryption_on (struct imap4d_session *session)
 }
 
 int
+starttls_server_check (struct imap4d_srv_config *cfg, char const *srvid)
+{
+  int result;
+  
+  switch (cfg->tls_mode)
+    {
+    case tls_unspecified:
+      if (global_tls_mode != tls_unspecified)
+	cfg->tls_mode = global_tls_mode;
+      else if (cfg->tls_conf.cert_file)
+	cfg->tls_mode = tls_ondemand;
+      else
+	{
+	  cfg->tls_mode = tls_no;
+	  return MU_TLS_CONFIG_NULL;
+	}
+      break;
+
+    case tls_no:
+      return MU_TLS_CONFIG_NULL;
+
+    default:
+      break;
+    }
+
+  result = mu_tls_config_check (&cfg->tls_conf, 1);
+  switch (result)
+    {
+    case MU_TLS_CONFIG_OK:
+      if (!cfg->tls_conf.cert_file)
+	{
+	  mu_error (_("server %s: no certificate set"), srvid);
+	  result = MU_TLS_CONFIG_FAIL;
+	}
+      break;
+
+    case MU_TLS_CONFIG_NULL:
+      if (global_conf_status == -1)
+	{
+	  if (global_tls_conf.cert_file)
+	    global_conf_status = mu_tls_config_check (&global_tls_conf, 1);
+	  else
+	    global_conf_status = MU_TLS_CONFIG_NULL;
+	}
+
+      if (global_conf_status != MU_TLS_CONFIG_NULL)
+	{
+	  cfg->tls_conf = global_tls_conf;
+	  result = MU_TLS_CONFIG_OK;
+	}
+      else
+	{
+	  mu_error (_("server %s: no certificate set"), srvid);
+	  result = MU_TLS_CONFIG_FAIL;
+	}
+      break;
+
+    default:
+      mu_error (_("server %s: TLS configuration failed"), srvid);
+    }
+  return result;
+}
+
+int
 starttls_init (mu_m_server_t msrv)
 {
   mu_list_t srvlist;
@@ -75,12 +141,6 @@ starttls_init (mu_m_server_t msrv)
   int errors = 0;
   int tls_ok = mu_init_tls_libs ();
   int tls_requested = 0;
-  int global_conf_status = 0;
-
-  if (global_tls_conf.cert_file)
-    global_conf_status = mu_tls_config_check (&global_tls_conf, 1);
-  else
-    global_conf_status = MU_TLS_CONFIG_NULL;
   
   mu_m_server_get_srvlist (msrv, &srvlist);
   mu_list_get_iterator (srvlist, &itr);
@@ -90,57 +150,24 @@ starttls_init (mu_m_server_t msrv)
       struct imap4d_srv_config *cfg;
       mu_iterator_current (itr, (void**) &ipsrv);
       cfg = mu_ip_server_get_data (ipsrv);
-      switch (cfg->tls_mode)
+      switch (starttls_server_check (cfg, mu_ip_server_addrstr (ipsrv)))
 	{
-	case tls_unspecified:
-	  if (cfg->tls_conf.cert_file)
-	    {
-	      cfg->tls_mode = tls_ondemand;
-	      break;
-	    }
-	  else
-	    cfg->tls_mode = tls_no;
-	  /* fall through */
-	case tls_no:
+	case MU_TLS_CONFIG_NULL:
 	  continue;
 	  
-	default:
-	  break;
-	}
-
-      switch (mu_tls_config_check (&cfg->tls_conf, 1))
-	{
 	case MU_TLS_CONFIG_OK:
-	  if (!cfg->tls_conf.cert_file)
-	    {
-	      mu_error (_("server %s: no certificate set"),
-			mu_ip_server_addrstr (ipsrv));
-	      errors = 1;
-	    }
-	  break;
-	  
-	case MU_TLS_CONFIG_NULL:
-	  if (global_conf_status != MU_TLS_CONFIG_NULL)
-	    {
-	      cfg->tls_conf = global_tls_conf;
-	    }
-	  else
-	    {
-	      mu_error (_("server %s: no certificate set"),
-			mu_ip_server_addrstr (ipsrv));
-	      errors = 1;
-	    }
 	  break;
 
 	default:
-	  mu_error (_("server %s: TLS configuration failed"),
-		    mu_ip_server_addrstr (ipsrv));
 	  errors = 1;
 	}
       
       tls_requested = 1;
     }
   mu_iterator_destroy (&itr);
+
+  if (global_tls_mode == tls_unspecified)
+    global_tls_mode = tls_no;
 
   if (tls_requested && !tls_ok)
     {
