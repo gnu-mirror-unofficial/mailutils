@@ -75,8 +75,6 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 				     0);
       if (rc)
 	{
-	  mu_stream_unref (istream);
-	  mu_stream_unref (ostream);
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
 	  imap4d_bye (ERR_STREAM_CREATE);
 	}
@@ -84,6 +82,9 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
     }
   else if (mu_iostream_create (&str, istream, ostream))
     imap4d_bye (ERR_STREAM_CREATE);
+
+  mu_stream_unref (istream);
+  mu_stream_unref (ostream);
 
   /* Convert all writes to CRLF form.
      There is no need to convert reads, as the code ignores extra \r anyway.

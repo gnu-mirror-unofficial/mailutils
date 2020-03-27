@@ -182,8 +182,6 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 				     0);
       if (rc)
 	{
-	  mu_stream_unref (istream);
-	  mu_stream_unref (ostream);
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
 	  pop3d_abquit (ERR_FILE);
 	}
@@ -191,6 +189,9 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
     }
   else if (mu_iostream_create (&str, istream, ostream))
     pop3d_abquit (ERR_FILE);
+
+  mu_stream_unref (istream);
+  mu_stream_unref (ostream);
 
   /* Convert all writes to CRLF form.
      There is no need to convert reads, as the code ignores extra \r anyway.
