@@ -1269,7 +1269,7 @@ mbox_expunge_unlocked (mu_mailbox_t mailbox, size_t dirty, int remove_deleted,
 	      return status;
 	    }
 	  status = mu_stream_copy (tempstr, mailbox->stream,
-				   mum->body_end - mum->envel_from, NULL);
+				   mum->body_end - mum->envel_from + 1, NULL);
 	  if (status)
 	    {
 	      mu_error (_("%s:%d: error copying: %s"),
