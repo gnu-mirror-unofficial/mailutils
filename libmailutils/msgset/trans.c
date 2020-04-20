@@ -63,7 +63,7 @@ _mu_msgset_translate_pair (mu_msgset_t mset, int mode,
 		}
 	      else
 		x = end;
-	      for (; rc == MU_ERR_NOENT && beg < x; beg++)
+	      for (; rc == MU_ERR_NOENT && beg <= x; beg++)
 		rc = mu_mailbox_translate (mset->mbox, cmd, beg, &n);
 	    }
 	  if (rc)
