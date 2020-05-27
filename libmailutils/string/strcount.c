@@ -64,3 +64,15 @@ mu_str_count (char const *str, char const *chr, size_t *cnt)
     }
   return count;
 }
+
+/* Find the number of occurrences of character C in byte array
+   STR of length LEN. */
+size_t
+mu_mem_c_count (char const *str, int c, size_t len)
+{
+  size_t n = 0;
+  while (len--)
+    if (*str++ == c)
+      n++;
+  return n;
+}

@@ -1008,6 +1008,52 @@ util_get_message (mu_mailbox_t mbox, size_t msgno, mu_message_t *msg)
 }
 
 int
+util_get_message_part (mu_mailbox_t mbox, msgset_t *msgset,
+		       mu_message_t *ret_msg)
+{
+  int status, ismime;
+  mu_message_t msg;
+  size_t i;
+  
+  status = mu_mailbox_get_message (mbox, msgset->msg_part[0], &msg);
+  if (status)
+    {
+      mu_error (_("Cannot get message %lu: %s"),
+		  (unsigned long) msgset->msg_part[0], mu_strerror (status));
+      return status;
+    }
+
+  for (i = 1; i < msgset->npart; i++)
+    {
+      status = mu_message_is_multipart (msg, &ismime);
+      if (status)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_is_multipart",
+			   NULL, status);
+	  return status;
+	}
+
+      if (!ismime)
+	{
+	  char *s = msgset_part_str (msgset, i);
+	  mu_error (_("%s: not a multipart message"), s);
+	  free (s);
+	  return status;
+	}
+
+      status = mu_message_get_part (msg, msgset->msg_part[i], &msg);
+      if (status)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_part",
+			   NULL, status);
+	  return status;
+	}
+    }
+  *ret_msg = msg;
+  return 0;
+}
+
+int
 util_error_range (size_t msgno)
 {
   mu_error (_("%lu: invalid message number"), (unsigned long) msgno);

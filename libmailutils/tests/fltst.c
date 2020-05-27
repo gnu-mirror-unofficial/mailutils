@@ -190,6 +190,11 @@ main (int argc, char * argv [])
 	       (unsigned long) instat[MU_STREAM_STAT_IN]);
       fprintf (stderr, "Bytes out: %lu\n",
 	       (unsigned long) instat[MU_STREAM_STAT_OUT]);
+      fprintf (stderr, "Lines in: %lu\n",
+	       (unsigned long) instat[MU_STREAM_STAT_INLN]);
+      fprintf (stderr, "Linees out: %lu\n",
+	       (unsigned long) instat[MU_STREAM_STAT_OUTLN]);
+      
       fprintf (stderr, "Reads: %lu\n",
 	       (unsigned long) instat[MU_STREAM_STAT_READS]);
       fprintf (stderr, "Seeks: %lu\n",
@@ -200,6 +205,10 @@ main (int argc, char * argv [])
 	       (unsigned long) outstat[MU_STREAM_STAT_IN]);
       fprintf (stderr, "Bytes out: %lu\n",
 	       (unsigned long) outstat[MU_STREAM_STAT_OUT]);
+      fprintf (stderr, "Lines in: %lu\n",
+	       (unsigned long) outstat[MU_STREAM_STAT_INLN]);
+      fprintf (stderr, "Lines out: %lu\n",
+	       (unsigned long) outstat[MU_STREAM_STAT_OUTLN]);
       fprintf (stderr, "Writes: %lu\n",
 	       (unsigned long) outstat[MU_STREAM_STAT_WRITES]);
       fprintf (stderr, "Seeks: %lu\n",

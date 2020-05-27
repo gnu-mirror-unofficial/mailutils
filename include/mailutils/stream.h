@@ -270,22 +270,30 @@ struct mu_buffer_query
   size_t bufsize;               /* Buffer size */
 };
 
-/* Statistics */  
-#define MU_STREAM_STAT_IN       0
-#define MU_STREAM_STAT_OUT      1
-#define MU_STREAM_STAT_READS    2 
-#define MU_STREAM_STAT_WRITES   3
-#define MU_STREAM_STAT_SEEKS    4
-#define _MU_STREAM_STAT_MAX     5   
+/* Statistics */
+enum
+  {
+    MU_STREAM_STAT_IN,          /* Bytes read */
+    MU_STREAM_STAT_OUT,         /* Bytes written */
+    MU_STREAM_STAT_READS,       /* Number of reads */
+    MU_STREAM_STAT_WRITES,      /* Number of writes */
+    MU_STREAM_STAT_SEEKS,       /* Number of seeks */
+    MU_STREAM_STAT_INLN,        /* Lines read */
+    MU_STREAM_STAT_OUTLN,       /* Lines written */
+    _MU_STREAM_STAT_MAX
+  };
 
 #define MU_STREAM_STAT_MASK(n)  (1U<<(n+1))
+
 #define MU_STREAM_STAT_MASK_ALL  \
   (MU_STREAM_STAT_MASK (MU_STREAM_STAT_IN) | \
    MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUT) |   \
    MU_STREAM_STAT_MASK (MU_STREAM_STAT_READS) | \
    MU_STREAM_STAT_MASK (MU_STREAM_STAT_WRITES) | \
-   MU_STREAM_STAT_MASK (MU_STREAM_STAT_SEEKS))
-
+   MU_STREAM_STAT_MASK (MU_STREAM_STAT_SEEKS) | \
+   MU_STREAM_STAT_MASK (MU_STREAM_STAT_INLN) | \
+   MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUTLN))
+   
 typedef mu_off_t mu_stream_stat_buffer[_MU_STREAM_STAT_MAX];
 int mu_stream_set_stat (mu_stream_t stream, int statmask,
 			mu_stream_stat_buffer statbuf);

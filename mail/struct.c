@@ -16,20 +16,16 @@
 
 #include "mail.h"
 
-#define PART_WIDTH 8
-
 static int
 show_part (struct mime_descend_closure *closure, void *data)
 {
-  size_t width;
-  size_t size = 0;
+  char *msp;
+  size_t size;
   
-  format_msgset (mu_strout, closure->msgset, &width);
-  for (; width < 5; width++)
-    mu_stream_write (mu_strout, " ", 1, NULL);
-    
-  mu_printf (" %-25s", closure->type);
-
+  msp = msgset_str (closure->msgset);
+  mu_printf ("%-16s %-25s", msp, closure->type);
+  free (msp);
+  
   mu_message_size (closure->message, &size);
   if (size < 1024)
     mu_printf (" %4lu", (unsigned long) size);

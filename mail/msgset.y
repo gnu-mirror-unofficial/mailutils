@@ -133,6 +133,12 @@ msgexpr  : msgspec
          ;
 
 msgspec  : msg
+         | msg '.' rangeset 
+           {
+	     $$ = msgset_expand ($1, $3);
+	     msgset_free ($1);
+	     msgset_free ($3);
+	   }
          | msg '[' rangeset ']'
            {
 	     $$ = msgset_expand ($1, $3);
@@ -236,6 +242,12 @@ range    : number
 
 number   : partno
            {
+	   }
+         | partno '.' rangeset 
+           {
+	     $$ = msgset_expand ($1, $3);
+	     msgset_free ($1);
+	     msgset_free ($3);
 	   }
          | partno '[' rangeset ']'
            {
@@ -940,6 +952,42 @@ check_set (msgset_t **pset)
     }
 
   return rc;
+}
+
+char *
+msgset_part_str (const msgset_t *msgset, size_t npart)
+{
+  size_t len = 0;
+  size_t i;
+  char *result, *p;
+  
+  for (i = 0; i < npart; i++)
+    {
+      size_t n = msgset->msg_part[i];
+      do
+	len++;
+      while (n /= 10);
+      len++;
+    }
+
+  result = malloc (len);
+  p = result;
+  
+  for (i = 0; i < npart; i++)
+    {
+      size_t n = msgset->msg_part[i];
+      if (i)
+	*p++ = '.';
+      do
+	{
+	  unsigned x = n % 10;
+	  *p++ = x + '0';
+	}
+      while (n /= 10);
+    }
+  *p = 0;
+
+  return result;
 }
 
 #if 0

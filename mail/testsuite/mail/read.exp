@@ -240,7 +240,7 @@ mail_test -message "print (2)" "print 2"\
 mail_test -message "decoding simple MIME messages" \
 	"decode 3" \
 "+------------------------------------------------------------------------------+"\
-"| Message=3\[1\]"\
+"| Message=3.1"\
 "| Type=text/plain; name=\"msg.1\"; charset=\"us-ascii\""\
 "| Encoding=7bit"\
 "+------------------------------------------------------------------------------+"\
@@ -258,7 +258,7 @@ mail_test -message "decoding simple MIME messages" \
 "And welcome little fishes in"\
 "With gently smiling jaws!"\
 "+------------------------------------------------------------------------------+"\
-"| Message=3\[2\]"\
+"| Message=3.2"\
 "| Type=application/octet-stream; name=\"msg.21\""\
 "| Encoding=base64"\
 "+------------------------------------------------------------------------------+"\
@@ -280,7 +280,7 @@ mail_test -message "decoding simple MIME messages" \
 mail_test -message "decoding nested MIME messages" \
 	"decode 4" \
 "+------------------------------------------------------------------------------+"\
-"| Message=4\[1\]"\
+"| Message=4.1"\
 "| Type=text/plain; name=\"msg.21\"; charset=\"us-ascii\""\
 "| Encoding=7bit"\
 "+------------------------------------------------------------------------------+"\
@@ -299,7 +299,7 @@ mail_test -message "decoding nested MIME messages" \
 "Why, I do it again and again.'"\
 ""\
 "+------------------------------------------------------------------------------+"\
-"| Message=4\[2\[1\]\]"\
+"| Message=4.2.1"\
 "| Type=application/octet-stream; name=\"msg.22\""\
 "| Encoding=base64"\
 "+------------------------------------------------------------------------------+"\
@@ -318,7 +318,7 @@ mail_test -message "decoding nested MIME messages" \
 "By the use of this ointment--one shilling the box--"\
 "Allow me to sell you a couple?'"\
 "+------------------------------------------------------------------------------+"\
-"| Message=4\[2\[2\[1\]\]\]"\
+"| Message=4.2.2.1"\
 "| Type=application/octet-stream; name=\"msg.23\""\
 "| Encoding=base64"\
 "+------------------------------------------------------------------------------+"\
@@ -337,7 +337,7 @@ mail_test -message "decoding nested MIME messages" \
 "And the muscular strength, which it gave to my jaw,"\
 "Has lasted the rest of my life.'"\
 "+------------------------------------------------------------------------------+"\
-"| Message=4\[2\[2\[2\]\]\]"\
+"| Message=4.2.2.2"\
 "| Type=application/octet-stream; name=\"msg.24\""\
 "| Encoding=base64"\
 "+------------------------------------------------------------------------------+"\
@@ -359,7 +359,7 @@ mail_test -message "decoding nested MIME messages" \
 mail_test -message "Addressing parts of a MIME message" \
 	"decode 4\[2\[2\[1\]\]\]" \
 "+------------------------------------------------------------------------------+"\
-"| Message=4\[2\[2\[1\]\]\]"\
+"| Message=4.2.2.1"\
 "| Type=application/octet-stream; name=\"msg.23\""\
 "| Encoding=base64"\
 "+------------------------------------------------------------------------------+"\
@@ -381,7 +381,7 @@ mail_test -message "Addressing parts of a MIME message" \
 mail_test -message "Addressing parts of a MIME message (2)" \
 	"decode 4\[2\[2\[1,2\]\]\]"\
 "+------------------------------------------------------------------------------+"\
-"| Message=4\[2\[2\[1\]\]\]"\
+"| Message=4.2.2.1"\
 "| Type=application/octet-stream; name=\"msg.23\""\
 "| Encoding=base64"\
 "+------------------------------------------------------------------------------+"\
@@ -400,7 +400,7 @@ mail_test -message "Addressing parts of a MIME message (2)" \
 "And the muscular strength, which it gave to my jaw,"\
 "Has lasted the rest of my life.'"\
 "+------------------------------------------------------------------------------+"\
-"| Message=4\[2\[2\[2\]\]\]"\
+"| Message=4.2.2.2"\
 "| Type=application/octet-stream; name=\"msg.24\""\
 "| Encoding=base64"\
 "+------------------------------------------------------------------------------+"\

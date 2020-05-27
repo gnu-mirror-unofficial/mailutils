@@ -121,41 +121,22 @@ display_headers (mu_stream_t out, mu_message_t mesg,
     }
 }
 
-void
-format_msgset (mu_stream_t str, const msgset_t *msgset, size_t *count)
-{
-  int i;
-  mu_stream_stat_buffer stat;
-
-  if (count)
-    mu_stream_set_stat (str, MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUT),
-			stat);
-  mu_stream_printf (str, "%lu", (unsigned long) msgset->msg_part[0]);
-  for (i = 1; i < msgset->npart; i++)
-    mu_stream_printf (str, "[%lu", (unsigned long) msgset->msg_part[i]);
-  for (i = 1; i < msgset->npart; i++)
-    mu_stream_printf (str, "]");
-  if (count)
-    {
-      *count = stat[MU_STREAM_STAT_OUT];
-      mu_stream_set_stat (str, 0, NULL);
-    }
-}
-
 static void
 display_part_header (mu_stream_t str, const msgset_t *msgset,
 		     const char *type, const char *encoding)
 {
   int size = util_screen_columns () - 3;
   unsigned int i;
-
+  char *msp;
+  
   mu_stream_printf (str, "+");
   for (i = 0; (int)i <= size; i++)
     mu_stream_printf (str, "-");
   mu_stream_printf (str, "+");
   mu_stream_printf (str, "\n");
-  mu_stream_printf (str, "%s", _("| Message="));
-  format_msgset (str, msgset, NULL);
+  msp = msgset_str (msgset);
+  mu_stream_printf (str, _("| Message=%s"), msp);
+  free (msp);
   mu_stream_printf (str, "\n");
 
   mu_stream_printf (str, _("| Type=%s\n"), type);
@@ -448,4 +429,89 @@ run_metamail (const char *mailcap_cmd, mu_message_t mesg)
   sigaction (SIGINT, &saveintr, NULL);
   sigaction (SIGQUIT, &savequit, NULL);
   sigprocmask (SIG_SETMASK, &savemask, NULL);
+}
+
+/* print_message_body(msg, out, stat)
+ *
+ * Prints the body of the message MSG to the output stream OUT.  If
+ * the Content-Transfer-Encoding header is set, the body is decoded.
+ * If stat is not NULL, it must point to an array of two size_t.
+ * Upon return stat[0] will contain the number of bytes and stat[0]
+ * the number of newline characters written to the output.
+ */
+int
+print_message_body (mu_message_t msg, mu_stream_t out, size_t *stat)
+{
+  int rc;
+  mu_header_t hdr;
+  mu_body_t body;
+  mu_stream_t d_stream;
+  mu_stream_t stream;
+  char *encoding = NULL;
+  mu_stream_stat_buffer sb;
+  
+  rc = mu_message_get_header (msg, &hdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header",
+		       NULL, rc);
+      return rc;
+    }
+      
+  rc = mu_message_get_body (msg, &body);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_body",
+		       NULL, rc);
+      return rc;
+    }
+  
+  rc = mu_body_get_streamref (body, &stream);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_body_get_streamref",
+		       NULL, rc);
+      return rc;
+    }
+
+  util_get_hdr_value (hdr, MU_HEADER_CONTENT_TRANSFER_ENCODING, &encoding);
+  if (encoding == NULL || *encoding == '\0')
+    /* No need to filter */;
+  else if ((rc = mu_filter_create (&d_stream, stream, encoding,
+				   MU_FILTER_DECODE, MU_STREAM_READ)) == 0)
+    {
+      mu_stream_unref (stream);
+      stream = d_stream;
+    }
+  else
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_body",
+		       encoding, rc);
+      /* FIXME: continue anyway? */
+    }
+
+  if (stat)
+    {
+      mu_stream_set_stat (stream,
+			  MU_STREAM_STAT_MASK (MU_STREAM_STAT_IN) |
+			  MU_STREAM_STAT_MASK (MU_STREAM_STAT_INLN),
+			  sb);
+    }
+  rc = mu_stream_copy (out, stream, 0, NULL);
+
+  mu_stream_destroy (&stream);
+  free (encoding);
+
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy",
+		       encoding, rc);
+    }
+  else if (stat)
+    {
+      stat[0] = sb[MU_STREAM_STAT_IN];
+      stat[1] = sb[MU_STREAM_STAT_INLN];
+    }
+  
+  return rc;
 }

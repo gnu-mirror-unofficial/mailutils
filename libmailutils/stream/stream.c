@@ -30,44 +30,64 @@
 #include <mailutils/errno.h>
 #include <mailutils/nls.h>
 #include <mailutils/stream.h>
+#include <mailutils/cstr.h>
 #include <mailutils/sys/stream.h>
 
 size_t mu_stream_default_buffer_size = MU_STREAM_DEFBUFSIZ;
 
-#define _stream_event(stream, code, n, p)			\
-  do								\
-    {								\
-      if ((stream)->event_cb &&					\
-          ((stream)->event_mask & _MU_STR_EVMASK(code)))	\
-        (stream)->event_cb (stream, code, n, p);		\
-    }								\
-  while (0)
+static inline void
+_stream_event (mu_stream_t str, int code, unsigned long n, void *p)
+{
+  if (str->event_cb && (str->event_mask & _MU_STR_EVMASK (code)))
+    str->event_cb (str, code, n, p);
+}
 
-#define _bootstrap_event(stream)					    \
-  do									    \
-    {									    \
-      if ((stream)->event_cb &&						    \
-          ((stream)->event_mask & _MU_STR_EVMASK(_MU_STR_EVENT_BOOTSTRAP))) \
-	{								    \
-	  (stream)->event_cb (stream, _MU_STR_EVENT_BOOTSTRAP, 0, NULL);    \
-	  (stream)->event_mask &= ~_MU_STR_EVMASK(_MU_STR_EVENT_BOOTSTRAP); \
-	}								    \
-    }									    \
-  while (0)
-  
+static inline void
+_bootstrap_event (mu_stream_t str)
+{
+  if (str->event_cb &&
+      (str->event_mask & _MU_STR_EVMASK (_MU_STR_EVENT_BOOTSTRAP)))
+    {
+      str->event_cb (str, _MU_STR_EVENT_BOOTSTRAP, 0, NULL);
+      str->event_mask &= ~_MU_STR_EVMASK (_MU_STR_EVENT_BOOTSTRAP);
+    }
+}
 
-#define _stream_stat_incr(s, k, n) \
-  (((s)->statmask & MU_STREAM_STAT_MASK(k)) ? ((s)->statbuf[k] += n) : 0)
+static inline void
+_stream_stat_incr (mu_stream_t s, int k, size_t n)
+{
+  if (s->statmask & MU_STREAM_STAT_MASK (k))
+    s->statbuf[k] += n;
+}
 
-#define _stream_read(str, buf, size, rdbytes) \
-  (_stream_stat_incr ((str), MU_STREAM_STAT_READS, 1),  \
-   (str)->read (str, buf, size, rdbytes))
-#define _stream_write(str, buf, size, wrbytes) \
-  (_stream_stat_incr ((str), MU_STREAM_STAT_WRITES, 1),  \
-   (str)->write (str, buf, size, wrbytes))
-#define _stream_seek(str, pos, poff)			\
-  (_stream_stat_incr ((str), MU_STREAM_STAT_SEEKS, 1),		\
-   (str)->seek (str, pos, poff))
+static inline int
+_stream_read (mu_stream_t str, char *buf, size_t size, size_t *pbytes)
+{
+  int rc;
+  _stream_stat_incr (str, MU_STREAM_STAT_READS, 1);
+  rc = str->read (str, buf, size, pbytes);
+  if (rc == 0 && str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_INLN))
+    str->statbuf[MU_STREAM_STAT_INLN] += mu_mem_c_count (buf, '\n', *pbytes);
+  return rc;
+}
+
+static inline int
+_stream_write (mu_stream_t str, char const *buf, size_t size, size_t *pbytes)
+{
+  int rc;
+  _stream_stat_incr (str, MU_STREAM_STAT_WRITES, 1);
+  rc = str->write (str, buf, size, pbytes);
+  if (rc == 0 && str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUTLN))
+    str->statbuf[MU_STREAM_STAT_OUTLN] += mu_mem_c_count (buf, '\n', *pbytes);
+  return rc;
+}
+
+static inline int
+_stream_seek (mu_stream_t str, mu_off_t pos, mu_off_t *poff)
+{
+  _stream_stat_incr (str, MU_STREAM_STAT_SEEKS, 1);
+  return str->seek (str, pos, poff);
+}
 
 static int _stream_read_unbuffered (mu_stream_t stream, void *buf, size_t size,
 				    int full_read, size_t *pnread);
@@ -75,14 +95,14 @@ static int _stream_write_unbuffered (mu_stream_t stream,
 				     const void *buf, size_t size,
 				     int full_write, size_t *pnwritten);
 
-static void
+static inline void
 _stream_setflag (struct _mu_stream *stream, int flag)
 {
   _stream_event (stream, _MU_STR_EVENT_SETFLAG, flag, NULL);
   stream->flags |= flag;
 }
 
-static void
+static inline void
 _stream_clrflag (struct _mu_stream *stream, int flag)
 {
   _stream_event (stream, _MU_STR_EVENT_CLRFLAG, flag, NULL);
@@ -169,28 +189,6 @@ _stream_fill_buffer (struct _mu_stream *stream)
 		     stream->level, _stream_curp (stream));
     }
   return rc;
-}
-
-/* Return 1 if no more data can be written to the current buffer. */
-static inline int
-_stream_buffer_full_p (struct _mu_stream *stream)
-{
-  /* This function should be called only for buffered streams */
-  if (stream->buftype == mu_buffer_none)
-    return 0;
-
-  if (stream->bufsize == stream->pos)
-    /* No space left in buffer */
-    return 1;
-
-  /* For line buffering, the buffer is flushed immediately after
-     receiving a newline character. */
-  if (stream->buftype == mu_buffer_line &&
-      stream->pos > 0 &&
-      memchr (stream->buffer, '\n', stream->pos) != NULL)
-    return 1;
-
-  return 0;
 }
 
 enum
@@ -975,6 +973,28 @@ mu_stream_getline (mu_stream_t stream, char **pbuf, size_t *psize,
 		   size_t *pread)
 {
   return mu_stream_getdelim (stream, pbuf, psize, '\n', pread);
+}
+
+/* Return 1 if no more data can be written to the current buffer. */
+static inline int
+_stream_buffer_full_p (struct _mu_stream *stream)
+{
+  /* This function should be called only for buffered streams */
+  if (stream->buftype == mu_buffer_none)
+    return 0;
+
+  if (stream->bufsize == stream->pos)
+    /* No space left in buffer */
+    return 1;
+
+  /* For line buffering, the buffer is flushed immediately after
+     receiving a newline character. */
+  if (stream->buftype == mu_buffer_line &&
+      stream->pos > 0 &&
+      memchr (stream->buffer, '\n', stream->pos) != NULL)
+    return 1;
+
+  return 0;
 }
 
 int

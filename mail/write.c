@@ -30,7 +30,7 @@ mail_write (int argc, char **argv)
   char *filename = NULL;
   msgset_t *msglist = NULL, *mp;
   int sender = 0;
-  size_t total_size = 0, total_lines = 0, size;
+  size_t total_size = 0, total_lines = 0;
 
   if (mu_isupper (argv[0][0]))
     sender = 1;
@@ -80,28 +80,21 @@ mail_write (int argc, char **argv)
   for (mp = msglist; mp; mp = mp->next)
     {
       mu_message_t msg;
-      mu_body_t body;
-      mu_stream_t stream;
       mu_attribute_t attr;
-
-      if (util_get_message (mbox, mp->msg_part[0], &msg))
+      size_t stat[2];
+      
+      if (util_get_message_part (mbox, mp, &msg))
         continue;
 
-      mu_message_get_body (msg, &body);
-
-      mu_body_get_streamref (body, &stream);
-      rc = mu_stream_copy (output, stream, 0, NULL);
-      mu_stream_destroy (&stream);
-
+      rc = print_message_body (msg, output, &stat);
       if (rc == 0)
 	{
-	  mu_body_size (body, &size);
-	  total_size += size;
-	  mu_body_lines (body, &size);
-	  total_lines += size;
+	  total_size += stat[0];
+	  total_lines += stat[1];
 	  
 	  /* mark as saved. */
-	  
+	  if (mp->npart > 1)
+	    util_get_message (mbox, mp->msg_part[0], &msg);
 	  mu_message_get_attribute (msg, &attr);
 	  mu_attribute_set_userflag (attr, MAIL_ATTRIBUTE_SAVED);
 	}

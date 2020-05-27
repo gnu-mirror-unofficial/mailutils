@@ -50,6 +50,7 @@ char *mu_str_stripws (char *string);
 int mu_string_split (const char *string, char *delim, mu_list_t list);
 
 size_t mu_str_count (char const *str, char const *chr, size_t *cnt);
+size_t mu_mem_c_count (char const *str, int c, size_t len);
 
 int mu_c_str_escape (char const *str, char const *chr, char const *xtab,
 		     char **ret_str);

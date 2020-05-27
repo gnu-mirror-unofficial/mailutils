@@ -402,6 +402,12 @@ int msgset_parse (const int argc, char **argv, int flags, msgset_t **mset);
 int msgset_member (msgset_t *set, size_t n);
 msgset_t *msgset_negate (msgset_t *set);
 size_t msgset_count (msgset_t *set);
+char *msgset_part_str (msgset_t const *msgset, size_t npart);
+static inline char *
+msgset_str (const msgset_t *msgset)
+{
+  return msgset_part_str (msgset, msgset->npart);
+}
 
 #define MDHINT_SELECTED_HEADERS 0x1
 
@@ -490,6 +496,9 @@ void util_get_hdr_value (mu_header_t hdr, const char *name, char **value);
 int util_merge_addresses (char **addr_str, const char *value);
 int util_header_expand (mu_header_t *hdr);
 int util_get_message (mu_mailbox_t mbox, size_t msgno, mu_message_t *msg);
+int util_get_message_part (mu_mailbox_t mbox, msgset_t *msgset,
+			   mu_message_t *ret_msg);
+
 void util_cache_command (mu_list_t *list, const char *fmt, ...)
   MU_PRINTFLIKE(2,3);
 void util_run_cached_commands (mu_list_t *list);
@@ -503,7 +512,8 @@ const char *util_url_to_string (mu_url_t url);
 
 mu_stream_t open_pager (size_t lines);
 
-void format_msgset (mu_stream_t str, const msgset_t *msgset, size_t *count);
+int print_message_body (mu_message_t msg, mu_stream_t out, size_t *stat);
+
 char *sender_string (mu_message_t msg);
 
 int is_address_field (const char *name);
