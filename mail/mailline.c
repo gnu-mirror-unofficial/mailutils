@@ -23,6 +23,9 @@
 #ifdef WITH_READLINE
 static char **ml_command_completion (char *cmd, int start, int end);
 static char *ml_command_generator (const char *text, int state);
+static void ml_sig_handler (int);
+#else
+# define ml_sig_handler(n)
 #endif
 
 static volatile int _interrupted;
@@ -37,6 +40,7 @@ sig_handler (int signo)
 	exit (0);
       _interrupted++;
       break;
+
 #if defined (SIGWINCH)
     case SIGWINCH:
       util_do_command ("set screen=%d", util_getlines ());
@@ -45,6 +49,7 @@ sig_handler (int signo)
       break;
 #endif
     }
+  ml_sig_handler (signo);
 #ifndef HAVE_SIGACTION
   signal (signo, sig_handler);
 #endif
@@ -96,6 +101,7 @@ ml_readline_init (void)
   rl_attempted_completion_function =
     (rl_completion_func_t*) ml_command_completion;
   rl_getc_function = ml_getc;
+  rl_catch_signals = 0;
 #endif
 #ifdef HAVE_SIGACTION
   {
@@ -143,7 +149,7 @@ ml_readline_internal (void)
 char *
 ml_readline (const char *prompt)
 {
-  if (interactive)
+  if (interactive) 
     return readline (prompt);
   return ml_readline_internal ();
 }
@@ -158,6 +164,25 @@ ml_readline_with_intr (const char *prompt)
 }
 
 #ifdef WITH_READLINE
+
+/* Readline-specific signal handling */
+static void
+ml_sig_handler (int sig)
+{
+  switch (sig)
+    {
+    case SIGINT:
+      rl_free_line_state ();
+      break;
+
+#if defined (SIGWINCH)
+    case SIGWINCH:
+      rl_resize_terminal ();
+      break;
+#endif
+    }
+  rl_reset_after_signal ();
+}
 
 static char *insert_text;
 
