@@ -73,7 +73,12 @@ struct _mbox_message
   mu_off_t envel_from;         /* Start of envelope (^From ) */
   mu_off_t envel_from_end;     /* End of envelope (terminating \n) */
   mu_off_t body;               /* Start of body */
-  mu_off_t body_end;           /* End of body */
+  mu_off_t body_end;           /* End of body.  This is the first character
+				  past the body.  Normally, it is the newline
+			          character of the blank line that follows the
+				  message.  If such a line is missing, it is
+				  the offset of the next envelope ^F (or size
+				  of mailbox if it is the last message). */
 
   size_t header_lines;         /* Number of lines in header */
   size_t body_lines;           /* Number of lines in message body */

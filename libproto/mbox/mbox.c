@@ -1102,7 +1102,7 @@ append_message_to_stream (mu_stream_t ostr, mu_message_t msg,
       status = mu_stream_copy (ostr, flt, 0, NULL);
       mu_stream_destroy (&flt);
       if (status == 0)
-	status = mu_stream_write (ostr, "\n", 1, NULL);
+      	status = mu_stream_write (ostr, "\n", 1, NULL);
     }
   
   return status;
@@ -1269,7 +1269,10 @@ mbox_expunge_unlocked (mu_mailbox_t mailbox, size_t dirty, int remove_deleted,
 	      return status;
 	    }
 	  status = mu_stream_copy (tempstr, mailbox->stream,
-				   mum->body_end - mum->envel_from + 1, NULL);
+				   mum->body_end - mum->envel_from, NULL);
+	  /* Terminate messate with an empty line */
+	  if (status == 0)
+	    status = mu_stream_write (tempstr, "\n", 1, NULL);      
 	  if (status)
 	    {
 	      mu_error (_("%s:%d: error copying: %s"),
