@@ -1219,6 +1219,23 @@ mu_stream_truncate (mu_stream_t stream, mu_off_t size)
       
       if ((rc = _stream_flush_buffer (stream, FLUSH_RDWR)))
 	return rc;
+      if (stream->offset > size)
+	{
+	  stream->offset = size;
+	  stream->level = 0;
+	  stream->pos = 0;
+	}
+      else if (stream->offset + stream->pos > size)
+	{
+	  stream->pos = size - stream->offset;
+	  stream->level = stream->pos;
+	}
+      else if (stream->offset + stream->level > size)
+	{
+	  stream->level = size - stream->offset;
+	  if (stream->pos > stream->level)
+	    stream->pos = stream->level;
+	}
       return stream->truncate (stream, size);
     }
   return ENOSYS;
