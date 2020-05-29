@@ -166,7 +166,13 @@ mail_mbox_commit (void)
 
 	  status = mu_mailbox_append_message (dest_mbox, msg);
 	  if (status)
-	    mu_error (_("Cannot append message: %s"), mu_strerror (status));
+	    {
+	      mu_url_t url = NULL;
+	      mu_mailbox_get_url (dest_mbox, &url);
+	      mu_error (_("Cannot append message to %s: %s"),
+			util_url_to_string (url),
+			mu_strerror (status));
+	    }
 	  else
 	    {
 	      mu_attribute_set_deleted (attr);

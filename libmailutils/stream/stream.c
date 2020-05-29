@@ -121,10 +121,6 @@ _mu_stream_seteof (mu_stream_t str)
   _stream_setflag (str, _MU_STR_EOF);
 }
 
-#define _stream_buffer_freespace(s) \
-  ((s)->bufsize - (s)->level)
-#define _stream_buffer_is_full(s) (_stream_buffer_freespace(s) == 0)
-
 #define _stream_curp(s) ((s)->buffer + (s)->pos)
 
 static int
@@ -175,22 +171,26 @@ _stream_fill_buffer (struct _mu_stream *stream)
   return rc;
 }
 
-static int
+/* Return 1 if no more data can be written to the current buffer. */
+static inline int
 _stream_buffer_full_p (struct _mu_stream *stream)
 {
-    switch (stream->buftype)
-      {
-      case mu_buffer_none:
-	break;
-	
-      case mu_buffer_line:
-	return _stream_buffer_is_full (stream)
-	       || memchr (stream->buffer, '\n', stream->level) != NULL;
-
-      case mu_buffer_full:
-	return _stream_buffer_is_full (stream);
-      }
+  /* This function should be called only for buffered streams */
+  if (stream->buftype == mu_buffer_none)
     return 0;
+
+  if (stream->bufsize == stream->pos)
+    /* No space left in buffer */
+    return 1;
+
+  /* For line buffering, the buffer is flushed immediately after
+     receiving a newline character. */
+  if (stream->buftype == mu_buffer_line &&
+      stream->pos > 0 &&
+      memchr (stream->buffer, '\n', stream->pos) != NULL)
+    return 1;
+
+  return 0;
 }
 
 enum
@@ -1010,14 +1010,16 @@ mu_stream_write (mu_stream_t stream, const void *buf, size_t size,
 	{
 	  size_t n;
 	  
-	  if (_stream_buffer_full_p (stream)
-	      && (rc = _stream_flush_buffer (stream, FLUSH_RDWR)))
-	    break;
+	  if (_stream_buffer_full_p (stream))
+	    {
+	      if ((rc = _stream_flush_buffer (stream, FLUSH_RDWR)))
+		break;
+	    }
 
 	  if (size == 0)
 	    break;
 	    
-	  n = _stream_buffer_freespace (stream);
+	  n = stream->bufsize - stream->pos;
 	  if (n > size)
 	    n = size;
 	  memcpy (_stream_curp (stream), bufp, n);

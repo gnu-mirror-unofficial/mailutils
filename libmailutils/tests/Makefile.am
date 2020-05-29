@@ -59,6 +59,8 @@ noinst_PROGRAMS = \
  strin\
  strout\
  strtoc\
+ t0-stream\
+ t1-stream\
  tempfile\
  tcli\
  tocrlf\
@@ -167,6 +169,8 @@ TESTSUITE_AT += \
  strin.at\
  strout.at\
  strtoc.at\
+ t0-stream.at\
+ t1-stream.at\
  url.at\
  url-comp.at\
  xml.at\

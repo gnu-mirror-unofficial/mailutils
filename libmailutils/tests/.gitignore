@@ -48,3 +48,5 @@ wordwrap
 wordsplit-version.h
 wsp
 xscript
+t0-stream
+t1-stream
