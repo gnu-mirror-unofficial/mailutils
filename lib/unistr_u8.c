@@ -14,11 +14,13 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include "imap4d.h"
+#include <config.h>
 #include <stdlib.h>
 #include <unicase.h>
 #include <unistr.h>
 #include <string.h>
+#include <mailutils/types.h>
+#include "muaux.h"
 
 void
 unistr_downcase (char const *input, char **output)
@@ -31,6 +33,12 @@ unistr_downcase (char const *input, char **output)
 
 int
 unistr_is_substring (char const *haystack, char const *needle)
+{
+  return u8_strstr ((const uint8_t*) haystack, (const uint8_t*) needle) != NULL;
+}
+
+int
+unistr_is_substring_dn (char const *haystack, char const *needle)
 {
   char *lc;
   int result;

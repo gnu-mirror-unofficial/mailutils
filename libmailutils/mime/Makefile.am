@@ -21,6 +21,7 @@ libmime_la_SOURCES = \
  attachment.c\
  mime.c\
  mimehdr.c\
- mimehdrset.c
+ mimehdrset.c\
+ mimeitr.c
 
 AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils

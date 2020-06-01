@@ -106,7 +106,7 @@ AM_CPPFLAGS =\
 
 mh_LIBS = \
  ./libmh.a\
- ../lib/libmuaux.la\
+ $(MU_APP_LIBRARIES)\
  $(MU_LIB_MAILBOX)\
  $(MU_LIB_MAILER)\
  $(MU_LIB_AUTH)\
@@ -122,7 +122,7 @@ AM_YFLAGS=-vt
 
 inc_LDADD = \
  ./libmh.a\
- ../lib/libmuaux.la\
+ $(MU_APP_LIBRARIES)\
  ../lib/libmuscript.a\
  @LIBMU_SCM@ @GUILE_LIBS@\
  @LIBMU_SCM_DEPS@\

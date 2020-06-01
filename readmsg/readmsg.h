@@ -50,8 +50,16 @@
 #include <mailutils/envelope.h>
 #include <mailutils/wordsplit.h>
 #include <mailutils/datetime.h>
+#include <mailutils/iterator.h>
+#include <mailutils/assoc.h>
 
 int msglist (mu_mailbox_t mbox, int show_all, int argc, char **argv, int **set, int *n);
+
+void *pattern_init (char const *pattern);
+int pattern_match (void *pat, char const *str);
+void pattern_free (void *pat);
+
+int message_body_stream (mu_message_t msg, char const *charset, mu_stream_t *pstr);
 
 #endif
 

@@ -837,7 +837,7 @@ _scan_header (struct parsebuf *pb, char *name, char *value)
 	  free (hval);
 	  hval = tmp;
 	}
-      result = unistr_is_substring (hval, needle);
+      result = unistr_is_substring_dn (hval, needle);
       free (hval);
     }
   if (!(rc == 0 || rc == MU_ERR_NOENT))
@@ -901,7 +901,7 @@ _scan_header_all (struct parsebuf *pb, char *text)
 	  free (hval);
 	  hval = tmp;
 	}
-      result = unistr_is_substring (hval, needle);
+      result = unistr_is_substring_dn (hval, needle);
       free (hval);
     }
   free (needle);
@@ -973,7 +973,7 @@ _match_text (struct parsebuf *pb, mu_message_t msg, mu_content_type_t ct,
   while ((rc = mu_stream_getline (str, &buffer, &bufsize, &n)) == 0
 	 && n > 0)
     {
-      result = unistr_is_substring (buffer, needle);
+      result = unistr_is_substring_dn (buffer, needle);
       if (result)
 	break;
     }

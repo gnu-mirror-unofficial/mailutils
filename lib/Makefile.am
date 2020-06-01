@@ -60,3 +60,8 @@ if MU_COND_PYTHON
  libmuscript_a_SOURCES += python.c
 endif
 
+if MU_COND_UNISTRING
+ libmuaux_la_SOURCES += unistr_u8.c
+else
+ libmuaux_la_SOURCES += unistr_c.c
+endif

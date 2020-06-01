@@ -269,6 +269,8 @@ extern int mu_message_from_stream_with_envelope (mu_message_t *pmsg,
 						 mu_envelope_t env);
 extern int mu_stream_to_message (mu_stream_t instream, mu_message_t *pmsg);
 
+extern int mu_message_get_iterator (mu_message_t msg, mu_iterator_t *pitr);
+  
 #ifdef __cplusplus
 }
 #endif

@@ -19,9 +19,13 @@
 #endif
 
 #include "readmsg.h"
+#include <fnmatch.h>
+#include <regex.h>
 #include "mailutils/cli.h"
 #include "mailutils/mu_auth.h"
+#include "mailutils/alloc.h"
 #include "mu_umaxtostr.h"
+#include "muaux.h"
 
 #define WEEDLIST_SEPARATOR " :,"
 
@@ -37,6 +41,132 @@ int no_header = 0;
 int all_header = 0;
 int form_feed = 0;
 int show_all = 0;
+int mime_decode = 0;
+char *charset;
+
+
+enum
+  {
+    PAT_EXACT,
+    PAT_GLOB,
+    PAT_REGEX
+  };
+
+int pattern_type = PAT_EXACT;
+int pattern_ci = 0;
+
+static void *
+generic_init (char const *pattern)
+{
+  char *res;
+  if (pattern_ci)
+    unistr_downcase (pattern, &res);
+  else
+    res = mu_strdup (pattern);
+  return res;
+}
+
+static void
+generic_free (void *p)
+{
+  free (p);
+}
+
+static int
+pat_exact_match (void *pat, char const *text)
+{
+  return (pattern_ci ? unistr_is_substring_dn : unistr_is_substring)
+            (text, pat);
+}
+	  
+static int
+pat_glob_match (void *pat, char const *text)
+{
+  return fnmatch (pat, text, 0) == 0;
+}
+
+static void *
+pat_regex_init (char const *pattern)
+{
+  regex_t *rx = mu_alloc (sizeof (*rx));
+  int rc = regcomp (rx, pattern, REG_EXTENDED|REG_NOSUB
+		                 |(pattern_ci ? REG_ICASE : 0));
+  if (rc)
+    {
+      char errbuf[512];
+      regerror (rc, rx, errbuf, sizeof errbuf);
+      mu_error ("%s: %s", pattern, errbuf);
+      return NULL;
+    }
+  return rx;
+}
+
+static void
+pat_regex_free (void *p)
+{
+  regex_t *rx = p;
+  regfree (rx);
+  free (rx);
+}
+
+static int
+pat_regex_match (void *pat, char const *str)
+{
+  regex_t *rx = pat;
+  return regexec (rx, str, 0, NULL, 0) == 0;
+}
+
+static struct pattern_match_fun
+{
+  void *(*pat_init) (char const *pattern);
+  int (*pat_match) (void *pat, char const *str);
+  void (*pat_free) (void *);
+} pattern_match_tab[] = {
+  { generic_init, pat_exact_match, generic_free },
+  { generic_init, pat_glob_match, generic_free },
+  { pat_regex_init, pat_regex_match, pat_regex_free }
+};
+
+void *
+pattern_init (char const *pattern)
+{
+  return pattern_match_tab[pattern_type].pat_init (pattern);
+}
+
+int
+pattern_match (void *pat, char const *str)
+{
+  return pattern_match_tab[pattern_type].pat_match (pat, str);
+}
+
+void
+pattern_free (void *pat)
+{
+  return pattern_match_tab[pattern_type].pat_free (pat);
+}
+
+static void
+cli_pattern_match (struct mu_parseopt *po, struct mu_option *opt,
+		   char const *arg)
+{
+  switch (opt->opt_short)
+    {
+    case 'e':
+      pattern_type = PAT_EXACT;
+      break;
+      
+    case 'g':
+      pattern_type = PAT_GLOB;
+      break;
+      
+    case 'r':
+      pattern_type = PAT_REGEX;
+      break;
+      
+    case 'i':
+      pattern_ci = 1;
+    }
+}
 
 static struct mu_option readmsg_options[] = 
 {
@@ -60,6 +190,21 @@ static struct mu_option readmsg_options[] =
   { "show-all-match", 'a', NULL, MU_OPTION_DEFAULT,
     N_("print all messages matching pattern, not only the first"),
     mu_c_bool, &show_all },
+  { "exact",          'e', NULL, MU_OPTION_DEFAULT,
+    N_("match exact string (default)"),
+    mu_c_int, NULL, cli_pattern_match },    
+  { "glob",           'g', NULL, MU_OPTION_DEFAULT,
+    N_("match using globbing pattern"),
+    mu_c_int, NULL, cli_pattern_match },
+  { "regex",          'r', NULL, MU_OPTION_DEFAULT,
+    N_("match using POSIX regular expressions"),
+    mu_c_int, NULL, cli_pattern_match },
+  { "ignorecase",     'i', NULL, MU_OPTION_DEFAULT,
+    N_("case-insensitive matching"),
+    mu_c_int, NULL, cli_pattern_match },
+  { "mime",           'm', NULL, MU_OPTION_DEFAULT,
+    N_("decode MIME messages on output"),
+    mu_c_bool, &mime_decode },
   MU_OPTION_END
 }, *options[] = { readmsg_options, NULL };
 
@@ -146,7 +291,25 @@ print_unix_header (mu_message_t message)
   if (size > 1 && buf[size-1] != '\n')
     mu_printf ("\n");
 }
-    
+
+static void
+print_header_field (const char *name, const char *value)
+{
+  if (mime_decode)
+    {
+      char *s;
+      int rc = mu_rfc2047_decode (charset, value, &s);
+      if (rc == 0)
+	{
+	  mu_printf ("%s: %s\n", name, s);
+	  free (s);
+	}
+    }
+  else
+    mu_printf ("%s: %s\n", name, value);    
+}
+  
+
 static void
 print_header (mu_message_t message, int unix_header, int weedc, char **weedv)
 {
@@ -193,9 +356,7 @@ print_header (mu_message_t message, int unix_header, int weedc, char **weedv)
 		}
 	      else if (string_starts_with (name, weedv[j]))
 		{
-		  /* Check if mu_header_sget_value returns an empty string.  */
-		  if (value && *value)
-		    mu_printf ("%s: %s\n", name, value);
+		  print_header_field (name, value);
 		}
 	    }
 	}
@@ -204,11 +365,12 @@ print_header (mu_message_t message, int unix_header, int weedc, char **weedv)
 }
 
 static void
-print_body (mu_message_t message)
+print_body_simple (mu_message_t message)
 {
   int status;
   mu_body_t body = NULL;
   mu_stream_t stream = NULL;
+
   mu_message_get_body (message, &body);
 
   status = mu_body_get_streamref (body, &stream);
@@ -219,6 +381,114 @@ print_body (mu_message_t message)
     }
   mu_stream_copy (mu_strout, stream, 0, NULL);
   mu_stream_destroy (&stream);
+}
+
+char *
+msgpart_str (size_t *mpart)
+{
+  size_t len = 0;
+  size_t i;
+  char *result, *p;
+  
+  for (i = 1; i < mpart[0]; i++)
+    {
+      size_t n = mpart[i];
+      do
+	len++;
+      while (n /= 10);
+      len++;
+    }
+
+  result = malloc (len);
+  p = result;
+  
+  for (i = 1; i < mpart[0]; i++)
+    {
+      size_t n = mpart[i];
+      if (i > 1)
+	*p++ = '.';
+      do
+	{
+	  unsigned x = n % 10;
+	  *p++ = x + '0';
+	}
+      while (n /= 10);
+    }
+  *p = 0;
+
+  return result;
+}
+
+static void
+print_body_decode (mu_message_t message)
+{
+  int rc;
+  mu_iterator_t itr;
+  
+  rc = mu_message_get_iterator (message, &itr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_iterator", NULL, rc);
+      exit (2);
+    }
+  
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
+       mu_iterator_next (itr))
+    {
+      mu_message_t partmsg;
+      mu_stream_t str;
+      size_t *p;
+      
+      rc = mu_iterator_current_kv (itr, (const void**)&p, (void**)&partmsg);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_iterator_current", NULL, rc);
+	  continue;
+	}
+
+      rc = message_body_stream (partmsg, charset, &str);
+      if (rc == 0)
+	{
+	  mu_stream_copy (mu_strout, str, 0, NULL);
+	  mu_stream_destroy (&str);
+	}
+      else if (rc == MU_ERR_USER0)
+	{
+	  char *s = msgpart_str (p);
+	  mu_stream_printf (mu_strout,
+			    "[part %s is a binary attachment: not shown]\n",
+			    s);
+	  free (s);
+	}
+      free (p);
+    }
+  mu_iterator_destroy (&itr);
+}
+
+static void
+print_body (mu_message_t message)
+{
+  if (mime_decode)
+    print_body_decode (message);
+  else
+    print_body_simple (message);
+}
+
+static void
+define_charset (void)
+{
+  struct mu_lc_all lc_all = { .flags = 0 };
+  char *ep = getenv ("LC_ALL");
+  if (!ep)
+    ep = getenv ("LANG");
+
+  if (ep && mu_parse_lc_all (ep, &lc_all, MU_LC_CSET) == 0)
+    {
+      charset = mu_strdup (lc_all.charset);
+      mu_lc_all_free (&lc_all);
+    }
+  else
+    charset = mu_strdup ("us-ascii");
 }
 
 int
@@ -251,6 +521,8 @@ main (int argc, char **argv)
       exit (1);
     }
 
+  define_charset ();
+  
   status = mu_mailbox_create_default (&mbox, mailbox_name);
   if (status != 0)
     {

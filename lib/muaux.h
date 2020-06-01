@@ -32,3 +32,6 @@ int manlock_unlock (mu_mailbox_t mbox);
 
 void manlock_cfg_init (void);
 
+void unistr_downcase (char const *input, char **output);
+int unistr_is_substring (char const *haystack, char const *needle);
+int unistr_is_substring_dn (char const *haystack, char const *needle);

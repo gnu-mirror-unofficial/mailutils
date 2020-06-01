@@ -49,6 +49,7 @@ noinst_PROGRAMS = \
  mailcap\
  mcf\
  mimehdr\
+ mimeitr\
  modtofsaf\
  msgset\
  modmesg\

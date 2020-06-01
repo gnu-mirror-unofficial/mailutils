@@ -82,7 +82,4 @@ imap4d_LDADD = \
 
 if MU_COND_UNISTRING
   imap4d_LDADD += -lunistring
-  imap4d_SOURCES += unistr_u8.c
-else
-  imap4d_SOURCES += unistr_c.c
 endif

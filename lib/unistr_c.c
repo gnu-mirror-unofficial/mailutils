@@ -14,7 +14,11 @@
    You should have received a copy of the GNU General Public License
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include "imap4d.h"
+#include <config.h>
+#include <mailutils/types.h>
+#include <mailutils/alloc.h>
+#include <mailutils/cstr.h>
+#include "muaux.h"
 
 void
 unistr_downcase (char const *input, char **output)
