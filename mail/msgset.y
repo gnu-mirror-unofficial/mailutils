@@ -954,6 +954,17 @@ check_set (msgset_t **pset)
   return rc;
 }
 
+static void
+revstr (char *s, char *e)
+{
+  while (s < e)
+    {
+      char t = *s;
+      *s++ = *--e;
+      *e = t;
+    }
+}
+
 char *
 msgset_part_str (const msgset_t *msgset, size_t npart)
 {
@@ -975,15 +986,18 @@ msgset_part_str (const msgset_t *msgset, size_t npart)
   
   for (i = 0; i < npart; i++)
     {
+      char *s;
       size_t n = msgset->msg_part[i];
       if (i)
 	*p++ = '.';
+      s = p;
       do
 	{
 	  unsigned x = n % 10;
 	  *p++ = x + '0';
 	}
       while (n /= 10);
+      revstr (s, p);
     }
   *p = 0;
 

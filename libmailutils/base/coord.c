@@ -69,6 +69,17 @@ mu_coord_dup (mu_coord_t orig, mu_coord_t *copy)
   return 0;
 }
 
+static void
+revstr (char *s, char *e)
+{
+  while (s < e)
+    {
+      char t = *s;
+      *s++ = *--e;
+      *e = t;
+    }
+}
+
 char *
 mu_coord_string (mu_coord_t c)
 {
@@ -92,15 +103,18 @@ mu_coord_string (mu_coord_t c)
   
   for (i = 1; i <= dim; i++)
     {
+      char *s;
       size_t n = c[i];
       if (i > 1)
 	*p++ = '.';
+      s = p;
       do
 	{
 	  unsigned x = n % 10;
 	  *p++ = x + '0';
 	}
       while (n /= 10);
+      revstr(s, p);
     }
   *p = 0;
 
