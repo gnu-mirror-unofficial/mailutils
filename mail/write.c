@@ -86,7 +86,7 @@ mail_write (int argc, char **argv)
       if (util_get_message_part (mbox, mp, &msg))
         continue;
 
-      rc = print_message_body (msg, output, &stat);
+      rc = print_message_body (msg, output, stat);
       if (rc == 0)
 	{
 	  total_size += stat[0];

@@ -436,7 +436,7 @@ run_metamail (const char *mailcap_cmd, mu_message_t mesg)
  * Prints the body of the message MSG to the output stream OUT.  If
  * the Content-Transfer-Encoding header is set, the body is decoded.
  * If stat is not NULL, it must point to an array of two size_t.
- * Upon return stat[0] will contain the number of bytes and stat[0]
+ * Upon return stat[0] will contain the number of bytes and stat[1]
  * the number of newline characters written to the output.
  */
 int
