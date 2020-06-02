@@ -24,6 +24,7 @@ libbase_la_SOURCES = \
  argcvjoin.c\
  argcvrem.c\
  assoc.c\
+ coord.c\
  copyfile.c\
  ctparse.c\
  daemon.c\

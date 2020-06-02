@@ -270,7 +270,24 @@ extern int mu_message_from_stream_with_envelope (mu_message_t *pmsg,
 extern int mu_stream_to_message (mu_stream_t instream, mu_message_t *pmsg);
 
 extern int mu_message_get_iterator (mu_message_t msg, mu_iterator_t *pitr);
+
+/*
+ * Message part coordinates
+ */
+typedef size_t *mu_coord_t;
   
+int mu_coord_alloc (mu_coord_t *ptr, size_t n);
+int mu_coord_realloc (mu_coord_t *ptr, size_t n);
+int mu_coord_dup (mu_coord_t orig, mu_coord_t *copy);
+
+static inline size_t
+mu_coord_length (mu_coord_t c)
+{
+  return c[0];
+}
+
+char *mu_coord_string (mu_coord_t c);
+
 #ifdef __cplusplus
 }
 #endif

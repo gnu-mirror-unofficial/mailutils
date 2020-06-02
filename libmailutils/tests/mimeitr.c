@@ -20,16 +20,6 @@
 #include <assert.h>
 #include <mailutils/mailutils.h>
 
-static void
-print_message_path (size_t *p)
-{
-  size_t n = p[0];
-  for (p++; n > 0; n--, p++)
-    {
-      mu_printf (".%zu", *p);
-    }
-}
-
 int
 main (int argc, char **argv)
 {
@@ -44,13 +34,16 @@ main (int argc, char **argv)
   for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
        mu_iterator_next (itr))
     {
-      size_t *p;
+      mu_coord_t crd;
       mu_message_t msg;
       mu_stream_t str;
+      char *s;
       
-      MU_ASSERT (mu_iterator_current_kv (itr, (const void **)&p, (void**)&msg));
-      print_message_path(p);
-      mu_printf (":\n");
+      MU_ASSERT (mu_iterator_current_kv (itr, (const void **)&crd,
+					 (void**)&msg));
+      s = mu_coord_string (crd);
+      mu_printf ("%s:\n", s);
+      free (s);
       MU_ASSERT (mu_message_get_streamref (msg, &str));
       MU_ASSERT (mu_stream_copy (mu_strout, str, 0, NULL));
       mu_printf ("\n");

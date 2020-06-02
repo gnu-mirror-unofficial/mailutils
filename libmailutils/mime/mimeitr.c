@@ -36,6 +36,7 @@ struct mimeitr
   int stop;
   struct mime_part *parent;
   struct mime_part *current;
+  mu_coord_t coord;
 };
 
 static void
@@ -159,14 +160,15 @@ getitem (void *owner, void **pret, const void **pkey)
     {
       struct mime_part *p;
       size_t n = mime_part_list_len (itr->current);
-      size_t *path = calloc (n, sizeof (*path));
+      mu_coord_t coord = realloc (itr->coord, n * sizeof (*itr->coord));
 
-      if (!path)
+      if (!coord)
 	return -1;
-      path[0] = --n;
+      itr->coord = coord;
+      coord[0] = --n;
       for (p = itr->current->up; p; p = p->up, n--)
-	path[n] = p->index;
-      *pkey = path;
+	coord[n] = p->index;
+      *pkey = coord;
     }
   *pret = itr->current->mesg;
   return 0;
@@ -179,12 +181,19 @@ finished_p (void *owner)
   return itr->stop;
 }
 
+static void
+mimeitr_free (struct mimeitr *itr)
+{
+  mime_part_list_unwind (&itr->current, NULL);
+  free (itr->coord);
+  free (itr);
+}
+
 static int
 destroy (mu_iterator_t iterator, void *data)
 {
   struct mimeitr *itr = data;
-  mime_part_list_unwind (&itr->current, NULL);
-  free (itr);
+  mimeitr_free (itr);
   return 0;
 }
 
@@ -235,6 +244,13 @@ itrdup (void **ptr, void *owner)
       po = po->up;
     }
 
+  rc = mu_coord_dup (orig->coord, &itr->coord);
+  if (rc)
+    {
+      mimeitr_free (itr);
+      return rc;
+    }
+  
   *ptr = itr;
   return 0;
 }
@@ -274,6 +290,7 @@ mu_message_get_iterator (mu_message_t msg, mu_iterator_t *pitr)
   itr->parent->nparts = nparts;
   itr->current = itr->parent;
   itr->stop = 0;
+  itr->coord = NULL;
   
   rc = mu_iterator_create (&iterator, itr);
   if (rc)

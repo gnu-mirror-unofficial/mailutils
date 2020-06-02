@@ -59,7 +59,9 @@ void *pattern_init (char const *pattern);
 int pattern_match (void *pat, char const *str);
 void pattern_free (void *pat);
 
-int message_body_stream (mu_message_t msg, char const *charset, mu_stream_t *pstr);
+int message_body_stream (mu_message_t msg, int unix_header,
+			 char const *charset,
+			 mu_stream_t *pstr);
 
 #endif
 

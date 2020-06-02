@@ -156,7 +156,8 @@ match_hdr (mu_header_t hdr, void *pattern)
 }
 
 int
-message_body_stream (mu_message_t msg, char const *charset, mu_stream_t *pstr)
+message_body_stream (mu_message_t msg, int unix_header, char const *charset,
+		     mu_stream_t *pstr)
 {
   int rc;
   mu_header_t hdr;
@@ -241,12 +242,30 @@ message_body_stream (mu_message_t msg, char const *charset, mu_stream_t *pstr)
 	}
       else
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_body", encoding, rc);
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_filter_create", encoding, rc);
 	  /* FIXME: continue anyway? */
 	}
 
-      /* Convert the content to UTF-8. */
+      /* Convert the content to the requested charset. */
       rc = charset_setup (&stream, ct, charset);
+      if (rc)
+	goto err;
+
+      if (unix_header)
+	{
+	  rc = mu_filter_create (&d_stream, stream, "FROM",
+				 MU_FILTER_ENCODE, MU_STREAM_READ);
+	  if (rc == 0)
+	    {
+	      mu_stream_unref (stream);
+	      stream = d_stream;
+	    }
+	  else
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_filter_create", "FROM", rc);
+	      /* continue anyway */
+	    }
+	}
     }
   else
     rc = MU_ERR_USER0;
@@ -282,7 +301,7 @@ matchmsgpart (mu_message_t msg, void *pattern)
   if (match_hdr (hdr, pattern) == 0)
     return 0;
 
-  if (message_body_stream (msg, "utf-8", &str))
+  if (message_body_stream (msg, 0, "utf-8", &str))
     return 1;
 
   /* Look for a matching line. */

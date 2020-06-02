@@ -31,7 +31,7 @@
 
 static void print_unix_header (mu_message_t);
 static void print_header (mu_message_t, int, int, char **);
-static void print_body (mu_message_t);
+static void print_body (mu_message_t, int);
 static int  string_starts_with (const char * s1, const char *s2);
 
 int dbug = 0;
@@ -43,7 +43,6 @@ int form_feed = 0;
 int show_all = 0;
 int mime_decode = 0;
 char *charset;
-
 
 enum
   {
@@ -297,8 +296,10 @@ print_header_field (const char *name, const char *value)
 {
   if (mime_decode)
     {
+      int rc;
       char *s;
-      int rc = mu_rfc2047_decode (charset, value, &s);
+      
+      rc = mu_rfc2047_decode (charset, value, &s);
       if (rc == 0)
 	{
 	  mu_printf ("%s: %s\n", name, s);
@@ -354,7 +355,8 @@ print_header (mu_message_t message, int unix_header, int weedc, char **weedv)
 		  if (string_starts_with (name, weedv[j]+1))
 		    break;
 		}
-	      else if (string_starts_with (name, weedv[j]))
+	      else if (strcmp (weedv[j], "*") == 0 ||
+		       string_starts_with (name, weedv[j]))
 		{
 		  print_header_field (name, value);
 		}
@@ -365,7 +367,7 @@ print_header (mu_message_t message, int unix_header, int weedc, char **weedv)
 }
 
 static void
-print_body_simple (mu_message_t message)
+print_body_simple (mu_message_t message, int unix_header)
 {
   int status;
   mu_body_t body = NULL;
@@ -383,44 +385,8 @@ print_body_simple (mu_message_t message)
   mu_stream_destroy (&stream);
 }
 
-char *
-msgpart_str (size_t *mpart)
-{
-  size_t len = 0;
-  size_t i;
-  char *result, *p;
-  
-  for (i = 1; i < mpart[0]; i++)
-    {
-      size_t n = mpart[i];
-      do
-	len++;
-      while (n /= 10);
-      len++;
-    }
-
-  result = malloc (len);
-  p = result;
-  
-  for (i = 1; i < mpart[0]; i++)
-    {
-      size_t n = mpart[i];
-      if (i > 1)
-	*p++ = '.';
-      do
-	{
-	  unsigned x = n % 10;
-	  *p++ = x + '0';
-	}
-      while (n /= 10);
-    }
-  *p = 0;
-
-  return result;
-}
-
 static void
-print_body_decode (mu_message_t message)
+print_body_decode (mu_message_t message, int unix_header)
 {
   int rc;
   mu_iterator_t itr;
@@ -437,16 +403,16 @@ print_body_decode (mu_message_t message)
     {
       mu_message_t partmsg;
       mu_stream_t str;
-      size_t *p;
+      mu_coord_t crd;
       
-      rc = mu_iterator_current_kv (itr, (const void**)&p, (void**)&partmsg);
+      rc = mu_iterator_current_kv (itr, (const void**)&crd, (void**)&partmsg);
       if (rc)
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_iterator_current", NULL, rc);
 	  continue;
 	}
 
-      rc = message_body_stream (partmsg, charset, &str);
+      rc = message_body_stream (partmsg, unix_header, charset, &str);
       if (rc == 0)
 	{
 	  mu_stream_copy (mu_strout, str, 0, NULL);
@@ -454,24 +420,23 @@ print_body_decode (mu_message_t message)
 	}
       else if (rc == MU_ERR_USER0)
 	{
-	  char *s = msgpart_str (p);
+	  char *s = mu_coord_string (crd);
 	  mu_stream_printf (mu_strout,
 			    "[part %s is a binary attachment: not shown]\n",
 			    s);
 	  free (s);
 	}
-      free (p);
     }
   mu_iterator_destroy (&itr);
 }
 
 static void
-print_body (mu_message_t message)
+print_body (mu_message_t message, int unix_header)
 {
   if (mime_decode)
-    print_body_decode (message);
+    print_body_decode (message, unix_header);
   else
-    print_body_simple (message);
+    print_body_simple (message, unix_header);
 }
 
 static void
@@ -554,7 +519,15 @@ main (int argc, char **argv)
       exit (2);
     }
 
-  if (weedlist == NULL)
+  if (all_header)
+    {
+      unix_header = 1;
+      if (mime_decode)
+	weedlist = "!MIME-Version !Content- *";
+      else
+	weedlist = "";
+    }
+  else if (weedlist == NULL)
     weedlist = "Date To Cc Subject From Apparently-";
 
   ws.ws_delim = WEEDLIST_SEPARATOR;
@@ -585,13 +558,6 @@ main (int argc, char **argv)
       weedv = ws.ws_wordv;
     }
   
-  if (all_header)
-    {
-      unix_header = 1;
-      weedc = 0;
-      weedv = NULL;
-    }
-
   /* Build an array containing the message number.  */
   msglist (mbox, show_all, argc, argv, &set, &n);
 
@@ -613,7 +579,7 @@ main (int argc, char **argv)
       if (!no_header)
 	print_header (msg, unix_header, weedc, weedv);
       
-      print_body (msg);
+      print_body (msg, unix_header);
       mu_printf (form_feed ? "\f" : "\n");
     }
 
