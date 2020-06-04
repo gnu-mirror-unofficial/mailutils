@@ -14,10 +14,6 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-if MU_COND_SUPPORT_NNTP
-  NNTPCLIENT = nntpclient
-endif
-
 if MU_COND_SUPPORT_CXX
   CPP_DIR = cpp
 endif
@@ -46,11 +42,8 @@ noinst_PROGRAMS = \
  muemail\
  murun\
  musocio\
- $(NNTPCLIENT)\
  sa\
  sfrom
-
-EXTRA_PROGRAMS = nntpclient
 
 ## NOTE: Numaddr must be an installable target, otherwise libtool
 ## will not create a shared library and `make check' will fail in
@@ -96,14 +89,6 @@ mboxsize_LDADD =\
  $(MU_LIB_AUTH)\
  $(MU_AUTHLIBS)\
  $(MU_LIB_MAILUTILS)
-
-nntpclient_LDADD = \
- $(MU_APP_LIBRARIES) \
- $(MU_LIB_NNTP)\
- $(MU_LIB_AUTH)\
- $(MU_AUTHLIBS)\
- $(MU_LIB_MAILUTILS)\
- @READLINE_LIBS@
 
 lsf_LDADD = \
  $(MU_LIB_MAILBOX)\

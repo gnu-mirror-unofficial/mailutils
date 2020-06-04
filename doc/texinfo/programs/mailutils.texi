@@ -187,8 +187,6 @@ Link in the Maildir format support.
 Link in the IMAP protocol support.
 @item pop
 Link in the POP protocol support.
-@item nntp
-Link in the NNTP protocol support.
 @item mailer
 Enable support for mailers.
 @item sieve

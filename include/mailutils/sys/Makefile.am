@@ -46,7 +46,6 @@ sysinclude_HEADERS = \
  mime.h\
  monitor.h\
  msgset.h\
- nntp.h\
  nullstream.h\
  observer.h\
  pop3.h\

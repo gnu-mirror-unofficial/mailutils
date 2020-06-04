@@ -34,10 +34,6 @@ mu_record_t mu_pop_record = NULL;
 mu_record_t mu_pops_record = NULL;
 #endif
 
-#ifndef ENABLE_NNTP
-mu_record_t mu_nntp_record = NULL;
-#endif
-
 #ifndef ENABLE_MH
 mu_record_t mu_mh_record = NULL;
 #endif

@@ -111,8 +111,6 @@ extern mu_record_t mu_imaps_record;
 /* Remote Mailbox POP3, pop://  */
 extern mu_record_t mu_pop_record;
 extern mu_record_t mu_pops_record;
-/* Remote newsgroup NNTP, nntp://  */
-extern mu_record_t mu_nntp_record;
 
 /* Local Mailbox Unix Mailbox, "mbox:"  */
 extern mu_record_t mu_mbox_record;
@@ -126,7 +124,6 @@ extern mu_record_t mu_maildir_record;
 #define MU_MBOX_PRIO        300 
 #define MU_MAILDIR_PRIO     400 
 #define MU_MH_PRIO          500
-#define MU_NNTP_PRIO        600
 #define MU_PATH_PRIO        1000
   
 #define MU_SMTP_PRIO        10000
@@ -168,7 +165,6 @@ extern mu_record_t mu_dotmail_record;
   mu_registrar_record (mu_pops_record);\
   mu_registrar_record (mu_imap_record);\
   mu_registrar_record (mu_imaps_record);\
-  mu_registrar_record (mu_nntp_record);\
 } while (0)
 
 #define mu_register_all_mailer_formats() do {\
@@ -178,9 +174,7 @@ extern mu_record_t mu_dotmail_record;
   mu_registrar_record (mu_prog_record);\
 } while (0)
 
-#define mu_register_extra_formats() do {\
-  mu_registrar_record (mu_nntp_record);\
-} while (0)
+#define mu_register_extra_formats()
 
 #define mu_register_all_formats() do {\
   mu_register_all_mbox_formats ();\

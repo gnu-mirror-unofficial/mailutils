@@ -55,9 +55,6 @@ struct lib_descr {
   { "pop",    "-lmu_pop",   0 },
   { "pop",    NEEDAUTH,     2 },
 #endif
-#ifdef ENABLE_NNTP  
-  { "nntp",   "-lmu_nntp",  0 },
-#endif
 #ifdef ENABLE_DBM
   { "dbm",    "-lmu_dbm",   0 },
   { "dbm",    DBMLIBS,      2 },
@@ -71,9 +68,10 @@ struct lib_descr {
 #ifdef WITH_PYTHON
   { "python", "-lmu_py " PYTHON_LIBS, -1, NOTALL },
 #endif
-  { "compat", NULL,  0, 0 },  /* deprecated */
-  { "cfg",    NULL,  0, 0 },  /* deprecated */
-  { "argp",   NULL,  0, 0 },  /* deprecated */
+  { "compat" },  /* deprecated */
+  { "cfg"    },  /* deprecated */
+  { "argp"   },  /* deprecated */
+  { "nntp"   },  /* deprecated */
   { NULL }
 };
 

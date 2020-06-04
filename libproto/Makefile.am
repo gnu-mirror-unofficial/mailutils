@@ -24,10 +24,6 @@ if MU_COND_SUPPORT_IMAP
   SUBDIRS += imap
 endif
 
-if MU_COND_SUPPORT_NNTP
-  SUBDIRS += nntp
-endif
-
 if MU_COND_SUPPORT_MH
   SUBDIRS += mh
 endif

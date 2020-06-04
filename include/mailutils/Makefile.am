@@ -82,7 +82,6 @@ pkginclude_HEADERS = \
  mu_auth.h\
  util.h\
  nls.h\
- nntp.h\
  observer.h\
  opool.h\
  opt.h\

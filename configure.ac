@@ -985,7 +985,6 @@ MU_ENABLE_REMOTE_MAILBOX_FORMAT([imap])
 # This is not a full-fledged testsuite yet, but it might be useful anyways
 AC_CONFIG_FILES([libproto/imap/tests/Makefile])
 MU_ENABLE_REMOTE_MAILBOX_FORMAT([pop])
-MU_ENABLE_LOCAL_MAILBOX_FORMAT([nntp],[],[],["$mu_build_experimental" = "yes"])
 MU_ENABLE_LOCAL_MAILBOX_FORMAT([mh])
 MU_ENABLE_LOCAL_MAILBOX_FORMAT([maildir])
 MU_ENABLE_LOCAL_MAILBOX_FORMAT([dotmail])

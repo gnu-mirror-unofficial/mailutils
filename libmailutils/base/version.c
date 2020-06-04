@@ -121,9 +121,6 @@ static struct mu_conf_option mu_conf_option[] = {
 #ifdef ENABLE_SENDMAIL
   { "ENABLE_SENDMAIL", N_("Sendmail command line interface support")},
 #endif
-#ifdef ENABLE_NNTP
-  { "ENABLE_NNTP", N_("NNTP protocol support") },
-#endif
 #ifdef ENABLE_RADIUS
   { "ENABLE_RADIUS", N_("RADIUS protocol support") },
 #endif
