@@ -15,6 +15,7 @@
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <config.h>
+#include <stdlib.h>
 #include <mailutils/types.h>
 #include <mailutils/alloc.h>
 #include <mailutils/cstr.h>
@@ -31,4 +32,16 @@ int
 unistr_is_substring (char const *haystack, char const *needle)
 {
   return mu_c_strcasestr (haystack, needle) != NULL;
+}
+
+int
+unistr_is_substring_dn (char const *haystack, char const *needle)
+{
+  char *lc;
+  int result;
+  
+  unistr_downcase (haystack, &lc);
+  result = mu_c_strcasestr (lc, needle) != NULL;
+  free (lc);
+  return result;
 }
