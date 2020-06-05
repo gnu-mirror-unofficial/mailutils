@@ -42,7 +42,7 @@ top0 (msgset_t *mspec, mu_message_t msg, void *data)
     }
   free (buf);
   mu_stream_destroy (&stream);
-  set_cursor (mspec->msg_part[0]);
+  set_cursor (msgset_msgno (mspec));
 
   util_mark_read (msg);
 

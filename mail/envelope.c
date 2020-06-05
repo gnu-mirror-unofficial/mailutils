@@ -32,7 +32,7 @@ print_stream_envelope (mu_stream_t str, msgset_t *mspec, mu_message_t msg,
   if (status)
     {
       mu_error (_("%lu: Cannot get envelope"),
-		(unsigned long) mspec->msg_part[0]);
+		(unsigned long) msgset_msgno (mspec));
     }
   else
     {

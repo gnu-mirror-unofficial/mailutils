@@ -236,9 +236,7 @@ typedef struct message_set msgset_t;
 struct message_set
 {
   msgset_t *next;       /* Link to the next message set */
-  unsigned int npart;   /* Number of parts in this set */
-  size_t *msg_part;     /* Array of part numbers: msg_part[0] is the 
-                           message number */
+  mu_coord_t crd;
 };
 
 typedef int (*msg_handler_t) (msgset_t *mp, mu_message_t mesg, void *data);
@@ -402,11 +400,25 @@ int msgset_parse (const int argc, char **argv, int flags, msgset_t **mset);
 int msgset_member (msgset_t *set, size_t n);
 msgset_t *msgset_negate (msgset_t *set);
 size_t msgset_count (msgset_t *set);
-char *msgset_part_str (msgset_t const *msgset, size_t npart);
-static inline char *
-msgset_str (const msgset_t *msgset)
+static inline size_t
+msgset_length (msgset_t *set)
 {
-  return msgset_part_str (msgset, msgset->npart);
+  return mu_coord_length (set->crd);
+}
+static inline size_t
+msgset_msgno (msgset_t *set)
+{
+  return set->crd[1];
+}
+static inline char *
+msgset_part_str (const msgset_t *set, size_t n)
+{
+  return mu_coord_part_string (set->crd, n);
+}
+static inline char *
+msgset_str (const msgset_t *set)
+{
+  return mu_coord_string (set->crd);
 }
 
 #define MDHINT_SELECTED_HEADERS 0x1

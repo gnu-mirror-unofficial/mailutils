@@ -59,7 +59,7 @@ mail_write (int argc, char **argv)
 
   if (sender)
     {
-      filename = util_outfolder_name (util_get_sender(msglist->msg_part[0], 1));
+      filename = util_outfolder_name (util_get_sender (msgset_msgno (msglist), 1));
       if (!filename)
 	{
 	  msgset_free (msglist);
@@ -93,14 +93,14 @@ mail_write (int argc, char **argv)
 	  total_lines += stat[1];
 	  
 	  /* mark as saved. */
-	  if (mp->npart > 1)
-	    util_get_message (mbox, mp->msg_part[0], &msg);
+	  if (msgset_length (mp) > 1)
+	    util_get_message (mbox, msgset_msgno (mp), &msg);
 	  mu_message_get_attribute (msg, &attr);
 	  mu_attribute_set_userflag (attr, MAIL_ATTRIBUTE_SAVED);
 	}
       else
 	mu_error (_("cannot save %lu: %s"),
-		  (unsigned long) mp->msg_part[0], mu_strerror (rc));
+		  (unsigned long) msgset_msgno (mp), mu_strerror (rc));
     }
 
   mu_stream_close (output);

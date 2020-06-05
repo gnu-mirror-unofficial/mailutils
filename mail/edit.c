@@ -28,7 +28,7 @@ edit0 (msgset_t *mspec, mu_message_t msg, void *data)
   util_do_command ("shell %s %s", getenv ("EDITOR"), file);
   remove (file);
   free (file);
-  set_cursor (mspec->msg_part[0]);
+  set_cursor (msgset_msgno (mspec));
   return 0;
 }
 

@@ -110,7 +110,7 @@ mail_print_msg (msgset_t *mspec, mu_message_t mesg, void *data)
   
   util_mark_read (mesg);
 
-  set_cursor (mspec->msg_part[0]);
+  set_cursor (msgset_msgno (mspec));
   
   return 0;
 }

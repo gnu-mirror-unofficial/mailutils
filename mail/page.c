@@ -31,7 +31,7 @@ static int
 _fill_map (msgset_t *mspec, mu_message_t msg, void *data)
 {
   unsigned *pos = data;
-  page_map[*pos] = mspec->msg_part[0];
+  page_map[*pos] = msgset_msgno (mspec);
   ++*pos;
   return 0;
 }
@@ -176,13 +176,10 @@ page_do (msg_handler_t func, void *data)
   for (i = 0; i < page_avail; i++)
     {
       mu_message_t msg;
-      msgset_t set;
-      
-      set.next = NULL;
-      set.npart = 1;
-      set.msg_part = page_map + i;
+      msgset_t *set = msgset_make_1 (page_map[i]);
       mu_mailbox_get_message (mbox, page_map[i], &msg);
-      func (&set, msg, data);
+      func (set, msg, data);
+      msgset_free (set);
     }
 }
 

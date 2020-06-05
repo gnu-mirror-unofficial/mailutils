@@ -82,10 +82,10 @@ revstr (char *s, char *e)
 }
 
 char *
-mu_coord_string (mu_coord_t c)
+mu_coord_part_string (mu_coord_t c, size_t dim)
 {
   size_t len = 0;
-  size_t i, dim = mu_coord_length (c);
+  size_t i;
   char *result, *p;
   
   for (i = 1; i <= dim; i++)
@@ -121,4 +121,3 @@ mu_coord_string (mu_coord_t c)
 
   return result;
 }
-      

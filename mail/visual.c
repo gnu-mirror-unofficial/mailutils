@@ -34,7 +34,7 @@ visual0 (msgset_t *mspec, mu_message_t msg, void *data)
   /* Mark as read */
   util_mark_read (msg);
 
-  set_cursor (mspec->msg_part[0]);
+  set_cursor (msgset_msgno (mspec));
   
   return 0;
 }

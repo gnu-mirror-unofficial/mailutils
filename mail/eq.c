@@ -39,14 +39,13 @@ mail_eq (int argc, char **argv)
     case 2:
       if (msgset_parse (argc, argv, MSG_NODELETED, &list) == 0)
 	{
-	  if (list->msg_part[0] <= total)
+	  if (msgset_msgno (list) <= total)
 	    {
-	      set_cursor (list->msg_part[0]);
-	      mu_printf ("%lu\n",
-				(unsigned long) list->msg_part[0]);
+	      set_cursor (msgset_msgno (list));
+	      mu_printf ("%lu\n", (unsigned long) msgset_msgno (list));
 	    }
 	  else
-	    util_error_range (list->msg_part[0]);
+	    util_error_range (msgset_msgno (list));
 	  msgset_free (list);
 	}
       break;

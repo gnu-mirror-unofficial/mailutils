@@ -168,7 +168,7 @@ util_foreach_msg (int argc, char **argv, int flags,
     {
       mu_message_t mesg;
 
-      if (util_get_message (mbox, mp->msg_part[0], &mesg) == 0)
+      if (util_get_message (mbox, msgset_msgno (mp), &mesg) == 0)
 	{
 	  if (func (mp, mesg, data) != 0)
 	    status = 1;
@@ -186,12 +186,8 @@ size_t
 util_range_msg (size_t low, size_t high, int flags,
 		msg_handler_t func, void *data)
 {
-  msgset_t msgspec = { 0 };
   size_t count, expect_count;
 
-  msgspec.next = NULL;
-  msgspec.npart = 0;
-  msgspec.msg_part = &low;
   if (!func)
     flags |= MSG_SILENT;
 
@@ -222,7 +218,11 @@ util_range_msg (size_t low, size_t high, int flags,
        {
 	 count ++;
 	 if (func)
-	   func (&msgspec, mesg, data) ;
+	   {
+	     msgset_t *set = msgset_make_1 (low);
+	     func (set, mesg, data);
+	     free (set);
+	   }
 	 /* Bail out if we receive an interrupt.  */
 	 if (ml_got_interrupt () != 0)
 	   break;
@@ -730,12 +730,13 @@ util_save_outgoing (mu_message_t msg, char *savefile)
     }
 }
 
+//FIXME
 static int
 util_descend_subparts (mu_message_t mesg, msgset_t *msgset, mu_message_t *part)
 {
   unsigned int i;
 
-  for (i = 1; i < msgset->npart; i++)
+  for (i = 2; i <= msgset_length (msgset); i++)
     {
       mu_message_t submsg = NULL;
       size_t nparts = 0;
@@ -755,17 +756,17 @@ util_descend_subparts (mu_message_t mesg, msgset_t *msgset, mu_message_t *part)
 	}
 
       mu_message_get_num_parts (mesg, &nparts);
-      if (nparts < msgset->msg_part[i])
+      if (nparts < msgset->crd[i])
 	{
 	  mu_error (_("No such (sub)part in the message: %lu"),
-		      (unsigned long) msgset->msg_part[i]);
+		      (unsigned long) msgset->crd[i]);
 	  return 1;
 	}
 
-      if (mu_message_get_part (mesg, msgset->msg_part[i], &submsg))
+      if (mu_message_get_part (mesg, msgset->crd[i], &submsg))
 	{
 	  mu_error (_("Cannot get (sub)part from the message: %lu"),
-		      (unsigned long) msgset->msg_part[i]);
+		      (unsigned long) msgset->crd[i]);
 	  return 1;
 	}
 
@@ -785,7 +786,7 @@ util_msgset_iterate (msgset_t *msgset,
     {
       mu_message_t mesg;
 
-      if (mu_mailbox_get_message (mbox, msgset->msg_part[0], &mesg) != 0)
+      if (mu_mailbox_get_message (mbox, msgset_msgno (msgset), &mesg) != 0)
 	return;
 
       if (util_descend_subparts (mesg, msgset, &mesg) == 0)
@@ -1015,15 +1016,15 @@ util_get_message_part (mu_mailbox_t mbox, msgset_t *msgset,
   mu_message_t msg;
   size_t i;
   
-  status = mu_mailbox_get_message (mbox, msgset->msg_part[0], &msg);
+  status = mu_mailbox_get_message (mbox, msgset_msgno (msgset), &msg);
   if (status)
     {
       mu_error (_("Cannot get message %lu: %s"),
-		  (unsigned long) msgset->msg_part[0], mu_strerror (status));
+		(unsigned long) msgset_msgno (msgset), mu_strerror (status));
       return status;
     }
 
-  for (i = 1; i < msgset->npart; i++)
+  for (i = 2; i <= msgset_length (msgset); i++)
     {
       status = mu_message_is_multipart (msg, &ismime);
       if (status)
@@ -1041,7 +1042,7 @@ util_get_message_part (mu_mailbox_t mbox, msgset_t *msgset,
 	  return status;
 	}
 
-      status = mu_message_get_part (msg, msgset->msg_part[i], &msg);
+      status = mu_message_get_part (msg, msgset->crd[i], &msg);
       if (status)
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_part",

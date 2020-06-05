@@ -30,7 +30,7 @@ touch0 (msgset_t *mspec, mu_message_t msg, void *data)
   mu_message_get_attribute (msg, &attr);
   mu_attribute_set_userflag (attr, MAIL_ATTRIBUTE_TOUCHED);
   
-  set_cursor (mspec->msg_part[0]);
+  set_cursor (msgset_msgno (mspec));
   return 0;
 }
 

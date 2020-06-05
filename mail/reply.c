@@ -52,14 +52,14 @@ reply0 (msgset_t *mspec, mu_message_t msg, void *data)
   int status;
   char *str;
 
-  set_cursor (mspec->msg_part[0]);
+  set_cursor (msgset_msgno (mspec));
   
   compose_init (&env);
 
   mu_message_get_header (msg, &hdr);
 
   compose_header_set (&env, MU_HEADER_TO,
-		      util_get_sender (mspec->msg_part[0], 0),
+		      util_get_sender (msgset_msgno (mspec), 0),
 		      COMPOSE_SINGLE_LINE);
 
   if (*(int*) data) /* reply starts with a lowercase */

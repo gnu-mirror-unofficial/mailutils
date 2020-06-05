@@ -222,13 +222,13 @@ rangeset : range
 range    : number
          | NUMBER '-' number
            {
-	     if ($3->npart == 1)
+	     if (msgset_length ($3) == 1)
 	       {
-		 $$ = msgset_range ($1, $3->msg_part[0]);
+		 $$ = msgset_range ($1, msgset_msgno ($3));
 	       }
 	     else
 	       {
-		 $$ = msgset_range ($1, $3->msg_part[0]-1);
+		 $$ = msgset_range ($1, msgset_msgno ($3) - 1);
 		 if (!$$)
 		   YYERROR;
 		 msgset_append ($$, $3);
@@ -415,13 +415,10 @@ msgset_free (msgset_t *msg_set)
 {
   msgset_t *next;
 
-  if (!msg_set)
-    return;
   while (msg_set)
     {
       next = msg_set->next;
-      if (msg_set->msg_part)
-	free (msg_set->msg_part);
+      free (msg_set->crd);
       free (msg_set);
       msg_set = next;
     }
@@ -446,9 +443,9 @@ msgset_make_1 (size_t number)
     return NULL;
   mp = mu_alloc (sizeof (*mp));
   mp->next = NULL;
-  mp->npart = 1;
-  mp->msg_part = mu_alloc (sizeof mp->msg_part[0]);
-  mp->msg_part[0] = number;
+  if (mu_coord_alloc (&mp->crd, 1))
+    mu_alloc_die ();
+  mp->crd[1] = number;
   return mp;
 }
 
@@ -458,9 +455,8 @@ msgset_dup (const msgset_t *set)
   msgset_t *mp;
   mp = mu_alloc (sizeof (*mp));
   mp->next = NULL;
-  mp->npart = set->npart;
-  mp->msg_part = mu_calloc (mp->npart, sizeof mp->msg_part[0]);
-  memcpy (mp->msg_part, set->msg_part, mp->npart * sizeof mp->msg_part[0]);
+  if (mu_coord_dup (set->crd, &mp->crd))
+    mu_alloc_die ();
   return mp;
 }
 
@@ -480,7 +476,7 @@ msgset_append (msgset_t *one, msgset_t *two)
     return two;
   for (last = one; last->next; last = last->next)
     {
-      msgset_remove (&two, last->msg_part[0]);
+      msgset_remove (&two, msgset_msgno (last));
     }
   last->next = two;
   return one;
@@ -490,7 +486,7 @@ int
 msgset_member (msgset_t *set, size_t n)
 {
   for (; set; set = set->next)
-    if (set->msg_part[0] == n)
+    if (msgset_msgno (set) == n)
       return 1;
   return 0;
 }
@@ -504,13 +500,14 @@ msgset_remove (msgset_t **pset, size_t n)
     {
       if (cur == NULL)
 	return;
-      if (cur->msg_part[0] == n)
+      if (msgset_msgno (cur) == n)
 	break;
       pnext = &cur->next;
       cur = cur->next;
     }
   *pnext = cur->next;
-  free (cur);
+  cur->next = NULL;
+  msgset_free (cur);
 }
 
 msgset_t *
@@ -572,11 +569,13 @@ msgset_expand (msgset_t *set, msgset_t *expand_by)
       {
 	mp = mu_alloc (sizeof *mp);
 	mp->next = NULL;
-	mp->npart = i->npart + j->npart;
-	mp->msg_part = mu_calloc (mp->npart, sizeof mp->msg_part[0]);
-	memcpy (mp->msg_part, i->msg_part, i->npart * sizeof i->msg_part[0]);
-	memcpy (mp->msg_part + i->npart, j->msg_part,
-		j->npart * sizeof j->msg_part[0]);
+	if (mu_coord_alloc (&mp->crd,
+			    mu_coord_length (i->crd) + mu_coord_length (j->crd)))
+	  mu_alloc_die ();
+	memcpy (&mp->crd[1], &i->crd[1],
+		mu_coord_length (i->crd) * sizeof i->crd[0]);
+	memcpy (&mp->crd[1] + mu_coord_length (i->crd), &j->crd[1],
+		mu_coord_length (j->crd) * sizeof j->crd[0]);
 
 	if (!first)
 	  first = mp;
@@ -915,7 +914,7 @@ check_set (msgset_t **pset)
       while (p)
 	{
 	  msgset_t *next = p->next;
-	  if (util_isdeleted (p->msg_part[0]))
+	  if (util_isdeleted (msgset_msgno (p)))
 	    {
 	      if ((flags & MSG_SILENT) && (prev || next))
 		{
@@ -931,7 +930,7 @@ check_set (msgset_t **pset)
 	      else
 		{
 		  mu_error (_("%lu: Inappropriate message (has been deleted)"),
-			      (unsigned long) p->msg_part[0]);
+			    (unsigned long) msgset_msgno (p));
 		  /* Delete entire set */
 		  delset = *pset;
 		  *pset = NULL;
@@ -954,55 +953,6 @@ check_set (msgset_t **pset)
   return rc;
 }
 
-static void
-revstr (char *s, char *e)
-{
-  while (s < e)
-    {
-      char t = *s;
-      *s++ = *--e;
-      *e = t;
-    }
-}
-
-char *
-msgset_part_str (const msgset_t *msgset, size_t npart)
-{
-  size_t len = 0;
-  size_t i;
-  char *result, *p;
-  
-  for (i = 0; i < npart; i++)
-    {
-      size_t n = msgset->msg_part[i];
-      do
-	len++;
-      while (n /= 10);
-      len++;
-    }
-
-  result = malloc (len);
-  p = result;
-  
-  for (i = 0; i < npart; i++)
-    {
-      char *s;
-      size_t n = msgset->msg_part[i];
-      if (i)
-	*p++ = '.';
-      s = p;
-      do
-	{
-	  unsigned x = n % 10;
-	  *p++ = x + '0';
-	}
-      while (n /= 10);
-      revstr (s, p);
-    }
-  *p = 0;
-
-  return result;
-}
 
 #if 0
 void

@@ -406,8 +406,7 @@ quote0 (msgset_t *mspec, mu_message_t mesg, void *data)
   mu_stream_t flt;
   char *argv[3];
 
-  mu_printf (_("Interpolating: %lu\n"),
-		    (unsigned long) mspec->msg_part[0]);
+  mu_printf (_("Interpolating: %lu\n"), (unsigned long) msgset_msgno (mspec));
 
   mailvar_get (&prefix, mailvar_name_indentprefix, mailvar_type_string, 0);
 

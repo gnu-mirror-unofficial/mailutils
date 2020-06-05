@@ -52,7 +52,7 @@ show_struct (msgset_t *msgset, mu_message_t msg, void *data)
   mime_descend (&mclos, show_part, NULL);
 
     /* Mark enclosing message as read */
-  if (mu_mailbox_get_message (mbox, msgset->msg_part[0], &msg) == 0)
+  if (mu_mailbox_get_message (mbox, msgset_msgno (msgset), &msg) == 0)
     util_mark_read (msg);
 
   return 0;

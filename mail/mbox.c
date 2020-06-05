@@ -29,7 +29,7 @@ mbox0 (msgset_t *mspec, mu_message_t msg, void *data)
   mu_attribute_unset_userflag (attr, MAIL_ATTRIBUTE_PRESERVED);
   mu_attribute_set_userflag (attr, MAIL_ATTRIBUTE_MBOXED);
   
-  set_cursor (mspec->msg_part[0]);
+  set_cursor (msgset_msgno (mspec));
   
   return 0;
 }

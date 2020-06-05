@@ -30,7 +30,7 @@ undelete0 (msgset_t *mspec, mu_message_t msg, void *data)
   mu_attribute_unset_userflag (attr, MAIL_ATTRIBUTE_PRESERVED);
   mu_attribute_unset_userflag (attr, MAIL_ATTRIBUTE_MBOXED);
   util_mark_read (msg);
-  cond_page_invalidate (mspec->msg_part[0]);
+  cond_page_invalidate (msgset_msgno (mspec));
 
   return 0;
 }

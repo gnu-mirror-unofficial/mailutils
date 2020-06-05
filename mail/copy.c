@@ -59,7 +59,7 @@ append_to_mailbox (mu_url_t url, msgset_t *msglist, int mark,
 
   for (mp = msglist; mp; mp = mp->next)
     {
-      status = util_get_message (mbox, mp->msg_part[0], &msg);
+      status = util_get_message (mbox, msgset_msgno (mp), &msg);
       if (status)
 	break;
 
@@ -136,7 +136,7 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
       const char *s, *d;
       int n;
 
-      status = util_get_message (mbox, mp->msg_part[0], &msg);
+      status = util_get_message (mbox, msgset_msgno (mp), &msg);
       if (status)
 	break;
 
@@ -228,7 +228,7 @@ mail_copy0 (int argc, char **argv, int mark)
     {
       if (msgset_parse (argc, argv, MSG_NODELETED, &msglist))
 	return 1;
-      filename = util_outfolder_name (util_get_sender (msglist->msg_part[0], 1));
+      filename = util_outfolder_name (util_get_sender (msgset_msgno (msglist), 1));
     }
   else
     {

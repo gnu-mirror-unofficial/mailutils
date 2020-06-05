@@ -71,7 +71,7 @@ mail_followup (int argc, char **argv)
      (or should it be cc?) */
   for (mp = msglist; mp; mp = mp->next)
     compose_header_set (&env, MU_HEADER_TO,
-			util_get_sender (mp->msg_part[0], 0),
+			util_get_sender (msgset_msgno (mp), 0),
 			COMPOSE_SINGLE_LINE);
 
   msgset_free (msglist);

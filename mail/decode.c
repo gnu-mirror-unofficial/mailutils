@@ -73,7 +73,7 @@ display_message (mu_message_t mesg, msgset_t *msgset, void *arg)
   mime_descend (&mclos, display_submessage, NULL);
 
   /* Mark enclosing message as read */
-  if (mu_mailbox_get_message (mbox, msgset->msg_part[0], &mesg) == 0)
+  if (mu_mailbox_get_message (mbox, msgset_msgno (msgset), &mesg) == 0)
     util_mark_read (mesg);
 
   return 0;

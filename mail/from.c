@@ -149,7 +149,7 @@ hdr_text (struct header_call_args *args, void *data)
 static char *
 hdr_cur (struct header_call_args *args, void *data)
 {
-  if (is_current_message (args->mspec->msg_part[0]))
+  if (is_current_message (msgset_msgno (args->mspec)))
     return (char*) data;
   return " ";
 }
@@ -327,7 +327,7 @@ static char *
 hdr_number (struct header_call_args *args, void *data)
 {
   char buf[UINTMAX_STRSIZE_BOUND];
-  return header_buf_string (args, umaxtostr (args->mspec->msg_part[0], buf));
+  return header_buf_string (args, umaxtostr (msgset_msgno (args->mspec), buf));
 }
 
 /* %o */

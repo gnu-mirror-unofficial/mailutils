@@ -49,7 +49,7 @@ mail_pipe (int argc, char **argv)
       mu_message_t msg;
       mu_stream_t stream;
       
-      if (util_get_message (mbox, mp->msg_part[0], &msg) == 0)
+      if (util_get_message (mbox, msgset_msgno (mp), &msg) == 0)
 	{
 	  mu_message_get_streamref (msg, &stream);
 	  mu_stream_copy (outstr, stream, 0, NULL);

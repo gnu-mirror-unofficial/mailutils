@@ -54,7 +54,7 @@ mail_previous (int argc, char **argv)
       int rc = msgset_parse (argc, argv, MSG_NODELETED|MSG_SILENT, &list);
       if (!rc)
 	{
-	  n = list->msg_part[0];
+	  n = msgset_msgno (list);
 	  msgset_free (list);
 	  if (util_get_message (mbox, n, &msg))
 	    return 1;

@@ -286,7 +286,13 @@ mu_coord_length (mu_coord_t c)
   return c[0];
 }
 
-char *mu_coord_string (mu_coord_t c);
+char *mu_coord_part_string (mu_coord_t c, size_t d);
+
+static inline char *
+mu_coord_string (mu_coord_t c)
+{
+  return mu_coord_part_string (c, mu_coord_length (c));
+}
 
 #ifdef __cplusplus
 }

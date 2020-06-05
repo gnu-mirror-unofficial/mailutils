@@ -20,7 +20,7 @@
 /* unt[ag] [msglist] */
 
 static int
-tag_message (mu_message_t mesg, msgset_t *msgset MU_ARG_UNUSED, void *arg)
+tag_message (msgset_t *msgset, mu_message_t mesg, void *arg)
 {
   mu_attribute_t attr;
   int *action = arg;
@@ -36,14 +36,8 @@ tag_message (mu_message_t mesg, msgset_t *msgset MU_ARG_UNUSED, void *arg)
 int
 mail_tag (int argc, char **argv)
 {
-  msgset_t *msgset;
   int action = argv[0][0] != 'u';
-
-  if (msgset_parse (argc, argv, MSG_NODELETED|MSG_SILENT, &msgset))
-    return 1;
-
-  util_msgset_iterate (msgset, tag_message, (void *)&action);
-
-  msgset_free (msgset);
-  return 0;
+  
+  return util_foreach_msg (argc, argv, MSG_NODELETED|MSG_SILENT,
+			   tag_message, &action);
 }
