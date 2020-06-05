@@ -31,6 +31,7 @@ mu_coord_alloc (mu_coord_t *ptr, size_t n)
   if (!p)
     return errno;
   p[0] = n;
+  *ptr = p;
   return 0;
 }
 
