@@ -180,6 +180,7 @@ pop_input (mu_list_t list, int *state, const char **input)
   *state = inp->state;
   if (input)
     *input = inp->input;
+  free (inp);
   return 0;
 }
 

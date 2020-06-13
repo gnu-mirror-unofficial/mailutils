@@ -302,6 +302,7 @@ _mime_header_parse (const char *text, char **pvalue,
     {
       mu_debug (MU_DEBCAT_MIME, MU_DEBUG_ERROR,
 		(_("wordsplit: %s"), mu_wordsplit_strerror (&ws)));
+      mu_wordsplit_free (&ws);
       return MU_ERR_PARSE;
     }
 
@@ -485,7 +486,10 @@ _mime_header_parse (const char *text, char **pvalue,
 	  struct mu_mime_param *param;
 	  rc = mu_rfc2047_decode_param (outcharset, val, &param);
 	  if (rc)
-	    return rc;
+	    {
+	      mu_wordsplit_free (&ws);
+	      return rc;
+	    }
 	  cset = csetp = param->cset;
 	  lang = langp = param->lang;
 	  decoded = param->value;

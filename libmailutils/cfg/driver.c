@@ -214,6 +214,7 @@ mu_config_destroy_container (struct mu_cfg_cont **pcont)
   struct mu_cfg_cont *cont = *pcont;
   unsigned refcount = mu_refcount_dec (cont->refcount);
   /* printf ("destr %p-%s: %d\n", cont, cont->v.section.ident, refcount); */
+  // FIXME: Shouldn't it be done inside the conditional below?
   switch (cont->type)
     {
     case mu_cfg_cont_section:
@@ -226,6 +227,7 @@ mu_config_destroy_container (struct mu_cfg_cont **pcont)
 
   if (refcount == 0)
     {
+      mu_refcount_destroy (&cont->refcount);
       free (cont);
       *pcont = 0;
     }

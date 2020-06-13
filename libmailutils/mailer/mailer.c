@@ -629,6 +629,7 @@ send_fragments (mu_mailer_t mailer,
 	break;
 
       mu_mime_to_message (mime, &newmsg);
+      mu_mime_destroy (&mime);
       merge_headers (newmsg, hdr);
       
       status = mailer->_send_message (mailer, newmsg, from, to);

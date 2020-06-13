@@ -624,6 +624,7 @@ mu_cfg_tree_postprocess (mu_cfg_tree_t *tree, struct mu_cfg_parse_hints *hints)
 	  mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
 	}
     }
+  mu_iterator_destroy (&itr);
   return 0;
 }
 
@@ -683,6 +684,7 @@ mu_cfg_destroy_tree (mu_cfg_tree_t **ptree)
       mu_cfg_tree_t *tree = *ptree;
       mu_list_destroy (&tree->nodes);
       mu_opool_destroy (&tree->pool);
+      free (tree);
       *ptree = NULL;
     }
 }

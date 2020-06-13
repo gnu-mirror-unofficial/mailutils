@@ -52,10 +52,11 @@ content_type_parse (const char *input, const char *charset,
       ct->type[len] = 0;
 
       ct->subtype = strdup (p + 1);
+      free (value);
+
       if (!ct->subtype)
 	{
 	  rc = errno;
-	  free (value);
 	  return rc;
 	}
     }

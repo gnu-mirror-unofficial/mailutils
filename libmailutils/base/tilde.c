@@ -113,8 +113,8 @@ mu_tilde_expansion (const char *ref, int delim, const char *homedir)
             }
         }
     }
-  if (home)
-    free (home);
+  free (proto);
+  free (home);
   return base;
 }
 

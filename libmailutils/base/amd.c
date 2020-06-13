@@ -1860,8 +1860,7 @@ amd_message_stream_close (struct _amd_message *mhm)
 {
   if (mhm)
     {
-      mu_stream_close (mhm->stream);
-      mhm->stream = NULL;
+      mu_stream_destroy (&mhm->stream);
     }
 }
 
