@@ -3,6 +3,7 @@ aclck
 argcv
 base64
 decode2047
+decodemail
 echosrv
 encode2047
 fcopy

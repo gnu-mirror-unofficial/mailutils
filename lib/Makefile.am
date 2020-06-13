@@ -30,6 +30,7 @@ libmuaux_la_SOURCES = \
  daemon.c\
  mailcap.c\
  manlock.c\
+ mdecode.c\
  signal.c\
  strexit.c\
  mu_umaxtostr.c\
