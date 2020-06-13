@@ -259,12 +259,6 @@ number   : partno
 
 partno   : NUMBER
            {
-	     if ($1 > message_count)
-	       {
-		 util_error_range ($1);
-		 YYERROR;
-	       }
-
 	     $$ = msgset_make_1 ($1);
 	   }
          | '(' rangeset ')'
@@ -404,7 +398,15 @@ msgset_parse (const int argc, char **argv, int flags, msgset_t **mset)
 	  rc = 1;
 	}
       else
-	*mset = result;
+	{
+	  if (result->crd[1] > message_count)
+	    {
+	      util_error_range (result->crd[1]);
+	      msgset_free (result);
+	      return 1;
+	    }
+	  *mset = result;
+	}
     }
   mu_opool_destroy (&tokpool);
   return rc;
