@@ -25,19 +25,18 @@
 extern "C" { 
 #endif
 
-#define MIME_MAX_HDR_LEN           256
-#define MIME_DFLT_BUF_SIZE         2048
-
 /* Parser states */
-#define MIME_STATE_BEGIN_LINE      1
-#define MIME_STATE_SCAN_BOUNDARY   2
-#define MIME_STATE_HEADERS         3
+enum
+  {
+    MIME_STATE_SCAN_BOUNDARY,
+    MIME_STATE_HEADERS,
+    MIME_STATE_END
+  };
 
 #define MIME_FLAG_MASK             0x0000ffff
 
 /* private */
 #define MIME_PARSER_ACTIVE         0x80000000
-#define MIME_PARSER_HAVE_CR        0x40000000
 #define MIME_NEW_MESSAGE           0x20000000
 #define MIME_ADDED_CT              0x10000000
 #define MIME_ADDED_MULTIPART_CT    0x08000000
@@ -66,11 +65,9 @@ struct _mu_mime
   size_t          postamble;
   mu_stream_t     part_stream;
   /* parser state */
-  char           *cur_line;
-  ssize_t         line_ndx;
-  size_t          line_size;
-  char           *cur_buf;
-  size_t          buf_size;
+  char           *cur_line;           /* Line buffer */
+  size_t          line_length;        /* Length of line in cur_line */
+  size_t          line_size;          /* Actual capacity of cur_line */
   char           *header_buf;
   size_t          header_buf_size;
   size_t          header_length;

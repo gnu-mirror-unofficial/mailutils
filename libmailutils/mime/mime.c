@@ -221,56 +221,35 @@ _mime_get_param (char *field_body, const char *param, int *len)
   return NULL;
 }
 
-static int
-_mime_setup_buffers (mu_mime_t mime)
-{
-  if (mime->cur_buf == NULL
-      && (mime->cur_buf = malloc (mime->buf_size)) == NULL)
-    {
-      return ENOMEM;
-    }
-  if (mime->cur_line == NULL
-      && (mime->cur_line = calloc (mime->line_size, 1)) == NULL)
-    {
-      free (mime->cur_buf);
-      return ENOMEM;
-    }
-  return 0;
-}
-
 static void
 _mime_append_header_line (mu_mime_t mime)
 {
-  if (mime->header_length + mime->line_ndx > mime->header_buf_size)
+  if (mime->header_length + mime->line_length > mime->header_buf_size)
     {
       char *nhb;
 
       if ((nhb = realloc (mime->header_buf,
-			  mime->header_length + mime->line_ndx + 128)) == NULL)
+			  mime->header_length + mime->line_length + 128)) == NULL)
 	return;
       mime->header_buf = nhb;
-      mime->header_buf_size = mime->header_length + mime->line_ndx + 128;
+      mime->header_buf_size = mime->header_length + mime->line_length + 128;
     }
   memcpy (mime->header_buf + mime->header_length, mime->cur_line,
-	  mime->line_ndx);
-  mime->header_length += mime->line_ndx;
+	  mime->line_length);
+  mime->header_length += mime->line_length;
 }
 
 static int
 _mime_parse_mpart_message (mu_mime_t mime)
 {
-  char *cp;
   size_t blength, mb_length, mb_offset, mb_lines;
   int ret;
-  size_t nbytes;
 
   if (!(mime->flags & MIME_PARSER_ACTIVE))
     {
       char *boundary;
       int len;
 
-      if ((ret = _mime_setup_buffers (mime)) != 0)
-	return ret;
       if ((boundary = _mime_get_param (mime->content_type, "boundary", &len))
 	  == NULL)
 	return EINVAL;
@@ -279,7 +258,7 @@ _mime_parse_mpart_message (mu_mime_t mime)
       strncpy (mime->boundary, boundary, len);
 
       mime->cur_offset = 0;
-      mime->line_ndx = 0;
+      mime->line_length = 0;
       mime->parser_state = MIME_STATE_SCAN_BOUNDARY;
       mime->flags |= MIME_PARSER_ACTIVE;
     }
@@ -289,126 +268,67 @@ _mime_parse_mpart_message (mu_mime_t mime)
   blength = strlen (mime->boundary);
 
   mu_stream_seek (mime->stream, mime->cur_offset, MU_SEEK_SET, NULL);
-  while ((ret = mu_stream_read (mime->stream, mime->cur_buf, mime->buf_size,
-				&nbytes)) == 0 && nbytes)
+  while (mime->parser_state != MIME_STATE_END &&
+	 (ret = mu_stream_getline (mime->stream,
+				   &mime->cur_line, &mime->line_size,
+				   &mime->line_length)) == 0 && mime->line_length)
     {
-      cp = mime->cur_buf;
-
-      while (1)
+      switch (mime->parser_state)
 	{
-	  if (nbytes)
-	    mime->cur_line[mime->line_ndx] = *cp;
-
-	  if (mime->parser_state == MIME_STATE_SCAN_BOUNDARY
-	      && (nbytes == 0 || *cp == '\n'))
+	case MIME_STATE_SCAN_BOUNDARY:
+	  if (mime->line_length >= blength
+	      && ((memcmp (mime->cur_line, "--", 2) == 0
+		   && memcmp (mime->cur_line + 2, mime->boundary,
+			      blength) == 0)
+		  || memcmp (mime->cur_line, mime->boundary, blength) == 0))
 	    {
-	      char *cp2 = mime->cur_line[0] == '\n'
-		            ? mime->cur_line + 1 : mime->cur_line;
-	      if (mime->line_ndx >= blength
-		  && ((memcmp (cp2, "--", 2) == 0
-		       && memcmp (cp2 + 2, mime->boundary, blength) == 0)
-		      || memcmp (cp2, mime->boundary, blength) == 0))
+	      mime->parser_state = MIME_STATE_HEADERS;
+	      mb_length = mime->cur_offset - mb_offset - 1;
+	      if (mime->header_length)
+		/* this skips the preamble */
 		{
-		  mime->parser_state = MIME_STATE_HEADERS;
-		  mime->flags &= ~MIME_PARSER_HAVE_CR;
-		  mb_length = mime->cur_offset 
-			                   - mb_offset
-			                   - mime->line_ndx;
-		  if (mime->header_length)
-		    /* this skips the preamble */
-		    {
-		      /* RFC 1521 [Page 30]:
-			 NOTE: The CRLF preceding the encapsulation
-			 line is conceptually attached to the boundary
-			 so that it is possible to have a part that
-			 does not end with a CRLF (line break). Body
-			 parts that must be considered to end with line
-			 breaks, therefore, must have two CRLFs
-			 preceding the encapsulation line, the first
-			 of which is part of the preceding body part,
-			 and the second of which is part of the
-			 encapsulation boundary. */
-		      
-		      if (mb_lines)
-			/* to prevent negative values in case of a
-			   malformed message */
-			mb_lines--;
-		      
-		      _mime_append_part (mime, NULL,
-					 mb_offset, mb_length,
-					 mb_lines);
-		    }
+		  /* RFC 1521 [Page 30]:
+		     NOTE: The CRLF preceding the encapsulation
+		     line is conceptually attached to the boundary
+		     so that it is possible to have a part that
+		     does not end with a CRLF (line break). Body
+		     parts that must be considered to end with line
+		     breaks, therefore, must have two CRLFs
+		     preceding the encapsulation line, the first
+		     of which is part of the preceding body part,
+		     and the second of which is part of the
+		     encapsulation boundary. */
 		  
-		  if ((&mime->cur_line[mime->line_ndx] - cp2 - 1 > blength
-		       && memcmp (cp2 + blength + 2, "--", 2) == 0)
-		      || (&mime->cur_line[mime->line_ndx] - cp2 - 1 == blength
-			  && memcmp (cp2 + blength, "--", 2) == 0))
-		    {	/* last boundary */
-		      mime->parser_state = MIME_STATE_BEGIN_LINE;
-		      mime->header_length = 0;
-		    }
-		  else
-		    mime->line_ndx = -1; /* headers parsing requires
-					    empty line */
+		  if (mb_lines)
+		    /* to prevent negative values in case of a
+		       malformed message */
+		    mb_lines--;
+		  
+		  _mime_append_part (mime, NULL,
+				     mb_offset, mb_length, mb_lines);
 		}
-	      else if (nbytes)
-		{
-		  if (mime->header_length)
-		    mb_lines++;
-		  
-		  mime->line_ndx = 0;
-		  mime->cur_line[0] = *cp;	/* stay in this state but
-						   leave '\n' at begining */
+	      
+	      if (mime->line_length > blength
+		  && memcmp (mime->cur_line + blength + 2, "--", 2) == 0)
+		{	/* last boundary */
+		  mime->parser_state = MIME_STATE_END;
+		  mime->header_length = 0;
 		}
 	    }
-
-	  if (nbytes == 0) 
-	    break;
+	  else
+	    mb_lines++;
+	  break;
 	  
-	  if (*cp == '\n')
+	case MIME_STATE_HEADERS:
+	  _mime_append_header_line (mime);//FIXME
+	  if (mime->line_length == 1)
 	    {
-	      switch (mime->parser_state)
-		{
-		case MIME_STATE_BEGIN_LINE:
-		  mime->cur_line[0] = *cp;
-		  mime->line_ndx = 0;
-		  mime->parser_state = MIME_STATE_SCAN_BOUNDARY;
-		  break;
-
-		case MIME_STATE_SCAN_BOUNDARY:
-		  break;
-
-		case MIME_STATE_HEADERS:
-		  mime->line_ndx++;
-		  _mime_append_header_line (mime);
-		  if (mime->line_ndx == 1 || mime->cur_line[0] == '\r')
-		    {
-		      mime->parser_state = MIME_STATE_SCAN_BOUNDARY;
-		      mb_offset = mime->cur_offset + 1;
-		      mb_lines = 0;
-		    }
-		  mime->line_ndx = -1;
-		  break;
-		}
+	      mime->parser_state = MIME_STATE_SCAN_BOUNDARY;
+	      mb_offset = mime->cur_offset + 1;
+	      mb_lines = 0;
 	    }
-
-	  mime->line_ndx++;
-	  if (mime->line_ndx >= mime->line_size)
-	    {
-	      size_t newsize = mime->line_size + MIME_MAX_HDR_LEN;
-	      char *p = realloc (mime->cur_line, newsize);
-	      if (!p)
-		{
-		  ret = ENOMEM;
-		  break;
-		}
-	      mime->cur_line = p;
-	      mime->line_size = newsize;
-	    }
-	  mime->cur_offset++;
-	  nbytes--;
-	  cp++;
 	}
+      mime->cur_offset += mime->line_length;
     }
   mime->body_lines = mb_lines;
   mime->body_length = mb_length;
@@ -992,8 +912,6 @@ mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
 	  if (ret == 0)
 	    {
 	      mime->msg = msg;
-	      mime->buf_size = MIME_DFLT_BUF_SIZE;
-	      mime->line_size = MIME_MAX_HDR_LEN;
 	      mu_message_get_body (msg, &body);
 	      mu_body_get_streamref (body, &mime->stream);
 	    }
@@ -1044,16 +962,10 @@ _mu_mime_free (mu_mime_t mime)
   mu_stream_destroy (&mime->part_stream);
   if (mime->msg && mime->flags & MIME_NEW_MESSAGE)
     mu_message_destroy (&mime->msg, mime);
-  if (mime->content_type)
-    free (mime->content_type);
-  if (mime->cur_buf)
-    free (mime->cur_buf);
-  if (mime->cur_line)
-    free (mime->cur_line);
-  if (mime->boundary)
-    free (mime->boundary);
-  if (mime->header_buf)
-    free (mime->header_buf);
+  free (mime->content_type);
+  free (mime->cur_line);
+  free (mime->boundary);
+  free (mime->header_buf);
   free (mime);
 }
 
