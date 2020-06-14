@@ -16,58 +16,6 @@
 
 ACLOCAL_AMFLAGS = -I m4 -I am -I gint -I doc/imprimatur
 
-if MU_COND_MH
-  MH_DIR = mh
-endif
-
-if MU_COND_FRM
-  FRM_DIR = frm
-endif
-
-if MU_COND_POP3D
-  POP3D_DIR = pop3d
-endif
-
-if MU_COND_IMAP4D
-  IMAP4D_DIR = imap4d
-endif
-
-if MU_COND_MDA_TOOLS
-  MDA_DIR = mda
-endif
-
-if MU_COND_MAIL
-  MAIL_DIR = mail
-endif
-
-if MU_COND_SIEVE
-  SIEVE_DIR = sieve
-endif
-
-if MU_COND_MESSAGES
-  MESSAGES_DIR = messages
-endif
-
-if MU_COND_COMSAT
-  COMSAT_DIR = comsat
-endif
-
-if MU_COND_READMSG
-  READMSG_DIR = readmsg
-endif
-
-if MU_COND_DOTLOCK
-  DOTLOCK_DIR = dotlock
-endif
-
-if MU_COND_MOVEMAIL
-  MOVEMAIL_DIR = movemail
-endif
-
-if MU_COND_MIMEVIEW
-  MIMEVIEW_DIR = mimeview
-endif
-
 if MU_COND_LIBMU_SCM
   GINT_DIR = gint
   LIBMU_SCM_DIR = libmu_scm
@@ -101,20 +49,63 @@ SUBDIRS = . \
  doc\
  examples\
  mu\
- $(SCHEME_DIR)\
- $(FRM_DIR)\
- $(POP3D_DIR)\
- $(IMAP4D_DIR)\
- $(MDA_DIR)\
- $(MAIL_DIR)\
- $(SIEVE_DIR)\
- $(MESSAGES_DIR)\
- $(COMSAT_DIR)\
- $(READMSG_DIR)\
- $(DOTLOCK_DIR)\
- $(MH_DIR)\
- $(MOVEMAIL_DIR)\
- $(MIMEVIEW_DIR)
+ $(SCHEME_DIR)
+
+if MU_COND_FRM
+  SUBDIRS += frm
+endif
+
+if MU_COND_POP3D
+  SUBDIRS += pop3d
+endif
+
+if MU_COND_IMAP4D
+  SUBDIRS += imap4d
+endif
+
+if MU_COND_MDA_TOOLS
+  SUBDIRS += mda
+endif
+
+if MU_COND_MAIL
+  SUBDIRS += mail
+endif
+
+if MU_COND_SIEVE
+  SUBDIRS += sieve
+endif
+
+if MU_COND_MESSAGES
+  SUBDIRS += messages
+endif
+
+if MU_COND_COMSAT
+  SUBDIRS += comsat
+endif
+
+if MU_COND_READMSG
+  SUBDIRS += readmsg
+endif
+
+if MU_COND_DOTLOCK
+  SUBDIRS += dotlock
+endif
+
+if MU_COND_MH
+  SUBDIRS += mh
+endif
+
+if MU_COND_MOVEMAIL
+  SUBDIRS += movemail
+endif
+
+if MU_COND_DECODEMAIL
+  SUBDIRS += decodemail
+endif
+
+if MU_COND_MIMEVIEW
+  SUBDIRS += mimeview
+endif
 
 EXTRA_DIST = COPYING.LESSER paths
 DISTCLEANFILES = pathdefs.h

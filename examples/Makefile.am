@@ -24,7 +24,6 @@ noinst_PROGRAMS = \
  aclck\
  addr\
  base64\
- decodemail\
  echosrv\
  fcopy\
  fremove\
@@ -116,12 +115,3 @@ mboxidx_LDADD=\
  $(MU_LIB_AUTH)\
  $(MU_AUTHLIBS) \
  $(MU_LIB_MAILUTILS)
-
-decodemail_CPPFLAGS=$(MU_LIB_COMMON_INCLUDES) -I$(top_srcdir)/lib -I$(top_builddir)/lib
-decodemail_LDADD =\
- $(MU_APP_LIBRARIES)\
- $(MU_LIB_MAILBOX)\
- $(MU_LIB_AUTH)\
- $(MU_AUTHLIBS)\
- $(MU_LIB_MAILUTILS)\
- $(MU_COMMON_LIBRARIES)

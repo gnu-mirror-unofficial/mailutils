@@ -1334,6 +1334,7 @@ MU_ENABLE_BUILD(readmsg,,,["$mu_build_clients" = yes],,[client_list])
 MU_ENABLE_BUILD(dotlock,,,["$mu_build_clients" = yes],,[client_list])
 MU_ENABLE_BUILD(movemail,,,["$mu_build_clients" = yes],,[client_list])
 MU_ENABLE_BUILD(mimeview,,,["$mu_build_clients" = yes],,[client_list])
+MU_ENABLE_BUILD(decodemail,,,["$mu_build_clients" = yes],,[client_list])
 
 MU_ENABLE_BUILD(mh,,,["$mu_build_clients$mu_cv_enable_mh" = yesyes],,[client_list])
 
@@ -1568,6 +1569,7 @@ AC_CONFIG_FILES([
  python/3/libmu_py/Makefile
  python/3/mailutils/Makefile
  readmsg/Makefile
+ decodemail/Makefile
  mu-aux/Makefile
  mu-aux/mailutils.spec
  sieve/Makefile
