@@ -17,6 +17,7 @@
 #include <config.h>
 #include <stdlib.h>
 #include <mailutils/mailutils.h>
+#include <mailutils/sys/envelope.h>
 #include <muaux.h>
 #include <sysexits.h>
 
@@ -67,7 +68,10 @@ define_charset (void)
   mu_asprintf (&content_type, "text/plain; charset=%s", charset);
 }
 
-static mu_message_t message_decode (mu_message_t);
+static mu_message_t message_decode (mu_message_t, int);
+/* Values for the message_decode second parameter */
+enum { MSG_PART, MSG_TOP };
+
 static void message_store_mbox (mu_message_t, mu_mailbox_t);
 static void message_store_stdout (mu_message_t, mu_mailbox_t);
 
@@ -204,7 +208,7 @@ main (int argc, char **argv)
 	  err = 1;
 	  continue;
 	}
-      newmsg = message_decode (msg);
+      newmsg = message_decode (msg, MSG_TOP);
       message_store (newmsg, ombox);
       mu_message_unref (newmsg);
     }
@@ -298,7 +302,7 @@ message_store_stdout (mu_message_t msg, mu_mailbox_t mbx)
 }
 
 static mu_message_t
-message_decode (mu_message_t msg)
+message_decode (mu_message_t msg, int what)
 {
   mu_message_t newmsg;
   int ismime;
@@ -394,7 +398,7 @@ message_decode (mu_message_t msg)
 	  mu_message_t msgpart, msgdec;
 	  
 	  mu_message_get_part (msg, i, &msgpart);
-	  msgdec = message_decode (msgpart);
+	  msgdec = message_decode (msgpart, MSG_PART);
 	  mu_mime_add_part (mime, msgdec);
 	  mu_message_unref (msgdec);
 	}
@@ -402,7 +406,36 @@ message_decode (mu_message_t msg)
       mu_mime_to_message (mime, &newmsg);
       mu_mime_unref (mime);
 
-      // Add headers
+      if (what == MSG_TOP)
+	{
+	  /* Copy envelope */
+	  mu_envelope_t env, newenv;
+
+	  rc = mu_message_get_envelope (msg, &env);
+	  if (rc == 0)
+	    {
+	      rc = mu_envelope_create (&newenv, newmsg);
+	      if (rc == 0)
+		{
+		  if ((rc = mu_envelope_aget_sender (env, &newenv->sender)) ||
+		      (rc = mu_envelope_aget_date (env, &newenv->date)))
+		    {
+		      mu_error ("%s", _("can't copy envelope"));
+		      exit (EX_UNAVAILABLE);
+		    }
+		  mu_message_set_envelope (newmsg, newenv,
+					   mu_message_get_owner (newmsg));
+		}
+	      else
+		mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create",
+				   NULL, rc);
+	    }
+	  else
+	    mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_envelope",
+			     NULL, rc);
+	}
+      
+      /* Copy headers */
       mu_message_get_header (msg, &hdr);
       mu_message_get_header (newmsg, &newhdr);
       mu_header_get_iterator (hdr, &itr);
