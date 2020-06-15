@@ -30,10 +30,10 @@ extern "C" {
 
 struct _mu_body
 {
-  void *owner;
-  mu_stream_t stream;
-  mu_stream_t rawstream;
-  mu_stream_t fstream;
+  int ref_count;           /* Reference counter */
+  void *owner;             /* Owner object pointer */
+  mu_stream_t data_stream; /* Body content stream */
+  mu_stream_t temp_stream; /* RW temporary stream (for writing ro the body) */
   int flags;
 
   int (*_size)  (mu_body_t, size_t*);

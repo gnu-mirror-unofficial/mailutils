@@ -42,6 +42,8 @@ extern int mu_body_set_size       (mu_body_t,
 extern int mu_body_lines          (mu_body_t, size_t *);
 extern int mu_body_set_lines      (mu_body_t,
 				int (*_lines) (mu_body_t, size_t*), void *owner);
+extern void mu_body_ref (mu_body_t body);
+extern void mu_body_unref (mu_body_t body);
 
 #ifdef __cplusplus
 }

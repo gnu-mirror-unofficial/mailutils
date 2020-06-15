@@ -36,12 +36,12 @@ main (int argc, char **argv)
   mu_set_program_name (argv[0]);
 
   mu_static_memory_stream_create (&stream, text, strlen (text));
-  assert (mu_stream_to_message (stream, &msg) == 0);
+  MU_ASSERT (mu_stream_to_message (stream, &msg));
   mu_stream_unref (stream);
-  assert (mu_message_get_header (msg, &hdr) == 0);
-  assert (mu_message_get_body (msg, &body) == 0);
-  assert (mu_body_get_streamref (body, &stream) == 0);
-  assert (mu_stream_seek (stream, 0, MU_SEEK_END, NULL) == 0);
+  MU_ASSERT (mu_message_get_header (msg, &hdr));
+  MU_ASSERT (mu_message_get_body (msg, &body));
+  MU_ASSERT (mu_body_get_streamref (body, &stream));
+  MU_ASSERT (mu_stream_seek (stream, 0, MU_SEEK_END, NULL));
   
   for (i = 1; i < argc; i++)
     {
@@ -60,7 +60,7 @@ main (int argc, char **argv)
 	  *p++ = 0;
 	  while (*p && mu_isspace (*p))
 	    p++;
-	  assert (mu_header_set_value (hdr, argv[i], p, 1) == 0);
+	  MU_ASSERT (mu_header_set_value (hdr, argv[i], p, 1));
 	}
       else if (strcmp (argv[i], "-l") == 0)
 	{
@@ -73,7 +73,7 @@ main (int argc, char **argv)
 	  assert (*p == 0);
 	  if (off < 0)
 	    whence = MU_SEEK_END;
-	  assert (mu_stream_seek (stream, off, whence, NULL) == 0);
+	  MU_ASSERT (mu_stream_seek (stream, off, whence, NULL));
 	}
       else if (strcmp (argv[i], "-t") == 0)
 	{
@@ -88,8 +88,8 @@ main (int argc, char **argv)
 	      exit (1);
 	    }
 	  else
-	    assert (mu_stream_write (stream, ws.ws_wordv[0],
-				     strlen (ws.ws_wordv[0]), NULL) == 0);
+	    MU_ASSERT (mu_stream_write (stream, ws.ws_wordv[0],
+					strlen (ws.ws_wordv[0]), NULL));
 	  mu_wordsplit_free (&ws);
 	}
       else
@@ -97,8 +97,8 @@ main (int argc, char **argv)
     }
   mu_stream_unref (stream);
 
-  assert (mu_message_get_streamref (msg, &stream) == 0);
-  assert (mu_stream_copy (mu_strout, stream, 0, NULL) == 0);
+  MU_ASSERT (mu_message_get_streamref (msg, &stream));
+  MU_ASSERT (mu_stream_copy (mu_strout, stream, 0, NULL));
   mu_stream_unref (stream);
 
   return 0;

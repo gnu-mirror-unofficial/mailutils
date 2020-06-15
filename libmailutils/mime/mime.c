@@ -44,11 +44,6 @@
 #include <mailutils/sys/message.h>
 #include <mailutils/sys/stream.h>
 
-#ifndef TRUE
-#define TRUE (1)
-#define FALSE (0)
-#endif
-
 #define CT_MULTIPART_DIGEST "multipart/digest"
 #define CT_MULTIPART_DIGEST_LEN (sizeof (CT_MULTIPART_DIGEST) - 1)
 
@@ -320,7 +315,7 @@ _mime_parse_mpart_message (mu_mime_t mime)
 	  break;
 	  
 	case MIME_STATE_HEADERS:
-	  _mime_append_header_line (mime);//FIXME
+	  _mime_append_header_line (mime);
 	  if (mime->line_length == 1)
 	    {
 	      mime->parser_state = MIME_STATE_SCAN_BOUNDARY;

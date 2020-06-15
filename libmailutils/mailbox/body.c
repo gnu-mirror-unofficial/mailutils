@@ -36,13 +36,12 @@
 
 #define BODY_MODIFIED         0x10000
 
-static int body_get_stream (mu_body_t body, mu_stream_t *pstream, int ref);
-
 
 struct _mu_body_stream
 {
   struct _mu_stream stream;
   mu_body_t body;
+  mu_stream_t transport;
 };
 
 /* Body stream.  */
@@ -55,193 +54,153 @@ init_tmp_stream (mu_body_t body)
   int rc;
   mu_off_t off;
 
-  rc = mu_stream_seek (body->rawstream, 0, MU_SEEK_CUR, &off);
+  rc = mu_stream_seek (body->data_stream, 0, MU_SEEK_CUR, &off);
   if (rc)
     return rc;
 
-  rc = mu_stream_seek (body->rawstream, 0, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (body->data_stream, 0, MU_SEEK_SET, NULL);
   if (rc)
     return rc;
   
-  rc = mu_stream_copy (body->fstream, body->rawstream, 0, NULL);
+  rc = mu_stream_copy (body->temp_stream, body->data_stream, 0, NULL);
   if (rc)
     return rc;
   
-  mu_stream_seek (body->rawstream, off, MU_SEEK_SET, NULL);
+  mu_stream_seek (body->data_stream, off, MU_SEEK_SET, NULL);
 
-  return mu_stream_seek (body->fstream, off, MU_SEEK_SET, NULL);
+  return mu_stream_seek (body->temp_stream, off, MU_SEEK_SET, NULL);
 }
 
-
 static int
-body_stream_transport (mu_stream_t stream, int mode, mu_stream_t *pstr)
+body_get_transport (mu_body_t body, int mode, mu_stream_t *pstr)
 {
-  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
-  mu_body_t body = str->body;
-  
-  if (!body->rawstream && body->_get_stream)
+  if (!body->data_stream && body->_get_stream)
     {
-      int status = body->_get_stream (body, &body->rawstream);
+      int status = body->_get_stream (body, &body->data_stream);
       if (status)
 	return status;
     }
-  if (mode == BODY_RDWR || !body->rawstream)
+  if (mode == BODY_RDWR || !body->data_stream)
     {
       /* Create the temporary file.  */
-      if (!body->fstream)
+      if (!body->temp_stream)
 	{
 	  int rc;
 	  
-	  rc = mu_temp_file_stream_create (&body->fstream, NULL, 0);
+	  rc = mu_temp_file_stream_create (&body->temp_stream, NULL, 0);
 	  if (rc)
 	    return rc;
-	  mu_stream_set_buffer (body->fstream, mu_buffer_full, 0);
-	  if (body->rawstream)
+	  mu_stream_set_buffer (body->temp_stream, mu_buffer_full, 0);
+	  if (body->data_stream)
 	    {
 	      rc = init_tmp_stream (body);
 	      if (rc)
 		{
-		  mu_stream_destroy (&body->fstream);
+		  mu_stream_destroy (&body->temp_stream);
 		  return rc;
 		}
 	    }
 	}
       body->flags |= BODY_MODIFIED;
     }
-  *pstr = body->fstream ? body->fstream : body->rawstream;
+  *pstr = body->temp_stream ? body->temp_stream : body->data_stream;
   return 0;
 }
     
 static int
 bstr_close (struct _mu_stream *stream)
 {
-  /* FIXME: While technically correct, the code below can result is
-     segmentation violations under some conditions, because reference
-     counters are not yet implemented for mu_body_t objects and so
-     str->body can be destroyed prior to calling that function.
-     See also bstr_done.
-  */
-#if 0
-  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
-  mu_body_t body = str->body;
-  mu_stream_close (body->rawstream);
-  mu_stream_close (body->fstream);
-#endif
   return 0;
 }
 
 void
 bstr_done (struct _mu_stream *stream)
 {
-#if 0
-  /* FIXME: See comment above */
   struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
-  mu_body_t body = str->body;
-  mu_stream_destroy (&body->rawstream);
-  mu_stream_destroy (&body->fstream);  
-#endif
+  mu_stream_unref (str->transport);
+  mu_body_unref (str->body);
 }
 
 static int
 bstr_seek (mu_stream_t stream, mu_off_t off, mu_off_t *presult)
 {
-  mu_stream_t transport;
-  int rc;
-  
-  rc = body_stream_transport (stream, BODY_RDONLY, &transport);
-  if (rc)
-    return rc;
-  
-  return mu_stream_seek (transport, off, MU_SEEK_SET, presult);
+  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
+  return mu_stream_seek (str->transport, off, MU_SEEK_SET, presult);
 }
 
 static int
 bstr_ioctl (mu_stream_t stream, int code, int opcode, void *ptr)
 {
-  mu_stream_t transport;
-  int rc;
-
-  /* FIXME: always RDONLY, is it? */
-  rc = body_stream_transport (stream, BODY_RDONLY, &transport);
-  if (rc)
-    return rc;
-  return mu_stream_ioctl (transport, code, opcode, ptr);
+  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
+  return mu_stream_ioctl (str->transport, code, opcode, ptr);
 }
 
 static int
 bstr_read (mu_stream_t stream, char *buf, size_t size, size_t *pret)
 {
-  mu_stream_t transport;
-  int rc;
-  
-  rc = body_stream_transport (stream, BODY_RDONLY, &transport);
-  if (rc)
-    return rc;
-  return mu_stream_read (transport, buf, size, pret);
+  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
+  return mu_stream_read (str->transport, buf, size, pret);
 }
 
 static int
 bstr_write (mu_stream_t stream, const char *buf, size_t size, size_t *pret)
 {
-  mu_stream_t transport;
-  int rc;
-  
-  rc = body_stream_transport (stream, BODY_RDWR, &transport);
-  if (rc)
-    return rc;
-  return mu_stream_write (transport, buf, size, pret);
+  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
+  if (!str->body->temp_stream)
+    {
+      int rc;
+      mu_off_t off;
+      mu_stream_t tmp, transport;
+      
+      rc = mu_stream_seek (str->transport, 0, MU_SEEK_CUR, &off);
+      if (rc)
+	return rc;
+      rc = body_get_transport (str->body, BODY_RDWR, &tmp);
+      if (rc)
+	return rc;
+      rc = mu_streamref_create (&transport, tmp);
+      if (rc)
+	return rc;
+      mu_stream_destroy (&str->transport);
+      str->transport = transport;
+      rc = mu_stream_seek (str->transport, off, MU_SEEK_SET, NULL);      
+      if (rc)
+	return rc;
+    }
+  return mu_stream_write (str->transport, buf, size, pret);
 }
 
 static int
 bstr_truncate (mu_stream_t stream, mu_off_t n)
 {
-  mu_stream_t transport;
-  int rc;
-  
-  rc = body_stream_transport (stream, BODY_RDWR, &transport);
-  if (rc)
-    return rc;
-  return mu_stream_truncate (transport, n);
+  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
+  return mu_stream_truncate (str->transport, n);
 }
 
 static int
 bstr_size (mu_stream_t stream, mu_off_t *size)
 {
-  mu_stream_t transport;
-  int rc;
-  
-  rc = body_stream_transport (stream, BODY_RDONLY, &transport);
-  if (rc)
-    return rc;
-  return mu_stream_size (transport, size);
+  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
+  return mu_stream_size (str->transport, size);
 }
 
 static int
 bstr_flush (mu_stream_t stream)
 {
-  mu_stream_t transport;
-  int rc;
-  
-  rc = body_stream_transport (stream, BODY_RDONLY, &transport);
-  if (rc)
-    return rc;
-  return mu_stream_flush (transport);
+  struct _mu_body_stream *str = (struct _mu_body_stream*) stream;
+  return mu_stream_flush (str->transport);
 }
 
 /* Default function for the body.  */
 static int
-bstr_get_lines (mu_body_t body, size_t *plines)
+body_get_lines (mu_body_t body, size_t *plines)
 {
-  mu_stream_t stream, transport;
+  mu_stream_t transport, null;
   int status;
-  size_t lines = 0;
   mu_off_t off;
-
-  status = body_get_stream (body, &stream, 0);
-  if (status)
-    return status;
-
-  status = body_stream_transport (body->stream, BODY_RDONLY, &transport);
+  mu_stream_stat_buffer stat;
+  
+  status = body_get_transport (body, BODY_RDONLY, &transport);
   if (status)
     return status;
   
@@ -249,60 +208,62 @@ bstr_get_lines (mu_body_t body, size_t *plines)
   if (status)
     return status;
   status = mu_stream_seek (transport, 0, MU_SEEK_CUR, &off);
+  if (status)
+    return status;
+  status = mu_stream_seek (transport, 0, MU_SEEK_SET, NULL);
+  if (status)
+    return status;
+  status = mu_nullstream_create (&null, MU_STREAM_WRITE);
+  if (status)
+    return status;
+  mu_stream_set_stat (null, MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUTLN),
+		      stat);
+  status = mu_stream_copy (null, transport, 0, NULL);
+  mu_stream_destroy (&null);
+  mu_stream_seek (transport, off, MU_SEEK_SET, NULL);
   if (status == 0)
-    {
-      char buf[128];
-      size_t n = 0;
-
-      status = mu_stream_seek (transport, 0, MU_SEEK_SET, NULL);
-      if (status)
-	return status;
-      while ((status = mu_stream_readline (transport, buf, sizeof buf,
-					   &n)) == 0 && n > 0)
-	{
-	  if (buf[n - 1] == '\n')
-	    lines++;
-	}
-      mu_stream_seek (transport, off, MU_SEEK_SET, NULL);
-    }
-  if (plines)
-    *plines = lines;
+    *plines = stat[MU_STREAM_STAT_OUTLN];
   return status;
 }
 
 static int
-bstr_get_size0 (mu_stream_t stream, size_t *psize)
-{
-  mu_off_t off = 0;
-  int status = mu_stream_size (stream, &off);
-  if (psize)
-    *psize = off;
-  return status;
-}
-
-static int
-bstr_get_size (mu_body_t body, size_t *psize)
+body_get_size (mu_body_t body, size_t *psize)
 {
   mu_stream_t transport;
+  mu_off_t off = 0;
   int rc;
   
-  rc = body_stream_transport (body->stream, BODY_RDONLY, &transport);
+  rc = body_get_transport (body, BODY_RDONLY, &transport);
   if (rc)
     return rc;
-  return bstr_get_size0 (transport, psize);
+  rc = mu_stream_size (transport, &off);
+  if (rc == 0)
+    *psize = off;
+  return 0;
 }
 
 
 static int
-body_stream_create (mu_body_t body)
+body_stream_create (mu_body_t body, mu_stream_t *return_stream)
 {
-  struct _mu_body_stream *str =
-    (struct _mu_body_stream *)
+  int rc;
+  mu_stream_t stream, transport;
+  struct _mu_body_stream *str;
+
+  rc = body_get_transport (body, BODY_RDONLY, &stream);
+  if (rc)
+    return rc;
+  rc = mu_streamref_create (&transport, stream);
+  if (rc)
+    return rc;
+
+  str = (struct _mu_body_stream *)
 	    _mu_stream_create (sizeof (*str),
 			       MU_STREAM_RDWR|MU_STREAM_SEEK|_MU_STR_OPEN);
   if (!str)
     return ENOMEM;
-	  
+  str->transport = transport;
+  str->body = body;
   str->stream.ctl = bstr_ioctl;
   str->stream.read = bstr_read;
   str->stream.write = bstr_write;
@@ -312,43 +273,22 @@ body_stream_create (mu_body_t body)
   str->stream.flush = bstr_flush;
   str->stream.close = bstr_close;
   str->stream.done = bstr_done;
-  str->body = body;
-  body->stream = (mu_stream_t) str;
   /* Override the defaults.  */
-  body->_lines = bstr_get_lines;
-  body->_size = bstr_get_size;
-
-  body->stream = (mu_stream_t) str;
+  body->_lines = body_get_lines;
+  body->_size = body_get_size;
+  mu_body_ref (body);
+  *return_stream = (mu_stream_t) str;
   return 0;
-}
-
-static int
-body_get_stream (mu_body_t body, mu_stream_t *pstream, int ref)
-{
-  if (body == NULL)
-    return EINVAL;
-  if (pstream == NULL)
-    return MU_ERR_OUT_PTR_NULL;
-
-  if (body->stream == NULL)
-    {
-      int status = body_stream_create (body);
-      if (status)
-	return status;
-    }
-  
-  if (!ref)
-    {
-      *pstream = body->stream;
-      return 0;
-    }
-  return mu_streamref_create (pstream, body->stream);
 }
 
 int
 mu_body_get_streamref (mu_body_t body, mu_stream_t *pstream)
 {
-  return body_get_stream (body, pstream, 1);
+  if (body == NULL)
+    return EINVAL;
+  if (pstream == NULL)
+    return MU_ERR_OUT_PTR_NULL;
+  return body_stream_create (body, pstream);
 }
 
 int
@@ -359,9 +299,9 @@ mu_body_set_stream (mu_body_t body, mu_stream_t stream, void *owner)
   if (body->owner != owner)
     return EACCES;
   /* make sure we destroy the old one if it is owned by the body */
-  mu_stream_destroy (&body->stream);
-  mu_stream_destroy (&body->rawstream);
-  body->rawstream = stream;
+  mu_stream_destroy (&body->temp_stream);
+  mu_stream_destroy (&body->data_stream);
+  body->data_stream = stream;
   body->flags |= BODY_MODIFIED;
   return 0;
 }
@@ -396,24 +336,34 @@ mu_body_lines (mu_body_t body, size_t *plines)
 {
   if (body == NULL)
     return EINVAL;
+  if (plines == NULL)
+    return MU_ERR_OUT_PTR_NULL;
   if (body->_lines)
     return body->_lines (body, plines);
-  /* Fall on the stream.  */
-  return bstr_get_lines (body, plines);
+  /* Fall back on the stream.  */
+  return body_get_lines (body, plines);
 }
 
 int
 mu_body_size (mu_body_t body, size_t *psize)
 {
+  int rc;
+  mu_stream_t str;
+  mu_off_t s;
+  
   if (body == NULL)
     return EINVAL;
+  if (psize == NULL)
+    return MU_ERR_OUT_PTR_NULL;
   if (body->_size)
     return body->_size (body, psize);
   /* Fall on the stream.  */
-  if (body->stream)
-    return bstr_get_size0 (body->stream, psize);
-  if (psize)
-    *psize = 0;
+  rc = body_get_transport (body, BODY_RDONLY, &str);
+  if (rc)
+    return rc;
+  rc = mu_stream_size (str, &s);
+  mu_stream_unref (str);
+  *psize = s;
   return 0;
 }
 
@@ -445,8 +395,31 @@ mu_body_create (mu_body_t *pbody, void *owner)
     return ENOMEM;
 
   body->owner = owner;
+  mu_body_ref (body);
   *pbody = body;
   return 0;
+}
+
+static void
+_mu_body_free (mu_body_t body)
+{
+  mu_stream_destroy (&body->data_stream);
+  mu_stream_destroy (&body->temp_stream);
+  free (body);
+}
+
+void
+mu_body_ref (mu_body_t body)
+{
+  if (body)
+    body->ref_count++;
+}
+
+void
+mu_body_unref (mu_body_t body)
+{
+  if (body && --body->ref_count == 0)
+    _mu_body_free (body);
 }
 
 void
@@ -455,13 +428,11 @@ mu_body_destroy (mu_body_t *pbody, void *owner)
   if (pbody && *pbody)
     {
       mu_body_t body = *pbody;
-      if (body->owner == owner)
+      if (body->owner == owner && --body->ref_count == 0)
 	{
-	  mu_stream_destroy (&body->rawstream);
-	  mu_stream_destroy (&body->stream);
-	  free (body);
+	  _mu_body_free (body);
+	  *pbody = NULL;
 	}
-      *pbody = NULL;
     }
 }
 
