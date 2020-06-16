@@ -30,6 +30,10 @@ if MU_COND_DBM
   LIBMU_DBM_DIR = libmu_dbm
 endif
 
+if MU_COND_PYTHON
+  PYTHON_DIR = python
+endif
+
 SUBDIRS = . \
  mu-aux\
  include\
@@ -45,7 +49,7 @@ SUBDIRS = . \
  $(LIBMU_SCM_DIR)\
  $(LIBMU_DBM_DIR)\
  libmu_sieve\
- python\
+ $(PYTHON_DIR)\
  doc\
  examples\
  mu\

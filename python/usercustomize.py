@@ -57,8 +57,6 @@ class lafinder(object):
                 return laloader(name, libdir)
         return None
 
-sys.path.insert(0, "%s/%d" % (os.path.dirname(os.path.realpath(__file__)), sys.version_info[0]))
-    
 sys.meta_path.append(lafinder())
 
 # End of file
