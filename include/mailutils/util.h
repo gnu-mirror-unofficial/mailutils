@@ -139,6 +139,8 @@ typedef struct mu_content_type *mu_content_type_t;
 int mu_content_type_parse (const char *input, const char *charset,
 			   mu_content_type_t *retct);
 void mu_content_type_destroy (mu_content_type_t *pptr);
+
+int mu_content_type_format (mu_content_type_t ct, char **return_ptr);
   
   /* ----------------------- */
   /* Filter+iconv            */

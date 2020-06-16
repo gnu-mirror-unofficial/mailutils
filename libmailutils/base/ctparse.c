@@ -25,6 +25,9 @@
 #include <mailutils/assoc.h>
 #include <mailutils/util.h>
 #include <mailutils/errno.h>
+#include <mailutils/opool.h>
+#include <mailutils/cctype.h>
+#include <mailutils/cstr.h>
 
   
 static int
@@ -105,4 +108,72 @@ mu_content_type_destroy (mu_content_type_t *pptr)
       free (ct);
       *pptr = NULL;
     }
+}
+
+static int
+format_param (char const *name, void *data, void *call_data)
+{
+  struct mu_mime_param *param = data;
+  char *value = param->value;
+  mu_opool_t pool = call_data;
+  char *cp;
+
+  /* Content-Type parameters don't use lang and cset fields of
+     struct mu_mime_param, so these are ignored. */
+  mu_opool_append_char (pool, ';');
+  mu_opool_appendz (pool, name);
+  mu_opool_append_char (pool, '=');
+  if (*(cp = mu_str_skip_class_comp (value, MU_CTYPE_TSPEC)))
+    {
+      mu_opool_append_char (pool, '"');
+      do
+	{
+	  mu_opool_append (pool, value, cp - value);
+	  mu_opool_append_char (pool, '\\');
+	  mu_opool_append_char (pool, *cp);
+	  value = cp + 1;
+	}
+      while (*(cp = mu_str_skip_class_comp (value, MU_CTYPE_TSPEC)));
+      if (*value)
+	mu_opool_appendz (pool, value);
+      mu_opool_append_char (pool, '"');
+    }
+  else
+    mu_opool_appendz (pool, value);
+  return 0;
+}
+
+int
+mu_content_type_format (mu_content_type_t ct, char **return_ptr)
+{
+  int rc;
+  mu_opool_t pool;
+  mu_nonlocal_jmp_t jmp;
+
+  if (!ct)
+    return EINVAL;
+  if (!return_ptr)
+    return MU_ERR_OUT_PTR_NULL;
+
+  rc = mu_opool_create (&pool, MU_OPOOL_DEFAULT);
+  if (rc)
+    return rc;
+
+  if ((rc = setjmp (jmp.buf)) != 0)
+    {
+      mu_opool_destroy (&pool);
+      return rc;
+    }
+  mu_opool_setjmp (pool, &jmp);
+
+  mu_opool_appendz (pool, ct->type);
+  mu_opool_append_char (pool, '/');
+  mu_opool_appendz (pool, ct->subtype);
+  if (!mu_assoc_is_empty (ct->param))
+    mu_assoc_foreach (ct->param, format_param, pool);
+  mu_opool_append_char (pool, 0);
+  *return_ptr = mu_opool_detach (pool, NULL);
+  mu_opool_clrjmp (pool);
+  mu_opool_destroy (&pool);
+  return 0;
 }

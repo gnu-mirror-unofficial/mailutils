@@ -43,7 +43,8 @@ static int
 charset_setup (mu_stream_t *pstr, mu_content_type_t ct, char const *charset)
 {
   struct mu_mime_param *param;
-  if (mu_assoc_lookup (ct->param, "charset", &param) == 0
+  if (charset
+      && mu_assoc_lookup (ct->param, "charset", &param) == 0
       && mu_c_strcasecmp (param->value, charset))
     {
       mu_stream_t input = *pstr;

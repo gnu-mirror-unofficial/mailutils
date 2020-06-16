@@ -23,20 +23,27 @@
 
 int truncate_opt;
 int from_filter;
+int recode_charset;
+char *charset;
 
 static struct mu_option decodemail_options[] = 
 {
   { "truncate", 't', NULL, MU_OPTION_DEFAULT,
     N_("truncate the output mailbox, if it exists"),
     mu_c_bool, &truncate_opt },
+  { "charset", 'c', N_("CHARSET"), MU_OPTION_DEFAULT,
+    N_("recode output to this charset"),
+    mu_c_string, &charset },
+  { "recode", 'R', NULL, MU_OPTION_DEFAULT,
+    N_("recode text parts to the current charset"),
+    mu_c_bool, &recode_charset },
   MU_OPTION_END
 }, *options[] = { decodemail_options, NULL };
 
 struct mu_cli_setup cli = {
-  options,
-  NULL,
-  N_("GNU decodemail -- decode messages."),
-  NULL
+  .optv = options,
+  .prog_doc = N_("GNU decodemail -- decode messages."),
+  .prog_args = N_("[INBOX] [OUTBOX]")
 };
 
 static char *decodemail_capa[] = {
@@ -47,7 +54,6 @@ static char *decodemail_capa[] = {
 };
 
 char *charset;
-char *content_type;
 
 static void
 define_charset (void)
@@ -56,7 +62,7 @@ define_charset (void)
   char *ep = getenv ("LC_ALL");
   if (!ep)
     ep = getenv ("LANG");
-
+  
   if (ep && mu_parse_lc_all (ep, &lc_all, MU_LC_CSET) == 0)
     {
       charset = mu_strdup (lc_all.charset);
@@ -64,8 +70,6 @@ define_charset (void)
     }
   else
     charset = mu_strdup ("us-ascii");
-
-  mu_asprintf (&content_type, "text/plain; charset=%s", charset);
 }
 
 static mu_message_t message_decode (mu_message_t, int);
@@ -111,6 +115,9 @@ main (int argc, char **argv)
       exit (EX_USAGE);
     }
 
+  if (!charset && recode_charset)
+    define_charset ();
+  
   /* Open input mailbox */
   rc = mu_mailbox_create_default (&imbox, imbox_name);
   if (rc != 0)
@@ -185,8 +192,6 @@ main (int argc, char **argv)
       message_store = message_store_stdout;
       from_filter = 1;
     }
-  
-  define_charset ();
   
   rc = mu_mailbox_get_iterator (imbox, &itr);
   if (rc)
@@ -326,6 +331,7 @@ message_decode (mu_message_t msg, int what)
 	  mu_header_t hdr, newhdr;
 	  mu_iterator_t itr;
 	  size_t i;
+	  char *content_type = NULL;
 	  
 	  mu_message_create (&newmsg, NULL);
 	  mu_message_get_body (newmsg, &body);
@@ -353,9 +359,47 @@ message_decode (mu_message_t msg, int what)
 	      rc = mu_iterator_current_kv (itr, (void const **) &name,
 					   (void**)&value);
 
-	      if (mu_c_strcasecmp (name, MU_HEADER_CONTENT_TYPE) == 0 ||
-		  mu_c_strcasecmp (name, MU_HEADER_CONTENT_TRANSFER_ENCODING) == 0 ||
-		  mu_c_strcasecmp (name, MU_HEADER_CONTENT_DISPOSITION) == 0)
+	      if (!mu_c_strcasecmp (name, MU_HEADER_CONTENT_TYPE))
+		{
+		  if (charset)
+		    {
+		      mu_content_type_t ct;
+		      struct mu_mime_param **pparam;
+		      char *vc = mu_strdup (value);
+		      size_t len;
+		      mu_string_unfold (vc, &len);
+		      rc = mu_content_type_parse (vc, NULL, &ct);
+		      free (vc);
+		      if (rc)
+			{
+			  mu_diag_funcall (MU_DIAG_ERROR,
+					   "mu_content_type_parse", NULL, rc);
+			  continue;
+			}
+		      rc = mu_assoc_install_ref (ct->param, "charset", &pparam);
+		      switch (rc)
+			{
+			case 0:
+			  *pparam = mu_zalloc (sizeof **pparam);
+			  break;
+
+			case MU_ERR_EXISTS:
+			  free ((*pparam)->value);
+			  break;
+
+			default:
+			  mu_diag_funcall (MU_DIAG_ERROR,
+					   "mu_assoc_install_ref", NULL, rc);
+			  exit (EX_IOERR);
+			}
+		      (*pparam)->value = mu_strdup (charset);
+		      mu_content_type_format (ct, &content_type);
+		      mu_content_type_destroy (&ct);
+		      continue;
+		    }
+		}
+	      else if (!mu_c_strcasecmp (name,
+					 MU_HEADER_CONTENT_TRANSFER_ENCODING))
 		continue;
 	  
 	      rc = mu_rfc2047_decode (charset, value, &s);
@@ -373,14 +417,16 @@ message_decode (mu_message_t msg, int what)
 			       MU_HEADER_CONTENT_TRANSFER_ENCODING,
 			       "8bit",
 			       1);
-	  mu_header_set_value (newhdr,
-			       MU_HEADER_CONTENT_TYPE,
-			       content_type,
-			       1);
-	  mu_header_set_value (newhdr,
-			       MU_HEADER_CONTENT_DISPOSITION,
-			       "inline",
-			       1);
+	  if (charset)
+	    {
+	      if (!content_type)
+		mu_asprintf (&content_type, "text/plain; charset=%s", charset);
+	      mu_header_set_value (newhdr,
+				   MU_HEADER_CONTENT_TYPE,
+				   content_type,
+				   1);
+	      free (content_type);
+	    }
 	}
     }
   else
