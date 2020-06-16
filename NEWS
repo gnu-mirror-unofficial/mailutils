@@ -1,5 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2020-05-29
-Copyright (C) 2002-2019 Free Software Foundation, Inc.
+GNU mailutils NEWS -- history of user-visible changes. 2020-06-16
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
@@ -18,6 +17,19 @@ from multipart message 1.
 The write (Write) command operates on message parts as well as on
 messages.  Decoding is automatic.
 
+* New utility: decodemail
+
+* readmsg
+
+** MIME messages are decoded on output.
+
+** Improve searches
+
+Requested patterns are searched in textual MIME parts as well.
+Regular expression search is also supported.
+New options --glob, --regex, and --ignorecase control the type of
+search used.
+
 * imap4d: implement TLS in inetd mode
 
 * imap client code
@@ -25,6 +37,8 @@ messages.  Decoding is automatic.
 ** Fix handling of [TRYCREATE] and similar imap responses.
 
 * Remove deprecated mailutils-config script
+
+* Dropped support for Python 2.x
 
 * Bugfixes
 
@@ -2462,7 +2476,7 @@ The first release.
 ----------------------------------------------------------------------
 Copyright information:
 
-Copyright (C) 2002-2018, Free Software Foundation, Inc.
+Copyright (C) 2002-2020, Free Software Foundation, Inc.
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the
