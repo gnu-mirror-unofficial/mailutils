@@ -20,6 +20,7 @@
 
 #include <sys/types.h>
 #include <mailutils/mime.h>
+#include <mailutils/util.h>
 
 #ifdef __cplusplus
 extern "C" { 
@@ -50,13 +51,13 @@ struct _mu_mime
   mu_message_t       msg;
   mu_header_t        hdrs;
   mu_stream_t        stream;
-  int             flags;
-  char           *content_type;
+  int                flags;
+  mu_content_type_t  content_type;
 
   size_t          tparts;
   size_t          nmtp_parts;
   struct _mime_part **mtp_parts;      /* list of parts in the msg */
-  char           *boundary;
+  char const     *boundary;
   size_t          cur_offset;
   size_t          cur_part;
   size_t          part_offset;

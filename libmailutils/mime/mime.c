@@ -44,22 +44,12 @@
 #include <mailutils/sys/message.h>
 #include <mailutils/sys/stream.h>
 
-#define CT_MULTIPART_DIGEST "multipart/digest"
-#define CT_MULTIPART_DIGEST_LEN (sizeof (CT_MULTIPART_DIGEST) - 1)
+static char default_content_type[] = "text/plain; charset=us-ascii";
 
 /* TODO:
  *  Need to prevent re-entry into mime lib, but allow non-blocking re-entry
  *  into lib.
  */
-
-static int
-_mime_is_multipart_digest (mu_mime_t mime)
-{
-  if (mime->content_type)
-    return mu_c_strncasecmp (CT_MULTIPART_DIGEST, mime->content_type,
-			     CT_MULTIPART_DIGEST_LEN) == 0;
-  return 0;
-}
 
 static int
 _mime_append_part (mu_mime_t mime, mu_message_t msg,
@@ -110,7 +100,7 @@ _mime_append_part (mu_mime_t mime, mu_message_t msg,
 	   mu_header_get_value (hdr, MU_HEADER_CONTENT_TYPE, NULL,
 				0, &size)) != 0 || size == 0)
 	{
-	  if (_mime_is_multipart_digest (mime))
+	  if (mu_c_strcasecmp (mime->content_type->subtype, "digest") == 0)
 	    mu_header_set_value (hdr,
 				 MU_HEADER_CONTENT_TYPE, "message/rfc822", 0);
 	  else
@@ -134,88 +124,6 @@ _mime_append_part (mu_mime_t mime, mu_message_t msg,
   return 0;
 }
 
-#define _ISSPECIAL(c) (						 \
-    ((c) == '(') || ((c) == ')') || ((c) == '<') || ((c) == '>') \
-    || ((c) == '@') || ((c) == ',') || ((c) == ';') || ((c) == ':') \
-    || ((c) == '\\') || ((c) == '.') || ((c) == '[') \
-    || ((c) == ']') )
-
-static void
-_mime_munge_content_header (char *field_body)
-{
-  char *p, *e, *str = field_body;
-  int quoted = 0;
-
-  mu_str_stripws (field_body);
-
-  if ((e = strchr (str, ';')) == NULL)
-    return;
-  while (*e == ';')
-    {
-      p = e;
-      e++;
-      while (*e && mu_isspace (*e)) /* remove space up to param */
-	e++;
-      memmove (p + 1, e, strlen (e) + 1);
-      e = p + 1;
-
-      while (*e && *e != '=')	/* find end of value */
-	e++;
-      e = p = e + 1;
-      while (*e
-	     && (quoted
-		 || (!_ISSPECIAL (*e) && !mu_isspace (*e))))
-	{
-	  if (*e == '\\')
-	    {			/* escaped */
-	      memmove (e, e + 1, strlen (e));
-	    }
-	  else if (*e == '\"')
-	    quoted = ~quoted;
-	  e++;
-	}
-    }
-}
-
-static char    *
-_mime_get_param (char *field_body, const char *param, int *len)
-{
-  char *str, *p, *v, *e;
-  int quoted = 0, was_quoted;
-
-  if (len == NULL || (str = field_body) == NULL)
-    return NULL;
-
-  p = strchr (str, ';');
-  while (p)
-    {
-      p++;
-      if ((v = strchr (p, '=')) == NULL)
-	break;
-      *len = 0;
-      v = e = v + 1;
-      was_quoted = 0;
-      while (*e
-	     && (quoted
-		 || (!_ISSPECIAL (*e) && !mu_isspace (*e))))
-	{			/* skip pass value and calc len */
-	  if (*e == '\"')
-	    quoted = ~quoted, was_quoted = 1;
-	  else
-	    (*len)++;
-	  e++;
-	}
-      if (mu_c_strncasecmp (p, param, strlen (param)))
-	{			/* no match jump to next */
-	  p = strchr (e, ';');
-	  continue;
-	}
-      else
-	return was_quoted ? v + 1 : v;	/* return unquoted value */
-    }
-  return NULL;
-}
-
 static void
 _mime_append_header_line (mu_mime_t mime)
 {
@@ -234,6 +142,75 @@ _mime_append_header_line (mu_mime_t mime)
   mime->header_length += mime->line_length;
 }
 
+int
+mu_mime_sget_content_type (mu_mime_t mime, const char **value)
+{
+  if (!mime)
+    return EINVAL;
+  if (!mime->content_type)
+    return MU_ERR_NOENT;
+  if (value)
+    *value = mime->content_type->type;
+  return 0;
+}
+
+int
+mu_mime_aget_content_type (mu_mime_t mime, char **value)
+{
+  char const *s;
+  int rc = mu_mime_sget_content_type (mime, &s);
+  if (rc == 0 && value)
+    {
+      if ((*value = strdup (s)) == NULL)
+	return errno;
+    }
+  return 0;
+}
+
+int
+mu_mime_sget_content_subtype (mu_mime_t mime, const char **value)
+{
+  if (!mime)
+    return EINVAL;
+  if (!mime->content_type)
+    return MU_ERR_NOENT;
+  if (value)
+    *value = mime->content_type->subtype;
+  return 0;
+}
+
+int
+mu_mime_aget_content_subtype (mu_mime_t mime, char **value)
+{
+  char const *s;
+  int rc = mu_mime_sget_content_subtype (mime, &s);
+  if (rc == 0 && value)
+    {
+      if ((*value = strdup (s)) == NULL)
+	return errno;
+    }
+  return 0;
+}
+
+int
+mu_mime_content_type_param (mu_mime_t mime, char const *name,
+			    const char **value)
+{
+  struct mu_mime_param *p;
+  int rc;
+
+  if (!mime || !name)
+    return EINVAL;
+
+  if (!mime->content_type)
+    return MU_ERR_NOENT;
+  
+  rc = mu_assoc_lookup (mime->content_type->param, name, &p);
+  if (rc == 0 && value)
+    *value = p->value;
+  return rc;
+}
+  
 static int
 _mime_parse_mpart_message (mu_mime_t mime)
 {
@@ -242,16 +219,9 @@ _mime_parse_mpart_message (mu_mime_t mime)
 
   if (!(mime->flags & MIME_PARSER_ACTIVE))
     {
-      char *boundary;
-      int len;
-
-      if ((boundary = _mime_get_param (mime->content_type, "boundary", &len))
-	  == NULL)
-	return EINVAL;
-      if ((mime->boundary = calloc (1, len + 1)) == NULL)
-	return ENOMEM;
-      strncpy (mime->boundary, boundary, len);
-
+      ret = mu_mime_content_type_param (mime, "boundary", &mime->boundary);
+      if (ret)
+	return ret;
       mime->cur_offset = 0;
       mime->line_length = 0;
       mime->parser_state = MIME_STATE_SCAN_BOUNDARY;
@@ -380,7 +350,6 @@ _mime_set_content_type (mu_mime_t mime)
 {
   const char  *content_type;
   mu_header_t hdr = NULL;
-  size_t size;
   int ret;
 
   /* Delayed the creation of the header 'til they create the final message via
@@ -389,13 +358,27 @@ _mime_set_content_type (mu_mime_t mime)
     return 0;
   if (mime->nmtp_parts > 1)
     {
+      char const *subtype;
       char *cstr;
-      
+
       if (mime->flags & MIME_ADDED_MULTIPART_CT)
 	return 0;
-      if (mime->flags & MU_MIME_MULTIPART_MIXED)
-	content_type = "multipart/mixed; boundary=";
-      else
+
+      ret = mu_mime_sget_content_subtype (mime, &subtype);
+      switch (ret)
+	{
+	case 0:
+	  break;
+	  
+	case MU_ERR_NOENT:
+	  subtype = MU_MIME_CONTENT_SUBTYPE_MIXED;
+	  break;
+
+	default:
+	  return ret;
+	}
+
+      if (mu_c_strcasecmp (subtype, MU_MIME_CONTENT_SUBTYPE_ALTERNATIVE) == 0)
 	{
 	  size_t i;
 
@@ -433,32 +416,20 @@ _mime_set_content_type (mu_mime_t mime)
 			}
 		      mu_content_type_destroy (&ct);
 		    }
+		  free (val);
 		}
 	    }
-	  
-	  content_type = "multipart/alternative; boundary=";
 	}
-      if (mime->boundary == NULL)
-	{
-	  char boundary[128];
-	  
-	  snprintf (boundary, sizeof boundary, "%ld-%ld=:%ld",
-		    (long) random (), (long) time (0), (long) getpid ());
-	  if ((mime->boundary = strdup (boundary)) == NULL)
-	    return ENOMEM;
-	}
-      size = strlen (content_type) + 2 + strlen (mime->boundary) + 1;
-      cstr = malloc (size);
-      if (!cstr)
-	return ENOMEM;
-      strcpy (cstr, content_type);
-      strcat (cstr, "\"");
-      strcat (cstr, mime->boundary);
-      strcat (cstr, "\"");
-      mime->flags |= MIME_ADDED_MULTIPART_CT;
 
-      ret = mu_header_set_value (mime->hdrs, MU_HEADER_CONTENT_TYPE, cstr, 1);
-      free (cstr);
+      ret = mu_content_type_format (mime->content_type, &cstr);
+      if (ret == 0)
+	{
+	  ret = mu_header_set_value (mime->hdrs, MU_HEADER_CONTENT_TYPE,
+				     cstr, 1);	  
+	  free (cstr);
+	  if (ret == 0)
+	    mime->flags |= MIME_ADDED_MULTIPART_CT;
+	}
     }
   else
     {
@@ -472,7 +443,7 @@ _mime_set_content_type (mu_mime_t mime)
       if (hdr == NULL
 	  || mu_header_sget_value (hdr, MU_HEADER_CONTENT_TYPE,
 				   &content_type))
-	content_type = "text/plain; charset=us-ascii";
+	content_type = default_content_type;
 
       ret = mu_header_set_value (mime->hdrs, MU_HEADER_CONTENT_TYPE,
 				 content_type, 1);
@@ -486,8 +457,8 @@ _mime_set_content_type (mu_mime_t mime)
 	  /* if the only part contains a transfer-encoding
 	     field, set it on the message header too */
 	  if (mu_header_sget_value (hdr,
-				MU_HEADER_CONTENT_TRANSFER_ENCODING,
-				&content_te) == 0)
+				    MU_HEADER_CONTENT_TRANSFER_ENCODING,
+				    &content_te) == 0)
 	    ret = mu_header_set_value (mime->hdrs,
 				       MU_HEADER_CONTENT_TRANSFER_ENCODING,
 				       content_te, 1);
@@ -857,78 +828,131 @@ _mime_body_lines (mu_body_t body, size_t *plines)
 int
 mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
 {
-  mu_mime_t mime = NULL;
   int ret = 0;
-  size_t size;
-  mu_body_t body;
   
   if (pmime == NULL)
     return EINVAL;
   
-  switch (flags & MIME_MULTIPART_FLAGS)
-    {
-    case MIME_MULTIPART_FLAGS:
-      return EINVAL;
+  if ((flags & MIME_MULTIPART_FLAGS) == MIME_MULTIPART_FLAGS
+      || (flags & ~MIME_MULTIPART_FLAGS) != 0)
+    return EINVAL;
 
-    case 0:
-      flags |= MU_MIME_MULTIPART_MIXED;
-    }
-  
-  *pmime = NULL;
-  if ((mime = calloc (1, sizeof (*mime))) == NULL)
-    return ENOMEM;
   if (msg)
     {
-      if ((ret = mu_message_get_header (msg, &mime->hdrs)) == 0)
+      mu_mime_t mime = NULL;
+      mu_body_t body;
+      
+      *pmime = NULL;
+      if ((mime = calloc (1, sizeof (*mime))) == NULL)
+	return ENOMEM;
+      if (msg)
 	{
-	  if ((ret = mu_header_get_value (mime->hdrs,
-					  MU_HEADER_CONTENT_TYPE,
-					  NULL, 0, &size)) == 0 && size)
+	  if ((ret = mu_message_get_header (msg, &mime->hdrs)) == 0)
 	    {
-	      if ((mime->content_type = malloc (size + 1)) == NULL)
-		ret = ENOMEM;
-	      else if ((ret = mu_header_get_value (mime->hdrs,
-						   MU_HEADER_CONTENT_TYPE,
-						   mime->content_type,
-						   size + 1, 0)) == 0)
-		_mime_munge_content_header (mime->content_type);
-	    }
-	  else
-	    {
-	      if (ret == MU_ERR_NOENT)
+	      char *buf;
+	      if ((ret = mu_header_aget_value_unfold (mime->hdrs,
+						      MU_HEADER_CONTENT_TYPE,
+						      &buf)) == 0)
 		{
-		  ret = 0;
-		  if ((mime->content_type =
-		       strdup ("text/plain; charset=us-ascii")) == NULL)
-		    /* default as per spec. */
-		    ret = ENOMEM;
+		  ret = mu_content_type_parse (buf, NULL, &mime->content_type);
+		  free (buf);
+		}
+	      else if (ret == MU_ERR_NOENT)
+		{
+		  ret = mu_content_type_parse (default_content_type,
+					       NULL, &mime->content_type);
+		}
+	      if (ret == 0)
+		{
+		  mime->msg = msg;
+		  mu_message_get_body (msg, &body);
+		  mu_body_get_streamref (body, &mime->stream);
 		}
 	    }
-	  if (ret == 0)
-	    {
-	      mime->msg = msg;
-	      mu_message_get_body (msg, &body);
-	      mu_body_get_streamref (body, &mime->stream);
-	    }
+	}
+      if (ret != 0)
+	{
+	  mu_content_type_destroy (&mime->content_type);
+	  free (mime);
+	}
+      else
+	{
+	  mime->flags = 0;
+	  mime->ref_count = 1;
+	  *pmime = mime;
 	}
     }
   else
     {
-      mime->flags |= MIME_NEW_MESSAGE;
+      ret = mu_mime_create_multipart (pmime,
+				      flags == 0
+				        || (flags & MU_MIME_MULTIPART_MIXED)
+				       ? MU_MIME_CONTENT_SUBTYPE_MIXED
+				       : MU_MIME_CONTENT_SUBTYPE_ALTERNATIVE);
     }
-  if (ret != 0)
-    {
-      if (mime->content_type)
-	free (mime->content_type);
-      free (mime);
-    }
-  else
-    {
-      mime->flags |= (flags & MIME_FLAG_MASK);
-      mime->ref_count = 1;
-      *pmime = mime;
-    }
+
   return ret;
+}
+
+int
+mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype)
+{
+  int rc;
+  mu_mime_t mime;
+  char boundary[128];
+  struct mu_mime_param *p;
+  
+  if (pmime == NULL)
+    return MU_ERR_OUT_PTR_NULL;
+  if ((mime = calloc (1, sizeof (*mime))) == NULL)
+    return ENOMEM;
+  mime->flags |= MIME_NEW_MESSAGE;
+  mime->ref_count = 1;
+	  
+  rc = mu_content_type_parse ("multipart/mixed", NULL, &mime->content_type);
+  if (rc)
+    {
+      free (mime);
+      return rc;
+    }
+  if (subtype)
+    {
+      free (mime->content_type->subtype);
+      if ((mime->content_type->subtype = strdup (subtype)) == NULL)
+	{
+	  mu_mime_destroy (&mime);
+	  return errno;
+	}
+    }
+
+  snprintf (boundary, sizeof boundary, "%ld-%ld=:%ld",
+	    (long) random (), (long) time (0), (long) getpid ());
+  
+  p = calloc (1, sizeof (*p));
+  if (!p)
+    {
+      mu_mime_destroy (&mime);
+      return rc;
+    }
+
+  if ((p->value = strdup (boundary)) == NULL)
+    {
+      free (p);
+      mu_mime_destroy (&mime);
+      return errno;
+    }
+  rc = mu_assoc_install (mime->content_type->param, "boundary", p);
+  if (rc)
+    {
+      free (p->value);
+      free (p);
+      mu_mime_destroy (&mime);
+      return rc;
+    }
+  mime->boundary = p->value;
+
+  *pmime = mime;
+  return 0;
 }
 
 void
@@ -957,9 +981,8 @@ _mu_mime_free (mu_mime_t mime)
   mu_stream_destroy (&mime->part_stream);
   if (mime->msg && mime->flags & MIME_NEW_MESSAGE)
     mu_message_destroy (&mime->msg, mime);
-  free (mime->content_type);
+  mu_content_type_destroy (&mime->content_type);
   free (mime->cur_line);
-  free (mime->boundary);
   free (mime->header_buf);
   free (mime);
 }
@@ -1133,8 +1156,6 @@ mu_mime_to_message (mu_mime_t mime, mu_message_t *pmsg)
 int
 mu_mime_is_multipart (mu_mime_t mime)
 {
-  if (mime->content_type)
-    return (mu_c_strncasecmp ("multipart", mime->content_type,
-			      strlen ("multipart")) ? 0 : 1);
-  return 0;
+  return (mime->content_type
+	  && mu_c_strcasecmp (mime->content_type->type, MU_MIME_CONTENT_TYPE_MULTIPART) == 0);
 }

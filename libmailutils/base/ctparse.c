@@ -120,20 +120,19 @@ format_param (char const *name, void *data, void *call_data)
 
   /* Content-Type parameters don't use lang and cset fields of
      struct mu_mime_param, so these are ignored. */
-  mu_opool_append_char (pool, ';');
+  mu_opool_append (pool, "; ", 2);
   mu_opool_appendz (pool, name);
   mu_opool_append_char (pool, '=');
   if (*(cp = mu_str_skip_class_comp (value, MU_CTYPE_TSPEC)))
     {
       mu_opool_append_char (pool, '"');
-      do
+      while (*(cp = mu_str_skip_cset_comp (value, "\\\"")))
 	{
 	  mu_opool_append (pool, value, cp - value);
 	  mu_opool_append_char (pool, '\\');
 	  mu_opool_append_char (pool, *cp);
 	  value = cp + 1;
 	}
-      while (*(cp = mu_str_skip_class_comp (value, MU_CTYPE_TSPEC)));
       if (*value)
 	mu_opool_appendz (pool, value);
       mu_opool_append_char (pool, '"');

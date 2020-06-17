@@ -435,8 +435,31 @@ message_decode (mu_message_t msg, int what)
       mu_mime_t mime;
       mu_header_t hdr, newhdr;
       mu_iterator_t itr;
+      char *content_type;
+      char *subtype;
+
+      /* FIXME: The following could be simplified if we could obtain
+	 a mime object from the message */
+      mu_message_get_header (msg, &hdr);
+      rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE,
+					&content_type);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_header_aget_value_unfold",
+			   MU_HEADER_CONTENT_TYPE, rc);
+	  exit (EX_SOFTWARE);
+	}
+      subtype = strchr (content_type, '/');
+      if (subtype)
+	{
+	  subtype++;
+	  subtype[strcspn (subtype, ";")] = 0;
+	}
+      else
+	subtype = "multipart";
       
-      mu_mime_create (&mime, NULL, 0);
+      mu_mime_create_multipart (&mime, subtype);
+      free (content_type);
       mu_message_get_num_parts (msg, &nparts);
 
       for (i = 1; i <= nparts; i++)
@@ -482,7 +505,6 @@ message_decode (mu_message_t msg, int what)
 	}
       
       /* Copy headers */
-      mu_message_get_header (msg, &hdr);
       mu_message_get_header (newmsg, &newhdr);
       mu_header_get_iterator (hdr, &itr);
 

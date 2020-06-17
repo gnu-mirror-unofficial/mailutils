@@ -35,7 +35,14 @@ struct mu_mime_param
   char *value;
 };
 
+#define MU_MIME_CONTENT_TYPE_MULTIPART      "multipart"
+#define MU_MIME_CONTENT_SUBTYPE_MIXED       "mixed"
+#define MU_MIME_CONTENT_SUBTYPE_ALTERNATIVE "alternative"
+#define MU_MIME_CONTENT_SUBTYPE_DIGEST      "digest"
+  
 int mu_mime_create	(mu_mime_t *pmime, mu_message_t msg, int flags);
+int mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype);
+  
 void mu_mime_destroy	(mu_mime_t *pmime);
 void mu_mime_ref        (mu_mime_t mime);
 void mu_mime_unref      (mu_mime_t mime);
@@ -43,6 +50,13 @@ void mu_mime_unref      (mu_mime_t mime);
 int mu_mime_is_multipart	(mu_mime_t mime);
 int mu_mime_get_num_parts	(mu_mime_t mime, size_t *nparts);
 
+int mu_mime_sget_content_type (mu_mime_t mime, const char **value);
+int mu_mime_aget_content_type (mu_mime_t mime, char **value);
+int mu_mime_sget_content_subtype (mu_mime_t mime, const char **value);
+int mu_mime_aget_content_subtype (mu_mime_t mime, char **value);
+int mu_mime_content_type_param (mu_mime_t mime, char const *name,
+				const char **value);
+  
 int mu_mime_get_part	(mu_mime_t mime, size_t part, mu_message_t *msg);
 
 int mu_mime_add_part	(mu_mime_t mime, mu_message_t msg);
@@ -81,7 +95,6 @@ int mu_mime_header_set_w (mu_header_t hdr, const char *name,
 int mu_mime_header_set (mu_header_t hdr, const char *name,
 			const char *value, mu_assoc_t params);
 
-  
 #ifdef __cplusplus
 }
 #endif
