@@ -50,6 +50,7 @@ static char *decodemail_capa[] = {
   "debug",
   "mailbox",
   "locking",
+  "mime",
   NULL
 };
 
@@ -97,7 +98,8 @@ main (int argc, char **argv)
   mu_register_all_mbox_formats ();
   mu_register_extra_formats ();
   mu_auth_register_module (&mu_auth_tls_module);
-
+  mu_cli_capa_register (&mu_cli_capa_mime);
+  
   mu_cli (argc, argv, &cli, decodemail_capa, NULL, &argc, &argv);
 
   switch (argc)

@@ -39,3 +39,5 @@ int unistr_is_substring_dn (char const *haystack, char const *needle);
 int message_body_stream (mu_message_t msg, int unix_header,
 			 char const *charset,
 			 mu_stream_t *pstr);
+extern struct mu_cli_capa mu_cli_capa_mime;
+
