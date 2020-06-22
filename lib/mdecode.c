@@ -22,10 +22,9 @@ static mu_list_t text_mime_list;
 
 static char const *default_text_types[] = {
   "text/*",
-  "x-cshell",
-  "x-perl",
-  "x-shell",
-  "x-csource",
+  "application/*shell",
+  "*/x-perl",
+  "*/x-csource",
   NULL
 };
 
