@@ -334,10 +334,14 @@ message_decode (mu_message_t msg, int what)
 	  mu_iterator_t itr;
 	  size_t i;
 	  char *content_type = NULL;
+	  mu_stream_stat_buffer stat;
 	  
 	  mu_message_create (&newmsg, NULL);
 	  mu_message_get_body (newmsg, &body);
 	  mu_body_get_streamref (body, &bstr);
+	  mu_stream_set_stat (bstr,
+			      MU_STREAM_STAT_MASK (MU_STREAM_STAT_IN8BIT),
+			      stat);
 	  rc = mu_stream_copy (bstr, str, 0, NULL);
 	  if (rc)
 	    {
@@ -417,7 +421,7 @@ message_decode (mu_message_t msg, int what)
 
 	  mu_header_set_value (newhdr,
 			       MU_HEADER_CONTENT_TRANSFER_ENCODING,
-			       "8bit",
+			       stat[MU_STREAM_STAT_IN8BIT] ? "8bit" : "7bit",
 			       1);
 	  if (charset)
 	    {

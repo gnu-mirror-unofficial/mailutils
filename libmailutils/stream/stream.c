@@ -66,8 +66,13 @@ _stream_read (mu_stream_t str, char *buf, size_t size, size_t *pbytes)
   int rc;
   _stream_stat_incr (str, MU_STREAM_STAT_READS, 1);
   rc = str->read (str, buf, size, pbytes);
-  if (rc == 0 && str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_INLN))
-    str->statbuf[MU_STREAM_STAT_INLN] += mu_mem_c_count (buf, '\n', *pbytes);
+  if (rc == 0)
+    {
+      if (str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_INLN))
+	str->statbuf[MU_STREAM_STAT_INLN] += mu_mem_c_count (buf, '\n', *pbytes);
+      if (str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_IN8BIT))
+	str->statbuf[MU_STREAM_STAT_IN8BIT] += mu_mem_8bit_count (buf, *pbytes);
+    }
   return rc;
 }
 
@@ -77,8 +82,13 @@ _stream_write (mu_stream_t str, char const *buf, size_t size, size_t *pbytes)
   int rc;
   _stream_stat_incr (str, MU_STREAM_STAT_WRITES, 1);
   rc = str->write (str, buf, size, pbytes);
-  if (rc == 0 && str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUTLN))
-    str->statbuf[MU_STREAM_STAT_OUTLN] += mu_mem_c_count (buf, '\n', *pbytes);
+  if (rc == 0)
+    {
+      if (str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUTLN))
+	str->statbuf[MU_STREAM_STAT_OUTLN] += mu_mem_c_count (buf, '\n', *pbytes);
+      if (str->statmask & MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUT8BIT))
+	str->statbuf[MU_STREAM_STAT_OUT8BIT] += mu_mem_8bit_count (buf, *pbytes);
+    }
   return rc;
 }
 

@@ -76,3 +76,13 @@ mu_mem_c_count (char const *str, int c, size_t len)
       n++;
   return n;
 }
+
+size_t
+mu_mem_8bit_count (char const *str, size_t len)
+{
+  size_t n = 0;
+  while (len--)
+    if (*str & 0xf0)
+      n++;
+  return n;
+}

@@ -280,6 +280,8 @@ enum
     MU_STREAM_STAT_SEEKS,       /* Number of seeks */
     MU_STREAM_STAT_INLN,        /* Lines read */
     MU_STREAM_STAT_OUTLN,       /* Lines written */
+    MU_STREAM_STAT_IN8BIT,      /* 8-bit octets read */
+    MU_STREAM_STAT_OUT8BIT,     /* 8-bit octets written */
     _MU_STREAM_STAT_MAX
   };
 
