@@ -43,7 +43,7 @@
 #define MU_MIMEHDR_CSINFO    0x02  /* Parameter contains charset/language
 				      info */
 
-/* Free members of struct mu_mime_param, but do not free it itself. */
+/* Free the memory allocated for mu_mime_param. */
 void
 mu_mime_param_free (struct mu_mime_param *p)
 {

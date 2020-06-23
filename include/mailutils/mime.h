@@ -41,7 +41,8 @@ struct mu_mime_param
 #define MU_MIME_CONTENT_SUBTYPE_DIGEST      "digest"
   
 int mu_mime_create	(mu_mime_t *pmime, mu_message_t msg, int flags);
-int mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype);
+int mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype,
+			      mu_assoc_t param);
   
 void mu_mime_destroy	(mu_mime_t *pmime);
 void mu_mime_ref        (mu_mime_t mime);
@@ -54,8 +55,10 @@ int mu_mime_sget_content_type (mu_mime_t mime, const char **value);
 int mu_mime_aget_content_type (mu_mime_t mime, char **value);
 int mu_mime_sget_content_subtype (mu_mime_t mime, const char **value);
 int mu_mime_aget_content_subtype (mu_mime_t mime, char **value);
-int mu_mime_content_type_param (mu_mime_t mime, char const *name,
-				const char **value);
+int mu_mime_content_type_get_param (mu_mime_t mime, char const *name,
+				    const char **value);
+int mu_mime_content_type_set_param (mu_mime_t mime, char const *name,
+				    const char *value);
   
 int mu_mime_get_part	(mu_mime_t mime, size_t part, mu_message_t *msg);
 

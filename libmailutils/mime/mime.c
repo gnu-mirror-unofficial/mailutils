@@ -193,8 +193,8 @@ mu_mime_aget_content_subtype (mu_mime_t mime, char **value)
 }
 
 int
-mu_mime_content_type_param (mu_mime_t mime, char const *name,
-			    const char **value)
+mu_mime_content_type_get_param (mu_mime_t mime, char const *name,
+				const char **value)
 {
   struct mu_mime_param *p;
   int rc;
@@ -210,7 +210,46 @@ mu_mime_content_type_param (mu_mime_t mime, char const *name,
     *value = p->value;
   return rc;
 }
+
+int
+mu_mime_content_type_set_param (mu_mime_t mime, char const *name,
+				const char *value)
+{
+  int rc;
+  struct mu_mime_param **pparam;
+  char *vcopy;
   
+  if (!mime || !mime->content_type || !name)
+    return EINVAL;
+
+  if (!value)
+    return mu_assoc_remove (mime->content_type->param, name);
+  
+  if ((vcopy = strdup (value)) == NULL)
+    return ENOMEM;
+  
+  rc = mu_assoc_install_ref (mime->content_type->param, name, &pparam);
+  switch (rc)
+    {
+    case 0:
+      if ((*pparam = malloc (sizeof **pparam)) == NULL)
+	{
+	  free (vcopy);
+	  return ENOMEM;
+	}
+      break;
+
+    case MU_ERR_EXISTS:
+      free ((*pparam)->value);
+      break;
+
+    default:
+      return rc;
+    }
+  (*pparam)->value = vcopy;
+  return 0;
+}
+
 static int
 _mime_parse_mpart_message (mu_mime_t mime)
 {
@@ -219,7 +258,7 @@ _mime_parse_mpart_message (mu_mime_t mime)
 
   if (!(mime->flags & MIME_PARSER_ACTIVE))
     {
-      ret = mu_mime_content_type_param (mime, "boundary", &mime->boundary);
+      ret = mu_mime_content_type_get_param (mime, "boundary", &mime->boundary);
       if (ret)
 	return ret;
       mime->cur_offset = 0;
@@ -338,12 +377,6 @@ _mimepart_body_lines (mu_body_t body, size_t *plines)
 }
 
 /*------ Mime message/header functions for CREATING multipart message -----*/
-static int
-retain_charset (char const *name, void *value MU_ARG_UNUSED,
-		void *data MU_ARG_UNUSED)
-{
-  return strcmp (name, "charset") != 0;
-}
 		 
 static int
 _mime_set_content_type (mu_mime_t mime)
@@ -403,9 +436,6 @@ _mime_set_content_type (mu_mime_t mime)
 		    {
 		      char *type;
 		      
-		      mu_assoc_mark (ct->param, retain_charset, NULL);
-		      mu_assoc_sweep (ct->param);
-
 		      rc = mu_asprintf (&type, "%s/%s", ct->type, ct->subtype);
 		      if (rc == 0)
 			{
@@ -888,14 +918,63 @@ mu_mime_create (mu_mime_t *pmime, mu_message_t msg, int flags)
 				      flags == 0
 				        || (flags & MU_MIME_MULTIPART_MIXED)
 				       ? MU_MIME_CONTENT_SUBTYPE_MIXED
-				       : MU_MIME_CONTENT_SUBTYPE_ALTERNATIVE);
+				       : MU_MIME_CONTENT_SUBTYPE_ALTERNATIVE,
+				      NULL);
     }
 
   return ret;
 }
 
+static int
+param_copy (char const *name, void *vptr, void *call_data)
+{
+  mu_assoc_t a = call_data;
+  struct mu_mime_param *val = vptr;
+  struct mu_mime_param *p, **pptr;
+  int rc;
+  
+  rc = mu_assoc_install_ref2 (a, name, &pptr, NULL);
+  if (rc == MU_ERR_EXISTS)
+    return 0; /* Ignore duplicates */
+  if (rc)
+    return rc;
+  
+  if ((p = malloc (sizeof *p)) == NULL)
+    return ENOMEM;
+  if (val->lang)
+    {
+      if ((p->lang = strdup (val->lang)) == NULL)
+	{
+	  mu_mime_param_free (p);
+	  return ENOMEM;
+	}
+    }
+  else
+    p->lang = NULL;
+
+  if (val->cset)
+    {
+      if ((p->cset = strdup (val->cset)) == NULL)
+	{
+	  mu_mime_param_free (p);
+	  return ENOMEM;
+	}
+    }
+  else
+    p->cset = NULL;
+  
+  if ((p->value = strdup (val->value)) == NULL)
+    {
+      mu_mime_param_free (p);
+      return ENOMEM;
+    }
+  *pptr = p;
+  return 0;
+}
+
 int
-mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype)
+mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype,
+			  mu_assoc_t param)
 {
   int rc;
   mu_mime_t mime;
@@ -951,6 +1030,16 @@ mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype)
     }
   mime->boundary = p->value;
 
+  if (param)
+    {
+      rc = mu_assoc_foreach (param, param_copy, mime->content_type->param);
+      if (rc)
+	{
+	  mu_mime_destroy (&mime);
+	  return rc;
+	}
+    }
+  
   *pmime = mime;
   return 0;
 }
