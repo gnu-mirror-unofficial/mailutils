@@ -1208,7 +1208,18 @@ if test "$status_python" = yes; then
     if test -z "$PYTHON_CONFIG"; then
       AC_PATH_PROGS([PYTHON_CONFIG], [python3-config python-config])
     fi
-    if test -z "$PYTHON_CONFIG"; then
+    if test -n "$PYTHON_CONFIG"; then
+      save_CPPFLAGS=$CPPFLAGS
+      CPPFLAGS=$($PYTHON_CONFIG --includes)
+      AC_MSG_CHECKING([whether python-config ($PYTHON_CONFIG) is of same version as python])
+      AC_EGREP_CPP([^\"$PYTHON_VERSION],
+        [#include <patchlevel.h>
+PY_VERSION],
+	[AC_MSG_RESULT([yes])],
+	[AC_MSG_RESULT([no])
+	 status_python=no])
+      CPPFLAGS=$save_CPPFLAGS
+    else
       status_python=no
     fi
    
