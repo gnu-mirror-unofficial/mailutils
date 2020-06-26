@@ -31,7 +31,8 @@ dnl or newer.  If not installed, execute `ac-if-not-found' or, if it is not
 dnl given, spit out an error message.
 dnl
 dnl If Mailutils is found, set:
-dnl     MAILUTILS_CONFIG to the full name of the mailutils-config program;
+dnl     MAILUTILS_BIN     to the full name of the mailutils binary;
+dnl     MAILUTILS_CONFIG  to the full name of the mailutils-config program;
 dnl     MAILUTILS_VERSION to the Mailutils version (string);
 dnl     MAILUTILS_VERSION_MAJOR  Mailutils version: major number
 dnl     MAILUTILS_VERSION_MINOR  Mailutils version: minor number
@@ -46,10 +47,13 @@ dnl Finally, if `act-if-found' is given, execute it.  Otherwise, append the
 dnl value of $MAILUTILS_LIBS to LIBS. 
 dnl
 AC_DEFUN([AM_GNU_MAILUTILS],
- [AC_PATH_PROG(MAILUTILS_CONFIG, mailutils-config, none, $PATH)
-  if test "$MAILUTILS_CONFIG" = "none"; then
+ [AC_PATH_PROG(MAILUTILS_BIN, mailutils, false, $PATH)
+  if test "$MAILUTILS_BIN" = "false"; then
     m4_if($4,,[AC_MSG_ERROR(cannot find GNU Mailutils)], [$4])
   fi
+  # For backward compatibility, provide also the MAILUTILS_CONFIG variable.
+  AC_PATH_PROG(MAILUTILS_CONFIG, mailutils-config, false, $PATH)
+  AC_SUBST(MAILUTILS_BIN)  
   AC_SUBST(MAILUTILS_CONFIG)
   AC_SUBST(MAILUTILS_VERSION)
   AC_SUBST(MAILUTILS_INCLUDES)
@@ -64,7 +68,7 @@ mu_version_parse() {
 }]
   m4_pushdef([MU_VERSION_PARSE_DEFINED])])
 
-  MAILUTILS_VERSION=`$MAILUTILS_CONFIG --info version|sed 's/VERSION=//'`
+  MAILUTILS_VERSION=`$MAILUTILS_BIN info version|sed 's/VERSION=//'`
   mu_version_parse $MAILUTILS_VERSION
   AC_DEFINE_UNQUOTED([MAILUTILS_VERSION_MAJOR], $major, [Mailutils version major number])
   AC_DEFINE_UNQUOTED([MAILUTILS_VERSION_MINOR], $minor, [Mailutils version minor number])
@@ -76,8 +80,8 @@ mu_version_parse() {
                 m4_dquote(m4_bpatsubst($1, [\.],[,])),
       [AC_MSG_ERROR([Mailutils v. $MAILUTILS_VERSION is too old; required is at least ]$1)])
   ])
-  MAILUTILS_LIBS=`$MAILUTILS_CONFIG --link $2`
-  MAILUTILS_INCLUDES=`$MAILUTILS_CONFIG --compile`
+  MAILUTILS_LIBS=`$MAILUTILS_BIN ldflags $2`
+  MAILUTILS_INCLUDES=`$MAILUTILS_BIN cflags`
   m4_if($3,,[LIBS="$LIBS $MAILUTILS_LIBS"], [$3])
 ])  
   
