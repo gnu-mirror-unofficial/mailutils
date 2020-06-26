@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2020-06-16
+GNU mailutils NEWS -- history of user-visible changes. 2020-06-26
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
@@ -35,8 +35,6 @@ search used.
 * imap client code
 
 ** Fix handling of [TRYCREATE] and similar imap responses.
-
-* Remove deprecated mailutils-config script
 
 * Dropped support for Python 2.x
 
