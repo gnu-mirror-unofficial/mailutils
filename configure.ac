@@ -423,15 +423,13 @@ check_bdb() {
 	AC_CHECK_LIB($2, $3,
                      [AC_CHECK_HEADERS(db.h)
                       if test $ac_cv_header_db_h = yes; then
-                        DBMLIBS="$DBMLIBS -l$2"
-                        MU_DB2_CURSOR
                         status_bdb="$1"
                       fi])
 	if test "$status_bdb" = no; then
 		:
 	else
 	  save_LIBS=$LIBS
-	  LIBS="$LIBS $DBMLIBS"
+	  LIBS="-l$2 $DBMLIBS $LIBS"
 	  AC_RUN_IFELSE(
            [AC_LANG_PROGRAM([#include "db.h"],
             [int v_major, v_minor, v_patch;
@@ -446,6 +444,8 @@ check_bdb() {
 	   LIBS=$save_LIBS
            if test "$status_bdb" != no; then
 	     AC_DEFINE_UNQUOTED(WITH_BDB,$ver)
+             DBMLIBS="-l$2 $DBMLIBS"
+             MU_DB2_CURSOR
            fi
 	fi
 }
