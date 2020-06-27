@@ -22,17 +22,20 @@ testcompile([ex-2.5.1.sv])
 testcompile([ex-2.7.3.sv])
 testcompile([ex-3.1a.sv])
 testcompile([ex-3.1b.sv])
+testcompile([ex-3.2.sv])
+testcompile([ex-4.1.sv])
 testcompile([ex-4.2.sv])
 testcompile([ex-4.4a.sv])
 testcompile([ex-4.4b.sv])
 testcompile([ex-4.5.sv])
 testcompile([ex-5.1.sv])
 testcompile([ex-5.7.sv])
+testcompile([ex-9.sv])
 testcompile([ex-save-all.sv])
 testcompile([example.sv])
 testcompile([exn-2.3b.sv])
-
-dnl t-complex.sv
-dnl t-exists.sv
-dnl t-fileinto.sv
-dnl t-mailutils.sv
+testcompile([exn-5.4.sv])
+testcompile([t-complex.sv])
+testcompile([t-exists.sv])
+testcompile([t-fileinto.sv])
+testcompile([t-mailutils.sv])

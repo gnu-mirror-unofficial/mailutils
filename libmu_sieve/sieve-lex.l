@@ -41,7 +41,6 @@ static int number (void);
 static int string (void);
 static void line_begin (void);
 static void line_add (char const *text, size_t len);
-static void line_addz (char const *text); 
 static void line_finish (void);
 static void multiline_begin (void);
 static void multiline_add (void);
@@ -50,7 +49,6 @@ static char *multiline_strip_tabs (char *text);
 static void ident (const char *text);
 static void sieve_include (void);
 static void sieve_searchpath (void);
-static char *str_unescape (char *text, size_t len);
 static int isemptystr (char *text);
 
 static mu_linetrack_t trk;
@@ -274,13 +272,15 @@ true    return TRUE;
 0x[0-9a-fA-F][0-9a-fA-F]+{SIZESUF}*   { return number (); }
 [1-9][0-9]*{SIZESUF}*                 { return number (); }
          /* Quoted strings */
-\"[^\\"\n]*\"                 { return string (); }
-\"[^\\"\n]*\\.    { BEGIN(STR);
+\"[^\\"]*\"       { return string (); }
+\"[^\\"]*\\.      { BEGIN(STR);
                     line_begin ();
-  		    line_addz (str_unescape (yytext + 1, yyleng - 1)); }
-<STR>[^\\"\n]*\\. { line_addz (str_unescape (yytext, yyleng)); }
-<STR>[^\\"\n]*\" { BEGIN(INITIAL);
-                  if (yyleng > 1) 
+  		    line_add (yytext + 1, yyleng - 3);
+		    line_add (yytext + yyleng - 1, 1); }
+<STR>[^\\"]*\\.   { line_add (yytext, yyleng - 2);
+                    line_add (yytext + yyleng - 1, 1); }
+<STR>[^\\"]*\"   { BEGIN(INITIAL);
+                   if (yyleng > 1) 
                      line_add (yytext, yyleng - 1); 
                    line_finish ();
 		   return STRING; }
@@ -523,12 +523,6 @@ line_add (char const *text, size_t len)
 }
 
 static void
-line_addz (char const *text)
-{
-  mu_opool_appendz (mu_sieve_machine->string_pool, text);
-}
-
-static void
 multiline_add (void)
 {
   mu_opool_appendz (mu_sieve_machine->string_pool,
@@ -596,17 +590,6 @@ ident (const char *text)
       yyerror (_("not enough memory"));
       exit (1);
     }
-}
-
-/* Escapes the last character from yytext */
-static char *
-str_unescape (char *text, size_t len)
-{
-  char *str = mu_sieve_malloc (mu_sieve_machine, len);
-  memcpy (str, text, len - 2);
-  str[len - 2] = mu_wordsplit_c_unquote_char (text[len - 1]);
-  str[len - 1] = 0;
-  return str;
 }
 
 static mu_i_sv_interp_t string_interpreter;
