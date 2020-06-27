@@ -31,7 +31,7 @@ mimeview_SOURCES = \
 
 YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS=-vtd
-AM_LEXFLAGS=-d
+AM_LFLAGS=-d
 EXTRA_DIST = gylwrap.conf
 
 mimeview_LDADD = \
