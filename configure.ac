@@ -958,7 +958,8 @@ if test $status_ldap = maybe; then
   AC_CHECK_LIB(ldap, ldap_bind,[
    status_ldap=yes
    AC_DEFINE(WITH_LDAP, 1, [Define to 1 if you want to use -lldap])
-   MU_AUTHLIBS="${MU_AUTHLIBS}${MU_AUTHLIBS:+ }-lldap"],
+   MU_AUTHLIBS="${MU_AUTHLIBS}${MU_AUTHLIBS:+ }-lldap"
+   AC_CHECK_LIB(lber, ber_set_option,[MU_AUTHLIBS="${MU_AUTHLIBS} -llber"])],
    [status_ldap=no])
 fi
 
