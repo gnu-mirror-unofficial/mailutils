@@ -256,14 +256,16 @@ mu_imapio_getline (struct _mu_imapio *io)
 	  io->_imap_buf_base[io->_imap_buf_level++] = 0;
 
 	  free (last_arg);
-	  io->_imap_ws.ws_wordv[--io->_imap_ws.ws_wordc] = NULL;
-	  if (mu_wordsplit_len (io->_imap_buf_base, io->_imap_buf_level,
-				&io->_imap_ws,
-				io->_imap_ws_flags|MU_WRDSF_NOSPLIT))
+	  last_arg = malloc (io->_imap_buf_level + 1);
+	  if (!last_arg)
 	    {
-	      rc = MU_ERR_PARSE;
+	      rc = errno;
+	      io->_imap_ws.ws_wordv[--io->_imap_ws.ws_wordc] = NULL;
 	      break;
 	    }
+	  last_arg[io->_imap_buf_level] = 0;
+	  memcpy (last_arg, io->_imap_buf_base, io->_imap_buf_level);
+	  io->_imap_ws.ws_wordv[io->_imap_ws.ws_wordc-1] = last_arg;
 	}
       else
 	break;
