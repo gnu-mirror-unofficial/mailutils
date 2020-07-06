@@ -26,6 +26,7 @@
 #include <mailutils/error.h>
 #include <mailutils/iterator.h>
 #include <mailutils/util.h>
+#include <mailutils/cctype.h>
 #include <mailutils/cstr.h>
 #include <mailutils/sys/iterator.h>
 
@@ -54,6 +55,7 @@ struct _mu_assoc
 {
   int flags;
   unsigned int hash_num;  /* Index to hash_size table */
+  unsigned (*hash) (const char *name, unsigned long hash_num);
   struct _mu_assoc_elem **tab;
   struct _mu_assoc_elem *head, *tail;
   mu_deallocator_t free;
@@ -94,7 +96,7 @@ assoc_elem_link (mu_assoc_t assoc, int idx)
 }
 
 static unsigned
-hash (const char *name, unsigned long hash_num)
+hash_dfl (const char *name, unsigned long hash_num)
 {
   unsigned i;
 	
@@ -102,6 +104,19 @@ hash (const char *name, unsigned long hash_num)
     {
       i <<= 1;
       i ^= *(unsigned char*) name;
+    }
+  return i % hash_size[hash_num];
+};
+
+static unsigned
+hash_ci (const char *name, unsigned long hash_num)
+{
+  unsigned i;
+	
+  for (i = 0; *name; name++)
+    {
+      i <<= 1;
+      i ^= mu_tolower(*(unsigned char*) name);
     }
   return i % hash_size[hash_num];
 };
@@ -182,7 +197,7 @@ assoc_remove (mu_assoc_t assoc, unsigned idx)
 	    i = 0;
 	  if (!assoc->tab[i])
 	    return 0;
-	  r = hash (assoc->tab[i]->name, assoc->hash_num);
+	  r = assoc->hash (assoc->tab[i]->name, assoc->hash_num);
 	}
       while ((j < r && r <= i) || (i < j && j < r) || (r <= i && i < j));
 
@@ -215,7 +230,7 @@ assoc_find_slot (mu_assoc_t assoc, const char *name,
 	return MU_ERR_NOENT;
     }
 
-  pos = hash (name, assoc->hash_num);
+  pos = assoc->hash (name, assoc->hash_num);
 
   for (i = pos; (elem = assoc->tab[i]);)
     {
@@ -256,6 +271,7 @@ mu_assoc_create (mu_assoc_t *passoc, int flags)
   if (!assoc)
     return ENOMEM;
   assoc->flags = flags;
+  assoc->hash = flags & MU_ASSOC_ICASE ? hash_ci : hash_dfl;
   *passoc = assoc;
   return 0;
 }
