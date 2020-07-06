@@ -62,6 +62,7 @@ noinst_PROGRAMS = \
  strtoc\
  t0-stream\
  t1-stream\
+ t-streamshift\
  tempfile\
  tcli\
  tocrlf\
@@ -166,6 +167,7 @@ TESTSUITE_AT += \
  prop.at\
  scantime.at\
  strftime.at\
+ streamshift.at\
  strerr.at\
  strin.at\
  strout.at\

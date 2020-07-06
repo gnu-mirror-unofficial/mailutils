@@ -36,6 +36,7 @@ libstream_la_SOURCES = \
  stream_vprintf.c\
  streamcpy.c\
  streamref.c\
+ streamshift.c\
  syslogstream.c\
  tcp.c\
  temp_file_stream.c\

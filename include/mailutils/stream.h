@@ -363,6 +363,8 @@ int mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 		    mu_off_t *pcsz);
 int mu_stream_header_copy (mu_stream_t dst, mu_stream_t src, char **exclude_names);
 
+int mu_stream_shift (mu_stream_t str, mu_off_t off_a, mu_off_t off_b,
+		     size_t bufsize);
 
 int mu_file_stream_create (mu_stream_t *pstream, const char *filename, int flags);
 struct mu_tempfile_hints;  

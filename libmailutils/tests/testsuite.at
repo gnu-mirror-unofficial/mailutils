@@ -101,6 +101,7 @@ AT_INIT
 AT_BANNER([Basic streams])
 m4_include([t0-stream.at])
 m4_include([t1-stream.at])
+m4_include([streamshift.at])
 
 AT_BANNER([Conversions])
 m4_include([strtoc.at])
