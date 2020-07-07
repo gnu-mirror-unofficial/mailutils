@@ -645,7 +645,7 @@ _stream_read_unbuffered (mu_stream_t stream, void *buf, size_t size,
 	}
       mu_stream_seterr (stream, rc, rc != 0);
     }
-  if (pnread)
+  if (rc == 0 && pnread)
     *pnread = nread;
   
   return rc;
