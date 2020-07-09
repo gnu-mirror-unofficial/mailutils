@@ -930,46 +930,54 @@ util_header_expand (mu_header_t *phdr)
 	      errcnt++;
 	      mu_error (_("cannot split line `%s': %s"), value,
 			mu_wordsplit_strerror (&ws));
-	      break;
 	    }
-
-	  for (j = 0; j < ws.ws_wordc; j++)
+	  else
 	    {
-	      const char *exp;
-	      mu_address_t new_addr;
-	      char *p = ws.ws_wordv[j];
-
-	      if (mailvar_is_true (mailvar_name_inplacealiases))
-		/* If inplacealiases was set, the value was already expanded */
-		exp = p;
-	      else
-		exp = alias_expand (p);
-	      rc = mu_address_create (&new_addr, p);
-	      if (rc)
+	      for (j = 0; j < ws.ws_wordc; j++)
 		{
-		  errcnt++;
-		  if (exp)
-		    mu_error (_("Cannot parse address `%s'"
-				" (while expanding `%s'): %s"),
-				exp, p, mu_strerror (rc));
+		  char *exp_mem = NULL;
+		  mu_address_t new_addr;
+		  char *p = ws.ws_wordv[j];
+		  char *exp;
+	      
+		  if (mailvar_is_true (mailvar_name_inplacealiases))
+		    /* If inplacealiases was set, the value was a
+		       lready expanded */
+		    exp = p;
 		  else
-		    mu_error (_("Cannot parse address `%s': %s"),
-				p, mu_strerror (rc));
+		    {
+		      exp_mem = alias_expand (p);
+		      exp = exp_mem ? exp_mem : p;
+		    }
+		  rc = mu_address_create (&new_addr, exp);
+		  if (rc)
+		    {
+		      errcnt++;
+		      if (exp_mem)
+			mu_error (_("Cannot parse address `%s'"
+				    " (while expanding `%s'): %s"),
+				  exp, p, mu_strerror (rc));
+		      else
+			mu_error (_("Cannot parse address `%s': %s"),
+				  p, mu_strerror (rc));
+		    }
+		  
+		  mu_address_union (&addr, new_addr);
+		  mu_address_destroy (&new_addr);
+		  free (exp_mem);
 		}
 
-	      mu_address_union (&addr, new_addr);
-	      mu_address_destroy (&new_addr);
+	      if (addr)
+		{
+		  const char *newvalue;
+		  
+		  rc = mu_address_sget_printable (addr, &newvalue);
+		  if (rc == 0 && newvalue)
+		    mu_header_set_value (hdr, name, newvalue, 1);
+		  mu_address_destroy (&addr);
+		}
 	    }
-
-	  if (addr)
-	    {
-	      const char *newvalue;
-
-	      rc = mu_address_sget_printable (addr, &newvalue);
-	      if (rc == 0 && newvalue)
-		mu_header_set_value (hdr, name, newvalue, 1);
-	      mu_address_destroy (&addr);
-	    }
+	  mu_wordsplit_free (&ws);
 	}
       else
 	mu_header_append (hdr, name, value);

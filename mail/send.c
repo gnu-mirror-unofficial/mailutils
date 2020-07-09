@@ -557,8 +557,6 @@ add_body (mu_message_t inmsg, compose_env_t *env)
   aptr->name = NULL;
   aptr->filename = NULL;
   aptr->source = str;
-  if (str)
-    mu_stream_ref (str);
   aptr->skip_empty = skip_empty_attachments || multipart_alternative;
   aptr->disp_inline = 1;
   if (!env->attlist)
@@ -568,7 +566,7 @@ add_body (mu_message_t inmsg, compose_env_t *env)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_list_prepend", NULL, rc);
   return rc;
 }
-  
+
 static int
 add_attachments (compose_env_t *env, mu_message_t *pmsg)
 {
@@ -962,12 +960,12 @@ compose_header_set (compose_env_t *env, const char *name,
   return status;
 }
 
-char *
+char const *
 compose_header_get (compose_env_t *env, char *name, char *defval)
 {
-  char *p;
+  char const *p;
 
-  if (mu_header_aget_value (env->header, name, &p))
+  if (mu_header_sget_value (env->header, name, &p))
     p = defval;
   return p;
 }
@@ -1231,14 +1229,14 @@ mail_send0 (compose_env_t *env, int save_to)
 
       if (ml_got_interrupt ())
 	{
+	  if (buf)
+	    free (buf);
 	  if (mailvar_is_true (mailvar_name_ignore))
 	    {
 	      mu_printf ("@\n");
 	    }
 	  else
 	    {
-	      if (buf)
-		free (buf);
 	      if (++int_cnt == 2)
 		break;
 	      mu_error (_("\n(Interrupt -- one more to kill letter)"));
@@ -1354,17 +1352,20 @@ mail_send0 (compose_env_t *env, int save_to)
 	  /* Save outgoing message */
 	  if (save_to)
 	    {
-	      char *tmp = compose_header_get (env, MU_HEADER_TO, NULL);
-	      mu_address_t addr = NULL;
-	      
-	      mu_address_create (&addr, tmp);
-	      mu_address_aget_email (addr, 1, &savefile);
-	      mu_address_destroy (&addr);
-	      if (savefile)
+	      char const *rcpt = compose_header_get (env, MU_HEADER_TO, NULL);
+	      if (rcpt)
 		{
-		  char *p = strchr (savefile, '@');
-		  if (p)
-		    *p = 0;
+		  mu_address_t addr = NULL;
+	      
+		  mu_address_create (&addr, rcpt);
+		  mu_address_aget_email (addr, 1, &savefile);
+		  mu_address_destroy (&addr);
+		  if (savefile)
+		    {
+		      char *p = strchr (savefile, '@');
+		      if (p)
+			*p = 0;
+		    }
 		}
 	    }
 	  util_save_outgoing (msg, savefile);

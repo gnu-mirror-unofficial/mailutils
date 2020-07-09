@@ -31,11 +31,16 @@ source_readline (void *closure, int cont MU_ARG_UNUSED)
       return NULL;
     }
   if (n == 0)
-    return NULL;
-
-  mu_rtrim_class (buf, MU_CTYPE_SPACE);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-		   MU_IOCTL_LOGSTREAM_ADVANCE_LOCUS_LINE, NULL);
+    {
+      free (buf);
+      buf = NULL;
+    }
+  else
+    {
+      mu_rtrim_class (buf, MU_CTYPE_SPACE);
+      mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		       MU_IOCTL_LOGSTREAM_ADVANCE_LOCUS_LINE, NULL);
+    }
   return buf;
 }
   

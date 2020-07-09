@@ -557,7 +557,7 @@ mu_address_t get_sender_address (mu_message_t msg);
 void compose_init (compose_env_t *env);
 int compose_header_set (compose_env_t *env, const char *name,
 		        const char *value, int replace);
-char *compose_header_get (compose_env_t *env, char *name, char *defval);
+char const *compose_header_get (compose_env_t *env, char *name, char *defval);
 void compose_destroy (compose_env_t *env);
 
 #ifndef HAVE_READLINE_READLINE_H

@@ -242,7 +242,7 @@ mu_progmailer_send (struct _mu_progmailer *pm, mu_message_t msg)
 	  break;
 	}
     }
-  mu_body_get_streamref (body, &stream);
+  mu_stream_destroy (&stream);
 
   close (pm->fd);
 

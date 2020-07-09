@@ -51,6 +51,7 @@ reply0 (msgset_t *mspec, mu_message_t msg, void *data)
   compose_env_t env;
   int status;
   char *str;
+  char const *rcpt;
 
   set_cursor (msgset_msgno (mspec));
   
@@ -111,11 +112,11 @@ reply0 (msgset_t *mspec, mu_message_t msg, void *data)
 
   mu_printf ("To: %s\n",
 	   compose_header_get (&env, MU_HEADER_TO, ""));
-  str = compose_header_get (&env, MU_HEADER_CC, NULL);
-  if (str)
-    mu_printf ("Cc: %s\n", str);
+  rcpt = compose_header_get (&env, MU_HEADER_CC, NULL);
+  if (rcpt)
+    mu_printf ("Cc: %s\n", rcpt);
   mu_printf ("Subject: %s\n\n",
-		    compose_header_get (&env, MU_HEADER_SUBJECT, ""));
+	     compose_header_get (&env, MU_HEADER_SUBJECT, ""));
   
   make_in_reply_to (&env, msg);
   make_references (&env, msg);

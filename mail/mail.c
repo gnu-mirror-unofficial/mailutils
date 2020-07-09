@@ -583,6 +583,7 @@ main (int argc, char **argv)
 
       mu_argcv_string (argc, argv, &buf);
       rc = util_do_command ("mail %s", buf);
+      free (buf);
       return mailvar_is_true (mailvar_name_mailx) ? 0 : rc;
     }
   /* Or acting as a normal reader */
@@ -720,8 +721,7 @@ mail_mainloop (char *(*input) (void *, int),
       if (do_history && !(mu_isspace (cmd[0]) || cmd[0] == '#'))
 	add_history (cmd);
 #endif
-      if (command)
-	free (command);
+      free (command);
     }
 }
 

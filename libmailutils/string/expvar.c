@@ -313,11 +313,8 @@ mu_str_expand (char **output, char const *input, mu_assoc_t assoc)
     }
   else
     {
-      size_t wordc;
-      char **wordv;
-      
-      mu_wordsplit_get_words (&ws, &wordc, &wordv);
-      *output = wordv[0];
+      *output = ws.ws_wordv[0];
+      ws.ws_wordv[0] = NULL;
     }
   mu_wordsplit_free (&ws);
   return rc;

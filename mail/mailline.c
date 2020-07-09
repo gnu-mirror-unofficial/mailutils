@@ -141,7 +141,10 @@ ml_readline_internal (void)
       return NULL;
     }
   if (n == 0)
-    return NULL;
+    {
+      free (buf);
+      return NULL;
+    }
   mu_rtrim_cset (buf, "\n");
   return buf;
 }

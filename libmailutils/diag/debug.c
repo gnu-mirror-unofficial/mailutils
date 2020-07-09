@@ -707,6 +707,7 @@ mu_debug_log (const char *fmt, ...)
       if (!nl)
 	mu_stream_write (mu_strerr, "\n", 1, NULL);
     }
+  free (buf);
 }
 
 void
