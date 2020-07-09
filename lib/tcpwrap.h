@@ -17,7 +17,7 @@
 #include <mailutils/types.h>
 
 extern int mu_tcp_wrapper_enable;
-const char *mu_tcp_wrapper_daemon;
+extern const char *mu_tcp_wrapper_daemon;
 extern int mu_tcpwrapper_access (int fd);
 extern void mu_tcpwrapper_cfg_init (void);
 extern int mu_tcp_wrapper_prefork (int fd, 

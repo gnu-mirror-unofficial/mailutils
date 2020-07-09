@@ -230,8 +230,6 @@ extern int global_tls_mode;
 extern int test_mode;
 extern int silent_expunge;
 
-int tls_available;
-
 /* Input functions */
 extern mu_stream_t iostream;
 extern int  io_untagged_response (int, const char *, ...) MU_PRINTFLIKE(2,3);
