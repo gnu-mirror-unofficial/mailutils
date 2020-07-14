@@ -29,6 +29,7 @@ mailutils_TEXINFOS = \
  $(programs_TEXINFOS)
 
 programs_TEXINFOS = \
+ programs/decodemail.texi\
  programs/frm.texi\
  programs/mail.texi\
  programs/messages.texi\

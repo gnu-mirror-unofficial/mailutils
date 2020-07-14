@@ -1,0 +1,120 @@
+@c This is part of the GNU Mailutils manual.
+@c Copyright (C) 2020 Free Software Foundation, Inc.
+@c See file mailutils.texi for copying conditions.
+@comment *******************************************************************
+@pindex decodemail
+
+The @command{decodemail} utility is a filter program that reads
+messages from the input mailbox, decodes parts of each multipart
+message to 8-bit transfer encoding and stores the processed messages
+in the output mailbox.  The utility decodes only the message parts
+that are deemed to be ``textual'', i.e. the ones with the
+@samp{Content-Type} header matching one of the predefined type
+patterns.
+
+The default list of textual content type patterns is:
+
+@itemize @bullet
+@item text/*
+@item application/*shell
+@item application/shellscript
+@item */x-csrc
+@item */x-csource
+@item */x-diff
+@item */x-patch
+@item */x-perl
+@item */x-php
+@item */x-python
+@item */x-sh
+@end itemize
+
+These strings are matched as shell globbing patterns
+(@pxref{glob,,,glob(7), glob(7) manual page}).
+
+More patterns can be added to this list using the
+@code{mime.text-type} configuration statement.
+@xref{mime statement}, for a detailed discussion.
+
+Optionally, the decoded parts can be converted to another character set.
+
+@menu
+* Opt-decodemail::   Invocation of @command{decodemail}.
+* Conf-decodemail::  Configuration of @command{decodemail}.
+@end menu
+
+@node Opt-decodemail
+@subsection Invocation of @command{decodemail}.
+
+Usually, the utility is invoked as:
+
+@example
+decodemail @var{inbox} @var{outbox}
+@end example
+
+@noindent
+where @var{inbox} and @var{outbox} are file names or URLs of the input
+and output mailboxes, correspondingly.  The input mailbox is opened
+read-only and will not be modified in any way.  In particular, the
+status of the processed messages will not change.  If the output
+mailbox does not exist, it will be created.  If it exists, the
+messages will be appended to it, preserving any original messages that
+are already in it.  This behavior can be changed using the @option{-t}
+(@option{--truncate}) option, described below.
+
+The two mailboxes can be of different types.  For example you can read
+input from an imap server and store it in local @samp{maildir} box
+using the following command:
+
+@example
+decodemail imap://user@@example.com maildir:///var/mail/user
+@end example
+
+Both arguments can be omitted.  If @var{outbox} is not supplied, the
+resulting mailbox will be printed on the standard output in Unix
+@samp{mbox} format.  If @var{inbox} is not supplied, the utility will
+open the system inbox for the current user and use it for input.
+
+Notice, that currently there is no easy way of reading the input
+mailbox from standard input.
+
+The following command line options modify the @command{decodemail}
+behavior:
+
+@table @option
+@item -c, --charset=@var{charset}
+Convert all textual parts from their original character set to the
+specified @var{charset}.
+
+@item -R, --recode
+Convert all textual parts from their original character set to the
+current character set, as specified by the @env{LC_ALL} or @env{LANG}
+environment variable.
+
+@item --no-recode
+Do not convert character sets.  This is the default.
+
+@item -t, --truncate
+If the output mailbox exists, truncate it before appending new
+messages.
+
+@item --no-truncate
+Keep the existing messages in the output mailbox intact.  This is the
+default.
+@end table
+
+Additionally, the @ref{Common Options} are also understood.
+
+@node Conf-decodemail
+@subsection Configuration of @command{decodemail}.
+
+The following common configuration statements affect the behavior of
+@command{decodemail}:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item mime          @tab @xref{mime statement}.
+@item debug         @tab @xref{Debug Statement}.
+@item mailbox       @tab @xref{Mailbox Statement}.
+@item locking       @tab @xref{Locking Statement}.
+@end multitable
+

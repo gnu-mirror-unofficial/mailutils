@@ -13,27 +13,47 @@ criteria are:
 
 @item
 A list of message numbers may be specified.  Values
-of  @samp{0}  and @samp{$} in the list both mean the last
+of @samp{0} and @samp{$} in the list both mean the last
 message in the mailbox.  For example:
+
 @example
 readmsg 1 3 0
 @end example
+
+@noindent
 extracts three messages from the folder: the first, the third, and the last.
 
 @item
 Finally, the selection may be some text to match.  This will select a mail
 message which exactly matches the specified text.  For example,
+
 @example
 readmsg staff meeting
 @end example
+
+@noindent
 extracts the message which contains the words @samp{staff meeting}.
 Note that it will not match a message containing @samp{Staff Meeting}
--- the matching is case sensitive.  Normally only the first message
-which matches the pattern is printed.
+-- the matching is case sensitive by default.  This can changed using
+the @option{-i} (@option{--ignorecase}) option.  Two more options are
+provided to control the matching algorithm: the @option{-g}
+(@option{--glob}) option instructs @command{readmsg} to treat
+arguments as shell globbing patterns and the @option{-r}
+(@option{--regex}) option instructs it to treat them as POSIX extended
+regular expressions.  Needless to say, when using any of the two latter
+options, you should pay attention to escape the matching pattern to
+prevent it from being interpreted by the shell.  E.g.:
+
+@example
+readmsg --regex 'staff.*meeting'
+@end example
 @end enumerate
 
-Unless one of the informational options is used, at least one command
-line argument must be present.  Informational options are:
+Unless requested otherwise, only the first message that matches the
+pattern is printed.
+
+At least one command line argument or one informational option must be
+present in @command{readmsg} invocation.  Informational options are:
 @option{--help} (@option{-?}), @option{--usage}, and
 @option{--version} (@option{-V}).
 
@@ -48,20 +68,48 @@ line argument must be present.  Informational options are:
 @table @option
 @item -a
 @itemx --show-all
-If a pattern is use for selection show all messages that match pattern
+If a pattern is used for selection, show all messages that match pattern
 by default only the first one is presented.
 
 @item -d
 @itemx --debug
 Display mailbox debugging information.
 
+@item -e
+@itemx --exact
+Look for messages containing exactly the words given as arguments.
+This is the default.  Other options changing this behavior are:
+@option{--glob}, @option{--regex}, and @option{--ignorecase}.
+
 @item -f @var{mailbox}
 @itemx --folder=@var{mailbox}
 Specified the default mailbox.
 
+@item -g
+@itemx --glob
+Treat non-option arguments as shell globbing patterns.  For example,
+to select the first message with words @samp{morning} and
+@samp{coffee} with anything bewteen them:
+
+@example
+readmsg --glob 'morning*coffee'
+@end example
+
+@noindent
+(notice quoting, which prevents the shell from interpreting the
+@samp{*} prematurely).
+
 @item -h
 @itemx --header
 Show the entire header and ignore the weedlist.
+
+@item -i
+@itemx --ignorecase
+Ignore the case of letters when looking for matching messages.  E.g.:
+
+@example
+readmsg --glob --ignorecase 'morning*coffee'
+@end example
 
 @item -n
 @itemx --no-header
@@ -70,6 +118,10 @@ Do not print the message header.
 @item -p
 @itemx --form-feed
 Put form-feed (Control-L) between messages instead of newline.
+
+@item -r
+@itemx --regex
+Treat non-option arguments as POSIX extended regular expressions.
 
 @anchor{weedlist option}
 @item  -w @var{weedlist}

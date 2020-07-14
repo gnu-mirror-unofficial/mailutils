@@ -28,6 +28,7 @@ syntax.
 * messages::          Count the Number of Messages in a Mailbox.
 * movemail::          Moves Mail from the User Maildrop to the Local File.
 * readmsg::           Extract Messages from a Folder.
+* decodemail::        Decode multipart messages.
 
 * sieve::             Mail Filtering Utility.
 * guimb::             Mailbox Scanning and Processing Language.
@@ -407,6 +408,7 @@ configuration files.
 * logging statement::
 * debug statement::
 * mailbox statement::
+* mime statement::
 * locking statement::
 * mailer statement::
 * acl statement::
@@ -1221,6 +1223,54 @@ The @var{dir} argument can contain mailbox type prefix, e.g
 @samp{mh://Mail}.
 
 The default folder name is @samp{Mail/}.
+@end deffn
+
+@node mime statement
+@subsection The @command{mime} Statement
+@kwindex mime
+@subheading Syntax
+@example
+@group
+mime @{
+  # Define additional textual mime types.
+  text-type PATTERN;
+  # or
+  text-type ( PATTERN-LIST );
+@}
+@end group
+@end example
+
+@subheading Description
+The @code{mime} compound statement is used by utilities that process
+MIME messages, in particular @command{mail}, @command{readmsg}, and
+@command{decodemail}.  As of mailutils version @value{VERSION} it
+contains only one statement:
+
+@deffn {Configuration} text-type @var{pattern}
+@deffnx {Configuration} text-type ( @var{pattern-list} )
+Defines additional patterns for recognition of textual message parts.
+The @var{pattern} is a shell globbing pattern that will be compared
+against the @samp{Content-Type} header of a MIME message part in order
+to determine whether it can be treated as a text part.  In second
+form, @var{pattern-list} is a comma-separated list of such patterns.
+
+In both forms, the new patterns are appended to the built-in textual
+pattern list, which contains:
+
+@itemize @bullet
+@item text/*
+@item application/*shell
+@item application/shellscript
+@item */x-csrc
+@item */x-csource
+@item */x-diff
+@item */x-patch
+@item */x-perl
+@item */x-php
+@item */x-python
+@item */x-sh
+@end itemize
+
 @end deffn
 
 @node locking statement
@@ -2880,6 +2930,11 @@ Show payload information
 @node readmsg
 @section @command{readmsg} --- Extract Messages from a Folder
 @include programs/readmsg.texi
+
+@page
+@node decodemail
+@section @command{decodemail} -- Decode multipart messages
+@include programs/decodemail.texi
 
 @node sieve
 @section @command{sieve}

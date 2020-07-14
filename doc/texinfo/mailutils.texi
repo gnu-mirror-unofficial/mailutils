@@ -39,6 +39,7 @@
 * movemail: (mailutils) movemail.        Move Mail between Mailboxes.
 * pop3d: (mailutils) pop3d.              POP3 Daemon.
 * readmsg: (mailutils) readmsg.          Extract Messages from a Folder.
+* decodemail: (mailutils) decodemail.    Decode MIME messages.
 * sieve: (mailutils) sieve.              Mail Filtering Utility.
 * mimeview: (mailutils) mimeview.        View MIME Messages.
 * mailutils: (mailutils) mailutils.      Mailutils Multi-Purpose Tool
@@ -138,7 +139,9 @@ Mailutils Programs
 * movemail::          Moves Mail from the User Maildrop to the Local File.
 * readmsg::           Extract Messages from a Folder.
 
+* decodemail::        Decode MIME messages.
 * sieve::             Mail Filtering Utility.
+
 * guimb::             Mailbox Scanning and Processing Language.
 
 * mda::               Local Mail Delivery Agent.
