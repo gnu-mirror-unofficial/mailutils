@@ -1,0 +1,90 @@
+# GNU Mailutils -- a suite of utilities for electronic mail
+# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([multiple sends])
+AT_DATA([msg],[dnl
+From: mailutils@localhost
+To: root@example.org
+Subject: test
+
+test message
+])
+
+AT_DATA([expout],
+[ENVELOPE FROM: <mailutils@localhost>
+ENVELOPE TO: <gray@example.org>
+   0: From: mailutils@localhost
+   1: To: root@example.org
+   2: Subject: test
+   3:
+   4: test message
+END OF MESSAGE
+ENVELOPE FROM: <mailutils@localhost>
+ENVELOPE TO: <root@example.org>
+   0: From: mailutils@localhost
+   1: To: root@example.org
+   2: Subject: test
+   3:
+   4: test message
+END OF MESSAGE
+ENVELOPE FROM: <mailutils@localhost>
+ENVELOPE TO: <wheel@example.com>
+   0: From: mailutils@localhost
+   1: To: root@example.org
+   2: Subject: test
+   3:
+   4: test message
+END OF MESSAGE
+])
+
+AT_CHECK([
+MTA_DIAG=`pwd`/mta.diag
+export MTA_DIAG
+p=`$abs_top_builddir/examples/mta -bd -c`
+test $? -eq 0 || AT_SKIP_TEST
+set -- $p
+# $1 - pid, $2 - port
+sends smtp://127.0.0.1:$2 msg gray@example.org root@example.org wheel@example.com
+ec=$?
+kill $1 >/dev/null 2>&1
+if test $ec -eq 0; then
+  cat mta.diag
+fi
+exit $ec
+],
+[0],
+[expout])
+
+AT_CHECK([
+MTA_DIAG=`pwd`/mta.diag
+export MTA_DIAG
+p=`$abs_top_builddir/examples/mta -bd -c`
+test $? -eq 0 || AT_SKIP_TEST
+set -- $p
+# $1 - pid, $2 - port
+sendm smtp://127.0.0.1:$2 msg gray@example.org root@example.org wheel@example.com
+ec=$?
+kill $1 >/dev/null 2>&1
+if test $ec -eq 0; then
+  cat mta.diag
+fi
+exit $ec
+],
+[0],
+[expout])
+
+AT_CLEANUP
+

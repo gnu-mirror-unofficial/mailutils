@@ -77,20 +77,13 @@ int foreground = 0;      /* Stay in the foreground (smtp mode) */
 char *from_person = NULL; /* Set the name of the `from' person */
 int read_recipients = 0; /* Read the message for recipients */
 int dot = 1;             /* Message is terminated by a lone dot on a line */
-
+int cont_mode = 0;
 mu_address_t recipients = NULL;
 
 /* FIXME: If finalize_option is set, mta should try to finalize
    received messages the way sendmail does, i.e. to add To: or
-   Cc: headers, if they are missing, etc. The code to do so is
-   already included, but the modified message is not reproduced
-   on diagnostic output because mta_send reads it from the stream,
-   which does not reflect modifications to the header.
-
-   Ideally, the mu_message_get_streamref function should notice the
-   change in the header (and/or the body) and return a temporary
-   stream, which will read the modified values.  This is left as
-   as TODO for a later time.                  2010-09-29, Sergey */
+   Cc: headers, if they are missing, etc. The basic code to do so
+   is already included, but not enabled by default. */
 int finalize_option = 0; 
 
 int mta_stdin (int argc, char **argv);
@@ -105,7 +98,7 @@ main (int argc, char **argv)
 
   mu_set_program_name (argv[0]);
   
-  while ((c = getopt (argc, argv, "b:f:p:to:")) != EOF)
+  while ((c = getopt (argc, argv, "b:cf:p:to:")) != EOF)
     {
       switch (c)
 	{
@@ -126,10 +119,14 @@ main (int argc, char **argv)
 	    }
 	  break;
 	  
+	case 'c':
+	  cont_mode = 1;
+	  break;
+	  
 	case 'f':
 	  from_person = optarg;
 	  break;
-	  
+
 	case 'p':
 	  port = strtoul (optarg, NULL, 0);
 	  break;
@@ -835,7 +832,7 @@ mta_smtp (int argc, char **argv)
   if (!foreground)
     alarm (60);
   
-  while (1)
+  do
     {
       fd_set rfds;
       struct sockaddr_in his_addr;
@@ -903,6 +900,8 @@ mta_smtp (int argc, char **argv)
       mu_stream_set_buffer (flt, mu_buffer_line, 0);
       ostream = flt;
       rc = mu_iostream_create (&str, istream, ostream);
+      mu_stream_unref (istream);
+      mu_stream_unref (ostream);
       if (rc)
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_iostream_create", NULL, rc);
@@ -911,8 +910,8 @@ mta_smtp (int argc, char **argv)
       mu_stream_set_buffer (str, mu_buffer_line, 0);
       smtp (str);
       mu_stream_destroy (&str);
-      break;
     }
+  while (cont_mode);
   
   return 0;
 }

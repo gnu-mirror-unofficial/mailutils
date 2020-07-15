@@ -54,3 +54,6 @@ libmu_mailer_la_SOURCES = \
  smtp_starttls.c\
  smtp_trace.c\
  smtp_url.c
+
+SUBDIRS = . tests
+
