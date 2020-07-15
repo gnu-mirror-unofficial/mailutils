@@ -146,7 +146,7 @@ mu_mailer_create_from_url (mu_mailer_t *pmailer, mu_url_t url)
 }
 
 int
-mu_mailer_create (mu_mailer_t * pmailer, const char *name)
+mu_mailer_create (mu_mailer_t *pmailer, const char *name)
 {
   int status;
   mu_url_t url;
@@ -183,13 +183,6 @@ mu_mailer_destroy (mu_mailer_t * pmailer)
 	mailer->_destroy (mailer);
 
       mu_monitor_wrlock (monitor);
-
-      if (mailer->stream)
-	{
-	  /* FIXME: Should be the client responsability to close this?  */
-	  /* mu_stream_close (mailer->stream); */
-	  mu_stream_destroy (&mailer->stream);
-	}
 
       if (mailer->url)
 	mu_url_destroy (&(mailer->url));
@@ -721,25 +714,6 @@ mu_mailer_send_message (mu_mailer_t mailer, mu_message_t msg,
 			mu_address_t from, mu_address_t to)
 {
   return mu_mailer_send_fragments (mailer, msg, 0, NULL, from, to);
-}
-
-int
-mu_mailer_set_stream (mu_mailer_t mailer, mu_stream_t stream)
-{
-  if (mailer == NULL)
-    return EINVAL;
-  mailer->stream = stream;
-  return 0;
-}
-
-int
-mu_mailer_get_streamref (mu_mailer_t mailer, mu_stream_t * pstream)
-{
-  if (mailer == NULL)
-    return EINVAL;
-  if (pstream == NULL)
-    return MU_ERR_OUT_PTR_NULL;
-  return mu_streamref_create (pstream, mailer->stream);
 }
 
 int

@@ -37,10 +37,13 @@ mu_smtp_set_carrier (mu_smtp_t smtp, mu_stream_t carrier)
       mu_smtp_disconnect (smtp);
       mu_stream_destroy (&smtp->carrier);
     }
-  mu_stream_ref (carrier);
-  smtp->carrier = carrier;
-  if (MU_SMTP_FISSET (smtp, _MU_SMTP_TRACE))
-    _mu_smtp_trace_enable (smtp);
+  if (carrier)
+    {
+      mu_stream_ref (carrier);
+      smtp->carrier = carrier;
+      if (MU_SMTP_FISSET (smtp, _MU_SMTP_TRACE))
+	_mu_smtp_trace_enable (smtp);
+    }
   return 0;
 }
 

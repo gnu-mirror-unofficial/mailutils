@@ -106,6 +106,13 @@ static struct _mu_record _smtps_record = {
 mu_record_t     mu_smtps_record = &_smtps_record;
 #endif
 
+enum mailer_tls
+  {
+    MAILER_TLS_NONE,
+    MAILER_TLS_ALWAYS,
+    MAILER_TLS_STARTTLS
+  };
+
 struct _smtp_mailer
 {
   mu_mailer_t     mailer;
@@ -113,6 +120,9 @@ struct _smtp_mailer
 
   mu_address_t    rcpt_to;
   mu_address_t    rcpt_bcc;
+
+  enum mailer_tls tls;
+  int auth:1;
 };
 
 static void
@@ -138,109 +148,63 @@ smtp_mailer_add_auth_mech (struct _smtp_mailer *smtp_mailer, const char *str)
    as well. See also smtp_auth.c.
  */
 #ifdef WITH_GSASL
-# define DFLNOAUTH 0
+# define DFLAUTH 1
 #else
-# define DFLNOAUTH 1
+# define DFLAUTH 0
 #endif
 
 static int
 smtp_open (mu_mailer_t mailer, int flags)
 {
-  const char *auth, *scheme;
   struct _smtp_mailer *smtp_mailer = mailer->data;
   int rc;
-  size_t parmc = 0;
-  char **parmv = NULL;
-  int tls = 0;
-  int nostarttls = 0;
-  int noauth = DFLNOAUTH;
-
-  rc = mu_url_sget_scheme (mailer->url, &scheme);
-  if (rc == 0) 
-    tls = strcmp (scheme, "smtps") == 0;
-
-  rc = mu_smtp_create (&smtp_mailer->smtp);
-  if (rc)
-    return rc;
-  if (mu_debug_level_p (MU_DEBCAT_MAILER, MU_DEBUG_PROT))
-    mu_smtp_trace (smtp_mailer->smtp, MU_SMTP_TRACE_SET);
-  if (mu_debug_level_p (MU_DEBCAT_MAILER, MU_DEBUG_TRACE6))
-    mu_smtp_trace_mask (smtp_mailer->smtp, MU_SMTP_TRACE_SET,
-			MU_XSCRIPT_SECURE);
-  if (mu_debug_level_p (MU_DEBCAT_MAILER, MU_DEBUG_TRACE7))
-    mu_smtp_trace_mask (smtp_mailer->smtp, MU_SMTP_TRACE_SET,
-			MU_XSCRIPT_PAYLOAD);
   
-  mu_smtp_set_url (smtp_mailer->smtp, mailer->url);
-
-  if (mu_url_sget_auth (mailer->url, &auth) == 0)
-    smtp_mailer_add_auth_mech (smtp_mailer, auth);
-  
-  /* Additional information is supplied in the arguments */
-  if (mu_url_sget_fvpairs (mailer->url, &parmc, &parmv) == 0)
-    {
-      size_t i;
+  {
+    struct mu_sockaddr *sa;
+    struct mu_sockaddr_hints hints;
+    mu_stream_t transport;
       
-      for (i = 0; i < parmc; i++)
-	{
-	  if (strcmp (parmv[i], "notls") == 0)
-	    nostarttls = 1;
-	  else if (strcmp (parmv[i], "noauth") == 0)
-	    noauth = 1;
-	  else if (strncmp (parmv[i], "auth=", 5) == 0)
-	    smtp_mailer_add_auth_mech (smtp_mailer, parmv[i] + 5);
-	  /* unrecognized arguments silently ignored */
-	}
-    }
-  
-  if (mailer->stream == NULL)
-    {
-      struct mu_sockaddr *sa;
-      struct mu_sockaddr_hints hints;
-      mu_stream_t transport;
+    memset (&hints, 0, sizeof (hints));
+    hints.flags = MU_AH_DETECT_FAMILY;
+    hints.port = smtp_mailer->tls ? MU_SMTPS_PORT : MU_SMTP_PORT;
+    hints.protocol = IPPROTO_TCP;
+    hints.socktype = SOCK_STREAM;
+    rc = mu_sockaddr_from_url (&sa, mailer->url, &hints);
+    if (rc)
+      return rc;
       
-      memset (&hints, 0, sizeof (hints));
-      hints.flags = MU_AH_DETECT_FAMILY;
-      hints.port = tls ? MU_SMTPS_PORT : MU_SMTP_PORT;
-      hints.protocol = IPPROTO_TCP;
-      hints.socktype = SOCK_STREAM;
-      rc = mu_sockaddr_from_url (&sa, mailer->url, &hints);
-      if (rc)
+    rc = mu_tcp_stream_create_from_sa (&transport, sa, NULL, mailer->flags);
+    if (rc)
+      {
+	mu_sockaddr_free (sa);
 	return rc;
-      
-      rc = mu_tcp_stream_create_from_sa (&transport, sa, NULL, mailer->flags);
-      if (rc)
-        {
-          mu_sockaddr_free (sa);
-	  return rc;
-	}
+      }
+    
 #ifdef WITH_TLS
-      if (tls)
-	{
-	  mu_stream_t tlsstream;
-	  
-	  rc = mu_tls_client_stream_create (&tlsstream, transport, transport,
-					    0);
-	  mu_stream_unref (transport);
-	  if (rc)
-	    {
-	      mu_debug (MU_DEBCAT_MAILER, MU_DEBUG_ERROR,
-			(_("cannot create TLS stream: %s"),
-			 mu_strerror (rc)));
-	      mu_sockaddr_free (sa);
-	      if (mu_tls_enable)
-		return rc;
-	    }
-	  else
-	    transport = tlsstream;
-	  nostarttls = 1;
-	}
+    if (smtp_mailer->tls == MAILER_TLS_ALWAYS)
+      {
+	mu_stream_t tlsstream;
+	
+	rc = mu_tls_client_stream_create (&tlsstream, transport, transport,
+					  0);
+	mu_stream_unref (transport);
+	if (rc)
+	  {
+	    mu_debug (MU_DEBCAT_MAILER, MU_DEBUG_ERROR,
+		      (_("cannot create TLS stream: %s"),
+		       mu_strerror (rc)));
+	    mu_sockaddr_free (sa);
+	    if (mu_tls_enable)
+	      return rc;
+	  }
+	else
+	  transport = tlsstream;
+      }
 #endif
-      mailer->stream = transport;
-      mu_stream_set_buffer (mailer->stream, mu_buffer_line, 0);
-    }
-  mu_smtp_set_carrier (smtp_mailer->smtp, mailer->stream);
-  /* FIXME: Unref the stream */
+    mu_stream_set_buffer (transport, mu_buffer_line, 0);
+    mu_smtp_set_carrier (smtp_mailer->smtp, transport);
+    mu_stream_unref (transport);
+  }
 
   rc = mu_smtp_open (smtp_mailer->smtp);
   if (rc)
@@ -251,7 +215,7 @@ smtp_open (mu_mailer_t mailer, int flags)
     return rc;
 
 #ifdef WITH_TLS
-  if (!nostarttls &&
+  if (smtp_mailer->tls == MAILER_TLS_STARTTLS &&
       mu_smtp_capa_test (smtp_mailer->smtp, "STARTTLS", NULL) == 0)
     {
       rc = mu_smtp_starttls (smtp_mailer->smtp);
@@ -263,7 +227,8 @@ smtp_open (mu_mailer_t mailer, int flags)
 	}
     }
 #endif
-  if (!noauth && mu_smtp_capa_test (smtp_mailer->smtp, "AUTH", NULL) == 0)
+  if (smtp_mailer->auth &&
+      mu_smtp_capa_test (smtp_mailer->smtp, "AUTH", NULL) == 0)
     {
       rc = mu_smtp_auth (smtp_mailer->smtp);
       switch (rc)
@@ -304,7 +269,13 @@ static int
 smtp_close (mu_mailer_t mailer)
 {
   struct _smtp_mailer *smp = mailer->data;
-  return mu_smtp_quit (smp->smtp);
+  mu_smtp_t smtp = smp->smtp;  
+  int rc = mu_smtp_quit (smtp);
+  if (rc == 0)
+    {
+      mu_smtp_set_carrier (smtp, NULL);
+    }
+  return rc;
 }
 
 
@@ -579,6 +550,10 @@ static int
 _mailer_smtp_init (mu_mailer_t mailer)
 {
   struct _smtp_mailer *smp;
+  const char *auth, *scheme;
+  int rc;
+  size_t parmc = 0;
+  char **parmv = NULL;
 
   /* Allocate memory specific to smtp mailer.  */
   smp = mailer->data = calloc (1, sizeof (*smp));
@@ -600,6 +575,48 @@ _mailer_smtp_init (mu_mailer_t mailer)
     mu_property_set_value (property, "TYPE", "SMTP", 1);
   }
 
+  smp->auth = DFLAUTH;
+  
+  rc = mu_url_sget_scheme (mailer->url, &scheme);
+  if (rc == 0 && strcmp (scheme, "smtps") == 0) 
+    smp->tls = MAILER_TLS_ALWAYS; 
+  else
+    smp->tls = MAILER_TLS_STARTTLS;
+
+  rc = mu_smtp_create (&smp->smtp);
+  if (rc)
+    return rc;
+  if (mu_debug_level_p (MU_DEBCAT_MAILER, MU_DEBUG_PROT))
+    mu_smtp_trace (smp->smtp, MU_SMTP_TRACE_SET);
+  if (mu_debug_level_p (MU_DEBCAT_MAILER, MU_DEBUG_TRACE6))
+    mu_smtp_trace_mask (smp->smtp, MU_SMTP_TRACE_SET,
+			MU_XSCRIPT_SECURE);
+  if (mu_debug_level_p (MU_DEBCAT_MAILER, MU_DEBUG_TRACE7))
+    mu_smtp_trace_mask (smp->smtp, MU_SMTP_TRACE_SET,
+			MU_XSCRIPT_PAYLOAD);
+  
+  mu_smtp_set_url (smp->smtp, mailer->url);
+
+  if (mu_url_sget_auth (mailer->url, &auth) == 0)
+    smtp_mailer_add_auth_mech (smp, auth);
+  
+  /* Additional information is supplied in the arguments */
+  if (mu_url_sget_fvpairs (mailer->url, &parmc, &parmv) == 0)
+    {
+      size_t i;
+      
+      for (i = 0; i < parmc; i++)
+	{
+	  if (strcmp (parmv[i], "notls") == 0)
+	    smp->tls = MAILER_TLS_NONE;
+	  else if (strcmp (parmv[i], "noauth") == 0)
+	    smp->auth = 0;
+	  else if (strncmp (parmv[i], "auth=", 5) == 0)
+	    smtp_mailer_add_auth_mech (smp, parmv[i] + 5);
+	  /* unrecognized arguments silently ignored */
+	}
+    }
+  
   return 0;
 }
 

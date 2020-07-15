@@ -34,7 +34,6 @@ extern "C" {
 
 struct _mu_mailer
 {
-  mu_stream_t stream;
   mu_observable_t observable;
   mu_url_t url;
   int flags;
