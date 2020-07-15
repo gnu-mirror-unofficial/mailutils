@@ -29,6 +29,7 @@ mu_sockaddr_free (struct mu_sockaddr *addr)
     return;
   free (addr->addr);
   free (addr->str);
+  free (addr);
 }
 
 void

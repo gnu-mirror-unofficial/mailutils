@@ -42,25 +42,16 @@ mu_url_destroy (mu_url_t * purl)
       if (url->_destroy)
 	url->_destroy (url);
 
-      if (url->name)
-	free (url->name);
-
-      if (url->scheme)
-	free (url->scheme);
-
-      if (url->user)
-	free (url->user);
+      free (url->name);
+      free (url->scheme);
+      free (url->user);
 
       mu_secret_destroy (&url->secret);
 
-      if (url->auth)
-	free (url->auth);
-
-      if (url->host)
-	free (url->host);
-
-      if (url->path)
-	free (url->path);
+      free (url->auth);
+      free (url->host);
+      free (url->portstr);
+      free (url->path);
 
       if (url->fvcount)
 	mu_argcv_free (url->fvcount, url->fvpairs);

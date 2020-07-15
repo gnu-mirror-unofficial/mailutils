@@ -46,7 +46,7 @@
 static int
 _env_msg_date (mu_envelope_t envelope, char *buf, size_t len, size_t *pnwrite)
 {
-  struct _mu_message_stream *str = mu_envelope_get_owner (envelope);
+  struct _mu_message_stream *str = mu_message_get_owner (mu_envelope_get_owner (envelope));
   
   if (!str || !str->date)
     return EINVAL;
@@ -68,7 +68,7 @@ static int
 _env_msg_sender (mu_envelope_t envelope, char *buf, size_t len,
 		 size_t *pnwrite)
 {
-  struct _mu_message_stream *str = mu_envelope_get_owner (envelope);
+  struct _mu_message_stream *str = mu_message_get_owner (mu_envelope_get_owner (envelope));
   
   if (!str || !str->from)
     return EINVAL;
@@ -438,15 +438,20 @@ mu_message_from_stream_with_envelope (mu_message_t *pmsg,
 
   if (!env)
     {
-      if ((rc = mu_envelope_create (&env, draftstream)))
+      /*
+       * FIXME: Currently the envelope *must* be owned by the message,
+       * otherwise _mu_message_free won't destroy it.
+       * The same holds true for attribute and body.
+       */
+      if ((rc = mu_envelope_create (&env, msg)))
 	{
 	  mu_message_destroy (&msg, draftstream);
 	  mu_stream_destroy (&draftstream);
 	  return rc;
 	}
   
-      mu_envelope_set_date (env, _env_msg_date, draftstream);
-      mu_envelope_set_sender (env, _env_msg_sender, draftstream);
+      mu_envelope_set_date (env, _env_msg_date, msg);
+      mu_envelope_set_sender (env, _env_msg_sender, msg);
     }
   mu_message_set_envelope (msg, env, draftstream);
 
