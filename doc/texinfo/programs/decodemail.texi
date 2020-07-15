@@ -5,41 +5,57 @@
 @pindex decodemail
 
 The @command{decodemail} utility is a filter program that reads
-messages from the input mailbox, decodes parts of each multipart
-message to 8-bit transfer encoding and stores the processed messages
-in the output mailbox.  The utility decodes only the message parts
-that are deemed to be ``textual'', i.e. the ones with the
-@samp{Content-Type} header matching one of the predefined type
-patterns.
+messages from the input mailbox, decodes ``textual'' parts of each
+multipart message from a base64- or quoted-printable encoding to an
+8-bit or 7-bit transfer encoding, and stores the processed messages in
+the output mailbox. All messages from the input mailbox are stored in
+the output, regardless of whether a change was made.
 
-The default list of textual content type patterns is:
+The message parts deemed to be textual are those whose
+@samp{Content-Type} header matches a predefined, or user-defined,
+mime type pattern. In addition, encoded pieces of the @samp{From:},
+@samp{To:}, @samp{Subject:}, etc., headers are decoded. A non-mime
+message which has a textual content type and is encoded in base64 or
+quoted-printable is likewise decoded.
 
-@itemize @bullet
-@item text/*
-@item application/*shell
-@item application/shellscript
-@item */x-csrc
-@item */x-csource
-@item */x-diff
-@item */x-patch
-@item */x-perl
-@item */x-php
-@item */x-python
-@item */x-sh
-@end itemize
+For example, @command{decodemail} makes this transformation:
+
+@example
+Subject: =?utf-8?Q?The=20Baroque=20Enquirer=20|=20July=202020?=
+@result{} Subject: The Baroque Enquirer | July 2020
+@end example
+
+The built-in list of textual content type patterns is:
+
+@example
+text/*
+application/*shell
+application/shellscript
+*/x-csrc
+*/x-csource
+*/x-diff
+*/x-patch
+*/x-perl
+*/x-php
+*/x-python
+*/x-sh
+@end example
 
 These strings are matched as shell globbing patterns
 (@pxref{glob,,,glob(7), glob(7) manual page}).
 
 More patterns can be added to this list using the
 @code{mime.text-type} configuration statement.
-@xref{mime statement}, for a detailed discussion.
+@xref{mime statement}, for a detailed discussion, and the
+configuration section below for a simple example.
 
-Optionally, the decoded parts can be converted to another character set.
+Optionally, the decoded parts can be converted to another character
+set. By default, the character set is not changed.
 
 @menu
 * Opt-decodemail::   Invocation of @command{decodemail}.
 * Conf-decodemail::  Configuration of @command{decodemail}.
+* Using-decodemail:: Purpose and caveats of @command{decodemail}.
 @end menu
 
 @node Opt-decodemail
@@ -74,8 +90,11 @@ resulting mailbox will be printed on the standard output in Unix
 @samp{mbox} format.  If @var{inbox} is not supplied, the utility will
 open the system inbox for the current user and use it for input.
 
-Notice, that currently there is no easy way of reading the input
-mailbox from standard input.
+A consequence of these rules is that there is no simple way to read
+the input mailbox from standard input (the input must be seekable).
+If you need to do this, the normal procedure would be to save what
+would be standard input in a temporary file and then give that file as
+@command{decodemail}'s input.
 
 The following command line options modify the @command{decodemail}
 behavior:
@@ -117,4 +136,87 @@ The following common configuration statements affect the behavior of
 @item mailbox       @tab @xref{Mailbox Statement}.
 @item locking       @tab @xref{Locking Statement}.
 @end multitable
+
+Notably, the @code{mime} statement can be used to extend the list of
+types which are decoded. For example, in the file @file{~/.decodemail}
+(other locations are possible, @pxref{configuration}), you could have:
+
+@example
+# base64/qp decode these mime types also:
+mime @{
+  text-type "application/x-bibtex";
+  text-type "application/x-tex";
+@}
+@end example
+
+Since the list of textual mime types is open-ended, with new types being
+used at any time, we do not attempt to make the built-in list
+comprehensive.
+
+@node Using-decodemail
+@subsection Purpose and caveats of @command{decodemail}.
+
+The principal use envisioned for this program is to decode messages in
+batch, after they are received.
+
+Unfortunately, some mailers prefer to encode messages in their
+entirety in base64 (or quoted-printable), even when the content is
+entirely human-readable text. This makes straightforward use of
+@command{grep} or other standard commands impossible. The idea is for
+@command{decodemail} to rectify that, by making the message text
+readable again.
+
+Besides personal mail, mailing list archives are another place where
+such decoding can be useful, as they are often searched with standard
+tools.
+
+It is generally not recommended to run @command{decodemail} within a
+mail reader (which should be able to do the decoding itself), or
+directly in a terminal (since quite possibly there will be 8-bit
+output not in the current character set).
+
+Although the output message from @command{decodemail} should be
+entirely equivalent to the input message, apart from the decoding, it
+is generally not identical. Because @command{decodemail} parses the
+input message and reconstructs it for output, there are usually small
+differences:
+
+@itemize
+@item In the envelope @samp{From } line, multiple spaces are collapsed
+to one.
+
+@item A @samp{Content-Transfer-Encoding:} header may be added where
+not previously present, or its value changed from @samp{8bit} to
+@samp{7bit}, or vice versa. This may happen both for the message as a
+whole, and for a given mime part. @command{decodemail} looks at the
+actual content of the text and outputs
+@samp{Content-Transfer-Encoding:} accordingly.
+
+@item A trailing space is inserted when a long header line is broken
+to occupy several lines (@dfn{header wrapping}).
+
+@example
+SomeHeader: 
+  someextremelylongvaluethatcannotbebroken
+@end example
+
+@item The non-tracing headers may be reordered, notably those that are
+mime-related.
+
+@item Any material before the first mime part of a mime multipart
+message is lost. By the standards, nothing should appear
+there. Typically if it does appear, it is a string such as @samp{This
+is a multi-part message in MIME format.}.
+
+@item In mime parts, the charset specifications may no longer be
+quoted (if quoting is not necessary). For example,
+@samp{charset="utf-8"} becomes @samp{charset=utf-8}.
+
+@item The mime boundary strings will be changed.
+
+@end itemize
+
+If a discrepancy is created which actually affects message parsing or
+reading, that's most likely a bug, and please report it. Naturally,
+please send an exact input message to reproduce the problem.
 
