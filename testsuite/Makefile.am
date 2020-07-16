@@ -56,7 +56,7 @@ noinst_PROGRAMS = \
  mbdel\
  msgset\
  mimetest\
- smtpsend\
+ mockmta\
  ufms
 
 LDADD = \
@@ -72,6 +72,7 @@ smtpsend_LDADD = \
  $(MU_LIB_MAILUTILS)
 
 cwdrepl_LDADD = $(MU_LIB_MAILUTILS)
+mockmta_LDADD = $(TLS_LIBS)
 
 ## ------------ ##
 ## Test suite.  ##
@@ -86,8 +87,6 @@ TESTSUITE_AT += \
  mbdel.at\
  mime.at\
  mime01.at\
- smtp-msg.at\
- smtp-str.at\
  ufms.at
 
 

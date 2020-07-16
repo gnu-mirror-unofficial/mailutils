@@ -10,6 +10,6 @@ testsuite.dir
 testsuite.log
 mbdel
 mimetest
+mockmta
 msgset
-smtpsend
 ufms

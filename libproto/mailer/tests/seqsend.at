@@ -24,42 +24,55 @@ test message
 ])
 
 AT_DATA([expout],
-[ENVELOPE FROM: <mailutils@localhost>
-ENVELOPE TO: <gray@example.org>
-   0: From: mailutils@localhost
-   1: To: root@example.org
-   2: Subject: test
-   3:
-   4: test message
-END OF MESSAGE
-ENVELOPE FROM: <mailutils@localhost>
-ENVELOPE TO: <root@example.org>
-   0: From: mailutils@localhost
-   1: To: root@example.org
-   2: Subject: test
-   3:
-   4: test message
-END OF MESSAGE
-ENVELOPE FROM: <mailutils@localhost>
-ENVELOPE TO: <wheel@example.com>
-   0: From: mailutils@localhost
-   1: To: root@example.org
-   2: Subject: test
-   3:
-   4: test message
-END OF MESSAGE
-])
+[[MSGID: 0001
+DOMAIN: localhost
+SENDER: <mailutils@localhost>
+NRCPT: 1
+RCPT[0]: <gray@example.org>
+LENGTH: 77
+From: mailutils@localhost
+To: root@example.org
+Subject: test
+
+test message
+.
+
+MSGID: 0002
+DOMAIN: localhost
+SENDER: <mailutils@localhost>
+NRCPT: 1
+RCPT[0]: <root@example.org>
+LENGTH: 77
+From: mailutils@localhost
+To: root@example.org
+Subject: test
+
+test message
+.
+
+MSGID: 0003
+DOMAIN: localhost
+SENDER: <mailutils@localhost>
+NRCPT: 1
+RCPT[0]: <wheel@example.com>
+LENGTH: 77
+From: mailutils@localhost
+To: root@example.org
+Subject: test
+
+test message
+.
+
+]])
 
 AT_CHECK([
-MTA_DIAG=`pwd`/mta.diag
-export MTA_DIAG
-p=`$abs_top_builddir/examples/mta -bd -c`
+p=`$abs_top_builddir/testsuite/mockmta -d mta.diag`
 test $? -eq 0 || AT_SKIP_TEST
 set -- $p
-# $1 - pid, $2 - port
-sends smtp://127.0.0.1:$2 msg gray@example.org root@example.org wheel@example.com
+# $1 - port, $2 - pid
+sends "smtp://127.0.0.1:$1;domain=localhost" msg gray@example.org root@example.org wheel@example.com
 ec=$?
-kill $1 >/dev/null 2>&1
+kill $2 >/dev/null 2>&1
 if test $ec -eq 0; then
   cat mta.diag
 fi
@@ -69,15 +82,13 @@ exit $ec
 [expout])
 
 AT_CHECK([
-MTA_DIAG=`pwd`/mta.diag
-export MTA_DIAG
-p=`$abs_top_builddir/examples/mta -bd -c`
+p=`$abs_top_builddir/testsuite/mockmta -d mta.diag`
 test $? -eq 0 || AT_SKIP_TEST
 set -- $p
-# $1 - pid, $2 - port
-sendm smtp://127.0.0.1:$2 msg gray@example.org root@example.org wheel@example.com
+# $1 - port, $2 - pid
+sendm "smtp://127.0.0.1:$1;domain=localhost" msg gray@example.org root@example.org wheel@example.com
 ec=$?
-kill $1 >/dev/null 2>&1
+kill $2 >/dev/null 2>&1
 if test $ec -eq 0; then
   cat mta.diag
 fi

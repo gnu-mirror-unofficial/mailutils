@@ -2,6 +2,7 @@
 /atlocal
 /sendm
 /sends
+/smtpsend
 /testsuite
 /testsuite.dir
 /testsuite.log

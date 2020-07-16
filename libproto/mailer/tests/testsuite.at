@@ -17,3 +17,7 @@
 m4_include([testsuite.inc])
 AT_INIT
 m4_include([seqsend.at])
+AT_BANNER(SMTP)
+m4_include([smtp-msg.at])
+m4_include([smtp-str.at])
+

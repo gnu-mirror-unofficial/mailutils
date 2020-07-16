@@ -18,6 +18,7 @@ dnl
 dnl MU_CHECK_GNUTLS([VERSION = `'],[ACTION-IF-TRUE=`'],[ACTION-IF-FALSE=`']
 AC_DEFUN([MU_CHECK_GNUTLS],
 [
+ AC_SUBST([TLS_LIBS])
  if test "x$mu_cv_lib_gnutls" = x; then
    cached=""
    AC_ARG_WITH([gnutls],

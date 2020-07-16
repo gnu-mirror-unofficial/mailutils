@@ -16,7 +16,7 @@
 
 include $(top_srcdir)/testsuite/testsuite.am
 
-noinst_PROGRAMS = sends sendm
+noinst_PROGRAMS = sends sendm smtpsend
 AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES)
 LDADD = \
  $(MU_LIB_MAILER)\
@@ -25,4 +25,6 @@ LDADD = \
  $(MU_LIB_MAILUTILS)
 
 TESTSUITE_AT += \
+ smtp-msg.at\
+ smtp-str.at\
  seqsend.at
