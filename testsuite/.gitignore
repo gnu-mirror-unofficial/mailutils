@@ -10,6 +10,7 @@ testsuite.dir
 testsuite.log
 mbdel
 mimetest
+mockmail
 mockmta
 msgset
 ufms

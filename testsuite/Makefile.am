@@ -56,6 +56,7 @@ noinst_PROGRAMS = \
  mbdel\
  msgset\
  mimetest\
+ mockmail\
  mockmta\
  ufms
 
@@ -63,11 +64,6 @@ LDADD = \
  $(MU_LIB_MAILBOX)\
  $(MU_LIB_MAILER)\
  $(MU_LIB_AUTH)\
- $(MU_AUTHLIBS)\
- $(MU_LIB_MAILUTILS)
-
-smtpsend_LDADD = \
- $(MU_LIB_MAILER) \
  $(MU_AUTHLIBS)\
  $(MU_LIB_MAILUTILS)
 

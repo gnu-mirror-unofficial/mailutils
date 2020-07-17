@@ -43,7 +43,7 @@ m4_define([MUT_SIEVE_CMDLINE],[dnl
  MUT_SIEVE_DEFAULT_OPTIONS dnl
  --line-info=no dnl
  --no-program-name dnl
- -M sendmail:$abs_top_builddir/examples/mta dnl
+ -M sendmail:$abs_top_builddir/testsuite/mockmail dnl
  --email foobar@nonexistent.net])
  
 dnl ------------------------------------------------------------

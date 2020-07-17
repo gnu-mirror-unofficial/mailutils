@@ -22,9 +22,9 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
 } else {
     mail_start "--file=%mbox1"
 
-    mail_command "set sendmail=\"sendmail:$top_builddir/examples/mta\""
+    mail_command "set sendmail=\"sendmail:$top_builddir/testsuite/mockmail\""
     mail_command "set inplacealiases"
-    mail_command "setenv MTA_DIAG=\"$MU_FOLDER_DIR/mta.diag\""
+    mail_command "setenv MAIL_DUMP=\"$MU_FOLDER_DIR/mta.diag\""
 
     mail_test -noprompt "reply 1" \
 	"To: <foobar@nonexistent.net>,<bar@dontmailme.org>"\
@@ -40,60 +40,64 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
     mail_stop
 
     mu_test_file "$MU_FOLDER_DIR/mta.diag" \
-	-re "ENVELOPE FROM: \[^\r\n\]*"\
-	"ENVELOPE TO: <foobar@nonexistent.net>,<bar@dontmailme.org>"\
-	"   0: To: <foobar@nonexistent.net>,<bar@dontmailme.org>"\
-	"   1: Subject: Re: Jabberwocky"\
-	"   2: In-Reply-To: Your message of Fri, 28 Dec 2001 22:18:08 +0200"\
-	"   3: \t<200112282018.fBSKI8N04906@nonexistent.net>"\
-	"   4: References: <200112282018.fBSKI8N04906@nonexistent.net>"\
-	"   5: X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)"\
-	"   6: "\
-	"   7: > Received: (from foobar@nonexistent.net)"\
-	"   8: > 	by nonexistent.net id fBSKI8N04906"\
-	"   9: > 	for bar@dontmailme.org; Fri, 28 Dec 2001 22:18:08 +0200"\
-	"  10: > Date: Fri, 28 Dec 2001 22:18:08 +0200"\
-	"  11: > From: Foo Bar <foobar@nonexistent.net>"\
-	"  12: > Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>"\
-	"  13: > To: Bar <bar@dontmailme.org>"\
-	"  14: > Subject: Jabberwocky"\
-	"  15: >"\
-	"  16: > `Twas brillig, and the slithy toves"\
-	"  17: > Did gyre and gimble in the wabe;"\
-	"  18: > All mimsy were the borogoves,"\
-	"  19: > And the mome raths outgrabe."\
-	"  20: > "\
-	"  21: > `Beware the Jabberwock, my son!"\
-	"  22: > The jaws that bite, the claws that catch!"\
-	"  23: > Beware the Jujub bird, and shun"\
-	"  24: > The frumious Bandersnatch!'"\
-	"  25: > "\
-	"  26: > He took his vorpal sword in hand:"\
-	"  27: > Long time the manxome foe he sought --"\
-	"  28: > So rested he by the Tumtum gree,"\
-	"  29: > And stood awhile in thought."\
-	"  30: > "\
-	"  31: > And as in uffish thought he stood,"\
-	"  32: > The Jabberwock, with eyes of flame,"\
-	"  33: > Came whiffling through the tulgey wook,"\
-	"  34: > And burbled as it came!"\
-	"  35: > "\
-	"  36: > One, two!  One, two!  And through and through"\
-	"  37: > The vorpal blade went snicker-snack!"\
-	"  38: > He left it dead, and with its head"\
-	"  39: > He went galumphing back."\
-	"  40: > "\
-	"  41: > `And has thou slain the Jabberwock?"\
-	"  42: > Come to my arms, my beamish boy!"\
-	"  43: > O frabjous day!  Calloh!  Callay!"\
-	"  44: > He chortled in his joy."\
-	"  45: > "\
-	"  46: > `Twas brillig, and the slithy toves"\
-	"  47: > Did gyre and gimble in the wabe;"\
-	"  48: > All mimsy were the borogoves,"\
-	"  49: > And the mome raths outgrabe."\
-	"  50: > "\
-	"END OF MESSAGE"
+	"MSGID: 0001"\
+	-re {^SENDER: [^ \r\n]*}\
+        "NRCPT: 2"\
+        "RCPT\[0\]: <foobar@nonexistent.net>"\
+	"RCPT\[1\]: <bar@dontmailme.org>"\
+	-re {^LENGTH: [0-9]+}\
+	"To: <foobar@nonexistent.net>,<bar@dontmailme.org>"\
+	"Subject: Re: Jabberwocky"\
+	"In-Reply-To: Your message of Fri, 28 Dec 2001 22:18:08 +0200"\
+	"\t<200112282018.fBSKI8N04906@nonexistent.net>"\
+	"References: <200112282018.fBSKI8N04906@nonexistent.net>"\
+	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)"\
+	""\
+	"> Received: (from foobar@nonexistent.net)"\
+	"> 	by nonexistent.net id fBSKI8N04906"\
+	"> 	for bar@dontmailme.org; Fri, 28 Dec 2001 22:18:08 +0200"\
+	"> Date: Fri, 28 Dec 2001 22:18:08 +0200"\
+	"> From: Foo Bar <foobar@nonexistent.net>"\
+	"> Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>"\
+	"> To: Bar <bar@dontmailme.org>"\
+	"> Subject: Jabberwocky"\
+	">"\
+	"> `Twas brillig, and the slithy toves"\
+	"> Did gyre and gimble in the wabe;"\
+	"> All mimsy were the borogoves,"\
+	"> And the mome raths outgrabe."\
+	"> "\
+	"> `Beware the Jabberwock, my son!"\
+	"> The jaws that bite, the claws that catch!"\
+	"> Beware the Jujub bird, and shun"\
+	"> The frumious Bandersnatch!'"\
+	"> "\
+	"> He took his vorpal sword in hand:"\
+	"> Long time the manxome foe he sought --"\
+	"> So rested he by the Tumtum gree,"\
+	"> And stood awhile in thought."\
+	"> "\
+	"> And as in uffish thought he stood,"\
+	"> The Jabberwock, with eyes of flame,"\
+	"> Came whiffling through the tulgey wook,"\
+	"> And burbled as it came!"\
+	"> "\
+	"> One, two!  One, two!  And through and through"\
+	"> The vorpal blade went snicker-snack!"\
+	"> He left it dead, and with its head"\
+	"> He went galumphing back."\
+	"> "\
+	"> `And has thou slain the Jabberwock?"\
+	"> Come to my arms, my beamish boy!"\
+	"> O frabjous day!  Calloh!  Callay!"\
+	"> He chortled in his joy."\
+	"> "\
+	"> `Twas brillig, and the slithy toves"\
+	"> Did gyre and gimble in the wabe;"\
+	"> All mimsy were the borogoves,"\
+	"> And the mome raths outgrabe."\
+	"> "\
+	""
 }
 
 # End of send.exp

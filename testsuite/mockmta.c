@@ -109,6 +109,9 @@
     1   Failure (see stderr for details).
     2   Command line usage error.
 
+  BUGS
+    At most 32 RCPT commands are allowed.
+    
   AUTHOR
     Sergey Poznyakoff <gray@gnu.org>
     

@@ -28,20 +28,23 @@ Subject: Send file test
 Message body
 ])
 send ./input || exit $?
-sed 's/: Date: .*/: Date: now/' $MTA_DIAG
+sed -e '/^Date:/s/:.*$/: now/' -e '/^LENGTH: /s/: [[0-9]][[0-9]]*/: X/' $MAIL_DUMP
 find . -name ,input
 ],
 [0],
-[ENVELOPE FROM: mhtester@example.net
-ENVELOPE TO: <gray@example.net>
-   0: From: mhtester@example.net
-   1: To: <gray@example.net>
-   2: Subject: Send file test
-   3: Date: now
-   4: X-Mailer: MH (AT_PACKAGE_STRING)
-   5:
-   6: Message body
-END OF MESSAGE
+[MSGID: 0001
+SENDER: mhtester@example.net
+NRCPT: 1
+RCPT[[0]]: <gray@example.net>
+LENGTH: X
+From: mhtester@example.net
+To: <gray@example.net>
+Subject: Send file test
+Date: now
+X-Mailer: MH (AT_PACKAGE_STRING)
+
+Message body
+
 ./,input
 ])
 
@@ -63,34 +66,40 @@ Subject: Send file test 2
 Message body 2
 ])
 
-MTA_APPEND=1
-export MTA_APPEND
+MAIL_DUMP_APPEND=1
+export MAIL_DUMP_APPEND
 
 send ./input.1 ./input.2 || exit $?
-sed 's/: Date: .*/: Date: now/' $MTA_DIAG
+sed -e '/^Date:/s/:.*$/: now/' -e '/^LENGTH: /s/: [[0-9]][[0-9]]*/: X/' $MAIL_DUMP
 find . -name ',input.[[12]]' | sort
 ],
 [0],
-[ENVELOPE FROM: mhtester@example.net
-ENVELOPE TO: <gray@example.net>
-   0: From: mhtester@example.net
-   1: To: <gray@example.net>
-   2: Subject: Send file test 1
-   3: Date: now
-   4: X-Mailer: MH (AT_PACKAGE_STRING)
-   5:
-   6: Message body 1
-END OF MESSAGE
-ENVELOPE FROM: mhtester@example.net
-ENVELOPE TO: <gray@example.org>
-   0: From: mhtester@example.net
-   1: To: <gray@example.org>
-   2: Subject: Send file test 2
-   3: Date: now
-   4: X-Mailer: MH (AT_PACKAGE_STRING)
-   5:
-   6: Message body 2
-END OF MESSAGE
+[MSGID: 0001
+SENDER: mhtester@example.net
+NRCPT: 1
+RCPT[[0]]: <gray@example.net>
+LENGTH: X
+From: mhtester@example.net
+To: <gray@example.net>
+Subject: Send file test 1
+Date: now
+X-Mailer: MH (AT_PACKAGE_STRING)
+
+Message body 1
+
+MSGID: 0001
+SENDER: mhtester@example.net
+NRCPT: 1
+RCPT[[0]]: <gray@example.org>
+LENGTH: X
+From: mhtester@example.net
+To: <gray@example.org>
+Subject: Send file test 2
+Date: now
+X-Mailer: MH (AT_PACKAGE_STRING)
+
+Message body 2
+
 ./,input.1
 ./,input.2
 ])
@@ -105,21 +114,24 @@ Subject: Send file test
 Message body
 ])
 send -draft || exit $?
-sed 's/: Date: .*/: Date: now/' $MTA_DIAG
+sed -e '/^Date:/s/:.*$/: now/' -e '/^LENGTH: /s/: [[0-9]][[0-9]]*/: X/' $MAIL_DUMP
 echo == Mail/,draft ==
 cat Mail/,draft
 ],
 [0],
-[ENVELOPE FROM: mhtester@example.net
-ENVELOPE TO: <gray@example.net>
-   0: From: mhtester@example.net
-   1: To: <gray@example.net>
-   2: Subject: Send file test
-   3: Date: now
-   4: X-Mailer: MH (AT_PACKAGE_STRING)
-   5:
-   6: Message body
-END OF MESSAGE
+[MSGID: 0001
+SENDER: mhtester@example.net
+NRCPT: 1
+RCPT[[0]]: <gray@example.net>
+LENGTH: X
+From: mhtester@example.net
+To: <gray@example.net>
+Subject: Send file test
+Date: now
+X-Mailer: MH (AT_PACKAGE_STRING)
+
+Message body
+
 == Mail/,draft ==
 From: mhtester@example.net
 To: gray@example.net
@@ -142,19 +154,22 @@ Message body
 echo "cur: 2" > Mail/drafts/.mh_sequences
 
 send -draftfolder +drafts || echo $?
-sed 's/: Date: .*/: Date: now/' $MTA_DIAG
+sed -e '/^Date:/s/:.*$/: now/' -e '/^LENGTH: /s/: [[0-9]][[0-9]]*/: X/' $MAIL_DUMP
 ],
 [0],
-[ENVELOPE FROM: mhtester@example.net
-ENVELOPE TO: <gray@example.net>
-   0: From: mhtester@example.net
-   1: To: <gray@example.net>
-   2: Subject: Draftfolder test
-   3: Date: now
-   4: X-Mailer: MH (AT_PACKAGE_STRING)
-   5:
-   6: Message body
-END OF MESSAGE
+[MSGID: 0001
+SENDER: mhtester@example.net
+NRCPT: 1
+RCPT[[0]]: <gray@example.net>
+LENGTH: X
+From: mhtester@example.net
+To: <gray@example.net>
+Subject: Draftfolder test
+Date: now
+X-Mailer: MH (AT_PACKAGE_STRING)
+
+Message body
+
 ])
 
 MH_CHECK([send -draftmessage],
@@ -179,19 +194,22 @@ Message body
 echo "cur: 2" > Mail/drafts/.mh_sequences
 
 send -draftfolder +drafts -draftmessage 5 || echo $?
-sed 's/: Date: .*/: Date: now/' $MTA_DIAG
+sed -e '/^Date:/s/:.*$/: now/' -e '/^LENGTH: /s/: [[0-9]][[0-9]]*/: X/' $MAIL_DUMP
 ],
 [0],
-[ENVELOPE FROM: mhtester@example.net
-ENVELOPE TO: <gray@example.org>
-   0: From: mhtester@example.net
-   1: To: <gray@example.org>
-   2: Subject: Draftmessage test
-   3: Date: now
-   4: X-Mailer: MH (AT_PACKAGE_STRING)
-   5:
-   6: Message body
-END OF MESSAGE
+[MSGID: 0001
+SENDER: mhtester@example.net
+NRCPT: 1
+RCPT[[0]]: <gray@example.org>
+LENGTH: X
+From: mhtester@example.net
+To: <gray@example.org>
+Subject: Draftmessage test
+Date: now
+X-Mailer: MH (AT_PACKAGE_STRING)
+
+Message body
+
 ])
 
 m4_popdef([MH_KEYWORDS])

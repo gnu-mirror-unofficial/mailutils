@@ -24,18 +24,21 @@ moderator :program "discard;";
 [cp ${abs_top_srcdir}/sieve/tests/moderator.mbox mailbox
 chmod +w mailbox
 
-MTA_DIAG=`pwd`/mta.diag
-export MTA_DIAG
+MAIL_DUMP=`pwd`/mail.dump
+export MAIL_DUMP
 sieve MUT_SIEVE_CMDLINE MUT_SIEVE_OPTIONS -f ./mailbox prog || exit 1
-sed 's/ENVELOPE FROM:.*/ENVELOPE FROM/' ./mta.diag
+cat $MAIL_DUMP
 ],
-[ENVELOPE FROM
-ENVELOPE TO: <bug-foobar-request@example.org>
-   0: To: bug-foobar-request@example.org
-   1: Subject: confirm 7e02c99a82a21a2349291a4f142ee2347bb5fd0b
-   2:
-END OF MESSAGE
-],
+[[MSGID: 0001
+SENDER: gray@nonexistent.net
+NRCPT: 1
+RCPT[0]: bug-foobar-request@example.org
+LENGTH: 94
+To: bug-foobar-request@example.org
+Subject: confirm 7e02c99a82a21a2349291a4f142ee2347bb5fd0b
+
+
+]],
 [DISCARD on msg uid 0: marking as deleted
 MODERATOR on msg uid 1: discarding message
 ])
@@ -48,19 +51,22 @@ moderator :program "discard;" :address "<sergiusz@example.org>";
 [cp ${abs_top_srcdir}/sieve/tests/moderator.mbox mailbox
 chmod +w mailbox
 
-MTA_DIAG=`pwd`/mta.diag
-export MTA_DIAG
+MAIL_DUMP=`pwd`/mail.dump
+export MAIL_DUMP
 sieve MUT_SIEVE_CMDLINE MUT_SIEVE_OPTIONS -f ./mailbox prog || exit 1
-cat ./mta.diag
+cat $MAIL_DUMP
 ],
-[ENVELOPE FROM: sergiusz@example.org
-ENVELOPE TO: <bug-foobar-request@example.org>
-   0: To: bug-foobar-request@example.org
-   1: Subject: confirm 7e02c99a82a21a2349291a4f142ee2347bb5fd0b
-   2: From: <sergiusz@example.org>
-   3:
-END OF MESSAGE
-],
+[[MSGID: 0001
+SENDER: sergiusz@example.org
+NRCPT: 1
+RCPT[0]: bug-foobar-request@example.org
+LENGTH: 123
+To: bug-foobar-request@example.org
+Subject: confirm 7e02c99a82a21a2349291a4f142ee2347bb5fd0b
+From: <sergiusz@example.org>
+
+
+]],
 [DISCARD on msg uid 0: marking as deleted
 MODERATOR on msg uid 1: discarding message
 ])
@@ -73,10 +79,10 @@ moderator :program "keep;";
 [cp ${abs_top_srcdir}/sieve/tests/moderator.mbox mailbox
 chmod +w mailbox
 
-MTA_DIAG=`pwd`/mta.diag
-export MTA_DIAG
+MAIL_DUMP=`pwd`/mta.diag
+export MAIL_DUMP
 sieve MUT_SIEVE_CMDLINE MUT_SIEVE_OPTIONS -f ./mailbox prog || exit $?
-test -f ./mta.diag && echo ./mta.diag
+test -f $MAIL_DUMP && echo $MAIL_DUMP
 exit 0
 ],
 [],

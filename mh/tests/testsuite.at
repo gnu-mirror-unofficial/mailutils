@@ -37,13 +37,11 @@ cat > $MTSTAILOR <<EOT
 localname: darkstar
 localdomain: example.net
 username: mhtester
-url: sendmail://$abs_top_builddir/examples/mta
+url: sendmail://$abs_top_builddir/testsuite/mockmail
 EOT
 
-MTA_DIAG=$HOME/mta.diag
-export MTA_DIAG
-MTA_DOMAIN=example.net
-export MTA_DOMAIN
+MAIL_DUMP=$HOME/mta.diag
+export MAIL_DUMP
 ])
 
 m4_define([MH_KEYWORDS])

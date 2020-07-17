@@ -19,9 +19,9 @@ AT_KEYWORDS([action])
 
 AT_CHECK([
 MUT_PREREQ_CAPA([ENABLE_SENDMAIL])
-MTA_DIAG=`pwd`/mta.diag
-MTA_APPEND=1
-export MTA_DIAG MTA_APPEND
+MAIL_DUMP=`pwd`/mta.diag
+MAIL_DUMP_APPEND=1
+export MAIL_DUMP MAIL_DUMP_APPEND
 
 AT_DATA([prog],[
 require "redirect";
@@ -31,60 +31,69 @@ redirect "gray@gnu.org";
 MUT_MBCOPY($abs_top_srcdir/testsuite/spool/MUT_SIEVE_MAILBOX)
 
 sieve MUT_SIEVE_CMDLINE MUT_SIEVE_OPTIONS -f ./MUT_SIEVE_MAILBOX prog || exit 1
-sed 's/ $//' ./mta.diag
+cat $MAIL_DUMP
 ],
 [0],
-[ENVELOPE FROM: coyote@desert.example.org
-ENVELOPE TO: <gray@gnu.org>
-   0: From: coyote@desert.example.org
-   1: To: roadrunner@acme.example.com
-   2: Subject: I have a present for you
-   3: X-Caffeine: C8H10N4O2
-   4: X-Loop-Prevention: foobar@nonexistent.net
-   5: 
-   6: Look, I'm sorry about the whole anvil thing, and I really
-   7: didn't mean to try and drop it on you from the top of the
-   8: cliff.  I want to try to make it up to you.  I've got some
-   9: great birdseed over here at my place--top of the line
-  10: stuff--and if you come by, I'll have it all wrapped up
-  11: for you.  I'm really sorry for all the problems I've caused
-  12: for you over the years, but I know we can work this out.
-  13: 
-  14: --
-  15: Wile E. Coyote   "Super Genius"   coyote@desert.example.org
-END OF MESSAGE
-ENVELOPE FROM: b1ff@de.res.example.com
-ENVELOPE TO: <gray@gnu.org>
-   0: From: youcouldberich!@reply-by-postal-mail.invalid
-   1: To: rube@landru.example.edu
-   2: Subject: $$$ YOU, TOO, CAN BE A MILLIONAIRE! $$$
-   3: Date: TBD
-   4: X-Number: 0015
-   5: X-Loop-Prevention: foobar@nonexistent.net
-   6: 
-   7: YOU MAY HAVE ALREADY WON TEN MILLION DOLLARS, BUT I DOUBT
-   8: IT!  SO JUST POST THIS TO SIX HUNDRED NEWSGROUPS!  IT WILL
-   9: GUARANTEE THAT YOU GET AT LEAST FIVE RESPONSES WITH MONEY!
-  10: MONEY! MONEY! COLD HARD CASH!  YOU WILL RECEIVE OVER
-  11: $20,000 IN LESS THAN TWO MONTHS!  AND IT'S LEGAL!!!!!!!!!
-  12: !!!!!!!!!!!!!!!!!!111111111!!!!!!!11111111111!!1  JUST
-  13: SEND $5 IN SMALL, UNMARKED BILLS TO THE ADDRESSES BELOW!
-END OF MESSAGE
-ENVELOPE FROM: bar@dontmailme.org
-ENVELOPE TO: <gray@gnu.org>
-   0: Received: (from bar@dontmailme.org)
-   1: 	by dontmailme.org id fERKR9N16790
-   2: 	for foobar@nonexistent.net; Fri, 28 Dec 2001 22:18:08 +0200
-   3: Date: Fri, 28 Dec 2001 23:28:08 +0200
-   4: From: Bar <bar@dontmailme.org>
-   5: To: Foo Bar <foobar@nonexistent.net>
-   6: Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
-   7: Subject: Coffee
-   8: X-Loop-Prevention: foobar@nonexistent.net
-   9: 
-  10: How about some coffee?
-END OF MESSAGE
-],
+[[MSGID: 0001
+SENDER: coyote@desert.example.org
+NRCPT: 1
+RCPT[0]: gray@gnu.org
+LENGTH: 628
+From: coyote@desert.example.org
+To: roadrunner@acme.example.com
+Subject: I have a present for you
+X-Caffeine: C8H10N4O2
+X-Loop-Prevention: foobar@nonexistent.net
+ 
+Look, I'm sorry about the whole anvil thing, and I really
+didn't mean to try and drop it on you from the top of the
+cliff.  I want to try to make it up to you.  I've got some
+great birdseed over here at my place--top of the line
+stuff--and if you come by, I'll have it all wrapped up
+for you.  I'm really sorry for all the problems I've caused
+for you over the years, but I know we can work this out.
+ 
+--
+Wile E. Coyote   "Super Genius"   coyote@desert.example.org
+
+MSGID: 0001
+SENDER: b1ff@de.res.example.com
+NRCPT: 1
+RCPT[0]: gray@gnu.org
+LENGTH: 595
+From: youcouldberich!@reply-by-postal-mail.invalid
+To: rube@landru.example.edu
+Subject: $$$ YOU, TOO, CAN BE A MILLIONAIRE! $$$
+Date: TBD
+X-Number: 0015
+X-Loop-Prevention: foobar@nonexistent.net
+
+YOU MAY HAVE ALREADY WON TEN MILLION DOLLARS, BUT I DOUBT
+IT!  SO JUST POST THIS TO SIX HUNDRED NEWSGROUPS!  IT WILL
+GUARANTEE THAT YOU GET AT LEAST FIVE RESPONSES WITH MONEY!
+MONEY! MONEY! COLD HARD CASH!  YOU WILL RECEIVE OVER
+$20,000 IN LESS THAN TWO MONTHS!  AND IT'S LEGAL!!!!!!!!!
+!!!!!!!!!!!!!!!!!!111111111!!!!!!!11111111111!!1  JUST
+SEND $5 IN SMALL, UNMARKED BILLS TO THE ADDRESSES BELOW!
+
+MSGID: 0001
+SENDER: bar@dontmailme.org
+NRCPT: 1
+RCPT[0]: gray@gnu.org
+LENGTH: 375
+Received: (from bar@dontmailme.org)
+	by dontmailme.org id fERKR9N16790
+	for foobar@nonexistent.net; Fri, 28 Dec 2001 22:18:08 +0200
+Date: Fri, 28 Dec 2001 23:28:08 +0200
+From: Bar <bar@dontmailme.org>
+To: Foo Bar <foobar@nonexistent.net>
+Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
+Subject: Coffee
+X-Loop-Prevention: foobar@nonexistent.net
+
+How about some coffee?
+
+]],
 [REDIRECT on msg uid 1: to gray@gnu.org
 REDIRECT on msg uid 2: to gray@gnu.org
 REDIRECT on msg uid 3: to gray@gnu.org

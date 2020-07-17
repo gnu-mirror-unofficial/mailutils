@@ -23,7 +23,7 @@ mailbox {
 }  
 
 mailer {
-  url "sendmail:$abs_top_builddir/examples/mta";
+  url "sendmail:$abs_top_builddir/testsuite/mockmail";
 }
 
 forward {
@@ -52,13 +52,17 @@ EOT
 
 cat $INPUT_MSG > expout.0
 
-echo "ENVELOPE FROM: gulliver@example.net" > expout.1
-echo "ENVELOPE TO: <foo@bar.baz>" >> expout.1
-awk '{printf("% 4d:",NR-1); if (NF!=0) printf(" %s",$0); print ""}' $INPUT_MSG >> expout.1
-echo "END OF MESSAGE" >> expout.1
+AT_DATA([expout.1],
+[[MSGID: 0001
+SENDER: gulliver@example.net
+NRCPT: 1
+RCPT[0]: foo@bar.baz
+LENGTH: 2691
+]])
 
-MTA_DIAG=mta.diag
-export MTA_DIAG
+cat $INPUT_MSG >> expout.1
+echo "" >> expout.1
+
 mkdir spool
 TESTMDA_CONF
 testmda --from gulliver@example.net $1 < $INPUT_MSG || exit $?
@@ -69,8 +73,8 @@ do
       cmp expout.0 - >/dev/null || echo "$name mailbox mismatch" >&2
 done
 
-if test -f mta.diag; then
-  cmp mta.diag expout.1 >/dev/null || echo "remote copy mismatch" >&2
+if test -f mail.dump; then
+  cmp mail.dump expout.1 >/dev/null || echo "remote copy mismatch" >&2
 else
   echo "remote delivery failed" >&2
 fi  
