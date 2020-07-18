@@ -27,7 +27,7 @@ Subject: test input
 message body
 ])
 
-echo quit | forwcmd +inbox 1 | cwdrepl
+echo quit | forwcmd +inbox 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message ==
@@ -87,7 +87,7 @@ Subject: test input
 message body
 ])
 
-echo quit | forwcmd -format +inbox 1 | cwdrepl
+echo quit | forwcmd -format +inbox 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message ==
@@ -153,7 +153,7 @@ Subject: 2nd message
 2nd message body
 ])
 
-echo quit | forwcmd +inbox 1 2 | cwdrepl
+echo quit | forwcmd +inbox 1 2 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message 1 ==
@@ -237,7 +237,7 @@ Subject: test input
 message body
 ])
 
-forwcmd -build +inbox 1 | cwdrepl
+forwcmd -build +inbox 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message ==
@@ -282,9 +282,9 @@ Subject: 2nd message
 2nd message body
 ])
 
-forwcmd -build -mime +inbox 1 2 | cwdrepl
+forwcmd -build -mime +inbox 1 2 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
-cwdrepl < Mail/draft
+cwdrepl < Mail/draft | sed 's/ *$//' 
 echo == Message 1 ==
 sed '/^X-IMAPbase/d' Mail/inbox/1
 echo == Message 2 ==
@@ -322,7 +322,7 @@ Subject: test input
 message body
 ])
 
-echo "quit" | forwcmd -draftfolder drafts 1 | cwdrepl
+echo "quit" | forwcmd -draftfolder drafts 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/drafts/1 ==
 cat Mail/drafts/1
 echo == Message ==
@@ -379,7 +379,7 @@ Subject: test input
 message body
 ])
 
-echo "quit" | forwcmd -file infile | cwdrepl
+echo "quit" | forwcmd -file infile | cwdrepl | sed 's/ *$//' 
 ],
 [0],
 [-- Editor invocation: ./Mail/draft
@@ -409,7 +409,7 @@ Subject: test input
 message body
 ])
 
-echo "quit" | forwcmd 1 | cwdrepl
+echo "quit" | forwcmd 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/drafts/1 ==
 cat Mail/drafts/1
 echo == Message ==
@@ -470,7 +470,7 @@ Subject: test input
 message body
 ])
 
-echo "quit" | forwcmd -nodraftfolder 1 | cwdrepl
+echo "quit" | forwcmd -nodraftfolder 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
 cat Mail/draft
 echo == Message ==

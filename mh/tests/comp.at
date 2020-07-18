@@ -196,7 +196,7 @@ Seen by mhed
 MH_CHECK([use Draft-Folder],[comp07 draftfolder],
 [mkdir Mail/drafts
 echo "Draft-Folder: +drafts" >> $MH
-echo 'quit' | compcmd | cwdrepl
+echo 'quit' | compcmd | cwdrepl | sed 's/ *$//' 
 sed 's/ *$//' Mail/drafts/1
 ],
 [0],
@@ -218,7 +218,7 @@ Seen by mhed
 MH_CHECK([-nodraftfolder],[comp08 nodraftfolder draftfolder],
 [mkdir Mail/drafts
 echo "Draft-Folder: +drafts" >> $MH
-echo 'quit' | compcmd -nodraftfolder | cwdrepl
+echo 'quit' | compcmd -nodraftfolder | cwdrepl | sed 's/ *$//' 
 sed 's/ *$//' Mail/draft
 ],
 [0],

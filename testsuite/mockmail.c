@@ -458,7 +458,7 @@ main (int argc, char **argv)
 		      if (p)
 			p[1] = 0;
 		      msg_add_rcpt (&msg, q);
-		}
+		    }
 		  else
 		    msg_add_rcpt (&msg, p);
 		}

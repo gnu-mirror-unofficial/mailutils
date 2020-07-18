@@ -28,7 +28,7 @@ Subject: test input
 
 message body
 ])
-echo "quit" | replcmd +inbox 1 | cwdrepl
+echo "quit" | replcmd +inbox 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
 cat Mail/draft
 ],
@@ -58,7 +58,7 @@ Subject: test input
 
 message body
 ])
-echo "quit" | replcmd -draftfolder drafts +inbox 1 | cwdrepl
+echo "quit" | replcmd -draftfolder drafts +inbox 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/drafts/1 ==
 cat Mail/drafts/1
 ],
@@ -90,7 +90,7 @@ Subject: test input
 
 message body
 ])
-echo "quit" | replcmd +inbox 1 | cwdrepl
+echo "quit" | replcmd +inbox 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/drafts/1 ==
 cat Mail/drafts/1
 ],
@@ -122,7 +122,7 @@ Subject: test input
 
 message body
 ])
-echo "quit" | replcmd -nodraftfolder +inbox 1 | cwdrepl
+echo "quit" | replcmd -nodraftfolder +inbox 1 | cwdrepl | sed 's/ *$//' 
 echo == Mail/draft ==
 cat Mail/draft
 ],

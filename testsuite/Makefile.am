@@ -67,7 +67,7 @@ LDADD = \
  $(MU_AUTHLIBS)\
  $(MU_LIB_MAILUTILS)
 
-cwdrepl_LDADD = $(MU_LIB_MAILUTILS)
+cwdrepl_LDADD =
 mockmta_LDADD = $(TLS_LIBS)
 
 ## ------------ ##
