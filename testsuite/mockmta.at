@@ -1,0 +1,69 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2017-2020 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([mockmta])
+AT_CHECK([
+nc -h > /dev/null 2>&1
+test $? -eq 1 || AT_SKIP_TEST
+AT_DATA([session],
+[EHLO example.org
+MAIL FROM: <gray@example.org>
+RCPT TO: <root@example.org>
+DATA
+From: gray@example.org
+To: root@example.com
+Subject: mockmta testing
+
+Message text.
+Please discard.
+.
+QUIT
+])
+set - $(mockmta -d mail.dump)
+if test $# -ne 2; then
+  echo >&2 "mockmta failed"
+  exit 1
+fi
+sed -e 's/$//' session | nc localhost $1 | tr -d '\r'
+kill $2
+cat mail.dump
+],
+[0],
+[220 Ready
+250-localhost Mock MTA pleased to meet you
+250-PIPELINING
+250 HELP
+250 Sender ok
+250 Recipient ok
+354 Enter mail, end with "." on a line by itself
+250 0001 Message accepted for delivery
+221 Bye
+MSGID: 0001
+DOMAIN: example.org
+SENDER: <gray@example.org>
+NRCPT: 1
+RCPT[[0]]: <root@example.org>
+LENGTH: 102
+From: gray@example.org
+To: root@example.com
+Subject: mockmta testing
+
+Message text.
+Please discard.
+.
+
+])
+AT_CLEANUP

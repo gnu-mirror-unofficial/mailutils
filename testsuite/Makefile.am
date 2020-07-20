@@ -57,8 +57,7 @@ noinst_PROGRAMS = \
  msgset\
  mimetest\
  mockmail\
- mockmta\
- ufms
+ mockmta
 
 LDADD = \
  $(MU_LIB_MAILBOX)\
@@ -83,6 +82,7 @@ TESTSUITE_AT += \
  mbdel.at\
  mime.at\
  mime01.at\
- ufms.at
+ mockmail.at\
+ mockmta.at
 
 

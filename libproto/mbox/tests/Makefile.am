@@ -1,5 +1,5 @@
-# This file is part of GNU Mailutils. -*- Autotest -*-
-# Copyright (C) 2010-2020 Free Software Foundation, Inc.
+# This file is part of GNU Mailutils.
+# Copyright (C) 2019-2020 Free Software Foundation, Inc.
 #
 # GNU Mailutils is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -14,27 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_include([testsuite.inc])
+include $(top_srcdir)/testsuite/testsuite.am
 
-AT_INIT
+noinst_PROGRAMS = ufms
+AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES)
+LDADD = $(MU_LIB_MBOX) $(MU_LIB_MAILUTILS)
 
-AT_BANNER(Auxiliary tools)
-m4_include([cwdrepl.at])
-m4_include([mockmail.at])
-m4_include([mockmta.at])
-
-AT_BANNER(UIDs)
-m4_include([lstuid00.at])
-m4_include([lstuid01.at])
-m4_include([lstuid02.at])
-
-AT_BANNER(mimetest)
-m4_include([mime.at])
-m4_include([mime01.at])
-
-AT_BANNER(Mailbox removal)
-m4_include([mbdel.at])
-
-AT_BANNER(Folder mailbox removal)
-m4_include([fldel.at])
-
+TESTSUITE_AT += ufms.at

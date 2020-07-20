@@ -25,3 +25,4 @@ libmu_mbox_la_SOURCES = \
  mboxscan.c\
  mbox0.h
 
+SUBDIRS = . tests

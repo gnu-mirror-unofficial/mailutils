@@ -1,0 +1,110 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2017-2020 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([mockmail])
+
+AT_DATA([msg0],
+[From: gray@example.org
+To: root@example.com
+Subject: mockmail testing
+
+Message text.
+..dot-stuffed line
+Please discard.
+.
+])
+
+AT_DATA([msg],
+[From: gray@example.org
+To: root@example.com
+Subject: mockmail testing
+
+Message text.
+Please discard.
+])
+
+AT_CHECK([mockmail root < msg0
+cat mail.dump
+],
+[0],
+[[MSGID: 0001
+NRCPT: 1
+RCPT[0]: root
+LENGTH: 119
+From: gray@example.org
+To: root@example.com
+Subject: mockmail testing
+
+Message text.
+.dot-stuffed line
+Please discard.
+
+]])
+
+AT_CHECK([mockmail -oi gray root < msg
+cat mail.dump
+],
+[0],
+[[MSGID: 0001
+NRCPT: 2
+RCPT[0]: gray
+RCPT[1]: root
+LENGTH: 101
+From: gray@example.org
+To: root@example.com
+Subject: mockmail testing
+
+Message text.
+Please discard.
+
+]])
+
+AT_CHECK([mockmail -oi -f gray@example.com root < msg
+cat mail.dump
+],
+[0],
+[[MSGID: 0001
+SENDER: gray@example.com
+NRCPT: 1
+RCPT[0]: root
+LENGTH: 101
+From: gray@example.org
+To: root@example.com
+Subject: mockmail testing
+
+Message text.
+Please discard.
+
+]])
+
+AT_CHECK([mockmail -oi -t < msg
+cat mail.dump
+],
+[0],
+[[MSGID: 0001
+NRCPT: 1
+RCPT[0]: root@example.com
+LENGTH: 101
+From: gray@example.org
+To: root@example.com
+Subject: mockmail testing
+
+Message text.
+Please discard.
+
+]])
+
+AT_CLEANUP

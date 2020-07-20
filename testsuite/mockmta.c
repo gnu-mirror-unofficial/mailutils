@@ -8,7 +8,7 @@
   DESCRIPTION
     Starts a mock MTA, which behaves almost identically to the real one,
     except that it does not actually inject messages to the mail transport
-    sustem.  Instead, each accepted message is logged to the DUMPFILE.
+    system.  Instead, each accepted message is logged to the DUMPFILE.
 
     Being a mailutils test tool, mockmta is written without relying on
     the mailutils libraries.  Only libc and, optionally, GnuTLS functions

@@ -376,6 +376,8 @@ main (int argc, char **argv)
 	case B_NL:
 	  if (c == '.')
 	    msg.state = B_DOT;
+	  else
+	    msg.state = B_INIT;
 	  break;
 
 	case B_DOT:
