@@ -488,7 +488,8 @@ run_commit (void *item, void *data)
     | MU_PARSEOPT_EXTRA_INFO				\
     | MU_PARSEOPT_VERSION_HOOK				\
     | MU_PARSEOPT_PROG_NAME   				\
-    | MU_PARSEOPT_NEGATION)
+    | MU_PARSEOPT_NEGATION                              \
+    | MU_PARSEOPT_SPECIAL_ARGS )
 
 void
 mu_cli_ext (int argc, char **argv,
@@ -591,7 +592,12 @@ mu_cli_ext (int argc, char **argv,
       po.po_help_hook = extra_help_hook;
       flags |= MU_PARSEOPT_HELP_HOOK;
     }
-
+  else if (pohint->po_flags & MU_PARSEOPT_HELP_HOOK)
+    {
+      po.po_help_hook = pohint->po_help_hook;
+      flags |= MU_PARSEOPT_HELP_HOOK;
+    }
+  
   if (setup->prog_doc_hook)
     {
       po.po_prog_doc_hook = prog_doc_hook;
@@ -622,15 +628,26 @@ mu_cli_ext (int argc, char **argv,
     po.po_negation = pohint->po_negation;
   if (flags & MU_PARSEOPT_PROG_NAME)
     po.po_prog_name = pohint->po_prog_name;
-      
+  if (flags & MU_PARSEOPT_SPECIAL_ARGS)
+    po.po_special_args = pohint->po_special_args;
+  
+  if (setup->ex_usage)
+    {
+      po.po_exit_error = setup->ex_usage;
+      flags |= MU_PARSEOPT_EXIT_ERROR;
+    }
+  else if (pohint->po_flags & MU_PARSEOPT_EXIT_ERROR)
+    {
+      po.po_exit_error = pohint->po_exit_error;
+      flags |= MU_PARSEOPT_EXIT_ERROR;
+    }
+  
   appd.setup = setup;
   appd.hints = &hints;
   appd.append_tree = NULL;
   appd.lint = 0;
   po.po_data = &appd;
   flags |= MU_PARSEOPT_DATA;
-
-  po.po_exit_error = setup->ex_usage;
 
   mu_opool_create (&pool, MU_OPOOL_ENOMEMABRT);
   optv = init_options (pool, capa, setup, &hints, &com_list);

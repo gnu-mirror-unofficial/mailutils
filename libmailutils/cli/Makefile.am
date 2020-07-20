@@ -21,6 +21,7 @@ libcli_la_SOURCES = \
  acl.c\
  capa.c\
  cli.c\
+ simple.c\
  stdcapa.c
 
 AM_CPPFLAGS = \

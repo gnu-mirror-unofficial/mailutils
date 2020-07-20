@@ -659,7 +659,7 @@ parseopt_init (struct mu_parseopt *po, struct mu_option **options,
     po->po_package_name = NULL;
   if (!(flags & MU_PARSEOPT_PACKAGE_URL))
     po->po_package_url = NULL;
-  if (!(flags & MU_PARSEOPT_PACKAGE_URL))
+  if (!(flags & MU_PARSEOPT_DATA))
     po->po_data = NULL;
   if (!(flags & MU_PARSEOPT_EXTRA_INFO))
     po->po_extra_info = NULL;
