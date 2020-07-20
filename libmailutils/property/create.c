@@ -42,6 +42,12 @@ mu_property_create_init (mu_property_t *pprop,
   if (rc == 0)
     {
       mu_property_set_init (prop, initfun, initdata);
+      if (initdata)
+	{
+	  rc = mu_property_init (prop);
+	  if (rc)
+	    return rc;
+	}
       *pprop = prop;
     }
   return rc;
@@ -122,7 +128,7 @@ mu_property_save (mu_property_t prop)
 }
 
 int
-_mu_property_init (mu_property_t prop)
+mu_property_init (mu_property_t prop)
 {
   int rc = 0;
   if (!(prop->_prop_flags & MU_PROP_INIT))
@@ -156,7 +162,7 @@ _mu_property_check (mu_property_t prop)
   
   if (!prop)
     return EINVAL;
-  rc = _mu_property_init (prop);
+  rc = mu_property_init (prop);
   if (rc == 0)
     rc = _mu_property_fill (prop);
   return rc;

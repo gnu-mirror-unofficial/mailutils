@@ -35,6 +35,7 @@ int mu_property_set_init_data (mu_property_t prop, void *data,
 			       void **old_data);
 void mu_property_destroy (mu_property_t *pprop);
 
+int mu_property_init (mu_property_t prop);
 void mu_property_ref (mu_property_t prop);
 void mu_property_unref (mu_property_t prop);
 int mu_property_save (mu_property_t prop);

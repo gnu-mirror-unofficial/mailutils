@@ -30,7 +30,7 @@ mu_property_invalidate (mu_property_t prop)
   
   if (!prop)
     return EINVAL;
-  rc = _mu_property_init (prop);
+  rc = mu_property_init (prop);
   if (rc)
     return rc;
   if (prop->_prop_flags & MU_PROP_FILL)
