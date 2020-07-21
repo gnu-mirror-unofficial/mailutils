@@ -479,35 +479,6 @@ message_decode (mu_message_t msg, int what)
       mu_mime_to_message (mime, &newmsg);
       mu_mime_unref (mime);
 
-      if (what == MSG_TOP)
-	{
-	  /* Copy envelope */
-	  mu_envelope_t env, newenv;
-
-	  rc = mu_message_get_envelope (msg, &env);
-	  if (rc == 0)
-	    {
-	      rc = mu_envelope_create (&newenv, newmsg);
-	      if (rc == 0)
-		{
-		  if ((rc = mu_envelope_aget_sender (env, &newenv->sender)) ||
-		      (rc = mu_envelope_aget_date (env, &newenv->date)))
-		    {
-		      mu_error ("%s", _("can't copy envelope"));
-		      exit (EX_UNAVAILABLE);
-		    }
-		  mu_message_set_envelope (newmsg, newenv,
-					   mu_message_get_owner (newmsg));
-		}
-	      else
-		mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create",
-				   NULL, rc);
-	    }
-	  else
-	    mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_envelope",
-			     NULL, rc);
-	}
-      
       /* Copy headers */
       mu_message_get_header (newmsg, &newhdr);
       mu_header_get_iterator (hdr, &itr);
@@ -536,6 +507,35 @@ message_decode (mu_message_t msg, int what)
 	    mu_header_append (newhdr, name, value);
 	}
       mu_iterator_destroy (&itr);
+    }
+
+  if (what == MSG_TOP)
+    {
+      /* Copy envelope */
+      mu_envelope_t env, newenv;
+
+      rc = mu_message_get_envelope (msg, &env);
+      if (rc == 0)
+	{
+	  rc = mu_envelope_create (&newenv, newmsg);
+	  if (rc == 0)
+	    {
+	      if ((rc = mu_envelope_aget_sender (env, &newenv->sender)) ||
+		  (rc = mu_envelope_aget_date (env, &newenv->date)))
+		{
+		  mu_error ("%s", _("can't copy envelope"));
+		  exit (EX_UNAVAILABLE);
+		}
+	      mu_message_set_envelope (newmsg, newenv,
+				       mu_message_get_owner (newmsg));
+	    }
+	  else
+	    mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create",
+			     NULL, rc);
+	}
+      else
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_envelope",
+			 NULL, rc);
     }
   
   return newmsg;
