@@ -44,6 +44,7 @@ noinst_PROGRAMS = \
  hdrcpy\
  imapio\
  listop\
+ listsort\
  linetrack\
  logstr\
  mailcap\

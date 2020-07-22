@@ -535,3 +535,8 @@ dnl ------------------------------------------------------------
 dnl Cleanup
 m4_popdef([TESTLIST])
 m4_popdef([MU_TEST_GROUP])
+
+AT_SETUP([Sort: big list])
+AT_KEYWORDS([list])
+AT_CHECK([listsort -n 100000])
+AT_CLEANUP

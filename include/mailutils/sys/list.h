@@ -19,6 +19,7 @@
 # define _MAILUTILS_SYS_LIST_H
 
 # include <sys/types.h>
+# include <string.h>
 
 # include <mailutils/list.h>
 # include <mailutils/monitor.h>
@@ -44,6 +45,19 @@ struct _mu_list
   void (*destroy_item) (void *item);
   struct _mu_iterator *itr;
 };
+
+static inline struct list_data *
+_mu_list_null (struct _mu_list *lst)
+{
+  return &lst->head;
+}
+  
+static inline void
+_mu_list_init (struct _mu_list *lst)
+{
+  memset (lst, 0, sizeof *lst);
+  lst->head.prev = lst->head.next = &lst->head;
+}
 
 #define DESTROY_ITEM(list, elt)			\
   do						\

@@ -118,7 +118,7 @@ _smtp_callback (Gsasl *ctx, Gsasl_session *sctx, Gsasl_property prop)
 	rc = GSASL_NO_HOSTNAME;
       else
 	gsasl_property_set (sctx, prop, p);
-	break;
+      break;
 
     case GSASL_HOSTNAME:
       if ((mu_smtp_get_param (smtp, MU_SMTP_PARAM_HOST, &p) || !p) &&
