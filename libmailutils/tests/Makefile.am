@@ -94,6 +94,7 @@ TESTSUITE_AT += \
  crlf.at\
  crlfdot.at\
  ctm.at\
+ content-type.at\
  encode2047.at\
  exp.at\
  fromflt.at\

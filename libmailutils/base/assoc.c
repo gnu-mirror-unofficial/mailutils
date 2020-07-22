@@ -762,7 +762,7 @@ merge_sort (struct _mu_assoc_elem *list, size_t length,
   size_t left_len, right_len, i;
   struct _mu_assoc_elem *elt;
   
-  if (length == 1)
+  if (length <= 1)
     return list;
 
   if (length == 2)

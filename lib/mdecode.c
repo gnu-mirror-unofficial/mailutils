@@ -212,13 +212,14 @@ message_body_stream (mu_message_t msg, int unix_header, char const *charset,
     }
 
   rc = mu_content_type_parse (buf, NULL, &ct);
-  free (buf);
-  buf = NULL;
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", NULL, rc);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", buf, rc);
+      free (buf);
       return rc;
     }
+  free (buf);
+  buf = NULL;
 
   if (is_text_part (ct))
     /* Process only textual parts */

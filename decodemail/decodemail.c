@@ -323,8 +323,8 @@ message_decode (mu_message_t msg, int what)
       rc = message_body_stream (msg, from_filter, charset, &str);
       if (rc)
 	{
-	  newmsg = msg;
-	  mu_message_ref (newmsg);
+	  mu_message_ref (msg);
+	  return msg;
 	}
       else
 	{
@@ -375,13 +375,14 @@ message_decode (mu_message_t msg, int what)
 		      size_t len;
 		      mu_string_unfold (vc, &len);
 		      rc = mu_content_type_parse (vc, NULL, &ct);
-		      free (vc);
 		      if (rc)
 			{
 			  mu_diag_funcall (MU_DIAG_ERROR,
-					   "mu_content_type_parse", NULL, rc);
+					   "mu_content_type_parse", vc, rc);
+			  free (vc);
 			  continue;
 			}
+		      free (vc);
 		      rc = mu_assoc_install_ref (ct->param, "charset", &pparam);
 		      switch (rc)
 			{
@@ -455,12 +456,14 @@ message_decode (mu_message_t msg, int what)
 	  exit (EX_SOFTWARE);
 	}
       rc = mu_content_type_parse (s, NULL, &ct);
-      free (s);
       if (rc)
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", NULL, rc);
-	  exit (EX_SOFTWARE);
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", s, rc);
+	  free (s);
+	  mu_message_ref (msg);
+	  return msg;
 	}
+      free (s);
       
       mu_mime_create_multipart (&mime, ct->subtype, ct->param);
       mu_content_type_destroy (&ct);

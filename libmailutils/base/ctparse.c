@@ -65,8 +65,7 @@ content_type_parse (const char *input, const char *charset,
     }
   else
     {
-      ct->type = value;
-      ct->subtype = NULL;
+      return MU_ERR_PARSE;
     }
   return 0;
 }

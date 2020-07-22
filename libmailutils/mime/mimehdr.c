@@ -264,6 +264,277 @@ mu_mime_param_assoc_add (mu_assoc_t assoc, const char *name)
   return mu_assoc_install (assoc, name, NULL);
 }
 
+static inline char *
+getword (struct mu_wordsplit *ws, size_t *pi)
+{
+  if (*pi == ws->ws_wordc)
+    return NULL;
+  return ws->ws_wordv[(*pi)++];
+}
+
+static int
+parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
+	     struct param_continuation *param_cont,
+	     const char *outcharset, int subset)
+{
+  size_t klen;
+  char *key;
+  char *val;
+  const char *lang = NULL;
+  const char *cset = NULL;
+  char *langp = NULL;
+  char *csetp = NULL;
+  char *p;
+  char *decoded;
+  int flags = 0;
+  struct mu_mime_param *param;
+  int rc;
+  
+  key = getword (ws, pi);
+  if (key == NULL)
+    return MU_ERR_USER0;
+  
+  if (strcmp (key, ";") == 0)
+    {
+      /* Reportedly, some MUAs insert several semicolons */
+      do
+	{
+	  key = getword (ws, pi);
+	  if (key == NULL)
+	    return MU_ERR_USER0;
+	}
+      while (strcmp (key, ";") == 0);
+    }
+  else
+    return MU_ERR_PARSE;
+  
+  p = strchr (key, '=');
+  if (!p)
+    val = "";
+  else
+    {
+      *p++ = 0;
+      val = p;
+    }
+  
+  klen = strlen (key);
+  if (klen == 0)
+    /* Ignore empty parameter */
+    return 0;
+  
+  p = strchr (key, '*');
+  if (p)
+    {
+      /* It is a parameter value continuation (RFC 2231, Section 3)
+	 or parameter value character set and language information
+	 (ibid., Section 4). */
+      klen = p - key;
+      if (p[1])
+	{
+	  if (mu_isdigit (p[1]))
+	    {
+	      char *q;
+	      unsigned long n = strtoul (p + 1, &q, 10);
+	      
+	      if (*q && *q != '*')
+		{
+		  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+			    (_("malformed parameter name %s: skipping"),
+			     key));
+		  return 0;
+		}
+	      
+	      if (n != param_cont->param_cind)
+		{
+		  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+			    (_("continuation index out of sequence in %s: "
+			       "skipping"),
+			     key));
+		  /* Ignore this parameter. Another possibility would be
+		     to drop the continuation assembled so far. That makes
+		     little difference, because the string is malformed
+		     anyway.
+		     
+		     We try to continue just to gather as many information
+		     as possible from this mess.
+		  */
+		  return 0;
+		}
+
+	      if (n == 0)
+		{
+		  param_cont->param_name = malloc (klen + 1);
+		  if (!param_cont->param_name)
+		    return ENOMEM;
+		  param_cont->param_length = klen;
+		  memcpy (param_cont->param_name, key, klen);
+		  param_cont->param_name[klen] = 0;
+		  
+		  rc = mu_memory_stream_create (&param_cont->param_value,
+						MU_STREAM_RDWR);
+		  if (rc)
+		    return rc;
+		}
+	      else if (param_cont->param_length != klen ||
+		       memcmp (param_cont->param_name, key, klen))
+		{
+		  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+			    (_("continuation name mismatch: %s: "
+			       "skipping"),
+			     key));
+		  return 0;
+		}
+	      
+	      if (*q == '*')
+		flags |= MU_MIMEHDR_CSINFO;
+	      
+	      param_cont->param_cind++;
+	      flags |= MU_MIMEHDR_MULTILINE;
+	    }
+	}
+      else
+	{
+	  flags |= MU_MIMEHDR_CSINFO;
+	  *p = 0;
+	}
+    }
+  else if (param_cont->param_name)
+    {
+      rc = flush_param (param_cont, assoc, subset, outcharset);
+      free_param_continuation (param_cont);
+      if (rc)
+	return rc;
+    }
+  
+  if (flags & MU_MIMEHDR_CSINFO)
+    {
+      p = strchr (val, '\'');
+      if (p)
+	{
+	  char *q = strchr (p + 1, '\'');
+	  if (q)
+	    {
+	      cset = val;
+	      *p++ = 0;
+	      lang = p;
+	      *q++ = 0;
+	      val = q;
+	    }
+	}
+      
+      if ((flags & MU_MIMEHDR_MULTILINE) && param_cont->param_cind == 1)
+	{
+	  param_cont->param_lang = lang;
+	  param_cont->param_cset = cset;
+	}
+    }
+  
+  if (flags & MU_MIMEHDR_CSINFO)
+    {
+      char *tmp;
+      
+      rc = mu_str_url_decode (&tmp, val);
+      if (rc)
+	return rc;
+      if (!(flags & MU_MIMEHDR_MULTILINE))
+	{
+	  if (!outcharset || mu_c_strcasecmp (cset, outcharset) == 0)
+	    decoded = tmp;
+	  else
+	    {
+	      rc = _recode_string (tmp, cset, outcharset, &decoded);
+	      free (tmp);
+	      if (rc)
+		return rc;
+	    }
+	}
+      else
+	decoded = tmp;
+    }
+  else
+    {
+      struct mu_mime_param *param;
+      rc = mu_rfc2047_decode_param (outcharset, val, &param);
+      if (rc)
+	return rc;
+      cset = csetp = param->cset;
+      lang = langp = param->lang;
+      decoded = param->value;
+      free (param);
+    }
+  val = decoded;
+  
+  if (flags & MU_MIMEHDR_MULTILINE)
+    {
+      rc = mu_stream_write (param_cont->param_value, val, strlen (val), NULL);
+      free (decoded);
+      free (csetp);
+      free (langp);
+      return rc;
+    }
+  
+  param = calloc (1, sizeof (*param));
+  if (!param)
+    rc = ENOMEM;
+  else
+    {
+      if (lang)
+	{
+	  param->lang = strdup (lang);
+	  if (!param->lang)
+	    rc = ENOMEM;
+	}
+      
+      if (rc == 0 && cset)
+	{
+	  param->cset = strdup (cset);
+	  if (!param->cset)
+	    {
+	      free (param->lang);
+	      rc = ENOMEM;
+	    }
+	}
+      
+      free (csetp);
+      free (langp);
+    }
+  
+  if (rc)
+    {
+      free (decoded);
+      return rc;
+    }
+  
+  param->value = strdup (val);
+  free (decoded);
+  if (!param->value)
+    {
+      mu_mime_param_free (param);
+      return ENOMEM;
+    }
+  
+  if (subset)
+    {
+      struct mu_mime_param **p;
+      if (mu_assoc_lookup_ref (assoc, key, &p) == 0)
+	*p = param;
+      else
+	mu_mime_param_free (param);
+    }
+  else
+    {
+      rc = mu_assoc_install (assoc, key, param);
+      if (rc)
+	{
+	  mu_mime_param_free (param);
+	  return rc;
+	}
+    }
+  
+  return 0;
+}
+  
+
 /* A working horse of this module.  Parses input string, which should
    be a header field value complying to RFCs 2045, 2183, 2231.3.
 
@@ -306,6 +577,12 @@ _mime_header_parse (const char *text, char **pvalue,
       return MU_ERR_PARSE;
     }
 
+  if (ws.ws_wordc == 0)
+    {
+      mu_wordsplit_free (&ws);
+      return MU_ERR_PARSE;
+    }
+  
   if (!assoc)
     {
       if (!pvalue)
@@ -318,256 +595,10 @@ _mime_header_parse (const char *text, char **pvalue,
     }
     
   memset (&cont, 0, sizeof (cont));
-  for (i = 1; i < ws.ws_wordc; i++)
-    {
-      size_t klen;
-      char *key;
-      char *val;
-      const char *lang = NULL;
-      const char *cset = NULL;
-      char *langp = NULL;
-      char *csetp = NULL;
-      char *p;
-      char *decoded;
-      int flags = 0;
-      struct mu_mime_param *param;
-
-      key = ws.ws_wordv[i];
-      if (key[0] == ';')
-	/* Reportedly, some MUAs insert several semicolons */
-	continue;
-      p = strchr (key, '=');
-      if (!p)
-	val = "";
-      else
-	{
-	  *p++ = 0;
-	  val = p;
-	}
-
-      klen = strlen (key);
-      if (klen == 0)
-	continue;
-
-      p = strchr (key, '*');
-      if (p)
-	{
-	  /* It is a parameter value continuation (RFC 2231, Section 3)
-	     or parameter value character set and language information
-	     (ibid., Section 4). */
-	  klen = p - key;
-	  if (p[1])
-	    {
-	      if (mu_isdigit (p[1]))
-		{
-		  char *q;
-		  unsigned long n = strtoul (p + 1, &q, 10);
-
-		  if (*q && *q != '*')
-		    {
-		      mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
-				(_("malformed parameter name %s: skipping"),
-				 key));
-		      continue;
-		    }
-
-		  if (n != cont.param_cind)
-		    {
-		      mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
-				(_("continuation index out of sequence in %s: "
-				   "skipping"),
-				 key));
-		      /* Ignore this parameter. Another possibility would be
-			 to drop the continuation assembled so far. That makes
-			 little difference, because the string is malformed
-			 anyway.
-
-			 We try to continue just to gather as many information
-			 as possible from this mess.
-		      */
-		      continue;
-		    }
-
-		  if (n == 0)
-		    {
-		      cont.param_name = malloc (klen + 1);
-		      if (!cont.param_name)
-			{
-			  rc = ENOMEM;
-			  break;
-			}
-		      cont.param_length = klen;
-		      memcpy (cont.param_name, key, klen);
-		      cont.param_name[klen] = 0;
-
-		      rc = mu_memory_stream_create (&cont.param_value,
-						    MU_STREAM_RDWR);
-		      if (rc)
-			break;
-		    }
-		  else if (cont.param_length != klen ||
-			   memcmp (cont.param_name, key, klen))
-		    {
-		      mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
-				(_("continuation name mismatch: %s: "
-				   "skipping"),
-				 key));
-		      continue;
-		    }
-		      
-		  if (*q == '*')
-		    flags |= MU_MIMEHDR_CSINFO;
-		      
-		  cont.param_cind++;
-		  flags |= MU_MIMEHDR_MULTILINE;
-		}
-	    }
-	  else
-	    {
-	      flags |= MU_MIMEHDR_CSINFO;
-	      *p = 0;
-	    }
-	}
-      else if (cont.param_name)
-	{
-	  rc = flush_param (&cont, assoc, subset, outcharset);
-	  free_param_continuation (&cont);
-	  if (rc)
-	    break;
-	}
-      
-      if (flags & MU_MIMEHDR_CSINFO)
-	{
-	  p = strchr (val, '\'');
-	  if (p)
-	    {
-	      char *q = strchr (p + 1, '\'');
-	      if (q)
-		{
-		  cset = val;
-		  *p++ = 0;
-		  lang = p;
-		  *q++ = 0;
-		  val = q;
-		}
-	    }
-
-	  if ((flags & MU_MIMEHDR_MULTILINE) && cont.param_cind == 1)
-	    {
-	      cont.param_lang = lang;
-	      cont.param_cset = cset;
-	    }
-	}
-
-      if (flags & MU_MIMEHDR_CSINFO)
-	{
-	  char *tmp;
-	  
-	  rc = mu_str_url_decode (&tmp, val);
-	  if (rc)
-	    break;
-	  if (!(flags & MU_MIMEHDR_MULTILINE))
-	    {
-	      if (!outcharset || mu_c_strcasecmp (cset, outcharset) == 0)
-		decoded = tmp;
-	      else
-		{
-		  rc = _recode_string (tmp, cset, outcharset, &decoded);
-		  free (tmp);
-		}
-	      if (rc)
-		break;
-	    }
-	  else
-	    decoded = tmp;
-	}
-      else
-	{
-	  struct mu_mime_param *param;
-	  rc = mu_rfc2047_decode_param (outcharset, val, &param);
-	  if (rc)
-	    {
-	      mu_wordsplit_free (&ws);
-	      return rc;
-	    }
-	  cset = csetp = param->cset;
-	  lang = langp = param->lang;
-	  decoded = param->value;
-	  free (param);
-	}
-      val = decoded;
-      
-      if (flags & MU_MIMEHDR_MULTILINE)
-	{
-	  rc = mu_stream_write (cont.param_value, val, strlen (val), NULL);
-	  free (decoded);
-	  free (csetp);
-	  free (langp);
-	  if (rc)
-	    break;
-	  continue;
-	}
-
-      param = calloc (1, sizeof (*param));
-      if (!param)
-	rc = ENOMEM;
-      else
-	{
-	  if (lang)
-	    {
-	      param->lang = strdup (lang);
-	      if (!param->lang)
-		rc = ENOMEM;
-	    }
-
-	  if (rc == 0 && cset)
-	    {
-	      param->cset = strdup (cset);
-	      if (!param->cset)
-		{
-		  free (param->lang);
-		  rc = ENOMEM;
-		}
-	    }
-	  
-	  free (csetp);
-	  free (langp);
-	}
-      
-      if (rc)
-	{
-	  free (decoded);
-	  break;
-	}
-      
-      param->value = strdup (val);
-      free (decoded);
-      if (!param->value)
-	{
-	  mu_mime_param_free (param);
-	  rc = ENOMEM;
-	  break;
-	}
-
-      if (subset)
-	{
-	  struct mu_mime_param **p;
-	  if (mu_assoc_lookup_ref (assoc, key, &p) == 0)
-	    *p = param;
-	  else
-	    mu_mime_param_free (param);
-	}
-      else
-	{
-	  rc = mu_assoc_install (assoc, key, param);
-	  if (rc)
-	    {
-	      mu_mime_param_free (param);
-	      break;
-	    }
-	}
-    }
-
+  for (i = 1; (rc = parse_param (&ws, &i, assoc, &cont, outcharset, subset)) == 0;)
+    ;
+  if (rc == MU_ERR_USER0)
+    rc = 0;
   if (rc == 0 && cont.param_name)
     rc = flush_param (&cont, assoc, subset, outcharset);
   free_param_continuation (&cont);

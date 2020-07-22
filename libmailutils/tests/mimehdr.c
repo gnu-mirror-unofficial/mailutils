@@ -55,6 +55,7 @@ int
 main (int argc, char **argv)
 {
   int i;
+  int rc;
   mu_stream_t tmp;
   mu_transport_t trans[2];
   char *value;
@@ -100,7 +101,12 @@ main (int argc, char **argv)
   MU_ASSERT (mu_stream_ioctl (tmp, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET,
 			      trans));
       
-  MU_ASSERT (mu_mime_header_parse ((char*)trans[0], charset, &value, &assoc));
+  rc = mu_mime_header_parse ((char*)trans[0], charset, &value, &assoc);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_header_parse", NULL, rc);
+      return 2;
+    }
 
   if (header_name)
     {

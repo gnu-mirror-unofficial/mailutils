@@ -1,0 +1,53 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2011-2020 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+dnl ---------------------------------------------------------------------
+dnl CTHDR([NAME], [KW], [INPUT], [STATUS = 0], [STDOUT = `'], [STDERR = `'])
+dnl
+m4_pushdef([CTHDR],[
+m4_pushdef([MU_TEST_GROUP],[content-type])
+m4_pushdef([MU_TEST_KEYWORDS],[content-type rfc2231])
+m4_pushdef([MU_TEST_COMMAND],[conttype])
+MU_GENERIC_TEST($@)
+m4_popdef([MU_TEST_COMMAND])
+m4_popdef([MU_TEST_KEYWORDS])
+m4_popdef([MU_TEST_GROUP])
+])
+
+CTHDR([no parameters],[ctparse content-type],
+[text/plain],
+[0],
+[type = text
+subtype = plain
+])
+
+CTHDR([with parameters],[ctparse content-type],
+[text/plain; charset=utf-8],
+[0],
+[type = text
+subtype = plain
+ 0: charset=utf-8
+])
+
+CTHDR([missing subtype],[ctparse content-type],
+[text],
+[1],
+[],
+[conttype: Parse error
+])
+
+m4_popdef([CTHDR])
+

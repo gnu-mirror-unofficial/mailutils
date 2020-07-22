@@ -43,7 +43,7 @@ main (int argc, char **argv)
 {
   char *buf = NULL;
   size_t size = 0, n;
-  int rc;
+  int rc, result = 0;
   
   mu_set_program_name (argv[0]);
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
@@ -54,8 +54,8 @@ main (int argc, char **argv)
     {
       mu_rtrim_class (buf, MU_CTYPE_ENDLN);
       if (parse (buf))
-	rc = 1;
+	result = 1;
     }
-  return rc;
+  return result;
 }
   

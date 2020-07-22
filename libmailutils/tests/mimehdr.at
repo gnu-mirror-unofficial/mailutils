@@ -30,6 +30,16 @@ m4_popdef([MU_TEST_COMMAND])
 m4_popdef([MU_TEST_KEYWORDS])
 m4_popdef([MU_TEST_GROUP])
 ])
+
+m4_pushdef([MIMEHDR_FAIL],[
+m4_pushdef([MU_TEST_GROUP],[mimehdr])
+m4_pushdef([MU_TEST_KEYWORDS],[mimehdr rfc2231])
+m4_pushdef([MU_TEST_COMMAND],[mimehdr $3])
+MU_GENERIC_TEST([$1],[$2],[$4],[2],[$5],[$6])
+m4_popdef([MU_TEST_COMMAND])
+m4_popdef([MU_TEST_KEYWORDS])
+m4_popdef([MU_TEST_GROUP])
+])
 dnl ---------------------------------------------------------------------
 
 MIMEHDR([simple],[mimehdr00 mimehdr-simple],
@@ -243,4 +253,32 @@ MIMEHDR([format: language info 5],[mimehdr12 mimehdr12e],
 
 ])
 
+MIMEHDR([missing parameters],[mimehdr13],
+[],
+[message],
+[message
+])
+
+MIMEHDR_FAIL([empty input],[mimehdr14],
+[],
+[],
+[],
+[mimehdr: mu_mime_header_parse() failed: Parse error
+])
+
+MIMEHDR_FAIL([missing semicolon after type],[mimehdr15],
+[],
+[message name="foo"],
+[],
+[mimehdr: mu_mime_header_parse() failed: Parse error
+])
+
+MIMEHDR_FAIL([whitespace in type],[mimehdr16],
+[],
+[TeX file/plain; name=foo],
+[],
+[mimehdr: mu_mime_header_parse() failed: Parse error
+])
+
 m4_popdef([MIMEHDR])
+m4_popdef([MIMEHDR_FAIL])
