@@ -150,6 +150,11 @@ _base64_decoder (void *xd MU_ARG_UNUSED,
 	    data[i++] = tmp;
 	  else if (*(iptr-1) == '=')
 	    {
+	      if (pad == 3)
+		{
+		  iobuf->errcode = MU_ERR_BASE64;
+		  return mu_filter_failure;
+		}
 	      data[i++] = 0;
 	      pad++;
 	    }

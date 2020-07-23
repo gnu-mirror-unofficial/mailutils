@@ -216,7 +216,10 @@ _ilcmt_decoder (void *xd, enum mu_filter_command cmd,
 		  if (!(pd->flags & ILCMT_SQUEEZE_WS))
 		    {
 		      if (ilcmt_save (pd, *iptr))
-			return mu_filter_failure;
+			{
+			  iobuf->errcode = errno;
+			  return mu_filter_failure;
+			}
 		    }
 		  iptr++;
 		}
@@ -290,7 +293,10 @@ _ilcmt_decoder (void *xd, enum mu_filter_command cmd,
 	      if (!(pd->flags & ILCMT_SQUEEZE_WS))
 		{
 		  if (ilcmt_save (pd, *iptr))
-		    return mu_filter_failure;
+		    {
+		      iobuf->errcode = errno;
+		      return mu_filter_failure;
+		    }
 		}
 	      iptr++;
 	    }

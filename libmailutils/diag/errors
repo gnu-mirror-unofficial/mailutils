@@ -139,3 +139,5 @@ MU_ERR_USER4                _("User-defined error 4")
 MU_ERR_USER5                _("User-defined error 5")
 MU_ERR_USER6                _("User-defined error 6")
 MU_ERR_USER7                _("User-defined error 7")
+
+MU_ERR_BASE64               _("invalid base64 input")
