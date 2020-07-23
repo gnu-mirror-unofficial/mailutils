@@ -346,8 +346,13 @@ message_decode (mu_message_t msg, int what)
 	  rc = mu_stream_copy (bstr, str, 0, NULL);
 	  if (rc)
 	    {
-	      mu_diag_funcall (MU_DIAG_ERROR, "mu_steam_copy", NULL, rc);
-	      exit (EX_IOERR);
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy", NULL, rc);
+	      if (!mu_stream_err (bstr))
+		{
+		  mu_stream_printf (bstr,
+				    "\n[decodemail: content decoding failed: %s]\n",
+				    mu_strerror (rc));
+		}
 	    }
 	  mu_stream_unref (bstr);
 	  mu_stream_unref (str);
@@ -445,7 +450,7 @@ message_decode (mu_message_t msg, int what)
       mu_iterator_t itr;
       char *s;
       mu_content_type_t ct;
-
+      
       /* FIXME: The following could be simplified if we could obtain
 	 a mime object from the message */
       mu_message_get_header (msg, &hdr);
