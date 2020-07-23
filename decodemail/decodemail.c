@@ -215,6 +215,7 @@ main (int argc, char **argv)
 	  err = 1;
 	  continue;
 	}
+      
       newmsg = message_decode (msg, MSG_TOP);
       message_store (newmsg, ombox);
       mu_message_unref (newmsg);
@@ -453,7 +454,8 @@ message_decode (mu_message_t msg, int what)
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_header_aget_value_unfold",
 			   MU_HEADER_CONTENT_TYPE, rc);
-	  exit (EX_SOFTWARE);
+	  mu_message_ref (msg);
+	  return msg;
 	}
       rc = mu_content_type_parse (s, NULL, &ct);
       if (rc)
@@ -520,21 +522,37 @@ message_decode (mu_message_t msg, int what)
       rc = mu_message_get_envelope (msg, &env);
       if (rc == 0)
 	{
-	  rc = mu_envelope_create (&newenv, newmsg);
-	  if (rc == 0)
+	  char *sender = NULL, *date = NULL;
+	  if ((rc = mu_envelope_aget_sender (env, &sender)) != 0)
 	    {
-	      if ((rc = mu_envelope_aget_sender (env, &newenv->sender)) ||
-		  (rc = mu_envelope_aget_date (env, &newenv->date)))
-		{
-		  mu_error ("%s", _("can't copy envelope"));
-		  exit (EX_UNAVAILABLE);
-		}
-	      mu_message_set_envelope (newmsg, newenv,
-				       mu_message_get_owner (newmsg));
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_aget_sender",
+			       NULL, rc);
 	    }
-	  else
-	    mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create",
-			     NULL, rc);
+	  else if ((rc = mu_envelope_aget_date (env, &date)) != 0)
+	    {
+	      free (sender);
+	      sender = NULL;
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_aget_date",
+			       NULL, rc);
+	    }
+	  
+	  if (sender)
+	    {
+	      if ((rc = mu_envelope_create (&newenv, newmsg)) == 0)
+		{
+		  newenv->sender = sender;
+		  newenv->date = date;
+		  mu_message_set_envelope (newmsg, newenv,
+					   mu_message_get_owner (newmsg));
+		}
+	      else
+		{
+		  free (sender);
+		  free (date);
+		  mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create",
+				   NULL, rc);
+		}
+	    }
 	}
       else
 	mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_envelope",
