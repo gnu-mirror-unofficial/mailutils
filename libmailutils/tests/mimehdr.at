@@ -259,21 +259,32 @@ MIMEHDR([missing parameters],[mimehdr13],
 [message
 ])
 
-MIMEHDR_FAIL([empty input],[mimehdr14],
+MIMEHDR([surrounding whitespace],[mimehdr14],
+[],
+[text/plain  ;   charset =  utf-8; param=foo  ;   p1  =bar ; p2=  baz
+],
+[text/plain
+charset=utf-8
+p1=bar
+p2=baz
+param=foo
+])
+
+MIMEHDR_FAIL([empty input],[mimehdr15],
 [],
 [],
 [],
 [mimehdr: mu_mime_header_parse() failed: Parse error
 ])
 
-MIMEHDR_FAIL([missing semicolon after type],[mimehdr15],
+MIMEHDR_FAIL([missing semicolon after type],[mimehdr16],
 [],
 [message name="foo"],
 [],
 [mimehdr: mu_mime_header_parse() failed: Parse error
 ])
 
-MIMEHDR_FAIL([whitespace in type],[mimehdr16],
+MIMEHDR_FAIL([whitespace in type],[mimehdr17],
 [],
 [TeX file/plain; name=foo],
 [],

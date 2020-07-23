@@ -309,12 +309,34 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
     return MU_ERR_PARSE;
   
   p = strchr (key, '=');
-  if (!p)
-    val = "";
-  else
+  if (p)
     {
       *p++ = 0;
-      val = p;
+      if (*p)
+	{
+	  /* key=val */
+	  val = p;
+	}
+      else if ((val = getword (ws, pi)) == NULL)
+	return MU_ERR_PARSE;
+      /* key= WSP val */
+    }
+  else
+    {
+      p = getword (ws, pi);
+      if (p && p[0] == '=')
+	{
+	  if (p[1])
+	    {
+	      /* key WSP =val */
+	      val = p + 1;
+	    }
+	  else if ((val = getword (ws, pi)) == NULL)
+	    return MU_ERR_PARSE;
+	  /* key WSP = WSP val */
+	}
+      else
+	return MU_ERR_PARSE;
     }
   
   klen = strlen (key);
