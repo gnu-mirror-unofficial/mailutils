@@ -570,8 +570,14 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
              success.
     ASSOC  - Unless NULL, parameters are stored here.	     
 
-   Either PVALUE or ASSOC (but not both) can be NULL, meaning that the
-   corresponding data are of no interest to the caller.
+   Both output pointers can be NULL, meaning that the corresponding data
+   are of no interest to the caller.
+
+   The value returned in PVALUE is the initial part of TEXT up to the
+   start of parameters (i.e. to the first semicolon) with leading and
+   trailing whitespace removed.  No other syntactic checking is done on
+   the value.  It is the responsibility of the caller to verify that it
+   complies to the syntax of the particular header.
 */
 static int
 _mime_header_parse (const char *text, char **pvalue,
@@ -581,7 +587,28 @@ _mime_header_parse (const char *text, char **pvalue,
   struct mu_wordsplit ws;
   struct param_continuation cont;
   size_t i;
+  char *value = NULL;
+  size_t val_len;
 
+  val_len = strcspn (text, ";");
+  if (pvalue)
+    {
+      value = malloc (val_len + 1);
+      if (!value)
+	return ENOMEM;
+      memcpy (value, text, val_len);
+      value[val_len] = 0;
+      mu_rtrim_class (value, MU_CTYPE_SPACE);
+      mu_ltrim_class (value, MU_CTYPE_SPACE);
+      if (value[0] == 0)
+	{
+	  free (value);
+	  return MU_ERR_PARSE;
+	}
+    }
+  
+  text += val_len;
+  
   ws.ws_delim = " \t\r\n;";
   ws.ws_escape[0] = ws.ws_escape[1] = "\\\\\"\"";
   ws.ws_options = 0;
@@ -596,28 +623,20 @@ _mime_header_parse (const char *text, char **pvalue,
       mu_debug (MU_DEBCAT_MIME, MU_DEBUG_ERROR,
 		(_("wordsplit: %s"), mu_wordsplit_strerror (&ws)));
       mu_wordsplit_free (&ws);
+      free (value);
       return MU_ERR_PARSE;
     }
 
-  if (ws.ws_wordc == 0)
-    {
-      mu_wordsplit_free (&ws);
-      return MU_ERR_PARSE;
-    }
-  
   if (!assoc)
     {
-      if (!pvalue)
-	return MU_ERR_OUT_PTR_NULL;
-      *pvalue = strdup (ws.ws_wordv[0]);
+      if (pvalue)
+	*pvalue = value;
       mu_wordsplit_free (&ws);
-      if (!*pvalue)
-	return ENOMEM;
       return 0;
     }
     
   memset (&cont, 0, sizeof (cont));
-  for (i = 1; (rc = parse_param (&ws, &i, assoc, &cont, outcharset, subset)) == 0;)
+  for (i = 0; (rc = parse_param (&ws, &i, assoc, &cont, outcharset, subset)) == 0;)
     ;
   if (rc == MU_ERR_USER0)
     rc = 0;
@@ -627,13 +646,10 @@ _mime_header_parse (const char *text, char **pvalue,
   if (rc == 0)
     {
       if (pvalue)
-	{
-	  *pvalue = strdup (ws.ws_wordv[0]);
-	  if (!*pvalue)
-	    rc = ENOMEM;
-	}
+	*pvalue = value;
     }
-
+  else
+    free (value);
   mu_wordsplit_free (&ws);
 
   if (subset)

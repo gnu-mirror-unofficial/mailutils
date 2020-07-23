@@ -53,6 +53,8 @@ main (int argc, char **argv)
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
       mu_rtrim_class (buf, MU_CTYPE_ENDLN);
+      if (buf[0] == 0)
+	continue;
       if (parse (buf))
 	result = 1;
     }

@@ -277,18 +277,17 @@ MIMEHDR_FAIL([empty input],[mimehdr15],
 [mimehdr: mu_mime_header_parse() failed: Parse error
 ])
 
-MIMEHDR_FAIL([missing semicolon after type],[mimehdr16],
+MIMEHDR([missing semicolon after type],[mimehdr16],
 [],
 [message name="foo"],
-[],
-[mimehdr: mu_mime_header_parse() failed: Parse error
+[message name="foo"
 ])
 
-MIMEHDR_FAIL([whitespace in type],[mimehdr17],
+MIMEHDR([whitespace in type],[mimehdr17],
 [],
 [TeX file/plain; name=foo],
-[],
-[mimehdr: mu_mime_header_parse() failed: Parse error
+[TeX file/plain
+name=foo
 ])
 
 m4_popdef([MIMEHDR])

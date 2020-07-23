@@ -29,45 +29,67 @@
 #include <mailutils/cctype.h>
 #include <mailutils/cstr.h>
 
-  
+/* Parse the content type header value in INPUT.  If CHARSET is not
+   NULL, convert textual parameters to this charset.
+
+   Store the result in CT.
+
+   In case of error, CT is left partially constructed.  The caller
+   must free it.
+   
+   Parsing of the type/subtype value is relaxed: any characters are
+   allowed in either part (except for "/", which can't appear in type).
+   Although RFC 2045 forbids that, mails with such content types reportedly
+   exist (see conversation with Karl Berry on 2020-07-21, particularly
+   <202007220115.06M1FuTh001462@freefriends.org> and my reply
+   <20200722133251.8412@ulysses.gnu.org.ua>).
+
+   Type must not be empty, but empty subtype is allowed.
+*/   
 static int
 content_type_parse (const char *input, const char *charset,
 		    mu_content_type_t ct)
 {
   int rc;
   char *value, *p;
-  
+
   rc = mu_mime_header_parse (input, charset, &value, &ct->param);
   if (rc)
     return rc;
+
   p = strchr (value, '/');
   if (p)
     {
       size_t len = p - value;
+      while (len > 0 && mu_isspace (value[len-1]))
+	len--;
+      if (len == 0)
+	{
+	  rc = MU_ERR_PARSE;
+	  goto end;
+	}
+      
+      p = mu_str_skip_class (p + 1, MU_CTYPE_SPACE);
+      
       ct->type = malloc (len + 1);
       if (!ct->type)
 	{
 	  rc = errno;
-	  free (value);
-	  return rc;
+	  goto end;
 	}
+      
       memcpy (ct->type, value, len);
       ct->type[len] = 0;
 
-      ct->subtype = strdup (p + 1);
-      free (value);
-
+      ct->subtype = strdup (p);
       if (!ct->subtype)
-	{
-	  rc = errno;
-	  return rc;
-	}
+	rc = errno;
     }
   else
-    {
-      return MU_ERR_PARSE;
-    }
-  return 0;
+    rc = MU_ERR_PARSE;
+ end:
+  free (value);
+  return rc;
 }
 
 int

@@ -49,5 +49,14 @@ CTHDR([missing subtype],[ctparse content-type],
 [conttype: Parse error
 ])
 
+CTHDR([whitespace],[ctparse content-type],
+[  text  /  plain  ; charset = utf-8;p =foo],
+[0],
+[type = text
+subtype = plain
+ 0: charset=utf-8
+ 1: p=foo
+])
+
 m4_popdef([CTHDR])
 

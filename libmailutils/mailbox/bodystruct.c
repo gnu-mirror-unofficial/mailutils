@@ -31,6 +31,7 @@
 #include <mailutils/nls.h>
 #include <mailutils/cstr.h>
 #include <mailutils/body.h>
+#include <mailutils/util.h>
 
 void
 mu_list_free_bodystructure (void *item)
@@ -94,59 +95,48 @@ static int
 bodystructure_fill (mu_message_t msg, struct mu_bodystructure *bs)
 {
   mu_header_t header = NULL;
-  const char *buffer = NULL;
+  char *buffer = NULL;
   mu_body_t body = NULL;
-  int rc;
   int is_multipart = 0;
+  int rc;
 
   rc = mu_message_get_header (msg, &header);
   if (rc)
     return rc;
   
-  if (mu_header_sget_value (header, MU_HEADER_CONTENT_TYPE, &buffer) == 0)
+  if (mu_header_aget_value_unfold (header, MU_HEADER_CONTENT_TYPE, &buffer) == 0)
     {
-      char *value;
-      char *p;
-      size_t len;
-      
-      rc = mu_mime_header_parse (buffer, "UTF-8", &value, &bs->body_param);
-      if (rc)
-	return rc;
+      mu_content_type_t ct;
 
-      len = strcspn (value, "/");
-
-      if (mu_c_strcasecmp (value, "MESSAGE/RFC822") == 0)
-        bs->body_message_type = mu_message_rfc822;
-      else if (mu_c_strncasecmp (value, "TEXT", len) == 0)
-        bs->body_message_type = mu_message_text;
-
-      p = malloc (len + 1);
-      if (!p)
-	return ENOMEM;
-      memcpy (p, value, len);
-      p[len] = 0;
-      
-      bs->body_type = p;
-      mu_strupper (bs->body_type);
-      if (value[len])
+      rc = mu_content_type_parse (buffer, "UTF-8", &ct);
+      if (rc == 0)
 	{
-	  bs->body_subtype = strdup (value + len + 1);
-	  if (!bs->body_subtype)
-	    return ENOMEM;
+	  if (mu_c_strcasecmp (ct->type, "MESSAGE") == 0 &&
+	      mu_c_strcasecmp (ct->subtype, "RFC822") == 0)
+	    bs->body_message_type = mu_message_rfc822;
+	  else if (mu_c_strcasecmp (ct->type, "TEXT") == 0)
+	    bs->body_message_type = mu_message_text;
+	  
+	  bs->body_type = ct->type;
+	  ct->type = NULL;
+	  mu_strupper (bs->body_type);
+	  bs->body_subtype = ct->subtype;
+	  ct->subtype = NULL;
 	  mu_strupper (bs->body_subtype);
-	}
+	  bs->body_param = ct->param;
+	  ct->param = NULL;
+	  mu_content_type_destroy (&ct);
       
-      /* body parameter parenthesized list: Content-type attributes */
-
-      rc = mu_message_is_multipart (msg, &is_multipart);
-      if (rc)
-	return rc;
-      if (is_multipart)
-	bs->body_message_type = mu_message_multipart;
+	  /* body parameter parenthesized list: Content-type attributes */
+	  mu_message_is_multipart (msg, &is_multipart);
+	  if (is_multipart)
+	    bs->body_message_type = mu_message_multipart;
+	}
+      free (buffer);
     }
   else
     {
-      struct mu_mime_param param;
+      struct mu_mime_param *param;
       
       /* Default? If Content-Type is not present consider as text/plain.  */
       bs->body_type = strdup ("TEXT");
@@ -161,21 +151,22 @@ bodystructure_fill (mu_message_t msg, struct mu_bodystructure *bs)
       rc = mu_mime_param_assoc_create (&bs->body_param);
       if (rc)
 	return rc;
-      memset (&param, 0, sizeof (param));
-      param.value = strdup ("US-ASCII");
-      if (!param.value)
-        {
-          free (bs->body_type);
-          free (bs->body_subtype);
-          return ENOMEM;
-        }
-      rc = mu_assoc_install (bs->body_param, "CHARSET", &param);
-      if (rc)
+      param = calloc (1, sizeof (*param));
+      if (param && (param->value = strdup ("US-ASCII")) != NULL)
 	{
-	  free (param.value);
-	  return rc;
+	  rc = mu_assoc_install (bs->body_param, "CHARSET", param);
+	  if (rc)
+	    {
+	      mu_mime_param_free (param);
+	      return rc;
+	    }
+	  bs->body_message_type = mu_message_text;
 	}
-      bs->body_message_type = mu_message_text;
+      else
+	{
+	  free (param);
+	  return ENOMEM;
+	} 
     }
 
   if (is_multipart)
@@ -283,12 +274,13 @@ bodystructure_fill (mu_message_t msg, struct mu_bodystructure *bs)
     return rc;
   
   /* body disposition: Content-Disposition.  */
-  rc = mu_header_sget_value (header, MU_HEADER_CONTENT_DISPOSITION,
-			     &buffer);
+  rc = mu_header_aget_value_unfold (header, MU_HEADER_CONTENT_DISPOSITION,
+				    &buffer);
   if (rc == 0)
     {
       rc = mu_mime_header_parse (buffer, "UTF-8", &bs->body_disposition,
 				 &bs->body_disp_param);
+      free (buffer);
       if (rc)
 	return rc;
     }
