@@ -73,9 +73,7 @@ define_charset (void)
     charset = mu_strdup ("us-ascii");
 }
 
-static mu_message_t message_decode (mu_message_t, int);
-/* Values for the message_decode second parameter */
-enum { MSG_PART, MSG_TOP };
+static mu_message_t message_decode (mu_message_t, mu_coord_t *, size_t);
 
 static void message_store_mbox (mu_message_t, mu_mailbox_t);
 static void message_store_stdout (mu_message_t, mu_mailbox_t);
@@ -90,6 +88,7 @@ main (int argc, char **argv)
   mu_iterator_t itr;
   unsigned long i;
   int err = 0;
+  mu_coord_t crd;
   
   /* Native Language Support */
   MU_APP_INIT_NLS ();
@@ -202,6 +201,10 @@ main (int argc, char **argv)
       exit (EX_SOFTWARE);
     }
 
+  rc = mu_coord_alloc (&crd, 1);
+  if (rc)
+    mu_alloc_die ();
+  
   for (mu_iterator_first (itr), i = 1; !mu_iterator_is_done (itr);
        mu_iterator_next (itr), i++)
     {
@@ -215,8 +218,8 @@ main (int argc, char **argv)
 	  err = 1;
 	  continue;
 	}
-      
-      newmsg = message_decode (msg, MSG_TOP);
+      crd[1] = i;
+      newmsg = message_decode (msg, &crd, 1);
       message_store (newmsg, ombox);
       mu_message_unref (newmsg);
     }
@@ -309,8 +312,45 @@ message_store_stdout (mu_message_t msg, mu_mailbox_t mbx)
   mu_printf ("\n");
 }
 
+/*
+ * Display diagnostics with the location of the message part it
+ * belongs to.
+ * 
+ * Arguments:
+ *   crd  -  A mu_coord_t object describing the location.
+ *   dim  -  Number of significant positions in crd.
+ *   fmt  -  Format string
+ */
+static void
+crd_error (mu_coord_t crd, size_t n, char const *fmt, ...)
+{
+  va_list ap;
+  char *pfx = mu_coord_part_string (crd, n);
+
+  mu_diag_printf (MU_DIAG_ERROR, "%s: ", pfx);
+  free (pfx);
+
+  va_start (ap, fmt);
+  mu_diag_cont_vprintf (fmt, ap);
+  va_end (ap);
+  mu_stream_write (mu_strerr, "\n", 1, NULL);
+}
+
+/*
+ * Decode a single message or message part.
+ *
+ * Arguments:
+ *   msg  -  Message or message part.
+ *   crd  -  Pointer to mu_coord_t object that keeps its location.
+ *   dim  -  Number of significant positions in crd.  If it is 1,
+ *           msg is the message.  If it is greater than 1, msg is
+ *           part of a MIME message.
+ *
+ * The function can reallocate crd to increase its actual dimension.
+ * It can modify the coordinate positions starting from dim+1 (inclusive).
+ */
 static mu_message_t
-message_decode (mu_message_t msg, int what)
+message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 {
   mu_message_t newmsg;
   int ismime;
@@ -346,8 +386,12 @@ message_decode (mu_message_t msg, int what)
 	  rc = mu_stream_copy (bstr, str, 0, NULL);
 	  if (rc)
 	    {
-	      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy", NULL, rc);
-	      if (!mu_stream_err (bstr))
+	      crd_error (*crd, dim, "mu_stream_copy: %s", mu_strerror (rc));
+	      if (mu_stream_err (bstr))
+		{
+		  exit (EX_IOERR);
+		}
+	      else
 		{
 		  mu_stream_printf (bstr,
 				    "\n[decodemail: content decoding failed: %s]\n",
@@ -383,8 +427,9 @@ message_decode (mu_message_t msg, int what)
 		      rc = mu_content_type_parse (vc, NULL, &ct);
 		      if (rc)
 			{
-			  mu_diag_funcall (MU_DIAG_ERROR,
-					   "mu_content_type_parse", vc, rc);
+			  crd_error (*crd, dim,
+				     "mu_content_type_parse(%s): %s",
+				     vc, mu_strerror (rc));
 			  free (vc);
 			  continue;
 			}
@@ -401,8 +446,8 @@ message_decode (mu_message_t msg, int what)
 			  break;
 
 			default:
-			  mu_diag_funcall (MU_DIAG_ERROR,
-					   "mu_assoc_install_ref", NULL, rc);
+			  crd_error (*crd, dim, "mu_assoc_install_ref: %s",
+				     mu_strerror (rc));
 			  exit (EX_IOERR);
 			}
 		      (*pparam)->value = mu_strdup (charset);
@@ -457,20 +502,29 @@ message_decode (mu_message_t msg, int what)
       rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE, &s);
       if (rc)
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_header_aget_value_unfold",
-			   MU_HEADER_CONTENT_TYPE, rc);
+	  crd_error (*crd, dim, "mu_header_aget_value_unfold(%s): %s",
+		     MU_HEADER_CONTENT_TYPE, mu_strerror (rc));
 	  mu_message_ref (msg);
 	  return msg;
 	}
       rc = mu_content_type_parse (s, NULL, &ct);
       if (rc)
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", s, rc);
+	  crd_error (*crd, dim, "mu_content_type_parse(%s): %s",
+		     s, mu_strerror (rc));
 	  free (s);
 	  mu_message_ref (msg);
 	  return msg;
 	}
       free (s);
+
+      ++dim;
+      if (dim > mu_coord_length (*crd))
+	{
+	  rc = mu_coord_realloc (crd, dim);
+	  if (rc)
+	    mu_alloc_die ();
+	}
       
       mu_mime_create_multipart (&mime, ct->subtype, ct->param);
       mu_content_type_destroy (&ct);
@@ -480,15 +534,17 @@ message_decode (mu_message_t msg, int what)
 	{
 	  mu_message_t msgpart, msgdec;
 	  
+	  (*crd)[dim] = i;
 	  mu_message_get_part (msg, i, &msgpart);
-	  msgdec = message_decode (msgpart, MSG_PART);
+	  
+	  msgdec = message_decode (msgpart, crd, dim);
 	  mu_mime_add_part (mime, msgdec);
 	  mu_message_unref (msgdec);
 	}
 
       mu_mime_to_message (mime, &newmsg);
       mu_mime_unref (mime);
-
+      
       /* Copy headers */
       mu_message_get_header (newmsg, &newhdr);
       mu_header_get_iterator (hdr, &itr);
@@ -519,7 +575,7 @@ message_decode (mu_message_t msg, int what)
       mu_iterator_destroy (&itr);
     }
 
-  if (what == MSG_TOP)
+  if (dim == 1)
     {
       /* Copy envelope */
       mu_envelope_t env, newenv;
@@ -530,15 +586,15 @@ message_decode (mu_message_t msg, int what)
 	  char *sender = NULL, *date = NULL;
 	  if ((rc = mu_envelope_aget_sender (env, &sender)) != 0)
 	    {
-	      mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_aget_sender",
-			       NULL, rc);
+	      crd_error (*crd, dim, "mu_envelope_aget_sender: %s",
+			 mu_strerror (rc));
 	    }
 	  else if ((rc = mu_envelope_aget_date (env, &date)) != 0)
 	    {
 	      free (sender);
 	      sender = NULL;
-	      mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_aget_date",
-			       NULL, rc);
+	      crd_error (*crd, dim, "mu_envelope_aget_date: %s",
+			 mu_strerror (rc));
 	    }
 	  
 	  if (sender)
@@ -554,8 +610,8 @@ message_decode (mu_message_t msg, int what)
 		{
 		  free (sender);
 		  free (date);
-		  mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create",
-				   NULL, rc);
+		  crd_error (*crd, dim, "mu_envelope_create: %s",
+			     mu_strerror (rc));
 		}
 	    }
 	}

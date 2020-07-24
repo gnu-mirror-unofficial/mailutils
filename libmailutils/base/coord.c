@@ -50,8 +50,9 @@ mu_coord_realloc (mu_coord_t *ptr, size_t n)
 	  mu_coord_t nc = realloc (*ptr, (n + 1) * sizeof (nc[0]));
 	  if (nc == NULL)
 	    return ENOMEM;
-	  for (; i <= n; i++)
+	  while (++i <= n)
 	    nc[i] = 0;
+	  nc[0] = n;
 	  *ptr = nc;
 	}
     }
