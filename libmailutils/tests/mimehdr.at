@@ -290,5 +290,14 @@ MIMEHDR([whitespace in type],[mimehdr17],
 name=foo
 ])
 
+MIMEHDR([error tolerance],[mimehdr18],
+[],
+[application/x-stuff;name="one";title some text ; charset= utf8;
+output = foo bar],
+[application/x-stuff
+charset=utf8
+name=one
+])
+
 m4_popdef([MIMEHDR])
 m4_popdef([MIMEHDR_FAIL])

@@ -152,19 +152,12 @@ free_param_continuation (struct param_continuation *p)
    is already in ASSOC. If OUTCHARSET is not NULL, the value from
    CONT->param_value will be recoded to that charset before storing it. */
 static int
-flush_param (struct param_continuation *cont, mu_assoc_t assoc, int subset,
+flush_param (struct param_continuation *cont, mu_assoc_t assoc,
 	     const char *outcharset)
 {
   int rc;
-  struct mu_mime_param *param, **param_slot;
+  struct mu_mime_param *param;
   mu_off_t size;
-  
-  if (subset)
-    {
-      rc = mu_assoc_lookup_ref (assoc, cont->param_name, &param_slot);
-      if (rc)
-	return 0;
-    }
   
   param = calloc (1, sizeof *param);
   if (!param)
@@ -231,16 +224,9 @@ flush_param (struct param_continuation *cont, mu_assoc_t assoc, int subset,
       param->value = tmp;
     }
 	
-  if (subset)
-    {
-      *param_slot = param;
-    }
-  else
-    {
-      rc = mu_assoc_install (assoc, cont->param_name, param);
-      if (rc)
-	mu_mime_param_free (param);
-    }
+  rc = mu_assoc_install (assoc, cont->param_name, param);
+  if (rc)
+    mu_mime_param_free (param);
   
   return rc;
 }
@@ -275,7 +261,7 @@ getword (struct mu_wordsplit *ws, size_t *pi)
 static int
 parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
 	     struct param_continuation *param_cont,
-	     const char *outcharset, int subset)
+	     const char *outcharset)
 {
   size_t klen;
   char *key;
@@ -296,6 +282,7 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
   
   if (strcmp (key, ";") == 0)
     {
+      mu_assoc_tail_set_mark (assoc, 0);
       /* Reportedly, some MUAs insert several semicolons */
       do
 	{
@@ -306,7 +293,11 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
       while (strcmp (key, ";") == 0);
     }
   else
-    return MU_ERR_PARSE;
+    {
+      mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+		(_("semicolon missing (found %s)"), key));
+      return MU_ERR_PARSE;
+    }
   
   p = strchr (key, '=');
   if (p)
@@ -318,7 +309,11 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
 	  val = p;
 	}
       else if ((val = getword (ws, pi)) == NULL)
-	return MU_ERR_PARSE;
+	{
+	  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+		    (_("missing parameter value")));
+	  return MU_ERR_PARSE;
+	}
       /* key= WSP val */
     }
   else
@@ -332,11 +327,19 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
 	      val = p + 1;
 	    }
 	  else if ((val = getword (ws, pi)) == NULL)
-	    return MU_ERR_PARSE;
+	    {
+	      mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+			(_("missing parameter value")));
+	      return MU_ERR_PARSE;
+	    }
 	  /* key WSP = WSP val */
 	}
       else
-	return MU_ERR_PARSE;
+	{
+	  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+		    (_("missing = after parameter name")));
+	  return MU_ERR_PARSE;
+	}
     }
   
   klen = strlen (key);
@@ -361,9 +364,9 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
 	      if (*q && *q != '*')
 		{
 		  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
-			    (_("malformed parameter name %s: skipping"),
+			    (_("malformed parameter name %s"),
 			     key));
-		  return 0;
+		  return MU_ERR_PARSE;
 		}
 	      
 	      if (n != param_cont->param_cind)
@@ -372,15 +375,7 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
 			    (_("continuation index out of sequence in %s: "
 			       "skipping"),
 			     key));
-		  /* Ignore this parameter. Another possibility would be
-		     to drop the continuation assembled so far. That makes
-		     little difference, because the string is malformed
-		     anyway.
-		     
-		     We try to continue just to gather as many information
-		     as possible from this mess.
-		  */
-		  return 0;
+		  return MU_ERR_PARSE;
 		}
 
 	      if (n == 0)
@@ -401,10 +396,8 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
 		       memcmp (param_cont->param_name, key, klen))
 		{
 		  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
-			    (_("continuation name mismatch: %s: "
-			       "skipping"),
-			     key));
-		  return 0;
+			    (_("continuation name mismatch: %s"), key));
+		  return MU_ERR_PARSE;
 		}
 	      
 	      if (*q == '*')
@@ -422,7 +415,7 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
     }
   else if (param_cont->param_name)
     {
-      rc = flush_param (param_cont, assoc, subset, outcharset);
+      rc = flush_param (param_cont, assoc, outcharset);
       free_param_continuation (param_cont);
       if (rc)
 	return rc;
@@ -535,23 +528,13 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
       return ENOMEM;
     }
   
-  if (subset)
+  rc = mu_assoc_install (assoc, key, param);
+  if (rc)
     {
-      struct mu_mime_param **p;
-      if (mu_assoc_lookup_ref (assoc, key, &p) == 0)
-	*p = param;
-      else
-	mu_mime_param_free (param);
+      mu_mime_param_free (param);
+      return rc;
     }
-  else
-    {
-      rc = mu_assoc_install (assoc, key, param);
-      if (rc)
-	{
-	  mu_mime_param_free (param);
-	  return rc;
-	}
-    }
+  mu_assoc_tail_set_mark (assoc, 1);
   
   return 0;
 }
@@ -581,7 +564,8 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
 */
 static int
 _mime_header_parse (const char *text, char **pvalue,
-		    mu_assoc_t assoc, const char *outcharset, int subset)
+		    mu_assoc_t assoc, const char *outcharset,
+		    mu_assoc_t subset)
 {
   int rc = 0;
   struct mu_wordsplit ws;
@@ -636,13 +620,42 @@ _mime_header_parse (const char *text, char **pvalue,
     }
     
   memset (&cont, 0, sizeof (cont));
-  for (i = 0; (rc = parse_param (&ws, &i, assoc, &cont, outcharset, subset)) == 0;)
-    ;
-  if (rc == MU_ERR_USER0)
-    rc = 0;
+  i = 0;
+  while (1)
+    {
+      rc = parse_param (&ws, &i, assoc, &cont, outcharset);
+      if (rc)
+	{
+	  if (rc == MU_ERR_PARSE)
+	    {
+	      char *p;
+	      mu_assoc_sweep (assoc);		  
+	      /* Attempt error recovery */
+	      do
+		p = getword (&ws, &i);
+	      while (p && strcmp (p, ";"));
+	      if (p)
+		{
+		  mu_debug (MU_DEBCAT_MIME, MU_DEBUG_TRACE0,
+			    (_("finished error recovery at ; %s"),
+			     ws.ws_wordv[i]));
+		  /* put the semicolon back */
+		  i--;
+		  continue;
+		}
+	      rc = 0;
+	    }
+	  else if (rc == MU_ERR_USER0)
+	    rc = 0;
+	  break;
+	}
+    }
+
   if (rc == 0 && cont.param_name)
-    rc = flush_param (&cont, assoc, subset, outcharset);
+    rc = flush_param (&cont, assoc, outcharset);
   free_param_continuation (&cont);
+  mu_assoc_tail_set_mark (assoc, 0);
+  
   if (rc == 0)
     {
       if (pvalue)
@@ -653,26 +666,7 @@ _mime_header_parse (const char *text, char **pvalue,
   mu_wordsplit_free (&ws);
 
   if (subset)
-    {
-      /* Eliminate empty elements. */
-      mu_iterator_t itr;
-
-      rc = mu_assoc_get_iterator (assoc, &itr);
-      if (rc == 0)
-	{
-	  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
-	       mu_iterator_next (itr))
-	    {
-	      const char *name;
-	      struct mu_mime_param *p;
-	      
-	      mu_iterator_current_kv (itr, (const void **)&name, (void**)&p);
-	      if (!p)
-		mu_iterator_ctl (itr, mu_itrctl_delete, NULL);
-	    }
-	  mu_iterator_destroy (&itr);
-	}
-    }
+    mu_assoc_pull (subset, assoc);
   
   return rc;
 }
@@ -699,7 +693,14 @@ int
 mu_mime_header_parse_subset (const char *text, const char *cset,
 			     char **pvalue, mu_assoc_t assoc)
 {
-  return _mime_header_parse (text, pvalue, assoc, cset, 1);
+  mu_assoc_t tmp;
+  int rc = mu_mime_param_assoc_create (&tmp);
+  if (rc == 0)
+    {
+      rc = _mime_header_parse (text, pvalue, tmp, cset, assoc);
+      mu_assoc_destroy (&tmp);
+    }
+  return rc;
 }
 
 /* Parse header value from TEXT and return its value and parameters.
@@ -725,7 +726,7 @@ mu_mime_header_parse (const char *text, char const *cset, char **pvalue,
   rc = mu_mime_param_assoc_create (&assoc);
   if (rc == 0)
     {
-      rc = _mime_header_parse (text, pvalue, assoc, cset, 0);
+      rc = _mime_header_parse (text, pvalue, assoc, cset, NULL);
       if (rc || !passoc)
 	mu_assoc_destroy (&assoc);
       else
@@ -733,7 +734,7 @@ mu_mime_header_parse (const char *text, char const *cset, char **pvalue,
     }
   
   return rc;
-}  
+}
 
 /* TEXT is a value of a structured MIME header, e.g. Content-Type.
    This function returns the `disposition part' of it.  In other

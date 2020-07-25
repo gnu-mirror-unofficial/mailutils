@@ -31,6 +31,7 @@
 #include <mailutils/cctype.h>
 #include <mailutils/error.h>
 #include <mailutils/errno.h>
+#include <mailutils/cli.h>
 
 static int
 sort_names (char const *aname, void const *adata,
@@ -51,57 +52,69 @@ print_param (const char *name, void *item, void *data)
   return 0;
 }
 
+static void
+cli_debug (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  mu_debug_parse_spec (arg);
+}
+
+char *charset;
+char *header_name;
+unsigned long width = 76;
+
+struct mu_option options[] = {
+  { "debug", 0, "SPEC", MU_OPTION_DEFAULT,
+    "set debug level", mu_c_string, NULL, cli_debug },
+  { "charset", 0, "NAME", MU_OPTION_DEFAULT,
+    "convert values to this charset", mu_c_string, &charset },
+  { "header",  0, "NAME", MU_OPTION_DEFAULT,
+    "set header name", mu_c_string, &header_name },
+  { "width",   0, "N", MU_OPTION_DEFAULT,
+    "output width", mu_c_ulong, &width },
+  MU_OPTION_END
+};
+
 int
 main (int argc, char **argv)
 {
-  int i;
   int rc;
   mu_stream_t tmp;
   mu_transport_t trans[2];
   char *value;
   mu_assoc_t assoc;
-  char *charset = NULL;
-  char *header_name = NULL;
-  unsigned long width = 76;
   
   mu_set_program_name (argv[0]);
-  for (i = 1; i < argc; i++)
-    {
-      char *opt = argv[i];
-
-      if (strncmp (opt, "-debug=", 7) == 0)
-	mu_debug_parse_spec (opt + 7);
-      else if (strncmp (opt, "-charset=", 9) == 0)
-	charset = opt + 9;
-      else if (strcmp (opt, "-h") == 0 || strcmp (opt, "-help") == 0)
-	{
-	  mu_printf ("usage: %s [-charset=cs] [-debug=SPEC] [-header=NAME] [-width=N]", mu_program_name);
-	  return 0;
-	}
-      else if (strncmp (opt, "-header=", 8) == 0)
-	header_name = opt + 8;
-      else if (strncmp (opt, "-width=", 7) == 0)
-	width = strtoul (opt + 7, NULL, 10);
-      else
-	{
-	  mu_error ("unknown option %s", opt);
-	  return 1;
-	}
-    }
-
-  if (i != argc)
-    {
-      mu_error ("too many arguments");
-      return 1;
-    }
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_SINGLE_DASH,
+		 MU_CLI_OPTION_PROG_DOC, "mu_mime_header_parse test",
+		 MU_CLI_OPTION_PROG_ARGS, "[PARAM...]",
+		 MU_CLI_OPTION_EXTRA_INFO, "If arguments (PARAM) are "
+		 "specified, only the matching parameters will be displayed.",
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+		 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
 	    
   MU_ASSERT (mu_memory_stream_create (&tmp, MU_STREAM_RDWR));
   MU_ASSERT (mu_stream_copy (tmp, mu_strin, 0, NULL));
   MU_ASSERT (mu_stream_write (tmp, "", 1, NULL));
   MU_ASSERT (mu_stream_ioctl (tmp, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET,
 			      trans));
+
+  if (argc)
+    {
+      int i;
       
-  rc = mu_mime_header_parse ((char*)trans[0], charset, &value, &assoc);
+      MU_ASSERT (mu_mime_param_assoc_create (&assoc));
+      for (i = 0; i < argc; i++)
+	mu_assoc_install (assoc, argv[i], NULL);
+      rc = mu_mime_header_parse_subset ((char*)trans[0], charset, &value,
+					assoc);
+    }
+  else
+    {
+      rc = mu_mime_header_parse ((char*)trans[0], charset, &value, &assoc);
+    }
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_header_parse", NULL, rc);

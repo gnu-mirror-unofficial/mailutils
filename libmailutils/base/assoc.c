@@ -207,6 +207,27 @@ assoc_remove (mu_assoc_t assoc, unsigned idx)
   return 0;
 }
 
+static int
+assoc_remove_elem (mu_assoc_t assoc, struct _mu_assoc_elem *elem, int nd)
+{
+  unsigned i;
+
+  if (elem)
+    {
+      for (i = 0; i < hash_size[assoc->hash_num]; i++)
+	{
+	  if (assoc->tab[i] == elem)
+	    {
+	      if (nd)
+		assoc->tab[i]->data = NULL;
+	      assoc_remove (assoc, i);
+	      return 0;
+	    }
+	}
+    }
+  return MU_ERR_NOENT;
+}
+
 #define name_cmp(assoc,a,b) (((assoc)->flags & MU_ASSOC_ICASE) ? \
                              mu_c_strcasecmp(a,b) : strcmp(a,b))
 
@@ -502,22 +523,7 @@ itrctl (void *owner, enum mu_itrctl_req req, void *arg)
     case mu_itrctl_delete:
     case mu_itrctl_delete_nd:
       /* Delete current element */
-      if (itr->elem)
-	{
-	  unsigned i;
-
-	  for (i = 0; i < hash_size[assoc->hash_num]; i++)
-	    {
-	      if (assoc->tab[i] == itr->elem)
-		{
-		  if (req == mu_itrctl_delete_nd)
-		    assoc->tab[i]->data = NULL;
-		  assoc_remove (assoc, i);
-		  return 0;
-		}
-	    }
-	}
-      return MU_ERR_NOENT;
+      return assoc_remove_elem (assoc, itr->elem, req == mu_itrctl_delete_nd);
 
     case mu_itrctl_replace:
     case mu_itrctl_replace_nd:
@@ -843,12 +849,140 @@ mu_assoc_sweep (mu_assoc_t asc)
   if (!asc)
     return EINVAL;
 
-  for (i = hash_size[asc->hash_num]; i > 0; i--)
+  if (asc->tab)
     {
-      if (asc->tab[i-1] && asc->tab[i-1]->mark)
-	assoc_remove (asc, i-1);
+      for (i = hash_size[asc->hash_num]; i > 0; i--)
+	{
+	  if (asc->tab[i-1] && asc->tab[i-1]->mark)
+	    assoc_remove (asc, i-1);
+	}
     }
   
   return 0;
 }
 
+int
+mu_assoc_sweep_unset (mu_assoc_t asc)
+{
+  unsigned i;
+  
+  if (!asc)
+    return EINVAL;
+
+  if (asc->tab)
+    {
+      for (i = hash_size[asc->hash_num]; i > 0; i--)
+	{
+	  if (asc->tab[i-1] && asc->tab[i-1]->mark)
+	    {
+	      if (asc->free)
+		asc->free (asc->tab[i]->data);
+	      asc->tab[i]->data = NULL;
+	    }
+	}
+    }
+  
+  return 0;
+}
+
+int
+mu_assoc_set_mark (mu_assoc_t asc, char const *name, int mark)
+{
+  int rc;
+  unsigned i;
+
+  if (!asc || !name)
+    return EINVAL;
+  
+  rc = assoc_find_slot (asc, name, NULL, &i);
+  if (rc == 0)
+    asc->tab[i]->mark = !!mark;
+  return rc;
+}
+
+int
+mu_assoc_head_set_mark (mu_assoc_t asc, int mark)
+{
+  if (!asc)
+    return EINVAL;
+  if (asc->head)
+    asc->head->mark = !!mark;
+  return 0;
+}
+
+int
+mu_assoc_tail_set_mark (mu_assoc_t asc, int mark)
+{
+  if (!asc)
+    return EINVAL;
+  if (asc->tail)
+    asc->tail->mark = !!mark;
+  return 0;
+}
+
+int
+mu_assoc_pop (mu_assoc_t asc, char const *name, void *ret_val)
+{
+  if (!asc || !name)
+    return EINVAL;
+
+  if (asc->tail && ret_val != NULL)
+    {
+      *(void**)ret_val = asc->tail->data;
+    }
+  return assoc_remove_elem (asc, asc->tail, ret_val != NULL);
+}
+
+int
+mu_assoc_shift (mu_assoc_t asc, char const *name, void *ret_val)
+{
+  if (!asc || !name)
+    return EINVAL;
+
+  if (asc->head && ret_val != NULL)
+    {
+      *(void**)ret_val = asc->head->data;
+    }
+  return assoc_remove_elem (asc, asc->head, ret_val != NULL);
+}
+
+/* Given A and B - two associative arrays keeping the same kind of data,
+   move from B to A all elements whose names are present in A.  Remove
+   from A all elements not thus updated.
+*/
+void
+mu_assoc_pull (mu_assoc_t a, mu_assoc_t b)
+{
+  unsigned i;
+  
+  for (i = 0; i < hash_size[a->hash_num]; i++)
+    {
+      if (a->tab[i])
+	{
+	  unsigned j;
+	  int rc;
+	  
+	  rc = assoc_find_slot (b, a->tab[i]->name, NULL, &j);
+	  if (rc == 0)
+	    {
+	      if (a->free)
+		a->free (a->tab[i]->data);
+	      a->tab[i]->data = b->tab[j]->data;
+	      b->tab[j]->data = NULL;
+	      assoc_remove (b, j);
+	    }
+	  else
+	    assoc_remove (a, i);
+	}
+    }
+}  
+
+/* TODO
+   mu_assoc_union (mu_assoc_t *r, mu_assoc_t a, mu_assoc_t b)
+     Computes the union of A and B.  Stores the result in R.
+   mu_assoc_intersect (mu_assoc_t *r, mu_assoc_t a, mu_assoc_t b)
+     Computes the intersection of A and B.
+   mu_assoc_symdiff (mu_assoc_t *r, mu_assoc_t a, mu_assoc_t b)
+     Computes the symmetric difference (disjunctive union) of the two
+     arrays.
+*/

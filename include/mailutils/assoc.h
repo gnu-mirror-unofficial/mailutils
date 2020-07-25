@@ -55,9 +55,17 @@ typedef int (*mu_assoc_comparator_t) (const char *, const void *,
 int mu_assoc_sort_r (mu_assoc_t assoc, mu_assoc_comparator_t cmp, void *data);
   
 int mu_assoc_mark (mu_assoc_t asc, int (*cond) (char const *, void *, void *),
-		   void *data);
+		   void *data);  
+int mu_assoc_set_mark (mu_assoc_t asc, char const *name, int mark);
+int mu_assoc_head_set_mark (mu_assoc_t asc, int mark);
+int mu_assoc_tail_set_mark (mu_assoc_t asc, int mark);
+int mu_assoc_pop (mu_assoc_t asc, char const *name, void *ret_val);
+int mu_assoc_shift (mu_assoc_t asc, char const *name, void *ret_val);
+  
 int mu_assoc_sweep (mu_assoc_t asc);
-
+int mu_assoc_sweep_unset (mu_assoc_t asc);
+  
+void mu_assoc_pull (mu_assoc_t a, mu_assoc_t b);
   
 #ifdef __cplusplus
 }
