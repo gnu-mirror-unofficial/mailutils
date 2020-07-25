@@ -464,14 +464,9 @@ mu_parse822_quoted_string (const char **p, const char *e, char **qstr)
 	  /* invalid character... */
 	  *p += 1;
 	}
-      else if (mu_parse822_is_char (c))
-	{
-	  rc = str_append_char (qstr, c);
-	  *p += 1;
-	}
       else
 	{
-	  /* invalid character... */
+	  rc = str_append_char (qstr, c);
 	  *p += 1;
 	}
       if (rc)

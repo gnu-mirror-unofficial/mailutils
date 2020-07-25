@@ -336,6 +336,79 @@ crd_error (mu_coord_t crd, size_t n, char const *fmt, ...)
   mu_stream_write (mu_strerr, "\n", 1, NULL);
 }
 
+static inline int
+is_address_header (char const *name)
+{
+  return !mu_c_strcasecmp (name, MU_HEADER_TO) ||
+    !mu_c_strcasecmp (name, MU_HEADER_CC) ||
+    !mu_c_strcasecmp (name, MU_HEADER_BCC);
+}
+
+static void
+qstring_format (mu_stream_t stream, char const *s)
+{
+  char const *cp;
+  mu_stream_write (stream, "\"", 1, NULL);
+  while (*(cp = mu_str_skip_cset_comp (s, "\\\"")))
+    {
+      mu_stream_write (stream, s, cp - s, NULL);
+      mu_stream_write (stream, "\\", 1, NULL);
+      mu_stream_write (stream, cp, 1, NULL);
+      s = cp + 1;
+    }
+  if (*s)
+    mu_stream_write (stream, s, strlen (s), NULL);
+  mu_stream_write (stream, "\"", 1, NULL);
+}
+  
+static int
+address_decode (char const *name, char const *value, char const *charset,
+		mu_header_t newhdr)
+{
+  int rc;
+  mu_address_t addr;
+  mu_stream_t mstr;
+  mu_transport_t trans[2];
+  
+  rc = mu_memory_stream_create (&mstr, MU_STREAM_RDWR);
+  if (rc)
+    return rc;
+  
+  rc = mu_address_create (&addr, value);
+  if (rc == 0)
+    {
+      mu_address_t cur;
+      for (cur = addr; cur; cur = cur->next)
+	{
+	  char *s;
+	  
+	  rc = mu_rfc2047_decode (charset, cur->personal, &s);
+	  if (rc == 0)
+	    {
+	      qstring_format (mstr, s);
+	      free (s);
+	    }
+	  else
+	    qstring_format (mstr, cur->personal);
+	  mu_stream_printf (mstr, " <%s>", cur->email);
+	  if (cur->next)
+	    mu_stream_write (mstr, ", ", 2, NULL);
+	}
+      mu_stream_write (mstr, "", 1, NULL);
+      rc = mu_stream_err (mstr);
+      if (rc == 0)
+	{
+	  mu_stream_ioctl (mstr, MU_IOCTL_TRANSPORT,
+			   MU_IOCTL_OP_GET,
+			   trans);
+	  mu_header_append (newhdr, name, (char*)trans[0]);
+	}
+      mu_stream_destroy (&mstr);
+      mu_address_destroy (&addr);
+    }
+  return rc;
+}
+
 /*
  * Decode a single message or message part.
  *
@@ -459,7 +532,13 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	      else if (!mu_c_strcasecmp (name,
 					 MU_HEADER_CONTENT_TRANSFER_ENCODING))
 		continue;
-	  
+	      else if (is_address_header (name))
+		{
+		  if (address_decode (name, value, charset, newhdr))
+		    mu_header_append (newhdr, name, value);
+		  continue;
+		}
+	      
 	      rc = mu_rfc2047_decode (charset, value, &s);
 	      if (rc == 0)
 		{
@@ -562,7 +641,12 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  if (mu_c_strcasecmp (name, MU_HEADER_MIME_VERSION) == 0 ||
 	      mu_c_strcasecmp (name, MU_HEADER_CONTENT_TYPE) == 0)
 	    continue;
-	  
+	  else if (is_address_header (name))
+	    {
+	      if (address_decode (name, value, charset, newhdr) == 0)
+		mu_header_append (newhdr, name, value);
+	      continue;
+	    }
 	  rc = mu_rfc2047_decode (charset, value, &s);
 	  if (rc == 0)
 	    {
