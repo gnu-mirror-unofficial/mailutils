@@ -339,26 +339,45 @@ crd_error (mu_coord_t crd, size_t n, char const *fmt, ...)
 static inline int
 is_address_header (char const *name)
 {
-  return !mu_c_strcasecmp (name, MU_HEADER_TO) ||
+  return !mu_c_strcasecmp (name, MU_HEADER_FROM) ||
+    !mu_c_strcasecmp (name, MU_HEADER_TO) ||
     !mu_c_strcasecmp (name, MU_HEADER_CC) ||
     !mu_c_strcasecmp (name, MU_HEADER_BCC);
+}
+
+static int
+qstring_needed (char const *s)
+{
+  for (; *s; s++)
+    {
+      if (mu_isascii (*s) && !mu_istspec (*s))
+	continue;
+      return 1;
+    }
+  return 0;
 }
 
 static void
 qstring_format (mu_stream_t stream, char const *s)
 {
-  char const *cp;
-  mu_stream_write (stream, "\"", 1, NULL);
-  while (*(cp = mu_str_skip_cset_comp (s, "\\\"")))
+  if (qstring_needed (s))
     {
-      mu_stream_write (stream, s, cp - s, NULL);
-      mu_stream_write (stream, "\\", 1, NULL);
-      mu_stream_write (stream, cp, 1, NULL);
-      s = cp + 1;
+      char const *cp;
+  
+      mu_stream_write (stream, "\"", 1, NULL);
+      while (*(cp = mu_str_skip_cset_comp (s, "\\\"")))
+	{
+	  mu_stream_write (stream, s, cp - s, NULL);
+	  mu_stream_write (stream, "\\", 1, NULL);
+	  mu_stream_write (stream, cp, 1, NULL);
+	  s = cp + 1;
+	}
+      if (*s)
+	mu_stream_write (stream, s, strlen (s), NULL);
+      mu_stream_write (stream, "\"", 1, NULL);
     }
-  if (*s)
+  else
     mu_stream_write (stream, s, strlen (s), NULL);
-  mu_stream_write (stream, "\"", 1, NULL);
 }
   
 static int
@@ -643,7 +662,7 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	    continue;
 	  else if (is_address_header (name))
 	    {
-	      if (address_decode (name, value, charset, newhdr) == 0)
+	      if (address_decode (name, value, charset, newhdr))
 		mu_header_append (newhdr, name, value);
 	      continue;
 	    }
