@@ -189,6 +189,10 @@ struct mu_cfg_param mda_script_cfg[] = {
        "  i - sieve instructions trace (MU_SIEVE_DEBUG_INSTR)\n"
        "  l - sieve action logs\n"),
     N_("arg: string") },
+  { "message-id-header", mu_c_string, &message_id_header, 0, NULL,
+    N_("When logging Sieve actions, identify messages by the value of "
+       "this header."),
+    N_("name") },
   { NULL }
 };
 
