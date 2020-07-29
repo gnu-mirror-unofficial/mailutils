@@ -360,6 +360,8 @@ qstring_needed (char const *s)
 static void
 qstring_format (mu_stream_t stream, char const *s)
 {
+  if (!s)
+    return;
   if (qstring_needed (s))
     {
       char const *cp;
@@ -516,7 +518,9 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 		      char *vc = mu_strdup (value);
 		      size_t len;
 		      mu_string_unfold (vc, &len);
-		      rc = mu_content_type_parse (vc, NULL, &ct);
+		      rc = mu_content_type_parse_ext (vc, NULL,
+						      MU_CONTENT_TYPE_RELAXED,
+						      &ct);
 		      if (rc)
 			{
 			  crd_error (*crd, dim,
@@ -605,7 +609,7 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  mu_message_ref (msg);
 	  return msg;
 	}
-      rc = mu_content_type_parse (s, NULL, &ct);
+      rc = mu_content_type_parse_ext (s, NULL, MU_CONTENT_TYPE_RELAXED, &ct);
       if (rc)
 	{
 	  crd_error (*crd, dim, "mu_content_type_parse(%s): %s",
@@ -616,6 +620,13 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	}
       free (s);
 
+      if (!ct->subtype)
+	{
+	  mu_content_type_destroy (&ct);
+	  mu_message_ref (msg);
+	  return msg;
+	}
+      
       ++dim;
       if (dim > mu_coord_length (*crd))
 	{

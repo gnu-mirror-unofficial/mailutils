@@ -135,9 +135,16 @@ struct mu_content_type
 };
 
 typedef struct mu_content_type *mu_content_type_t;
-  
+ 
+#define MU_CONTENT_TYPE_STRICT   0x00 
+#define MU_CONTENT_TYPE_RELAXED  0x01
+#define MU_CONTENT_TYPE_PARAM    0x02
+
 int mu_content_type_parse (const char *input, const char *charset,
 			   mu_content_type_t *retct);
+int mu_content_type_parse_ext (const char *input, const char *charset,
+			       int flags,
+			       mu_content_type_t *retct);
 void mu_content_type_destroy (mu_content_type_t *pptr);
 
 int mu_content_type_format (mu_content_type_t ct, char **return_ptr);

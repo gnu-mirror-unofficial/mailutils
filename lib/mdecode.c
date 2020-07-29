@@ -48,10 +48,14 @@ text_mime_cmp (const void *item, const void *ptr)
 {
   const struct mime_pattern *pat = item;
   mu_content_type_t ct = (mu_content_type_t) ptr;
-  if (mu_imap_wildmatch_ci (pat->pat_type, ct->type, 0) == 0
-      && (pat->pat_subtype == NULL
-	  || mu_imap_wildmatch (pat->pat_subtype, ct->subtype, '/') == 0))
-    return 0;
+  if (mu_imap_wildmatch_ci (pat->pat_type, ct->type, 0) == 0)
+    {
+      if (ct->subtype == NULL)
+	return pat->pat_subtype != NULL;
+      if (pat->pat_subtype == NULL
+	  || mu_imap_wildmatch (pat->pat_subtype, ct->subtype, '/') == 0)
+	return 0;
+    }
   return 1;
 } 
 
@@ -211,7 +215,7 @@ message_body_stream (mu_message_t msg, int unix_header, char const *charset,
       return rc;
     }
 
-  rc = mu_content_type_parse (buf, NULL, &ct);
+  rc = mu_content_type_parse_ext (buf, NULL, MU_CONTENT_TYPE_RELAXED, &ct);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", buf, rc);

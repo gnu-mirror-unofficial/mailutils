@@ -48,15 +48,36 @@
 */   
 static int
 content_type_parse (const char *input, const char *charset,
+		    int flags,
 		    mu_content_type_t ct)
 {
   int rc;
   char *value, *p;
 
-  rc = mu_mime_header_parse (input, charset, &value, &ct->param);
-  if (rc)
-    return rc;
+  if (flags & MU_CONTENT_TYPE_PARAM)
+    {
+      rc = mu_mime_header_parse (input, charset, &value, &ct->param);
+      if (rc)
+	return rc;
+    }
+  else
+    {
+      size_t len;
 
+      input = mu_str_skip_class (input, MU_CTYPE_SPACE);
+      len = strcspn (input, ";");
+      value = malloc (len + 1);
+      if (!value)
+	{
+	  rc = errno;
+	  goto end;
+	}
+      memcpy (value, input, len);
+      value[len] = 0;
+      
+      ct->param = NULL;
+    }
+  
   p = strchr (value, '/');
   if (p)
     {
@@ -85,6 +106,16 @@ content_type_parse (const char *input, const char *charset,
       if (!ct->subtype)
 	rc = errno;
     }
+  else if (flags & MU_CONTENT_TYPE_RELAXED)
+    {
+      ct->type = strdup (value);
+      if (!ct->type)
+	{
+	  rc = errno;
+	  goto end;
+	}
+      ct->subtype = NULL;
+    }
   else
     rc = MU_ERR_PARSE;
  end:
@@ -93,8 +124,9 @@ content_type_parse (const char *input, const char *charset,
 }
 
 int
-mu_content_type_parse (const char *input, const char *charset,
-		       mu_content_type_t *retct)
+mu_content_type_parse_ext (const char *input, const char *charset,
+			   int flags,
+			   mu_content_type_t *retct)
 {
   int rc;
   mu_content_type_t ct;
@@ -107,13 +139,23 @@ mu_content_type_parse (const char *input, const char *charset,
   ct = calloc (1, sizeof (*ct));
   if (!ct)
     return errno;
-  rc = content_type_parse (input, charset, ct);
+  rc = content_type_parse (input, charset, flags, ct);
   if (rc)
     mu_content_type_destroy (&ct);
   else
     *retct = ct;
 
   return rc;
+}
+
+int
+mu_content_type_parse (const char *input, const char *charset,
+		       mu_content_type_t *retct)
+{
+  return mu_content_type_parse_ext (input, charset,
+				    MU_CONTENT_TYPE_STRICT |
+				    MU_CONTENT_TYPE_PARAM,
+				    retct);
 }
 
 void
@@ -187,8 +229,11 @@ mu_content_type_format (mu_content_type_t ct, char **return_ptr)
   mu_opool_setjmp (pool, &jmp);
 
   mu_opool_appendz (pool, ct->type);
-  mu_opool_append_char (pool, '/');
-  mu_opool_appendz (pool, ct->subtype);
+  if (ct->subtype)
+    {
+      mu_opool_append_char (pool, '/');
+      mu_opool_appendz (pool, ct->subtype);
+    }
   if (!mu_assoc_is_empty (ct->param))
     mu_assoc_foreach (ct->param, format_param, pool);
   mu_opool_append_char (pool, 0);

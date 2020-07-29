@@ -49,6 +49,13 @@ More patterns can be added to this list using the
 @xref{mime statement}, for a detailed discussion, and the
 configuration section below for a simple example.
 
+When processing old mesages you may encounter @samp{Content-Type}
+headers whose value contains only type, but no subtype.  To match
+such headers, use the pattern without @samp{/whatever} part.  E.g.
+@samp{text/*} matches @samp{text/plain} and @samp{text/html}, but
+does not match @samp{text}.  On the other hand, @samp{t*xt} does
+not match @samp{text/plain}, but does match @samp{text}.
+
 Optionally, the decoded parts can be converted to another character
 set. By default, the character set is not changed.
 
