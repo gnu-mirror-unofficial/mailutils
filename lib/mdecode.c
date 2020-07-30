@@ -215,10 +215,12 @@ message_body_stream (mu_message_t msg, int unix_header, char const *charset,
       return rc;
     }
 
-  rc = mu_content_type_parse_ext (buf, NULL, MU_CONTENT_TYPE_RELAXED, &ct);
+  rc = mu_content_type_parse_ext (buf, NULL,
+				  MU_CONTENT_TYPE_RELAXED |
+				  MU_CONTENT_TYPE_PARAM, &ct);
   if (rc)
     {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse", buf, rc);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse_ext", buf, rc);
       free (buf);
       return rc;
     }

@@ -519,12 +519,13 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 		      size_t len;
 		      mu_string_unfold (vc, &len);
 		      rc = mu_content_type_parse_ext (vc, NULL,
-						      MU_CONTENT_TYPE_RELAXED,
+						      MU_CONTENT_TYPE_RELAXED |
+						      MU_CONTENT_TYPE_PARAM,
 						      &ct);
 		      if (rc)
 			{
 			  crd_error (*crd, dim,
-				     "mu_content_type_parse(%s): %s",
+				     "mu_content_type_parse_ext(%s): %s",
 				     vc, mu_strerror (rc));
 			  free (vc);
 			  continue;
@@ -609,10 +610,12 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  mu_message_ref (msg);
 	  return msg;
 	}
-      rc = mu_content_type_parse_ext (s, NULL, MU_CONTENT_TYPE_RELAXED, &ct);
+      rc = mu_content_type_parse_ext (s, NULL,
+				      MU_CONTENT_TYPE_RELAXED |
+				      MU_CONTENT_TYPE_PARAM, &ct);
       if (rc)
 	{
-	  crd_error (*crd, dim, "mu_content_type_parse(%s): %s",
+	  crd_error (*crd, dim, "mu_content_type_parse_ext(%s): %s",
 		     s, mu_strerror (rc));
 	  free (s);
 	  mu_message_ref (msg);

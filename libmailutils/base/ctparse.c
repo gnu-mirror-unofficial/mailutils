@@ -51,7 +51,7 @@ content_type_parse (const char *input, const char *charset,
 		    int flags,
 		    mu_content_type_t ct)
 {
-  int rc;
+  int rc = 0;
   char *value, *p;
 
   if (flags & MU_CONTENT_TYPE_PARAM)
