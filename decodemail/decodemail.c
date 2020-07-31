@@ -75,8 +75,9 @@ define_charset (void)
 
 static mu_message_t message_decode (mu_message_t, mu_coord_t *, size_t);
 
-static void message_store_mbox (mu_message_t, mu_mailbox_t);
-static void message_store_stdout (mu_message_t, mu_mailbox_t);
+static void message_store_mbox (mu_message_t, mu_mailbox_t, mu_coord_t);
+static void message_store_stdout (mu_message_t, mu_mailbox_t, mu_coord_t);
+static void crd_error (mu_coord_t crd, size_t n, char const *fmt, ...);
 
 int
 main (int argc, char **argv)
@@ -84,7 +85,7 @@ main (int argc, char **argv)
   int rc;
   mu_mailbox_t imbox, ombox = NULL;
   char *imbox_name = NULL, *ombox_name = NULL;
-  void (*message_store) (mu_message_t, mu_mailbox_t);
+  void (*message_store) (mu_message_t, mu_mailbox_t, mu_coord_t);
   mu_iterator_t itr;
   unsigned long i;
   int err = 0;
@@ -220,7 +221,7 @@ main (int argc, char **argv)
 	}
       crd[1] = i;
       newmsg = message_decode (msg, &crd, 1);
-      message_store (newmsg, ombox);
+      message_store (newmsg, ombox, crd);
       mu_message_unref (newmsg);
     }
   mu_mailbox_destroy (&imbox);
@@ -233,13 +234,21 @@ main (int argc, char **argv)
 }
 
 static void
-message_store_mbox (mu_message_t msg, mu_mailbox_t mbx)
+message_store_mbox (mu_message_t msg, mu_mailbox_t mbx, mu_coord_t crd)
 {
   int rc = mu_mailbox_append_message (mbx, msg);
   if (rc)
     {
-      mu_error (_("cannot store message: %s"), mu_strerror (rc));
-      exit (EX_IOERR);
+      crd_error (crd, 1, _("cannot store message: %s"), mu_strerror (rc));
+      switch (rc)
+	{
+	case MU_ERR_INVALID_EMAIL:
+	case MU_ERR_EMPTY_ADDRESS:
+	  break;
+
+	default:
+	  exit (EX_IOERR);
+	}
     }
 }
 
@@ -304,7 +313,7 @@ body_print (mu_message_t msg)
 }
 
 static void
-message_store_stdout (mu_message_t msg, mu_mailbox_t mbx)
+message_store_stdout (mu_message_t msg, mu_mailbox_t mbx, mu_coord_t crd)
 {
   env_print (msg);
   hdr_print (msg);
@@ -653,7 +662,8 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  mu_mime_add_part (mime, msgdec);
 	  mu_message_unref (msgdec);
 	}
-
+      --dim;
+      
       mu_mime_to_message (mime, &newmsg);
       mu_mime_unref (mime);
       
