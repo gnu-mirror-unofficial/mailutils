@@ -325,7 +325,7 @@ mu_scan_datetime (const char *input, const char *fmt,
 #endif
   /* provide default timezone, in case it is not supplied in input */
   if (tz)
-    mu_datetime_tz_local (tz);
+    mu_datetime_tz_utc (tz);
 
   /* Skip leading whitespace */
   input = mu_str_skip_class (input, MU_CTYPE_BLANK);

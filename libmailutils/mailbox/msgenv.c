@@ -38,23 +38,61 @@
 /* Message envelope */
 
 static int
-get_received_date (mu_message_t msg, struct tm *tm, struct mu_timezone *tz)
+datetime_normalize (char const *in, char const *fmt, char **outptr)
 {
-  mu_header_t hdr;
   int rc;
-  char *val;
+  struct tm tm;
+  struct mu_timezone tz;
+  time_t t;
+  mu_stream_t str;
+  mu_off_t size;
+  char tmpbuf[MU_DATETIME_FROM_LENGTH+1];
+  char *out;
+
+  if (mu_scan_datetime (in, fmt, &tm, &tz, NULL) == 0)
+    rc = 0;
+  else if (mu_parse_date_dtl (in, NULL, NULL, &tm, &tz, NULL) == 0)
+    rc = 0;
+  else
+    return MU_ERR_FAILURE;
+
+  t = mu_datetime_to_utc (&tm, &tz);
+
+  rc = mu_fixed_memory_stream_create (&str, tmpbuf, sizeof (tmpbuf),
+				      MU_STREAM_RDWR);
+  if (rc)
+    return rc;
+
+  rc = mu_c_streamftime (str, MU_DATETIME_FROM, gmtime (&t), NULL);
+  if (rc)
+    goto err;
+
+  rc = mu_stream_seek (str, 0, MU_SEEK_CUR, &size);
+  if (rc)
+    goto err;
+
+  out = malloc (size + 1);
+  if (!out)
+    {
+      rc = errno;
+      goto err;
+    }
+
+  memcpy (out, tmpbuf, size);
+  out[size] = 0;
+  *outptr = out;
+ err:
+  mu_stream_unref (str);
+
+  return rc;
+}
+
+static int
+retr_received (char const *in, char **outptr)
+{
+  int rc = MU_ERR_NOENT;
   char *p;
-
-  rc = mu_message_get_header (msg, &hdr);
-  if (rc)
-    return rc;
-
-  rc = mu_header_aget_value_unfold_n (hdr, MU_HEADER_RECEIVED, -1, &val);
-  if (rc)
-    return rc;
-
-  rc = MU_ERR_NOENT;
-
+    
   /* RFC 5321, section-4.4 (page 58-59)
      Time-stamp-line  = "Received:" FWS Stamp <CRLF>
      Stamp      = From-domain By-domain Opt-info [CFWS] ";"
@@ -63,16 +101,25 @@ get_received_date (mu_message_t msg, struct tm *tm, struct mu_timezone *tz)
 		  ; but the "obs-" forms, especially two-digit
 		  ; years, are prohibited in SMTP and MUST NOT be used.
   */
-  p = strchr (val, ';');
+  p = strchr (in, ';');
   if (p)
     {
       p = mu_str_skip_class (p + 1, MU_CTYPE_SPACE);
-      if (*p && mu_scan_datetime (p, MU_DATETIME_SCAN_RFC822, tm, tz, NULL) == 0)
-	rc = 0;
+      rc = datetime_normalize (p, MU_DATETIME_SCAN_RFC822, outptr);
     }
-  free (val);
-
   return rc;
+}
+
+static int
+retr_env_date (char const *in, char **outptr)
+{
+  return datetime_normalize (in, MU_DATETIME_FROM, outptr);
+}
+
+static int
+retr_date (char const *in, char **outptr)
+{
+  return datetime_normalize (in, MU_DATETIME_SCAN_RFC822, outptr);
 }
 
 static int
@@ -92,46 +139,52 @@ message_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
     }
   else
     {
-      struct tm tm;
-      struct mu_timezone tz;
-      time_t t;
-      char tmpbuf[MU_DATETIME_FROM_LENGTH+1];
-      mu_stream_t str;
-      mu_off_t size;
+      static struct hdrdate {
+	char const *name;
+	int (*retr) (char const *, char **);
+      } hdrdate[] = {
+	{ MU_HEADER_RECEIVED, retr_received },
+	{ MU_HEADER_ENV_DATE, retr_env_date },
+	{ MU_HEADER_DATE, retr_date },
+	{ NULL }
+      };
+      int i;
+      mu_header_t hdr;
+      char *datestr = NULL;
+      
+      rc = mu_message_get_header (msg, &hdr);
+      if (rc)
+	return rc;
+      for (i = 0; hdrdate[i].name; i++)
+	{
+	  char *val;
+	  
+	  rc = mu_header_aget_value_unfold (hdr, hdrdate[i].name, &val);
+	  if (rc == MU_ERR_NOENT)
+	    continue;
+	  else if (rc)
+	    {
+	      mu_debug (MU_DEBCAT_MESSAGE, MU_DEBUG_ERROR,
+			("mu_header_aget_value_unfold(%s): %s",
+			 hdrdate[i].name, mu_strerror (rc)));
+	      continue;
+	    }
 
-      rc = get_received_date (msg, &tm, &tz);
+	  rc = hdrdate[i].retr (val, &datestr);
+	  free (val);
+	  if (rc == 0)
+	    break;
+	}
+
       if (rc)
 	return rc;
 
-      t = mu_datetime_to_utc (&tm, &tz);
-
-      rc = mu_fixed_memory_stream_create (&str, tmpbuf, sizeof (tmpbuf),
-					  MU_STREAM_RDWR);
-      if (rc)
-	return rc;
-
-      rc = mu_c_streamftime (str, MU_DATETIME_FROM, gmtime (&t), NULL);
-      if (rc)
-	{
-	  mu_stream_unref (str);
-	  return rc;
-	}
-
-      rc = mu_stream_seek (str, 0, MU_SEEK_CUR, &size);
-      if (rc)
-	{
-	  mu_stream_unref (str);
-	  return rc;
-	}
-
-      if (size > len)
-	size = len;
-
-      mu_stream_seek (str, 0, MU_SEEK_SET, NULL);
-      rc = mu_stream_read (str, buf, size, &n);
-      if (n < len)
-	buf[n] = 0;
-      mu_stream_unref (str);
+      n = strlen (datestr);
+      len--;
+      if (n > len)
+	n = len;
+      memcpy (buf, datestr, n);
+      buf[n] = 0;
     }
   if (pnwrite)
     *pnwrite = n;
