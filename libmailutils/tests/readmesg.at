@@ -1,0 +1,72 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2020 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([Reading message from stream])
+AT_KEYWORDS([readmesg])
+
+AT_DATA([input.mbox],
+[[From gray@example.net Sat Aug  1 10:53:43 2020
+Return-Path: <gray@example.net>
+Organization: Mailutils-tests
+Received: from example.net (localhost [127.0.0.1])
+	by example.net with ESMTP id g6G9BZb00791
+	for <gray@example.net>; Sat,  1 Aug 2020 13:53:43 +0300
+Message-Id: <200207160911.g6G9BZb00791@example.net>
+To: Bin <bin@example.org>
+Subject: Read from stream
+Date: Sat,  1 Aug 2020 13:53:43 +0300
+From: Sergey Poznyakoff <gray@example.net>
+
+This is a sample message.
+]])
+
+AT_DATA([input.mesg],
+[[Return-Path: <gray@example.net>
+Organization: Mailutils-tests
+Received: from example.net (localhost [127.0.0.1])
+	by example.net with ESMTP id g6G9BZb00791
+	for <gray@example.net>; Sat,  1 Aug 2020 13:53:43 +0300
+Message-Id: <200207160911.g6G9BZb00791@example.net>
+To: Bin <bin@example.org>
+Subject: Read from stream
+Date: Sat,  1 Aug 2020 13:53:43 +0300
+From: Sergey Poznyakoff <gray@example.net>
+
+This is a sample message.
+]])
+
+AT_DATA([expout],
+[Sender: gray@example.net
+Date: Sat Aug  1 10:53:43 2020
+Size: 425
+Lines: 12
+Headers: 8
+Header size: 399
+Header lines: 11
+Body size: 26
+Body lines: 1
+This is a sample message.
+])
+
+AT_CHECK([readmesg input.mbox],
+[0],
+[expout])
+
+AT_CHECK([readmesg input.mesg],
+[0],
+[expout])
+
+AT_CLEANUP

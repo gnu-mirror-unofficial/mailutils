@@ -19,22 +19,31 @@
 
 #include <mailutils/sys/stream.h>
 
+struct mu_substring_location
+{
+  size_t start;
+  size_t length;
+};
+
 struct _mu_message_stream
 {
   struct _mu_stream stream;
   mu_stream_t transport;  /* Actual stream */
   mu_off_t offset;
 
-  int construct_envelope;
-  char *envelope_string;
-  size_t envelope_length; 
-  char *from;
-  char *date;
-  size_t mark_offset;  /* Offset of the header separator */
-  size_t mark_length;  /* Length of the header separator (not counting the
-			  newline) */
-  mu_off_t body_start;
-  mu_off_t body_end;
+  int construct_envelope; /* If 1, construct the envelope. */
+  char *envelope_string;             /* The From_ line, if found. */
+  size_t envelope_length;            /* Total length of the From_ line,
+					including trailing whitespace (if any)
+					and final \n. */
+  struct mu_substring_location from; /* Sender location in envelope_string. */
+  struct mu_substring_location date; /* Date location in envelope_string. */
+
+  struct mu_substring_location mark; /* Location of the header separator in
+					stream. */
+
+  mu_off_t body_start;               /* Start of the body. */
+  mu_off_t body_end;                 /* End of the body. */
 };
 
 struct _mu_body_stream

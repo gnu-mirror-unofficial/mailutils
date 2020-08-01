@@ -10,7 +10,7 @@ Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa0"
 Content-ID: <5082.1026510189.0@example.net>
 Date: Sat, 13 Jul 2002 00:43:18 +0300
 From: Sergey Poznyakoff <gray@example.net>
-X-Envelope-Date: Sat Jul 13 00:43:18 2002
+X-Envelope-Date: Fri Jul 12 21:43:18 2002
 X-Envelope-Sender: gray@example.net
 
 ------- =_aaaaaaaaaa0

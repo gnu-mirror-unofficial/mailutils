@@ -56,6 +56,7 @@ noinst_PROGRAMS = \
  modmesg\
  parseopt\
  prop\
+ readmesg\
  recenv\
  scantime\
  strftime\
@@ -168,6 +169,7 @@ TESTSUITE_AT += \
  parseopt_help11.at\
  parseopt_help12.at\
  prop.at\
+ readmesg.at\
  recenv.at\
  scantime.at\
  strftime.at\

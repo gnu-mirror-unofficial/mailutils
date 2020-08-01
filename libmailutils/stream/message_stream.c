@@ -44,47 +44,50 @@
 
 
 static int
-_env_msg_date (mu_envelope_t envelope, char *buf, size_t len, size_t *pnwrite)
+envelope_substr (struct _mu_message_stream *str,
+		 struct mu_substring_location *loc,
+		 char *buf, size_t len, size_t *pnwrite)
 {
-  struct _mu_message_stream *str = mu_message_get_owner (mu_envelope_get_owner (envelope));
-  
-  if (!str || !str->date)
-    return EINVAL;
   if (buf)
     {
-      strncpy (buf, str->date, len);
-      buf[len-1] = 0;
+      if (len == 0)
+	return EINVAL;
+      --len;
+      if (len > loc->length)
+	len = loc->length;
+      strncpy (buf, str->envelope_string + loc->start, len);
+      buf[len] = 0;
       if (pnwrite)
 	*pnwrite = len;
     }
   else if (!pnwrite)
     return EINVAL;
   else
-    *pnwrite = strlen (str->date);
+    *pnwrite = loc->length;
   return 0;
+}
+
+static int
+_env_msg_date (mu_envelope_t envelope, char *buf, size_t len, size_t *pnwrite)
+{
+  struct _mu_message_stream *str =
+    mu_message_get_owner (mu_envelope_get_owner (envelope));
+  
+  if (!str)
+    return EINVAL;
+  return envelope_substr (str, &str->date, buf, len, pnwrite);
 }
 
 static int
 _env_msg_sender (mu_envelope_t envelope, char *buf, size_t len,
 		 size_t *pnwrite)
 {
-  struct _mu_message_stream *str = mu_message_get_owner (mu_envelope_get_owner (envelope));
+  struct _mu_message_stream *str =
+    mu_message_get_owner (mu_envelope_get_owner (envelope));
   
-  if (!str || !str->from)
+  if (!str)
     return EINVAL;
-  if (buf)
-    {
-      strncpy (buf, str->from, len);
-      buf[len-1] = 0;
-      if (pnwrite)
-	*pnwrite = len;
-    }
-  else if (!pnwrite)
-    return EINVAL;
-  else
-    *pnwrite = strlen (str->from);
-    
-  return 0;
+  return envelope_substr (str, &str->from, buf, len, pnwrite);
 }
 
 
@@ -96,13 +99,13 @@ _message_read (mu_stream_t stream, char *optr, size_t osize, size_t *nbytes)
   mu_off_t offset = s->offset + s->envelope_length;
   size_t rsize;
   
-  if (offset < s->mark_offset)
+  if (offset < s->mark.start)
     {
-      if (offset + osize >= s->mark_offset)
-	osize = s->mark_offset - offset;
+      if (offset + osize >= s->mark.start)
+	osize = s->mark.start - offset;
     }
   else
-    offset += s->mark_length;
+    offset += s->mark.length;
   /* FIXME: Seeking each time before read is awkward. The streamref
      should be modified to take care of it */
   rc = mu_stream_seek (s->transport, offset, MU_SEEK_SET, NULL);
@@ -126,23 +129,8 @@ _message_size (mu_stream_t stream, mu_off_t *psize)
   int rc = mu_stream_size (s->transport, psize);
   
   if (rc == 0)
-    *psize -= s->envelope_length + s->mark_length;
+    *psize -= s->envelope_length + s->mark.length;
   return rc;
-}
-
-static char *
-copy_trimmed_value (const char *str)
-{
-  char *p;
-  size_t len;
-  
-  str = mu_str_skip_class (str, MU_CTYPE_SPACE);
-  p = mu_str_skip_class_comp (str, MU_CTYPE_ENDLN);
-  len = p - str;
-  p = malloc (len + 1);
-  memcpy (p, str, len);
-  p[len] = 0;
-  return p;
 }
 
 static int
@@ -168,9 +156,6 @@ static int
 _message_open (mu_stream_t stream)
 {
   struct _mu_message_stream *str = (struct _mu_message_stream*) stream;
-  char *from = NULL;
-  char *env_from = NULL;
-  char *env_date = NULL;
   int rc;
   char *buffer = NULL;
   size_t bufsize = 0;
@@ -191,37 +176,27 @@ _message_open (mu_stream_t stream)
 	  str->envelope_length = len;
 	  if (str->construct_envelope)
 	    {
-	      char *s, *p;
-	  
-	      str->envelope_string = mu_strdup (buffer);
+	      len = mu_rtrim_class (buffer, MU_CTYPE_SPACE);
+	      str->envelope_string = strdup (buffer);
 	      if (!str->envelope_string)
 		return ENOMEM;
-	      str->envelope_string[len - 1] = 0;
-	      
-	      s = str->envelope_string + 5;
-	      p = strchr (s, ' ');
-	      
-	      if (p)
-		{
-		  size_t n = p - s;
-		  env_from = mu_alloc (n + 1);
-		  if (!env_from)
-		    return ENOMEM;
-		  memcpy (env_from, s, n);
-		  env_from[n] = 0;
-		  env_date = mu_strdup (p + 1);
-		  if (!env_date)
-		    {
-		      free (env_from);
-		      return ENOMEM;
-		    }
-		}
+
+	      str->from.start = 5;
+	      str->from.length =
+		strcspn (str->envelope_string + str->from.start, " \t");
+
+	      str->date.start = str->from.start + str->from.length +
+		strspn (str->envelope_string + str->from.start +
+			str->from.length, " \t");
+	      str->date.length = len - str->date.start;
+
+	      str->construct_envelope = 0;
 	    }
 	}
       else if (mu_mh_delim (buffer))
 	{
-	  str->mark_offset = offset;
-	  str->mark_length = len - 1; /* do not count the terminating
+	  str->mark.start = offset;
+	  str->mark.length = len - 1; /* do not count the terminating
 					 newline */
 	  break;
 	}
@@ -237,23 +212,6 @@ _message_open (mu_stream_t stream)
 	      return MU_ERR_INVALID_EMAIL;
 	    }
 	  has_headers = 1;
-	  if (str->construct_envelope && (!env_from || !env_date))
-	    {
-	      if (!from && mu_c_strncasecmp (buffer, MU_HEADER_FROM,
-					     sizeof (MU_HEADER_FROM) - 1) == 0)
-	    
-		from = copy_trimmed_value (buffer + sizeof (MU_HEADER_FROM));
-	      else if (!env_from
-		       && mu_c_strncasecmp (buffer, MU_HEADER_ENV_SENDER,
-					    sizeof (MU_HEADER_ENV_SENDER) - 1) == 0)
-		env_from = copy_trimmed_value (buffer +
-					       sizeof (MU_HEADER_ENV_SENDER));
-	      else if (!env_date
-		       && mu_c_strncasecmp (buffer, MU_HEADER_ENV_DATE,
-					    sizeof (MU_HEADER_ENV_DATE) - 1) == 0)
-		env_date = copy_trimmed_value (buffer +
-					       sizeof (MU_HEADER_ENV_DATE));
-	    }
 	}
       offset += len;
     }
@@ -266,45 +224,6 @@ _message_open (mu_stream_t stream)
   rc = mu_stream_size (transport, &body_end);
   if (rc)
     return rc;
-  
-  if (str->construct_envelope)
-    {
-      if (!env_from)
-	{
-	  if (from)
-	    {
-	      mu_address_t addr;
-	      
-	      mu_address_create (&addr, from);
-	      if (addr)
-		{
-		  mu_address_aget_email (addr, 1, &env_from);
-		  mu_address_destroy (&addr);
-		}
-	    }
-
-	  if (!env_from)
-	    env_from = mu_get_user_email (NULL);
-	}
-      free (from);
-      
-      if (!env_date)
-	{
-	  struct tm *tm;
-	  time_t t;
-	  char date[MU_DATETIME_FROM_LENGTH+1];
-	  
-	  time (&t);
-	  tm = gmtime (&t);
-	  mu_strftime (date, sizeof (date), MU_DATETIME_FROM, tm);
-	  env_date = strdup (date);
-	  if (!env_date)
-	    return ENOMEM;
-	}
-      
-      str->from = env_from;
-      str->date = env_date;
-    }
   
   str->body_start = body_start;
   str->body_end = body_end - 1;
@@ -325,8 +244,6 @@ _message_done (mu_stream_t stream)
   struct _mu_message_stream *s = (struct _mu_message_stream*) stream;
 
   free (s->envelope_string);
-  free (s->date);
-  free (s->from);
   mu_stream_destroy (&s->transport);
 }
 
@@ -436,28 +353,37 @@ mu_message_from_stream_with_envelope (mu_message_t *pmsg,
   
   mu_message_set_stream (msg, draftstream, draftstream);
 
+  sp = (struct _mu_message_stream *) draftstream;
+
   if (!env)
     {
-      /*
-       * FIXME: Currently the envelope *must* be owned by the message,
-       * otherwise _mu_message_free won't destroy it.
-       * The same holds true for attribute and body.
-       */
-      if ((rc = mu_envelope_create (&env, msg)))
+      if (sp->construct_envelope)
+	{
+	  /*
+	   * FIXME: Currently the envelope *must* be owned by the message,
+	   * otherwise _mu_message_free won't destroy it.
+	   * The same holds true for attribute and body.
+	   */
+	  rc = mu_message_reconstruct_envelope (msg, &env);
+	  sp->construct_envelope = 0;
+	}
+      else if ((rc = mu_envelope_create (&env, msg)) == 0)
+	{
+	  mu_envelope_set_date (env, _env_msg_date, msg);
+	  mu_envelope_set_sender (env, _env_msg_sender, msg);
+	}
+
+      if (rc)
 	{
 	  mu_message_destroy (&msg, draftstream);
 	  mu_stream_destroy (&draftstream);
 	  return rc;
 	}
-  
-      mu_envelope_set_date (env, _env_msg_date, msg);
-      mu_envelope_set_sender (env, _env_msg_sender, msg);
     }
   mu_message_set_envelope (msg, env, draftstream);
 
   mu_body_create (&body, msg);
-  /* FIXME: It would be cleaner to use ioctl here */
-  sp = (struct _mu_message_stream *) draftstream;
+
   rc = mu_streamref_create_abridged (&bstream, instream,
 				     sp->body_start, sp->body_end);
   if (rc)

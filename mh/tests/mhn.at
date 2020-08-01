@@ -294,7 +294,7 @@ To:      Bar <bar@dontmailme.org>
 From:    Foo Bar <foobar@nonexistent.net>
 Subject: Jabberwocky
 
-X-Envelope-Date: Fri Dec 28 22:18:09 2001
+X-Envelope-Date: Fri Dec 28 20:18:08 2001
 X-Envelope-Sender: foobar@nonexistent.net
 
 part       text/plain               937
@@ -601,7 +601,7 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 22:18:09 2001
+X-Envelope-Date: Fri Dec 28 20:18:08 2001
 X-Envelope-Sender: foobar@nonexistent.net
 
 `Twas brillig, and the slithy toves
@@ -651,7 +651,7 @@ From: Bar <bar@dontmailme.org>
 To: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
 Subject: Re: Jabberwocky
-X-Envelope-Date: Fri Dec 28 23:28:09 2001
+X-Envelope-Date: Fri Dec 28 20:18:08 2001
 X-Envelope-Sender: bar@dontmailme.org
 
 It seems very pretty, but it's *rather* hard to understand!'
@@ -674,7 +674,7 @@ Content-Type: multipart/mixed; boundary="BOUNDARY-2"
 Content-ID: 1
 Date: Sat, 13 Jul 2002 00:43:18 +0300
 From: Sergey Poznyakoff <gray@example.net>
-X-Envelope-Date: Sat Jul 13 00:43:18 2002
+X-Envelope-Date: Fri Jul 12 21:43:18 2002
 X-Envelope-Sender: gray@example.net
 
 --BOUNDARY-2
@@ -728,7 +728,7 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 22:18:09 2001
+X-Envelope-Date: Fri Dec 28 20:18:08 2001
 X-Envelope-Sender: foobar@nonexistent.net
 
 `Twas brillig, and the slithy toves
@@ -778,7 +778,7 @@ From: Bar <bar@dontmailme.org>
 To: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
 Subject: Re: Jabberwocky
-X-Envelope-Date: Fri Dec 28 23:28:09 2001
+X-Envelope-Date: Fri Dec 28 20:18:08 2001
 X-Envelope-Sender: bar@dontmailme.org
 
 It seems very pretty, but it's *rather* hard to understand!'
@@ -801,7 +801,7 @@ Content-Type: multipart/mixed; boundary="BOUNDARY-2"
 Content-ID: 1
 Date: Sat, 13 Jul 2002 00:43:18 +0300
 From: Sergey Poznyakoff <gray@example.net>
-X-Envelope-Date: Sat Jul 13 00:43:18 2002
+X-Envelope-Date: Fri Jul 12 21:43:18 2002
 X-Envelope-Sender: gray@example.net
 
 --BOUNDARY-2
@@ -851,7 +851,7 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 22:18:09 2001
+X-Envelope-Date: Fri Dec 28 20:18:08 2001
 X-Envelope-Sender: foobar@nonexistent.net
 
 `Twas brillig, and the slithy toves
@@ -984,7 +984,7 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 22:18:09 2001
+X-Envelope-Date: Fri Dec 28 20:18:08 2001
 X-Envelope-Sender: foobar@nonexistent.net
  
 `Twas brillig, and the slithy toves

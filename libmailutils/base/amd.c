@@ -105,10 +105,6 @@ static int amd_pool_open_count (struct _amd_data *amd);
 static void amd_pool_flush (struct _amd_data *amd);
 static struct _amd_message **amd_pool_lookup (struct _amd_message *mhm);
 
-static int amd_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
-			      size_t *psize);
-static int amd_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
-			        size_t *psize);
 static int amd_remove_mbox (mu_mailbox_t mailbox);
 
 
@@ -634,14 +630,12 @@ _amd_attach_message (mu_mailbox_t mailbox, struct _amd_message *mhm,
   /* Set the envelope.  */
   {
     mu_envelope_t envelope = NULL;
-    status = mu_envelope_create (&envelope, msg);
+    status = mu_message_reconstruct_envelope (msg, &envelope);
     if (status != 0)
       {
 	mu_message_destroy (&msg, mhm);
 	return status;
       }
-    mu_envelope_set_sender (envelope, amd_envelope_sender, msg);
-    mu_envelope_set_date (envelope, amd_envelope_date, msg);
     mu_message_set_envelope (msg, envelope, mhm);
   }
 
@@ -2123,97 +2117,6 @@ amd_unset_attr_flags (mu_attribute_t attr, int flags)
   if (mhm == NULL)
     return EINVAL;
   mhm->attr_flags &= ~flags;
-  return 0;
-}
-
-/* Envelope */
-static int
-amd_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
-		   size_t *psize)
-{
-  mu_message_t msg = mu_envelope_get_owner (envelope);
-  struct _amd_message *mhm = mu_message_get_owner (msg);
-  mu_header_t hdr = NULL;
-  const char *date;
-  char datebuf[25]; /* Buffer for the output of ctime (terminating nl being
-		       replaced by 0) */
-  int status;
-  
-  if (mhm == NULL)
-    return EINVAL;
-
-  if ((status = mu_message_get_header (msg, &hdr)) != 0)
-    return status;
-  if (mu_header_sget_value (hdr, MU_HEADER_ENV_DATE, &date)
-      && mu_header_sget_value (hdr, MU_HEADER_DELIVERY_DATE, &date))
-    return MU_ERR_NOENT;
-  else
-    {
-      time_t t;
-      int rc;
-      
-      /* Convert to ctime format */
-      rc = mu_parse_date (date, &t, NULL); /* FIXME: TZ info is lost */
-      if (rc)
-	return MU_ERR_NOENT;
-      memcpy (datebuf, ctime (&t), sizeof (datebuf) - 1);
-      datebuf[sizeof (datebuf) - 1] = 0; /* Kill the terminating newline */
-      date = datebuf;
-    }
-
-  /* Format:  "sender date" */
-  if (buf && len > 0)
-    {
-      len--; /* Leave space for the null.  */
-      strncpy (buf, date, len);
-      if (strlen (date) < len)
-	{
-	  len = strlen (buf);
-	  if (buf[len-1] != '\n')
-	    buf[len++] = '\n';
-	}
-      buf[len] = '\0';
-    }
-  else
-    len = strlen (date);
-  
-  if (psize)
-    *psize = len;
-  return 0;
-}
-
-static int
-amd_envelope_sender (mu_envelope_t envelope, char *buf, size_t len, size_t *psize)
-{
-  mu_message_t msg = mu_envelope_get_owner (envelope);
-  struct _amd_message *mhm = mu_message_get_owner (msg);
-  mu_header_t hdr = NULL;
-  char *from;
-  int status;
-
-  if (mhm == NULL)
-    return EINVAL;
-
-  if ((status = mu_message_get_header (msg, &hdr)))
-    return status;
-  if ((status = mu_header_aget_value (hdr, MU_HEADER_ENV_SENDER, &from)))
-    return status;
-
-  if (buf && len > 0)
-    {
-      int slen = strlen (from);
-
-      if (len < slen + 1)
-	slen = len - 1;
-      memcpy (buf, from, slen);
-      buf[slen] = 0;
-    }
-  else
-    len = strlen (from);
-
-  if (psize)
-    *psize = len;
-  free (from);
   return 0;
 }
 
