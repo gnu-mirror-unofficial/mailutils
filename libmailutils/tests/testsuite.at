@@ -257,6 +257,7 @@ m4_include([globtest.at])
 
 m4_include([linetrack.at])
 
+m4_include([recenv.at])
 
 m4_popdef([MU_TEST_GROUP])
 m4_popdef([MU_TEST_KEYWORDS])

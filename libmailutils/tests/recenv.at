@@ -1,0 +1,56 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2020 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_BANNER([Reconstructed message envelope])
+dnl ------------------------------------------------------------
+dnl TESTENV(DESCR, MSG, [STATUS = `0'], [STDOUT = `'],
+dnl          [STDERR = `'], [RUN-IF-FAIL], [RUN-IF-PASS])
+dnl
+m4_pushdef([TESTENV],
+[AT_SETUP([$1])
+AT_KEYWORDS([recenv])
+AT_DATA([input],[$2
+])
+AT_CHECK([recenv input],
+m4_shift(m4_shift($@)))
+AT_CLEANUP
+])
+
+TESTENV([From Return-Path],
+[Return-Path: <daemon@example.org>
+From: root@example.com
+To: gray@example.com
+Subject: reconstructed environment test
+
+content
+],
+[0],
+[daemon@example.org
+])
+
+TESTENV([Fall back to From if invalid Return-Path],
+[Return-Path: foo@bar@baz
+From: root@example.com
+To: gray@example.com
+Subject: reconstructed environment test
+
+content
+],
+[0],
+[root@example.com
+])
+
+m4_popdef([TESTENV])

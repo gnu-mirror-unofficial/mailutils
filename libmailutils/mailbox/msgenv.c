@@ -74,7 +74,7 @@ get_received_date (mu_message_t msg, struct tm *tm, struct mu_timezone *tz)
 
   return rc;
 }
-
+
 static int
 message_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
 		       size_t *pnwrite)
@@ -138,6 +138,21 @@ message_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
   return rc;
 }
 
+static inline void
+save_return (char const *value, char *buf, size_t len, size_t *pnwrite)
+{
+  size_t n = strlen (value);
+  if (buf && len > 0)
+    {
+      len--; /* One for the null.  */
+      n = (n < len) ? n : len;
+      memcpy (buf, value, n);
+      buf[n] = '\0';
+    }
+  if (pnwrite)
+    *pnwrite = n;
+}
+
 static int
 message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
 			 size_t *pnwrite)
@@ -146,7 +161,7 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
   mu_header_t header;
   int status;
   const char *sender;
-  struct mu_auth_data *auth = NULL;
+  struct mu_auth_data *auth;
   static char *hdrnames[] = {
     "Return-Path",
     "X-Envelope-Sender",
@@ -155,7 +170,8 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
     "From",
     NULL
   };
-  mu_address_t address = NULL;
+  int i;
+  int save_i = -1;
 
   if (msg == NULL)
     return EINVAL;
@@ -164,43 +180,80 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
   status = mu_message_get_header (msg, &header);
   if (status)
     return status;
-  status = mu_header_sget_firstof (header, hdrnames, &sender, NULL);
-  if (status)
+
+  for (i = 0; hdrnames[i]; i++)
     {
-      auth = mu_get_auth_by_uid (getuid ());
-      if (!auth)
-	return MU_ERR_NOENT;
-      sender = auth->name;
+      mu_address_t address;
+      status = mu_header_sget_value (header, hdrnames[i], &sender);
+      if (status == MU_ERR_NOENT)
+	continue;
+      else if (status)
+	{
+	  mu_debug (MU_DEBCAT_MESSAGE, MU_DEBUG_ERROR,
+		    ("mu_header_sget_value(%s): %s",
+		     hdrnames[i], mu_strerror (status)));
+	  continue;
+	}
+
+      status = mu_address_create (&address, sender);
+      if (status == MU_ERR_INVALID_EMAIL)
+	{
+	  if (save_i == -1)
+	    save_i = i;
+	  continue;
+	}
+      else if (status)
+	{	
+	  mu_debug (MU_DEBCAT_MESSAGE, MU_DEBUG_ERROR,
+		    ("mu_address_create(%s): %s",
+		     sender, mu_strerror (status)));
+	  continue;
+	}
+
+      status = mu_address_sget_email (address, 1, &sender);
+      if (status)
+	{
+	  mu_debug (MU_DEBCAT_MESSAGE, MU_DEBUG_ERROR,
+		    ("mu_address_sget_email(%s): %s",
+		     address->printable, mu_strerror (status)));
+	  mu_address_destroy (&address);
+	  continue;
+	}	  
+      save_return (sender, buf, len, pnwrite);
+      mu_address_destroy (&address);
+      return 0;
     }
 
-  status = mu_address_create (&address, sender);
-  if (status == 0)
+  if (save_i)
     {
-      status = mu_address_sget_email (address, 1, &sender);
+      status = mu_header_sget_value (header, hdrnames[save_i], &sender);
       if (status == 0)
 	{
-	  if (sender == NULL)
-	    status = MU_ERR_NOENT;
-	  else
-	    {
-	      size_t n = strlen (sender);
-	      if (buf && len > 0)
-		{
-		  len--; /* One for the null.  */
-		  n = (n < len) ? n : len;
-		  memcpy (buf, sender, n);
-		  buf[n] = '\0';
-		}
-	      if (pnwrite)
-		*pnwrite = n;
-	    }
+	  save_return (sender, buf, len, pnwrite);
+	  return 0;
 	}
-      mu_address_destroy (&address);
     }
-  
-  if (auth)
-    mu_auth_data_free (auth);
 
+  auth = mu_get_auth_by_uid (getuid ());
+  if (!auth)
+    return MU_ERR_NOENT;
+  save_return (auth->name, buf, len, pnwrite);
+  mu_auth_data_free (auth);
+
+  return 0;
+}
+
+int
+mu_message_reconstruct_envelope (mu_message_t msg, mu_envelope_t *penv)
+{
+  mu_envelope_t env;
+  int status = mu_envelope_create (&env, msg);
+  if (status == 0)
+    {
+      mu_envelope_set_sender (env, message_envelope_sender, msg);
+      mu_envelope_set_date (env, message_envelope_date, msg);
+      *penv = env;
+    }
   return status;
 }
 
@@ -214,13 +267,9 @@ mu_message_get_envelope (mu_message_t msg, mu_envelope_t *penvelope)
 
   if (msg->envelope == NULL)
     {
-      mu_envelope_t envelope;
-      int status = mu_envelope_create (&envelope, msg);
+      int status = mu_message_reconstruct_envelope (msg, &msg->envelope);
       if (status != 0)
 	return status;
-      mu_envelope_set_sender (envelope, message_envelope_sender, msg);
-      mu_envelope_set_date (envelope, message_envelope_date, msg);
-      msg->envelope = envelope;
     }
   *penvelope = msg->envelope;
   return 0;

@@ -999,7 +999,26 @@ mu_parse822_route_addr (const char **p, const char *e, mu_address_t *a,
 
   mu_parse822_route (p, e, &route);
 
-  if ((rc = mu_parse822_addr_spec (p, e, a, hint, hflags)))
+  rc = mu_parse822_addr_spec (p, e, a, hint, hflags);
+  if (rc == EPARSE && (hflags & MU_ADDR_HINT_DOMAIN))
+    {
+      /*
+       * Although not allowed by RFC, a local part alone sometimes
+       * appears between '<' and '>' (notably, in the Return-Path
+       * header).  Accept such addresses, if the default domain is
+       * set in hints.
+       */
+      char *local_part = NULL;
+      rc = mu_parse822_local_part (p, e, &local_part);
+      if (rc == EOK && (rc = mu_parse822_special (p, e, '>')) == EOK)
+	{
+	  rc = fill_mb (a, 0, 0, local_part, NULL, hint, hflags);
+	  if (rc == EOK)
+	    return rc;
+	}
+    }
+  
+  if (rc != EOK)
     {
       *p = save;
 
@@ -1107,7 +1126,7 @@ mu_parse822_addr_spec (const char **p, const char *e, mu_address_t *a,
   if (!rc)
     {
       rc = mu_parse822_special (p, e, '@');
-      
+
       if (!rc)
 	{
 	  rc = mu_parse822_domain (p, e, &domain);
