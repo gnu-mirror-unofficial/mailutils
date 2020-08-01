@@ -456,7 +456,7 @@ static mu_message_t
 message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 {
   mu_message_t newmsg;
-  int ismime;
+  int ismime = 0;
   int rc;
 
   mu_message_is_multipart (msg, &ismime);

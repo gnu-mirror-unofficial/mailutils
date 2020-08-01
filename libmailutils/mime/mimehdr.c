@@ -529,8 +529,17 @@ parse_param (struct mu_wordsplit *ws, size_t *pi, mu_assoc_t assoc,
     }
   
   rc = mu_assoc_install (assoc, key, param);
-  if (rc)
+  switch (rc)
     {
+    case 0:
+      break;
+      
+    case MU_ERR_EXISTS:
+      mu_debug (MU_DEBCAT_MIME, MU_DEBUG_ERROR,
+		("MIME parameter %s duplicated", key));
+      break;
+
+    default:
       mu_mime_param_free (param);
       return rc;
     }
