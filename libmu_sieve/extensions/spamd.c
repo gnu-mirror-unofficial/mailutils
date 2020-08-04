@@ -254,7 +254,7 @@ spamd_read_line (mu_sieve_machine_t mach, mu_stream_t stream,
       /* FIXME: Need an 'onabort' mechanism in Sieve machine, which
 	 would restore the things to their prior state.  This will
 	 also allow to make handler local again. */
-      free (pbuffer);
+      free (*pbuffer);
       mu_sieve_error (mach, "read error: %s", mu_strerror (rc));
       spamd_abort (mach, &stream, handler);
     }

@@ -26,7 +26,7 @@ main (int argc, char **argv)
   struct mu_sockaddr *sa, *ap;
   int rc, i;
   char *node = NULL, *serv = NULL;
-  char *urlstr;
+  char *urlstr = NULL;
   
   mu_set_program_name (argv[0]);
 

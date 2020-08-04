@@ -649,7 +649,15 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
       
       mu_mime_create_multipart (&mime, ct->subtype, ct->param);
       mu_content_type_destroy (&ct);
-      mu_message_get_num_parts (msg, &nparts);
+      rc = mu_message_get_num_parts (msg, &nparts);
+      if (rc)
+	{
+	  crd_error (*crd, dim, "mu_message_get_num_parts(%s): %s",
+		     MU_HEADER_CONTENT_TYPE, mu_strerror (rc));
+	  --dim;
+	  mu_message_ref (msg);
+	  return msg;
+	}
 
       for (i = 1; i <= nparts; i++)
 	{

@@ -357,12 +357,11 @@ mu_body_size (mu_body_t body, size_t *psize)
     return MU_ERR_OUT_PTR_NULL;
   if (body->_size)
     return body->_size (body, psize);
-  /* Fall on the stream.  */
+  /* Fall back on the transport stream.  */
   rc = body_get_transport (body, BODY_RDONLY, &str);
   if (rc)
     return rc;
   rc = mu_stream_size (str, &s);
-  mu_stream_unref (str);
   *psize = s;
   return 0;
 }

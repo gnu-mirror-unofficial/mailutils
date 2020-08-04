@@ -80,7 +80,7 @@ int
 mu_parse_stream_perm_string (int *pmode, const char *str, const char **endp)
 {
   int mode = 0;
-  int f;
+  int f = 0;
   while (*str)
     {
       switch (*str)

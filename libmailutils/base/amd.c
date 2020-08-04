@@ -321,7 +321,8 @@ amd_msg_lookup (struct _amd_data *amd, struct _amd_message *msg,
     }
   
   rc = amd_msg_bsearch (amd, 0, amd->msg_count - 1, msg, &i);
-  *pret = i + 1;
+  if (rc == 0)
+    *pret = i + 1;
   return rc;
 }
 
@@ -1979,10 +1980,13 @@ amd_body_stream_readdelim (mu_stream_t is, char *buffer, size_t buflen,
 static int
 amd_body_stream_seek (mu_stream_t str, mu_off_t off, mu_off_t *presult)
 {
+  int rc;
   size_t size;
   struct _amd_body_stream *amdstr = (struct _amd_body_stream *)str;
   
-  amd_body_size (amdstr->body, &size);
+  rc = amd_body_size (amdstr->body, &size);
+  if (rc)
+    return rc;
 
   if (off < 0 || off > size)
     return ESPIPE;

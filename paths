@@ -35,7 +35,7 @@
 #       d       -- The same as test:d
 #	c	-- The same as test:c
 #	b	-- The same as test:b
-#	<ach.h>:SYMBOL
+#	<ack.h>:SYMBOL
 #		-- If SYMBOL is defined in <ack.h>, use SYM
 #       <ack.h> -- The same as <ack.h>:_PATH_FOO
 #       search:NAME:PATH

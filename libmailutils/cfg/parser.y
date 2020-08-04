@@ -1293,6 +1293,7 @@ split_cfg_path (const char *path, int *pargc, char ***pargv)
 	{
 	  mu_error (_("cannot split line `%s': %s"), path,
 		    mu_wordsplit_strerror (&ws));
+	  mu_wordsplit_free (&ws);
 	  return errno;
 	}
       argc = ws.ws_wordc;

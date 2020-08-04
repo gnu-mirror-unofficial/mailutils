@@ -91,10 +91,11 @@ mu_readlink (const char *name, char **pbuf, size_t *psize, size_t *plen)
 	}
       size = 0;
     }
+  else if (plen)
+    *plen = linklen;
+  
   *pbuf = buf;
   *psize = size;
-  if (plen)
-    *plen = linklen;
   return status;
 }
 

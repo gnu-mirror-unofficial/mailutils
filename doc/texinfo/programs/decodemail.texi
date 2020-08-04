@@ -14,9 +14,7 @@ the output, regardless of whether a change was made.
 The message parts deemed to be textual are those whose
 @samp{Content-Type} header matches a predefined, or user-defined,
 mime type pattern. In addition, encoded pieces of the @samp{From:},
-@samp{To:}, @samp{Subject:}, etc., headers are decoded. A non-mime
-message which has a textual content type and is encoded in base64 or
-quoted-printable is likewise decoded.
+@samp{To:}, @samp{Subject:}, etc., headers are decoded.
 
 For example, @command{decodemail} makes this transformation:
 
