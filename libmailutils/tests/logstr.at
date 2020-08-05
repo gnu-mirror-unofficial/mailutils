@@ -73,5 +73,11 @@ input:1.1-next:5.10: default
 20. fmt: set locus
 a:10.5-b:14.8: one
 a:10.5-b:14.8: default
+21. prefix
+LOG1: one
+LOG2: two
+prefix off
+LOG2: prefix on
+three
 ])
 AT_CLEANUP

@@ -32,6 +32,7 @@ struct _mu_log_stream
   int sevmask;             /* Mask out the output of severity level for
 			      these severities. */
   struct mu_locus_range locrange;  /* Location in the source file */
+  char const *prefix;      /* Optinal prefix */
 };
 
 void _mu_log_stream_setup (struct _mu_log_stream *sp, mu_stream_t transport);

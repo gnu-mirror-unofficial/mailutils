@@ -34,7 +34,8 @@ extern "C" {
 
 #define MU_LOGMODE_SEVERITY     0x0001
 #define MU_LOGMODE_LOCUS        0x0002
-
+#define MU_LOGMODE_PREFIX       0x0004
+  
 int mu_log_stream_create (mu_stream_t *, mu_stream_t); 
 int mu_syslog_stream_create (mu_stream_t *, int);
 

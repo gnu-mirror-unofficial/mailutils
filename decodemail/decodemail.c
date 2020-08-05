@@ -75,9 +75,33 @@ define_charset (void)
 
 static mu_message_t message_decode (mu_message_t, mu_coord_t *, size_t);
 
-static void message_store_mbox (mu_message_t, mu_mailbox_t, mu_coord_t);
-static void message_store_stdout (mu_message_t, mu_mailbox_t, mu_coord_t);
-static void crd_error (mu_coord_t crd, size_t n, char const *fmt, ...);
+static void message_store_mbox (mu_message_t, mu_mailbox_t);
+static void message_store_stdout (mu_message_t, mu_mailbox_t);
+
+static void
+enable_log_prefix (int on)
+{
+  int mode;
+  
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
+  if (on)
+    mode |= MU_LOGMODE_PREFIX;
+  else
+    mode &= ~MU_LOGMODE_PREFIX;
+  
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+}
+
+static void
+set_log_prefix (mu_coord_t crd, size_t dim)
+{
+  char *prefix = mu_coord_part_string (crd, dim);
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_PREFIX, prefix);
+  free (prefix);
+}
 
 int
 main (int argc, char **argv)
@@ -85,7 +109,7 @@ main (int argc, char **argv)
   int rc;
   mu_mailbox_t imbox, ombox = NULL;
   char *imbox_name = NULL, *ombox_name = NULL;
-  void (*message_store) (mu_message_t, mu_mailbox_t, mu_coord_t);
+  void (*message_store) (mu_message_t, mu_mailbox_t);
   mu_iterator_t itr;
   unsigned long i;
   int err = 0;
@@ -205,7 +229,8 @@ main (int argc, char **argv)
   rc = mu_coord_alloc (&crd, 1);
   if (rc)
     mu_alloc_die ();
-  
+
+  enable_log_prefix (1);
   for (mu_iterator_first (itr), i = 1; !mu_iterator_is_done (itr);
        mu_iterator_next (itr), i++)
     {
@@ -221,9 +246,11 @@ main (int argc, char **argv)
 	}
       crd[1] = i;
       newmsg = message_decode (msg, &crd, 1);
-      message_store (newmsg, ombox, crd);
+      message_store (newmsg, ombox);
       mu_message_unref (newmsg);
     }
+  enable_log_prefix (0);
+  
   mu_mailbox_destroy (&imbox);
   (truncate_opt ? mu_mailbox_expunge : mu_mailbox_sync) (ombox);
   mu_mailbox_destroy (&ombox);
@@ -234,12 +261,12 @@ main (int argc, char **argv)
 }
 
 static void
-message_store_mbox (mu_message_t msg, mu_mailbox_t mbx, mu_coord_t crd)
+message_store_mbox (mu_message_t msg, mu_mailbox_t mbx)
 {
   int rc = mu_mailbox_append_message (mbx, msg);
   if (rc)
     {
-      crd_error (crd, 1, _("cannot store message: %s"), mu_strerror (rc));
+      mu_error (_("cannot store message: %s"), mu_strerror (rc));
       switch (rc)
 	{
 	case MU_ERR_INVALID_EMAIL:
@@ -313,7 +340,7 @@ body_print (mu_message_t msg)
 }
 
 static void
-message_store_stdout (mu_message_t msg, mu_mailbox_t mbx, mu_coord_t crd)
+message_store_stdout (mu_message_t msg, mu_mailbox_t mbx)
 {
   env_print (msg);
   hdr_print (msg);
@@ -321,30 +348,6 @@ message_store_stdout (mu_message_t msg, mu_mailbox_t mbx, mu_coord_t crd)
   mu_printf ("\n");
 }
 
-/*
- * Display diagnostics with the location of the message part it
- * belongs to.
- * 
- * Arguments:
- *   crd  -  A mu_coord_t object describing the location.
- *   dim  -  Number of significant positions in crd.
- *   fmt  -  Format string
- */
-static void
-crd_error (mu_coord_t crd, size_t n, char const *fmt, ...)
-{
-  va_list ap;
-  char *pfx = mu_coord_part_string (crd, n);
-
-  mu_diag_printf (MU_DIAG_ERROR, "%s: ", pfx);
-  free (pfx);
-
-  va_start (ap, fmt);
-  mu_diag_cont_vprintf (fmt, ap);
-  va_end (ap);
-  mu_stream_write (mu_strerr, "\n", 1, NULL);
-}
-
 static inline int
 is_address_header (char const *name)
 {
@@ -459,6 +462,8 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
   int ismime = 0;
   int rc;
 
+  set_log_prefix (*crd, dim);
+  
   mu_message_is_multipart (msg, &ismime);
   if (!ismime)
     {
@@ -489,7 +494,7 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  rc = mu_stream_copy (bstr, str, 0, NULL);
 	  if (rc)
 	    {
-	      crd_error (*crd, dim, "mu_stream_copy: %s", mu_strerror (rc));
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy", NULL, rc);
 	      if (mu_stream_err (bstr))
 		{
 		  exit (EX_IOERR);
@@ -533,9 +538,9 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 						      &ct);
 		      if (rc)
 			{
-			  crd_error (*crd, dim,
-				     "mu_content_type_parse_ext(%s): %s",
-				     vc, mu_strerror (rc));
+			  mu_diag_funcall (MU_DIAG_ERROR, 
+					   "mu_content_type_parse_ext",
+					   vc, rc);
 			  free (vc);
 			  continue;
 			}
@@ -552,8 +557,9 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 			  break;
 
 			default:
-			  crd_error (*crd, dim, "mu_assoc_install_ref: %s",
-				     mu_strerror (rc));
+			  mu_diag_funcall (MU_DIAG_ERROR, 
+					   "mu_assoc_install_ref",
+					   NULL, rc);
 			  exit (EX_IOERR);
 			}
 		      (*pparam)->value = mu_strdup (charset);
@@ -614,8 +620,8 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
       rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE, &s);
       if (rc)
 	{
-	  crd_error (*crd, dim, "mu_header_aget_value_unfold(%s): %s",
-		     MU_HEADER_CONTENT_TYPE, mu_strerror (rc));
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_header_aget_value_unfold",
+			   MU_HEADER_CONTENT_TYPE, rc);
 	  mu_message_ref (msg);
 	  return msg;
 	}
@@ -624,8 +630,7 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 				      MU_CONTENT_TYPE_PARAM, &ct);
       if (rc)
 	{
-	  crd_error (*crd, dim, "mu_content_type_parse_ext(%s): %s",
-		     s, mu_strerror (rc));
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse_ext", s, rc);
 	  free (s);
 	  mu_message_ref (msg);
 	  return msg;
@@ -639,24 +644,23 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  return msg;
 	}
       
+      mu_mime_create_multipart (&mime, ct->subtype, ct->param);
+      mu_content_type_destroy (&ct);
+      rc = mu_message_get_num_parts (msg, &nparts);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_num_parts",
+			   NULL, rc);
+	  mu_message_ref (msg);
+	  return msg;
+	}
+
       ++dim;
       if (dim > mu_coord_length (*crd))
 	{
 	  rc = mu_coord_realloc (crd, dim);
 	  if (rc)
 	    mu_alloc_die ();
-	}
-      
-      mu_mime_create_multipart (&mime, ct->subtype, ct->param);
-      mu_content_type_destroy (&ct);
-      rc = mu_message_get_num_parts (msg, &nparts);
-      if (rc)
-	{
-	  crd_error (*crd, dim, "mu_message_get_num_parts(%s): %s",
-		     MU_HEADER_CONTENT_TYPE, mu_strerror (rc));
-	  --dim;
-	  mu_message_ref (msg);
-	  return msg;
 	}
 
       for (i = 1; i <= nparts; i++)
@@ -670,6 +674,7 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  mu_mime_add_part (mime, msgdec);
 	  mu_message_unref (msgdec);
 	}
+
       --dim;
       
       mu_mime_to_message (mime, &newmsg);
@@ -710,6 +715,8 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
       mu_iterator_destroy (&itr);
     }
 
+  set_log_prefix (*crd, dim);
+
   if (dim == 1)
     {
       /* Copy envelope */
@@ -721,15 +728,15 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	  char *sender = NULL, *date = NULL;
 	  if ((rc = mu_envelope_aget_sender (env, &sender)) != 0)
 	    {
-	      crd_error (*crd, dim, "mu_envelope_aget_sender: %s",
-			 mu_strerror (rc));
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_aget_sender",
+			      NULL, rc);
 	    }
 	  else if ((rc = mu_envelope_aget_date (env, &date)) != 0)
 	    {
 	      free (sender);
 	      sender = NULL;
-	      crd_error (*crd, dim, "mu_envelope_aget_date: %s",
-			 mu_strerror (rc));
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_aget_date",
+			       NULL, rc);
 	    }
 	  
 	  if (sender)
@@ -745,8 +752,8 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 		{
 		  free (sender);
 		  free (date);
-		  crd_error (*crd, dim, "mu_envelope_create: %s",
-			     mu_strerror (rc));
+		  mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create",
+				   NULL, rc);
 		}
 	    }
 	}

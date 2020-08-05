@@ -272,6 +272,13 @@ _log_write (struct _mu_stream *str, const char *buf, size_t size,
 	  mu_stream_print_locus_range (sp->transport, &loc);
   	  mu_stream_write (sp->transport, ": ", 2, NULL);
 	}
+
+      if ((logmode & MU_LOGMODE_PREFIX) && sp->prefix)
+	{
+	  mu_stream_write (sp->transport, sp->prefix, strlen (sp->prefix),
+			   NULL);
+  	  mu_stream_write (sp->transport, ": ", 2, NULL);
+	}
       
       if ((logmode & MU_LOGMODE_SEVERITY) &&
 	  !(sp->sevmask & MU_DEBUG_LEVEL_MASK (severity)))
@@ -302,6 +309,7 @@ _log_done (struct _mu_stream *str)
 {
   struct _mu_log_stream *sp = (struct _mu_log_stream *)str;
   mu_locus_range_deinit (&sp->locrange);
+  mu_ident_deref (sp->prefix);
   mu_stream_destroy (&sp->transport);
 }
 
@@ -548,9 +556,38 @@ _log_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 			    &sp->locrange.beg.mu_file);
 	      mu_ident_ref (sp->locrange.end.mu_file,
 			    &sp->locrange.end.mu_file);
-	      
+	      mu_ident_ref (sp->prefix, &newp->prefix);
 	      *(mu_stream_t*) arg = str;
 	    }
+	  break;
+
+	case MU_IOCTL_LOGSTREAM_GET_PREFIX:
+	  if (!arg)
+	    return EINVAL;
+	  else
+	    {
+	      char **ret_ptr = arg;
+
+	      if (!sp->prefix)
+		sp->prefix = NULL;
+	      else
+		{
+		  char *copy = strdup (sp->prefix);
+		  if (!copy)
+		    return errno;
+		  *ret_ptr = copy;
+		}
+	    }
+	  break;
+	      
+	case MU_IOCTL_LOGSTREAM_SET_PREFIX:
+	  {
+	    mu_ident_deref (sp->prefix);
+	    if (arg)
+	      mu_ident_ref (arg, &sp->prefix);
+	    else
+	      sp->prefix = NULL;
+	  }
 	  break;
 	  
 	default:

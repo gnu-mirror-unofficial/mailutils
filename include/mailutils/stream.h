@@ -169,6 +169,16 @@ enum mu_buffer_type
      Arg: struct mu_locus_range *
   */
 #define MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE   16
+
+  /* Get prefix.
+     Arg: char **
+  */
+#define MU_IOCTL_LOGSTREAM_GET_PREFIX        17
+
+  /* Set prefix.
+     Arg: char *
+  */
+#define MU_IOCTL_LOGSTREAM_SET_PREFIX        18  
   
   /* Opcodes for MU_IOCTL_XSCRIPTSTREAM */
   /* Swap transcript levels.

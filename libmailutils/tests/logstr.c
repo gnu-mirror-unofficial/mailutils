@@ -624,6 +624,49 @@ fmt_locus6 (mu_stream_t str)
   mu_stream_printf (str, "default\n");
 }
 
+/* Check the log prefix
+   Expected output:
+     LOG1: one
+     LOG2: two
+     prefix off
+     LOG2: prefix on
+     three   
+ */
+static void
+check_prefix (mu_stream_t str)
+{
+  char *prefix[2] = { "LOG1", "LOG2" };
+  char *s;
+  int mode = MU_LOGMODE_PREFIX;
+
+  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_PREFIX, prefix[0]);
+  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+  mu_stream_printf (str, "one\n");
+  
+  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_GET_PREFIX, &s);
+  if (!s || strcmp (s, prefix[0]))
+    {
+      mu_error ("%s:%d: wrong prefix returned", __FILE__, __LINE__);
+    }
+  free (s);
+
+  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_PREFIX, prefix[1]);
+  mu_stream_printf (str, "two\n");
+
+  mu_stream_printf (str, "\033X<%d>prefix off\n",
+		    MU_LOGMODE_PREFIX);
+  mu_stream_printf (str, "prefix on\n");
+  
+  mu_stream_ioctl (str, MU_IOCTL_LOGSTREAM,
+		   MU_IOCTL_LOGSTREAM_SET_PREFIX, NULL);
+  mu_stream_printf (str, "three\n");
+  
+}
+
 
 struct testcase
 {
@@ -654,6 +697,7 @@ struct testcase testcases[] = {
   { "fmt: locus; restore defaults", fmt_locus4 },
   { "fmt: locus; restore defaults, display locus", fmt_locus5 },
   { "fmt: set locus", fmt_locus6 },
+  { "prefix", check_prefix },
   { NULL }
 };
 
@@ -722,7 +766,7 @@ main (int argc, char **argv)
 	  log_reset (log);
 	}
     }
-  
+  mu_stream_destroy (&log);
   return 0;
 }
 
