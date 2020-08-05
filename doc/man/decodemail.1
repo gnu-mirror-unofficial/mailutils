@@ -1,0 +1,213 @@
+.\" GNU Mailutils -- a suite of utilities for electronic mail
+.\" Copyright (C) 1999-2020 Free Software Foundation, Inc.
+.\"
+.\" GNU Mailutils is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" GNU Mailutils is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
+.TH DECODEMAIL 1 "August 3, 2020" "MAILUTILS" "Mailutilst User Reference"
+.SH NAME
+decodemail \- decode MIME messages
+.SH SYNOPSIS
+.nh
+.na
+\fBcommand\fR\
+ [\fB\-Rt\fR]\
+ [\fB\-c \fICHARSET\fR]\
+ [\fB\-\-charset=\fICHARSET\fR]\
+ [\fB\-\-recode\fR]\
+ [\fB\-\-truncate\fR]\
+ [\fB\-\-no\-recode]\
+ [\fB\-\-no\-truncate]\
+ [\fIDEBUG\-OPTIONS\fR]\
+ [\fICONFIG\-OPTIONS\fR]\
+ [\fIINBOX\fR [\fIOUTBOX\fR]]
+.PP
+\fBcommand\fR \fIINFORMATIONAL\-OPTIONS\fR
+.ad
+.hy
+.SH DESCRIPTION
+The \fBdecodemail\fR utility is a filter program that reads
+messages from the input mailbox, decodes \fItextual\fR parts of each
+multipart message to 8-bit or 7-bit transfer encoding and stores the
+processed messages in the output mailbox.  Non-multipart messages as
+well as message parts that cannot be decoded are transferred to the
+output mailbox verbatim.
+.PP
+A message part is considered \fItextual\fR if its \fBContent\-Type\fR
+header matches one of the predefined content type patterns.  The list
+of such patterns is configurable.
+.PP
+The
+.I INBOX
+and
+.I OUTBOX
+arguments are file names or URLs of the input and output mailboxes,
+correspondingly.  The input mailbox is opened read-only and will not
+be modified in any way.  In particular, the status of the processed
+messages will not change.  If the output mailbox does not exist, it
+will be created.  If it exists, the messages will be appended to it,
+preserving any original messages that are already in it.
+.PP
+Both arguments can be omitted.  If \fIOUTBOX\fR is not supplied, the
+resulting mailbox will be printed on the standard output in Unix
+\fImbox\fR format.  If \fIINBOX\fR is not supplied, the utility will
+open the system inbox for the current user and use it for input.
+.SH OPTIONS
+.TP
+\fB\-c\fR, \fB\-\-charset=\fICHARSET\fR
+Convert all textual parts from their original character set to the
+specified charset.
+.TP
+\fB\-R\fR, \fB\-\-recode\fR
+Convert all textual parts from their original character set to the
+current character set, as specified by the \fBLC_ALL\fR or \fBLANG\fR
+environment variable.
+.TP
+\fB\-\-no\-recode\fR
+Do not recode character sets.  This is the default.
+.TP
+\fB\-t\fR, \fB\-\-truncate\fR
+If the output mailbox exists, truncate it before appending new
+messages.
+.TP
+\fB\-\-no\-truncate\fR
+Keep the existing messages in the output mailbox intact.  This is the
+default.
+.TP
+\fIDEBUG\-OPTIONS\fR, \fICONFIG\-OPTIONS\fR, \fIINFORMATIONAL-OPTIONS\fR
+See
+.BR mailutils\-command (1).
+.SH CONTENT TYPE PATTERNS
+Each element in the list of textual content types is a
+.BR glob (7)
+pattern that will be matched agains the actual content type and
+subtype.  Each pattern has the form
+.sp
+.nf
+.IB type / subtype
+.fi
+.sp
+with the slash (\fB/\fR) delimiting the two parts. E.g.:
+.sp
+.nf
+  text/*
+.fi
+.PP
+The parser for the \fBContent\-Type\fR header is pretty
+tolerant and allows, in particular, for missing subtypes.  To match
+such (obsolete) content types, omit the \fB/\fIsubtype\fR part from
+the pattern.
+.PP
+The default list of textual content type patterns is as follows:
+.sp
+.nf
+  text/*
+  application/*shell
+  application/shellscript
+  */x-csrc
+  */x-csource
+  */x-diff
+  */x-patch
+  */x-perl
+  */x-php
+  */x-python
+  */x-sh
+.fi
+.PP
+You can add new items to that list using the \fBmime.text\-type\fR
+configuration statement.  E.g., in your
+.B ~/.decodemail
+file:
+.sp
+.nf
+mime {
+  text-type */x-ps;
+}
+.fi
+.PP
+See
+.BR mailutils-config (5),
+for details about the mailutils configuration files, and the following
+chapter for configuration statements specific for \fBdecodemail\fR.
+.SH CONFIGURATION
+The following common configuration statements affect the behavior of
+\fBdecodemail\fR:
+.sp
+.nf
+.I mime
+.I debug
+.I mailbox
+.I locking
+.fi
+.PP
+See
+.BR mailutils\-config (5)
+for a detailed discussion of these.
+.SH "SEE ALSO"
+.BR mailutils\-command (1),
+.BR mailutils\-config (5).
+.SH NOTES
+This manpage is a short description of a program from GNU mailutils.
+For a detailed discussion of GNU mailutils and its components,
+including examples and usage recommendations, refer to the 
+\fBGNU Mailutils Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and \fBGNU mailutils\fR documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info mailutils
+.RE
+.PP
+should give you access to the complete manual.  Similarly, the command
+.PP
+.RS +4
+.B info decodemail
+.RE
+.PP
+will bring you the documentation about this program.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B https://www.gnu.org/software/mailutils/manual
+.RE
+.PP
+Additional documentation about GNU mailutils can be found at
+.PP
+.RS +4
+.B https://mailutils.org/wiki
+.RE
+.PP
+Should any discrepancies occur between this manpage and the
+\fBGNU Mailutils Manual\fR, the later shall be considered the authoritative
+source.
+.SH "BUG REPORTS"
+Report bugs to <bug\-mailutils@gnu.org>.
+.SH COPYRIGHT
+Copyright \(co 1999-2020 Free Software Foundation, Inc.
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+
