@@ -8,5 +8,5 @@ AT_KEYWORDS([message])
 MU_GUILE_CHECK([
 (display (mu-message-get-envelope-date (test-message)))],
 0,
-  [#(40 30 14 8 5 118 5 158 -1 0 #f)])
+  [#(40 30 14 8 5 118 5 158 -1 0 UTC)])
 AT_CLEANUP
