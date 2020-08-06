@@ -371,6 +371,12 @@ int mu_stream_printf (mu_stream_t stream, const char *fmt, ...)
 
 int mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 		    mu_off_t *pcsz);
+int mu_stream_copy_wcb (mu_stream_t dst, mu_stream_t src, mu_off_t size,
+			void (*cbf) (char *, size_t, void *), void *cbd,
+			mu_off_t *pcsz);
+int mu_stream_copy_nl (mu_stream_t dst, mu_stream_t src, mu_off_t size,
+		       mu_off_t *pcsz);
+
 int mu_stream_header_copy (mu_stream_t dst, mu_stream_t src, char **exclude_names);
 
 int mu_stream_shift (mu_stream_t str, mu_off_t off_a, mu_off_t off_b,

@@ -310,41 +310,14 @@ env_print (mu_message_t msg)
 }
 
 static void
-hdr_print (mu_message_t msg)
-{
-  mu_header_t hdr;
-  mu_stream_t str;
-  
-  mu_message_get_header (msg, &hdr);
-  mu_header_get_streamref (hdr, &str);
-  mu_stream_copy (mu_strout, str, 0, NULL);
-  mu_stream_destroy (&str);
-}
-
-static void
-body_print (mu_message_t msg)
-{
-  int rc;
-  mu_body_t body;
-  mu_stream_t str;
-  
-  mu_message_get_body (msg, &body);
-  rc = mu_body_get_streamref (body, &str);
-  if (rc)
-    {
-      mu_error (_("cannot get body stream: %s"), mu_strerror (rc));
-      exit (EX_OSERR);
-    }
-  mu_stream_copy (mu_strout, str, 0, NULL);
-  mu_stream_destroy (&str);
-}
-
-static void
 message_store_stdout (mu_message_t msg, mu_mailbox_t mbx)
 {
+  mu_stream_t str;
+
   env_print (msg);
-  hdr_print (msg);
-  body_print (msg);
+  mu_message_get_streamref (msg, &str);
+  mu_stream_copy_nl (mu_strout, str, 0, NULL);
+  mu_stream_destroy (&str);  
   mu_printf ("\n");
 }
 

@@ -29,10 +29,16 @@
 #define STREAMCPY_MAX_BUF_SIZE 16384
 
 /* Copy SIZE bytes from SRC to DST.  If SIZE is 0, copy everything up to
-   EOF. */
+   EOF.
+   If the callback function CBF is not NULL, it will be called for
+   each buffer-full of data read with the following arguments: pointer to
+   the buffer, length of the data portion in buffer, pointer to the user-
+   supplied callback data (CBD).
+*/
 int
-mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
-		mu_off_t *pcsz)
+mu_stream_copy_wcb (mu_stream_t dst, mu_stream_t src, mu_off_t size,
+		    void (*cbf) (char *, size_t, void *), void *cbd,
+		    mu_off_t *pcsz)
 {
   int status;
   size_t bufsize, n;
@@ -100,6 +106,8 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 	    break;
 	  if (n == 0)
 	    break;
+	  if (cbf)
+	    cbf (buf, n, cbd);
 	  status = mu_stream_write (dst, buf, n, NULL);
 	  if (status)
 	    break;
@@ -111,15 +119,19 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 	status = EIO;
     }
   else
-    while ((status = mu_stream_read (src, buf, bufsize, &n)) == 0
-	   && n > 0)
-      {
-	status = mu_stream_write (dst, buf, n, NULL);
-	if (status)
-	  break;
-	total += n;
-      }
-
+    {
+      while ((status = mu_stream_read (src, buf, bufsize, &n)) == 0
+	     && n > 0)
+	{
+	  if (cbf)
+	    cbf (buf, n, cbd);
+	  status = mu_stream_write (dst, buf, n, NULL);
+	  if (status)
+	    break;
+	  total += n;
+	}
+    }
+  
   if (pcsz)
     *pcsz = total;
   /* FIXME: When EOF error code is implemented:
@@ -129,3 +141,38 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
   free (buf);
   return status;
 }
+
+/* Copy SIZE bytes from SRC to DST.  If SIZE is 0, copy everything up to
+   EOF. */
+int
+mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
+		mu_off_t *pcsz)
+{
+  return mu_stream_copy_wcb (dst, src, size, NULL, NULL, pcsz);
+}
+
+static void
+capture_last_char (char *buf, size_t size, void *data)
+{
+  *(char*)data = buf[size-1];
+}
+
+/* Same as mu_stream_copy, but also ensures that the copied data end with
+   a '\n' character. */
+int
+mu_stream_copy_nl (mu_stream_t dst, mu_stream_t src, mu_off_t size,
+		   mu_off_t *pcsz)
+{
+  char lc;
+  int status = mu_stream_copy_wcb (dst, src, size, capture_last_char, &lc,
+				   pcsz);
+  if (status == 0 && lc != '\n')
+    {
+      status = mu_stream_write (dst, "\n", 1, NULL);
+      if (status == 0 && pcsz)
+	++ *pcsz;
+    }
+  return status;
+}
+
+				   
