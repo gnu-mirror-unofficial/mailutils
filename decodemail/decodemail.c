@@ -429,6 +429,355 @@ address_decode (char const *name, char const *value, char const *charset,
  * It can modify the coordinate positions starting from dim+1 (inclusive).
  */
 static mu_message_t
+message_decode_nomime (mu_message_t msg)
+{
+  mu_message_t newmsg;
+  int rc;
+  mu_stream_t str;
+  mu_body_t body;
+  mu_stream_t bstr;
+  mu_header_t hdr, newhdr;
+  mu_iterator_t itr;
+  size_t i;
+  char *content_type = NULL;
+  mu_stream_stat_buffer stat;
+      
+  rc = message_body_stream (msg, from_filter, charset, &str);
+  if (rc)
+    return NULL;
+  
+  rc = mu_message_create (&newmsg, NULL);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_create", NULL, rc);
+      exit (EX_OSERR);
+    }
+	  
+  rc = mu_message_get_body (newmsg, &body);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_body", NULL, rc);
+      goto end;
+    }
+	  
+  rc = mu_body_get_streamref (body, &bstr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_body_get_streamref", NULL, rc);
+      goto end;
+    }
+	      
+  mu_stream_set_stat (bstr,
+		      MU_STREAM_STAT_MASK (MU_STREAM_STAT_IN8BIT),
+		      stat);
+  rc = mu_stream_copy (bstr, str, 0, NULL);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy", NULL, rc);
+      if (mu_stream_err (bstr))
+	{
+	  exit (EX_IOERR);
+	}
+      else
+	{
+	  mu_stream_printf (bstr,
+			    "\n[decodemail: content decoding failed: %s]\n",
+			    mu_strerror (rc));
+	}
+    }
+  mu_stream_unref (bstr);
+  mu_stream_unref (str);
+
+  rc = mu_message_get_header (msg, &hdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header", "msg", rc);
+      goto end;
+    }
+
+  rc = mu_message_get_header (newmsg, &newhdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header", "newmsg", rc);
+      goto end;
+    }
+      
+  rc = mu_header_get_iterator (hdr, &itr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_header_get_iterator", NULL, rc);
+      goto end;
+    }
+
+  for (mu_iterator_first (itr), i = 1; !mu_iterator_is_done (itr);
+       mu_iterator_next (itr), i++)
+    {
+      const char *name;
+      const char *value;
+      char *s;
+      
+      rc = mu_iterator_current_kv (itr, (void const **) &name,
+				   (void**)&value);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_iterator_current_kv", NULL, rc);
+	  continue;
+	}
+      
+      if (!mu_c_strcasecmp (name, MU_HEADER_CONTENT_TYPE))
+	{
+	  if (charset)
+	    {
+	      mu_content_type_t ct;
+	      struct mu_mime_param **pparam;
+	      char *vc = mu_strdup (value);
+	      size_t len;
+	      mu_string_unfold (vc, &len);
+	      rc = mu_content_type_parse_ext (vc, NULL,
+					      MU_CONTENT_TYPE_RELAXED |
+					      MU_CONTENT_TYPE_PARAM,
+					      &ct);
+	      if (rc)
+		{
+		  mu_diag_funcall (MU_DIAG_ERROR, 
+				   "mu_content_type_parse_ext",
+				   vc, rc);
+		  free (vc);
+		  continue;
+		}
+	      free (vc);
+	      rc = mu_assoc_install_ref (ct->param, "charset", &pparam);
+	      switch (rc)
+		{
+		case 0:
+		  *pparam = mu_zalloc (sizeof **pparam);
+		  break;
+
+		case MU_ERR_EXISTS:
+		  free ((*pparam)->value);
+		  break;
+
+		default:
+		  mu_diag_funcall (MU_DIAG_ERROR, 
+				   "mu_assoc_install_ref",
+				   NULL, rc);
+		  exit (EX_IOERR);
+		}
+	      (*pparam)->value = mu_strdup (charset);
+	      mu_content_type_format (ct, &content_type);
+	      mu_content_type_destroy (&ct);
+	      continue;
+	    }
+	}
+      else if (!mu_c_strcasecmp (name, MU_HEADER_CONTENT_TRANSFER_ENCODING))
+	continue;
+      else if (is_address_header (name))
+	{
+	  if (address_decode (name, value, charset, newhdr))
+	    mu_header_append (newhdr, name, value);
+	  continue;
+	}
+	      
+      rc = mu_rfc2047_decode (charset, value, &s);
+      if (rc == 0)
+	{
+	  mu_header_append (newhdr, name, s);
+	  free (s);
+	}
+      else
+	mu_header_append (newhdr, name, value);
+    }
+  mu_iterator_destroy (&itr);
+  rc = 0;
+  
+  mu_header_set_value (newhdr,
+		       MU_HEADER_CONTENT_TRANSFER_ENCODING,
+		       stat[MU_STREAM_STAT_IN8BIT] ? "8bit" : "7bit",
+		       1);
+  if (charset)
+    {
+      if (!content_type)
+	mu_asprintf (&content_type, "text/plain; charset=%s", charset);
+      mu_header_set_value (newhdr,
+			   MU_HEADER_CONTENT_TYPE,
+			   content_type,
+			   1);
+      free (content_type);
+    }
+ end:
+  if (rc)
+    {
+      mu_message_unref (newmsg);
+      newmsg = NULL;
+    }
+  return newmsg;
+}
+
+static mu_message_t
+message_decode_mime (mu_message_t msg, mu_coord_t *crd, size_t dim)
+{
+  int rc;
+  mu_message_t newmsg;
+  size_t nparts, i;
+  mu_mime_t mime;
+  mu_header_t hdr, newhdr;
+  mu_iterator_t itr;
+  char *s;
+  mu_content_type_t ct;
+      
+  /* FIXME: The following could be simplified if we could obtain
+     a mime object from the message */
+  rc = mu_message_get_header (msg, &hdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header", "msg", rc);
+      return NULL;
+    }
+  
+  rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE, &s);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_header_aget_value_unfold",
+		       MU_HEADER_CONTENT_TYPE, rc);
+      return NULL;
+    }
+
+  rc = mu_content_type_parse_ext (s, NULL,
+				  MU_CONTENT_TYPE_RELAXED |
+				      MU_CONTENT_TYPE_PARAM, &ct);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse_ext", s, rc);
+      free (s);
+      return NULL;
+    }
+  free (s);
+
+  if (!ct->subtype)
+    {
+      mu_content_type_destroy (&ct);
+      return NULL;
+    }
+      
+  rc = mu_mime_create_multipart (&mime, ct->subtype, ct->param);
+  mu_content_type_destroy (&ct);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_create_multipart", NULL, rc);
+      return NULL;
+    }
+  
+  rc = mu_message_get_num_parts (msg, &nparts);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_num_parts",
+		       NULL, rc);
+      return NULL;
+    }
+
+  ++dim;
+  if (dim > mu_coord_length (*crd))
+    {
+      rc = mu_coord_realloc (crd, dim);
+      if (rc)
+	mu_alloc_die ();
+    }
+
+  for (i = 1; i <= nparts; i++)
+    {
+      mu_message_t msgpart, msgdec;
+	  
+      (*crd)[dim] = i;
+      rc = mu_message_get_part (msg, i, &msgpart);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_num_parts",
+			   NULL, rc);
+	  mu_mime_unref (mime);
+	  goto end;
+	}
+      msgdec = message_decode (msgpart, crd, dim);
+      rc = mu_mime_add_part (mime, msgdec);
+      mu_message_unref (msgdec);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_add_part", NULL, rc);
+	  mu_mime_unref (mime);
+	  goto end;
+	}	  
+    }
+
+  --dim;
+      
+  rc = mu_mime_to_message (mime, &newmsg);
+  mu_mime_unref (mime);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_to_message", NULL, rc);
+      return NULL;
+    }
+      
+  /* Copy headers */
+  rc = mu_message_get_header (newmsg, &newhdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header", "newmsg", rc);
+      goto end;
+    }
+  
+  rc = mu_header_get_iterator (hdr, &itr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_header_get_iterator", NULL, rc);
+      goto end;
+    }
+      
+  for (mu_iterator_first (itr), i = 1; !mu_iterator_is_done (itr);
+       mu_iterator_next (itr), i++)
+    {
+      const char *name;
+      const char *value;
+      char *s;
+      
+      rc = mu_iterator_current_kv (itr, (void const **) &name,
+				   (void**)&value);
+      if (rc)
+	{
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_iterator_current_kv", NULL, rc);
+	  continue;
+	}
+
+      if (mu_c_strcasecmp (name, MU_HEADER_MIME_VERSION) == 0 ||
+	  mu_c_strcasecmp (name, MU_HEADER_CONTENT_TYPE) == 0)
+	continue;
+      else if (is_address_header (name))
+	{
+	  if (address_decode (name, value, charset, newhdr))
+	    mu_header_append (newhdr, name, value);
+	  continue;
+	}
+      rc = mu_rfc2047_decode (charset, value, &s);
+      if (rc == 0)
+	{
+	  mu_header_append (newhdr, name, s);
+	  free (s);
+	}
+      else
+	mu_header_append (newhdr, name, value);
+    }
+  mu_iterator_destroy (&itr);
+  rc = 0;
+  
+ end:
+  if (rc)
+    {
+      mu_message_unref (newmsg);
+      newmsg = NULL;
+    }
+  return newmsg;  
+}
+
+static mu_message_t
 message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 {
   mu_message_t newmsg;
@@ -437,255 +786,25 @@ message_decode (mu_message_t msg, mu_coord_t *crd, size_t dim)
 
   set_log_prefix (*crd, dim);
   
-  mu_message_is_multipart (msg, &ismime);
-  if (!ismime)
+  rc = mu_message_is_multipart (msg, &ismime);
+  if (rc)
     {
-      mu_stream_t str;
-      
-      rc = message_body_stream (msg, from_filter, charset, &str);
-      if (rc)
-	{
-	  mu_message_ref (msg);
-	  return msg;
-	}
-      else
-	{
-	  mu_body_t body;
-	  mu_stream_t bstr;
-	  mu_header_t hdr, newhdr;
-	  mu_iterator_t itr;
-	  size_t i;
-	  char *content_type = NULL;
-	  mu_stream_stat_buffer stat;
-	  
-	  mu_message_create (&newmsg, NULL);
-	  mu_message_get_body (newmsg, &body);
-	  mu_body_get_streamref (body, &bstr);
-	  mu_stream_set_stat (bstr,
-			      MU_STREAM_STAT_MASK (MU_STREAM_STAT_IN8BIT),
-			      stat);
-	  rc = mu_stream_copy (bstr, str, 0, NULL);
-	  if (rc)
-	    {
-	      mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy", NULL, rc);
-	      if (mu_stream_err (bstr))
-		{
-		  exit (EX_IOERR);
-		}
-	      else
-		{
-		  mu_stream_printf (bstr,
-				    "\n[decodemail: content decoding failed: %s]\n",
-				    mu_strerror (rc));
-		}
-	    }
-	  mu_stream_unref (bstr);
-	  mu_stream_unref (str);
-
-	  mu_message_get_header (msg, &hdr);
-	  mu_message_get_header (newmsg, &newhdr);
-	  mu_header_get_iterator (hdr, &itr);
-	  
-	  for (mu_iterator_first (itr), i = 1; !mu_iterator_is_done (itr);
-	       mu_iterator_next (itr), i++)
-	    {
-	      const char *name;
-	      const char *value;
-	      char *s;
-	      
-	      rc = mu_iterator_current_kv (itr, (void const **) &name,
-					   (void**)&value);
-
-	      if (!mu_c_strcasecmp (name, MU_HEADER_CONTENT_TYPE))
-		{
-		  if (charset)
-		    {
-		      mu_content_type_t ct;
-		      struct mu_mime_param **pparam;
-		      char *vc = mu_strdup (value);
-		      size_t len;
-		      mu_string_unfold (vc, &len);
-		      rc = mu_content_type_parse_ext (vc, NULL,
-						      MU_CONTENT_TYPE_RELAXED |
-						      MU_CONTENT_TYPE_PARAM,
-						      &ct);
-		      if (rc)
-			{
-			  mu_diag_funcall (MU_DIAG_ERROR, 
-					   "mu_content_type_parse_ext",
-					   vc, rc);
-			  free (vc);
-			  continue;
-			}
-		      free (vc);
-		      rc = mu_assoc_install_ref (ct->param, "charset", &pparam);
-		      switch (rc)
-			{
-			case 0:
-			  *pparam = mu_zalloc (sizeof **pparam);
-			  break;
-
-			case MU_ERR_EXISTS:
-			  free ((*pparam)->value);
-			  break;
-
-			default:
-			  mu_diag_funcall (MU_DIAG_ERROR, 
-					   "mu_assoc_install_ref",
-					   NULL, rc);
-			  exit (EX_IOERR);
-			}
-		      (*pparam)->value = mu_strdup (charset);
-		      mu_content_type_format (ct, &content_type);
-		      mu_content_type_destroy (&ct);
-		      continue;
-		    }
-		}
-	      else if (!mu_c_strcasecmp (name,
-					 MU_HEADER_CONTENT_TRANSFER_ENCODING))
-		continue;
-	      else if (is_address_header (name))
-		{
-		  if (address_decode (name, value, charset, newhdr))
-		    mu_header_append (newhdr, name, value);
-		  continue;
-		}
-	      
-	      rc = mu_rfc2047_decode (charset, value, &s);
-	      if (rc == 0)
-		{
-		  mu_header_append (newhdr, name, s);
-		  free (s);
-		}
-	      else
-		mu_header_append (newhdr, name, value);
-	    }
-	  mu_iterator_destroy (&itr);
-
-	  mu_header_set_value (newhdr,
-			       MU_HEADER_CONTENT_TRANSFER_ENCODING,
-			       stat[MU_STREAM_STAT_IN8BIT] ? "8bit" : "7bit",
-			       1);
-	  if (charset)
-	    {
-	      if (!content_type)
-		mu_asprintf (&content_type, "text/plain; charset=%s", charset);
-	      mu_header_set_value (newhdr,
-				   MU_HEADER_CONTENT_TYPE,
-				   content_type,
-				   1);
-	      free (content_type);
-	    }
-	}
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_is_multipart", NULL, rc);
+      newmsg = NULL;
+    }
+  else if (!ismime)
+    {
+      newmsg = message_decode_nomime (msg);
     }
   else
     {
-      size_t nparts, i;
-      mu_mime_t mime;
-      mu_header_t hdr, newhdr;
-      mu_iterator_t itr;
-      char *s;
-      mu_content_type_t ct;
-      
-      /* FIXME: The following could be simplified if we could obtain
-	 a mime object from the message */
-      mu_message_get_header (msg, &hdr);
-      rc = mu_header_aget_value_unfold (hdr, MU_HEADER_CONTENT_TYPE, &s);
-      if (rc)
-	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_header_aget_value_unfold",
-			   MU_HEADER_CONTENT_TYPE, rc);
-	  mu_message_ref (msg);
-	  return msg;
-	}
-      rc = mu_content_type_parse_ext (s, NULL,
-				      MU_CONTENT_TYPE_RELAXED |
-				      MU_CONTENT_TYPE_PARAM, &ct);
-      if (rc)
-	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_content_type_parse_ext", s, rc);
-	  free (s);
-	  mu_message_ref (msg);
-	  return msg;
-	}
-      free (s);
-
-      if (!ct->subtype)
-	{
-	  mu_content_type_destroy (&ct);
-	  mu_message_ref (msg);
-	  return msg;
-	}
-      
-      mu_mime_create_multipart (&mime, ct->subtype, ct->param);
-      mu_content_type_destroy (&ct);
-      rc = mu_message_get_num_parts (msg, &nparts);
-      if (rc)
-	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_num_parts",
-			   NULL, rc);
-	  mu_message_ref (msg);
-	  return msg;
-	}
-
-      ++dim;
-      if (dim > mu_coord_length (*crd))
-	{
-	  rc = mu_coord_realloc (crd, dim);
-	  if (rc)
-	    mu_alloc_die ();
-	}
-
-      for (i = 1; i <= nparts; i++)
-	{
-	  mu_message_t msgpart, msgdec;
-	  
-	  (*crd)[dim] = i;
-	  mu_message_get_part (msg, i, &msgpart);
-	  
-	  msgdec = message_decode (msgpart, crd, dim);
-	  mu_mime_add_part (mime, msgdec);
-	  mu_message_unref (msgdec);
-	}
-
-      --dim;
-      
-      mu_mime_to_message (mime, &newmsg);
-      mu_mime_unref (mime);
-      
-      /* Copy headers */
-      mu_message_get_header (newmsg, &newhdr);
-      mu_header_get_iterator (hdr, &itr);
-
-      for (mu_iterator_first (itr), i = 1; !mu_iterator_is_done (itr);
-	   mu_iterator_next (itr), i++)
-	{
-	  const char *name;
-	  const char *value;
-	  char *s;
-      
-	  rc = mu_iterator_current_kv (itr, (void const **) &name,
-				       (void**)&value);
-
-	  if (mu_c_strcasecmp (name, MU_HEADER_MIME_VERSION) == 0 ||
-	      mu_c_strcasecmp (name, MU_HEADER_CONTENT_TYPE) == 0)
-	    continue;
-	  else if (is_address_header (name))
-	    {
-	      if (address_decode (name, value, charset, newhdr))
-		mu_header_append (newhdr, name, value);
-	      continue;
-	    }
-	  rc = mu_rfc2047_decode (charset, value, &s);
-	  if (rc == 0)
-	    {
-	      mu_header_append (newhdr, name, s);
-	      free (s);
-	    }
-	  else
-	    mu_header_append (newhdr, name, value);
-	}
-      mu_iterator_destroy (&itr);
+      newmsg = message_decode_mime (msg, crd, dim);
+    }
+  
+  if (!newmsg)
+    {
+      mu_message_ref (msg);
+      return msg;
     }
 
   set_log_prefix (*crd, dim);

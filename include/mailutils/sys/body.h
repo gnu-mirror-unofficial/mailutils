@@ -33,7 +33,7 @@ struct _mu_body
   int ref_count;           /* Reference counter */
   void *owner;             /* Owner object pointer */
   mu_stream_t data_stream; /* Body content stream */
-  mu_stream_t temp_stream; /* RW temporary stream (for writing ro the body) */
+  mu_stream_t temp_stream; /* RW temporary stream (for writing to the body) */
   int flags;
 
   int (*_size)  (mu_body_t, size_t*);

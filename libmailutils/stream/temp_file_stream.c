@@ -100,5 +100,5 @@ mu_temp_file_stream_create (mu_stream_t *pstream,
 	  *pstream = stream;
 	}
     }
-  return 0;
+  return rc;
 }
