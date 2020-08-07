@@ -20,11 +20,14 @@
 #include <mailutils/sys/envelope.h>
 #include <muaux.h>
 #include <sysexits.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 int truncate_opt;
 int from_filter;
 int recode_charset;
 char *charset;
+int fd_err;
 
 static struct mu_option decodemail_options[] = 
 {
@@ -103,6 +106,21 @@ set_log_prefix (mu_coord_t crd, size_t dim)
   free (prefix);
 }
 
+void
+abend (int code)
+{
+  if (fd_err)
+    {
+      struct rlimit rlim;
+      
+      getrlimit (RLIMIT_NOFILE, &rlim);
+      rlim.rlim_cur += fd_err;
+      mu_error (_("at least %lu file descriptors are needed to process this message"),
+		(unsigned long) rlim.rlim_cur);
+    }
+  exit (code);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -155,7 +173,7 @@ main (int argc, char **argv)
       else
 	mu_error (_("could not create default mailbox: %s"),
 		  mu_strerror (rc));
-      exit (EX_OSERR);
+      abend (EX_OSERR);
     }
 
   rc = mu_mailbox_open (imbox, MU_STREAM_READ);
@@ -166,7 +184,7 @@ main (int argc, char **argv)
       mu_mailbox_get_url (imbox, &url);
       mu_error (_("could not open input mailbox `%s': %s"),
 		mu_url_to_string (url), mu_strerror (rc));
-      exit (EX_NOINPUT);
+      abend (EX_NOINPUT);
     }
 
   /* Create output mailbox */
@@ -181,14 +199,14 @@ main (int argc, char **argv)
 	  mu_error (_("could not create output mailbox `%s': %s"),
 		    ombox_name,
 		    mu_strerror (rc));
-	  exit (EX_OSERR);
+	  abend (EX_OSERR);
 	}
       rc = mu_mailbox_open (ombox, MU_STREAM_RDWR|MU_STREAM_CREAT);
       if (rc)
 	{
 	  mu_error (_("could not open mailbox `%s': %s"),
 		    ombox_name, mu_strerror (rc));
-	  exit (EX_CANTCREAT);
+	  abend (EX_CANTCREAT);
 	}
 
       if (mu_mailbox_get_property (ombox, &prop) == 0 &&
@@ -223,7 +241,7 @@ main (int argc, char **argv)
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_get_iterator", NULL, rc);
-      exit (EX_SOFTWARE);
+      abend (EX_SOFTWARE);
     }
 
   rc = mu_coord_alloc (&crd, 1);
@@ -245,6 +263,7 @@ main (int argc, char **argv)
 	  continue;
 	}
       crd[1] = i;
+      fd_err = 0;
       newmsg = message_decode (msg, &crd, 1);
       message_store (newmsg, ombox);
       mu_message_unref (newmsg);
@@ -256,7 +275,7 @@ main (int argc, char **argv)
   mu_mailbox_destroy (&ombox);
 
   if (err)
-    exit (EX_UNAVAILABLE);
+    abend (EX_UNAVAILABLE);
   exit (EX_OK);
 }
 
@@ -273,8 +292,12 @@ message_store_mbox (mu_message_t msg, mu_mailbox_t mbx)
 	case MU_ERR_EMPTY_ADDRESS:
 	  break;
 
+	case EMFILE:
+	  fd_err++;
+	  /* FALLTHROUGH */
+	  
 	default:
-	  exit (EX_IOERR);
+	  abend (EX_IOERR);
 	}
     }
 }
@@ -450,7 +473,7 @@ message_decode_nomime (mu_message_t msg)
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_message_create", NULL, rc);
-      exit (EX_OSERR);
+      abend (EX_OSERR);
     }
 	  
   rc = mu_message_get_body (newmsg, &body);
@@ -463,6 +486,8 @@ message_decode_nomime (mu_message_t msg)
   rc = mu_body_get_streamref (body, &bstr);
   if (rc)
     {
+      if (rc == EMFILE)
+	fd_err++;
       mu_diag_funcall (MU_DIAG_ERROR, "mu_body_get_streamref", NULL, rc);
       goto end;
     }
@@ -476,7 +501,7 @@ message_decode_nomime (mu_message_t msg)
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_copy", NULL, rc);
       if (mu_stream_err (bstr))
 	{
-	  exit (EX_IOERR);
+	  abend (EX_IOERR);
 	}
       else
 	{
@@ -561,7 +586,7 @@ message_decode_nomime (mu_message_t msg)
 		  mu_diag_funcall (MU_DIAG_ERROR, 
 				   "mu_assoc_install_ref",
 				   NULL, rc);
-		  exit (EX_IOERR);
+		  abend (EX_IOERR);
 		}
 	      (*pparam)->value = mu_strdup (charset);
 	      mu_content_type_format (ct, &content_type);
