@@ -59,6 +59,7 @@ noinst_PROGRAMS = \
  readmesg\
  recenv\
  scantime\
+ stream-getdelim\
  strftime\
  strin\
  strout\
@@ -108,6 +109,7 @@ TESTSUITE_AT += \
  fsfolder02.at\
  fsfolder03.at\
  fsfolder04.at\
+ getdelim.at\
  hdrcpy.at\
  hdrflt.at\
  htmlent.at\

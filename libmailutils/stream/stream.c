@@ -864,16 +864,7 @@ mu_stream_readdelim (mu_stream_t stream, char *buf, size_t size,
 
   if (stream->buftype == mu_buffer_none)
     {
-      if (stream->readdelim)
-	{
-	  size_t nread;
-	  rc = stream->readdelim (stream, buf, size, delim, &nread);
-	  if (pread)
-	    *pread = nread;
-	  stream->offset += nread;
-	}
-      else
-	rc = _stream_readdelim (stream, buf, size, delim, pread);
+      rc = _stream_readdelim (stream, buf, size, delim, pread);
     }
   else
     {
@@ -952,14 +943,12 @@ mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
 	  n = needed;
 	}
 
-      if (stream->readdelim)
-	rc = stream->readdelim (stream, lineptr + cur_len, n - cur_len, delim,
-				&rdn);
-      else if (stream->buftype != mu_buffer_none)
+      if (stream->buftype == mu_buffer_none)
+	rc = _stream_readdelim (stream, lineptr + cur_len, n - cur_len, delim,
+				&rdn); 
+      else
 	rc = _stream_scandelim (stream, lineptr + cur_len, n - cur_len, delim,
 				&rdn);
-      else
-	rc = mu_stream_read (stream, lineptr + cur_len, 1, &rdn);
 
       if (rc || rdn == 0)
 	break;

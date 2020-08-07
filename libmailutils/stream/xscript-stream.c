@@ -310,14 +310,6 @@ _xscript_read (struct _mu_stream *str, char *buf, size_t bufsize,
 }
 
 static int
-_xscript_readdelim (struct _mu_stream *str, char *buf, size_t bufsize,
-		    int delim, size_t *pnread)
-{
-  struct _mu_xscript_stream *sp = (struct _mu_xscript_stream *)str;
-  return mu_stream_readdelim (sp->transport, buf, bufsize, delim, pnread);
-}
-
-static int
 _xscript_write (struct _mu_stream *str, const char *buf, size_t bufsize,
 		  size_t *pnwrite)
 {
@@ -582,8 +574,6 @@ mu_xscript_stream_create (mu_stream_t *pref, mu_stream_t transport,
     return ENOMEM;
 
   sp->stream.read = _xscript_read;
-  if (transport->readdelim)
-    sp->stream.readdelim = _xscript_readdelim;
   sp->stream.write = _xscript_write;
   sp->stream.flush = _xscript_flush;
   sp->stream.open = _xscript_open;

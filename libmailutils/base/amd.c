@@ -111,10 +111,6 @@ static int amd_remove_mbox (mu_mailbox_t mailbox);
 static int amd_body_stream_read (mu_stream_t str, char *buffer,
 				 size_t buflen,
 				 size_t *pnread);
-static int amd_body_stream_readdelim (mu_stream_t is,
-				      char *buffer, size_t buflen,
-				      int delim,
-				      size_t *pnread);
 static int amd_body_stream_size (mu_stream_t str, mu_off_t *psize);
 static int amd_body_stream_seek (mu_stream_t str, mu_off_t off, 
 				 mu_off_t *presult);
@@ -617,7 +613,6 @@ _amd_attach_message (mu_mailbox_t mailbox, struct _amd_message *mhm,
 	return ENOMEM;
       }
     str->stream.read = amd_body_stream_read;
-    str->stream.readdelim = amd_body_stream_readdelim;
     str->stream.size = amd_body_stream_size;
     str->stream.seek = amd_body_stream_seek;
     mu_body_set_stream (body, (mu_stream_t) str, msg);
@@ -1911,63 +1906,6 @@ amd_body_stream_read (mu_stream_t is, char *buffer, size_t buflen,
     }
 
   *pnread = nread;
-
-  mu_monitor_unlock (mhm->amd->mailbox->monitor);
-#ifdef WITH_PTHREAD
-  pthread_cleanup_pop (0);
-#endif
-
-  return status;
-}
-
-static int
-amd_body_stream_readdelim (mu_stream_t is, char *buffer, size_t buflen,
-			   int delim,
-			   size_t *pnread)
-{
-  struct _amd_body_stream *amdstr = (struct _amd_body_stream *)is;
-  mu_body_t body = amdstr->body;
-  mu_message_t msg = mu_body_get_owner (body);
-  struct _amd_message *mhm = mu_message_get_owner (msg);
-  int status = 0;
-
-  status = amd_pool_open (mhm);
-  if (status)
-    return status;
-
-  if (buffer == NULL || buflen == 0)
-    {
-      if (pnread)
-	*pnread = 0;
-      return 0;
-    }
-
-  mu_monitor_rdlock (mhm->amd->mailbox->monitor);
-#ifdef WITH_PTHREAD
-  /* read() is cancellation point since we're doing a potentially
-     long operation.  Lets make sure we clean the state.  */
-  pthread_cleanup_push (amd_cleanup, (void *)mhm->amd->mailbox);
-#endif
-
-  status = mu_stream_seek (mhm->stream, mhm->body_start + amdstr->off,
-			   MU_SEEK_SET, NULL);
-  if (status == 0)
-    {
-      size_t nread = 0;
-      size_t ln;
-	  
-      ln = mhm->body_end - (mhm->body_start + amdstr->off) + 1;
-      if (ln > 0)
-	{
-	  size_t rdsize = ((size_t)ln < buflen) ? (size_t)ln : buflen;
-	  status = mu_stream_readdelim (mhm->stream, buffer, rdsize,
-					delim, &nread);
-	  amdstr->off += nread;
-	}
-
-      if (pnread)
-	*pnread = nread;
-    }
 
   mu_monitor_unlock (mhm->amd->mailbox->monitor);
 #ifdef WITH_PTHREAD

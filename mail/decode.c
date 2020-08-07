@@ -207,12 +207,69 @@ mime_descend (struct mime_descend_closure *closure,
     {
       mu_message_t submsg = NULL;
 
-      if (mu_message_unencapsulate (closure->message, &submsg, NULL) == 0)
+      switch (mu_message_unencapsulate (closure->message, &submsg, NULL))
 	{
+	case 0:
 	  subclosure.hints = MDHINT_SELECTED_HEADERS;
 	  subclosure.msgset = closure->msgset;
 	  subclosure.message = submsg;
 	  status = mime_descend (&subclosure, fun, data);
+	  break;
+
+	case MU_ERR_INVALID_EMAIL:
+	  /*
+	   * The mu_message_unencapsulate function returns this code
+	   * if it was unable to parse the message body as a RFC822
+	   * message (this code is propagated from mu_stream_to_message,
+	   * which does the actual work).
+	   *
+	   * If the enclosing messgae(part) is of message/digest type, it
+	   * is possible that messages are packed into it without MIME
+	   * headers.  That violates RFC 1341, but such digests are
+	   * reported to exist (re. email conversation with Karl on
+	   * 2020-08-07, <202008070138.0771cfHn003390@freefriends.org>).
+	   *
+	   * Try to see whether the part has one of the normal RFC822 headers
+	   * and if so treat it as the message.  Otherwise, treat it as
+	   * text/plain.
+	   * 
+	   * FIXME: Do all this only if the upper-level message is of
+	   * message/digest type.
+	   */
+	  {
+	    char *names[] = { "From", "To", "Subject" };
+	    mu_header_t hdr;
+
+	    if (mu_message_get_header (closure->message, &hdr) == 0 &&
+		mu_header_sget_firstof (hdr, names, NULL, NULL) == 0)
+	      {
+		mu_stream_t str;
+		if (mu_message_get_streamref (closure->message, &str) == 0)
+		  {
+		    status = mu_stream_to_message (str, &submsg);
+		    mu_stream_unref (str);
+		    if (status == 0)
+		      {
+			mu_header_t subhdr;
+			if (mu_message_get_header (submsg, &subhdr) == 0)
+			  {
+			    mu_header_remove (subhdr,
+					      MU_HEADER_CONTENT_TYPE, 1);
+			    subclosure.hints = MDHINT_SELECTED_HEADERS;
+			    subclosure.msgset = closure->msgset;
+			    subclosure.message = submsg;
+			    status = mime_descend (&subclosure, fun, data);
+			    break;
+			  }
+		      }
+		  }
+	      }
+	  }
+	  /* FALLTHROUGH */
+	  
+	default:
+	  /* Treat as text/plain */
+	  status = fun (closure, data);
 	}
     }
   else

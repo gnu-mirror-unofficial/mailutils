@@ -127,31 +127,6 @@ _mu_pop3_read (struct _mu_stream *str, char *buf, size_t bufsize,
 }
 
 static int
-_mu_pop3_readdelim (struct _mu_stream *str, char *buf, size_t bufsize,
-		    int delim, size_t *pnread)
-{
-  struct mu_pop3_stream *sp = (struct mu_pop3_stream *)str;
-  mu_pop3_t pop3 = sp->pop3;
-  size_t nread;
-  int status = 0;
-  
-  if (sp->flags & _POP3F_DONE)
-    nread = 0;
-  else
-    {
-      status = mu_stream_readdelim (pop3->carrier, buf, bufsize, delim,
-				    &nread);
-      if (status == 0 && nread == 0)
-	{
-	  pop3->state = MU_POP3_NO_STATE;
-	  sp->flags |= _POP3F_DONE;
-	}
-    }
-  *pnread = nread;
-  return status;
-}
-
-static int
 _mu_pop3_flush (struct _mu_stream *str)
 {
   struct mu_pop3_stream *sp = (struct mu_pop3_stream *)str;
@@ -180,7 +155,6 @@ mu_pop3_stream_create (mu_pop3_t pop3, mu_stream_t *pstream)
   if (!sp)
     return ENOMEM;
   sp->stream.read = _mu_pop3_read; 
-  sp->stream.readdelim = _mu_pop3_readdelim; 
   sp->stream.flush = _mu_pop3_flush;
   sp->stream.wait = _mu_pop3_wait;
   

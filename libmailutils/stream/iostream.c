@@ -43,18 +43,6 @@ _iostream_read (struct _mu_stream *str, char *buf, size_t bufsize,
 }
 
 static int
-_iostream_readdelim (struct _mu_stream *str, char *buf, size_t bufsize,
-		    int delim, size_t *pnread)
-{
-  struct _mu_iostream *sp = (struct _mu_iostream *)str;
-  int rc = mu_stream_readdelim (sp->transport[_MU_STREAM_INPUT], buf,
-				bufsize, delim, pnread);
-  if (rc)
-    sp->last_err_str = _MU_STREAM_INPUT;
-  return rc;
-}
-
-static int
 _iostream_write (struct _mu_stream *str, const char *buf, size_t bufsize,
 		  size_t *pnwrite)
 {
@@ -275,8 +263,6 @@ mu_iostream_create (mu_stream_t *pref, mu_stream_t in, mu_stream_t out)
 
   sp->stream.flags |= _MU_STR_OPEN;
   sp->stream.read = _iostream_read; 
-  if (in->readdelim)
-    sp->stream.readdelim = _iostream_readdelim; 
   sp->stream.write = _iostream_write;
   sp->stream.flush = _iostream_flush;
   sp->stream.open = _iostream_open; 
