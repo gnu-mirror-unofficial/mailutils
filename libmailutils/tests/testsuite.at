@@ -104,6 +104,9 @@ m4_include([t1-stream.at])
 m4_include([streamshift.at])
 m4_include([getdelim.at])
 
+AT_BANNER([Stream implementations])
+MU_CHECK([temp_stream],[stream],[temp_stream])
+
 AT_BANNER([Conversions])
 m4_include([strtoc.at])
 

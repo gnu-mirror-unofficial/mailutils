@@ -40,6 +40,7 @@ libstream_la_SOURCES = \
  syslogstream.c\
  tcp.c\
  temp_file_stream.c\
+ temp_stream.c\
  wordwrap.c\
  xscript-stream.c
 

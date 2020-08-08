@@ -59,6 +59,7 @@ sysinclude_HEADERS = \
  stream.h\
  syslogstream.h\
  temp_file_stream.h\
+ temp_stream.h\
  tls-stream.h\
  url.h\
  xscript-stream.h\

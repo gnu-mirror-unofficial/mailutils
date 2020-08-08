@@ -474,7 +474,10 @@ int mu_nullstream_create (mu_stream_t *pref, int flags);
 
 int mu_wordwrap_stream_create (mu_stream_t *pstream, mu_stream_t transport,
 			       size_t left_margin, size_t right_margin);
-  
+
+extern size_t mu_temp_file_threshold_size;
+int mu_temp_stream_create (mu_stream_t *pstream, size_t threshold);
+
 #ifdef __cplusplus
 }
 #endif

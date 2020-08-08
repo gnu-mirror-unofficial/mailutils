@@ -21,6 +21,17 @@ m4_version_prereq([2.52g])
 m4_define([AT_SKIP_TEST],[exit 77])
 
 dnl ------------------------------------------------------------
+dnl MU_CHECK(NAME, [KW], COMMAND, [STATUS = `0'],
+dnl          [STDOUT], [STDERR],
+dnl          [RUN-IF-FAIL], [RUN-IF-PASS])
+dnl ------------------------------------------------------------
+m4_define([MU_CHECK],[AT_SETUP([$1])
+AT_KEYWORDS([$2])
+AT_CHECK([m4_shift2($@)])
+AT_CLEANUP
+])
+
+dnl ------------------------------------------------------------
 dnl MUT_DEFAULT_OPTIONS -- produce default command line options
 dnl ------------------------------------------------------------
 m4_define([MUT_DEFAULT_OPTIONS],[dnl

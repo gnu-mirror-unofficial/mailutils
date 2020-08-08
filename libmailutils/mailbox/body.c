@@ -87,7 +87,7 @@ body_get_transport (mu_body_t body, int mode, mu_stream_t *pstr)
 	{
 	  int rc;
 	  
-	  rc = mu_temp_file_stream_create (&body->temp_stream, NULL, 0);
+	  rc = mu_temp_stream_create (&body->temp_stream, 0);
 	  if (rc)
 	    return rc;
 	  mu_stream_set_buffer (body->temp_stream, mu_buffer_full, 0);

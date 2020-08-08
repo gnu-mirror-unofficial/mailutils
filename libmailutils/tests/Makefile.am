@@ -68,6 +68,7 @@ noinst_PROGRAMS = \
  t1-stream\
  t-streamshift\
  tempfile\
+ temp_stream\
  tcli\
  tocrlf\
  url-comp\
