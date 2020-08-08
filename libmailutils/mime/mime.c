@@ -250,12 +250,38 @@ mu_mime_content_type_set_param (mu_mime_t mime, char const *name,
   return 0;
 }
 
+enum
+  {
+    BOUNDARY_NO_MATCH,
+    BOUNDARY_MATCH,
+    BOUNDARY_CLOSE
+  };
+
+static int
+match_boundary (char const *line, size_t llen,
+		char const *boundary, size_t blen)
+{
+  if (line[llen-1] == '\n')
+    llen--;
+  if (llen >= blen + 2 &&
+      memcmp (line, "--", 2) == 0 &&
+      memcmp (line + 2, boundary, blen) == 0)
+    {
+      if (llen == blen + 2)
+	return BOUNDARY_MATCH;
+      if (llen == blen + 4 && memcmp (line + blen + 2, "--", 2) == 0)
+	return BOUNDARY_CLOSE;
+    }
+  return BOUNDARY_NO_MATCH;
+}  
+
 static int
 _mime_parse_mpart_message (mu_mime_t mime)
 {
   size_t blength, mb_length, mb_offset, mb_lines;
   int ret;
-
+  int match;
+  
   if (!(mime->flags & MIME_PARSER_ACTIVE))
     {
       ret = mu_mime_content_type_get_param (mime, "boundary", &mime->boundary);
@@ -280,14 +306,15 @@ _mime_parse_mpart_message (mu_mime_t mime)
       switch (mime->parser_state)
 	{
 	case MIME_STATE_SCAN_BOUNDARY:
-	  if (mime->line_length >= blength
-	      && ((memcmp (mime->cur_line, "--", 2) == 0
-		   && memcmp (mime->cur_line + 2, mime->boundary,
-			      blength) == 0)
-		  || memcmp (mime->cur_line, mime->boundary, blength) == 0))
+	  if ((match = match_boundary (mime->cur_line, mime->line_length,
+				       mime->boundary, blength))
+	      != BOUNDARY_NO_MATCH)
 	    {
 	      mime->parser_state = MIME_STATE_HEADERS;
-	      mb_length = mime->cur_offset - mb_offset - 1;
+	      if (mime->cur_offset == mb_offset)
+		mb_length = 0;
+	      else
+		mb_length = mime->cur_offset - mb_offset - 1;
 	      if (mime->header_length)
 		/* this skips the preamble */
 		{
@@ -311,9 +338,8 @@ _mime_parse_mpart_message (mu_mime_t mime)
 		  _mime_append_part (mime, NULL,
 				     mb_offset, mb_length, mb_lines);
 		}
-	      
-	      if (mime->line_length > blength
-		  && memcmp (mime->cur_line + blength + 2, "--", 2) == 0)
+
+	      if (match == BOUNDARY_CLOSE)
 		{	/* last boundary */
 		  mime->parser_state = MIME_STATE_END;
 		  mime->header_length = 0;
