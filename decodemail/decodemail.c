@@ -716,10 +716,10 @@ message_decode_mime (mu_message_t msg, mu_coord_t *crd, size_t dim)
       rc = mu_message_get_part (msg, i, &msgpart);
       if (rc)
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_num_parts",
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_part",
 			   NULL, rc);
 	  mu_mime_unref (mime);
-	  goto end;
+	  return NULL;
 	}
       msgdec = message_decode (msgpart, crd, dim);
       rc = mu_mime_add_part (mime, msgdec);
@@ -728,7 +728,7 @@ message_decode_mime (mu_message_t msg, mu_coord_t *crd, size_t dim)
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_mime_add_part", NULL, rc);
 	  mu_mime_unref (mime);
-	  goto end;
+	  return NULL;
 	}	  
     }
 
