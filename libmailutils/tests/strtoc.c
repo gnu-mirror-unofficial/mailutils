@@ -197,6 +197,7 @@ struct value_handler value_handler[] = {
   [mu_c_long]   = { v_long_format, v_long_compare },
   [mu_c_ulong]  = { v_ulong_format, v_ulong_compare },
   [mu_c_size]   = { v_size_format, v_size_compare },
+  [mu_c_hsize]  = { v_size_format, v_size_compare },
 #if 0
     mu_c_time,
 #endif
@@ -244,7 +245,6 @@ struct testdata tests[] = {
   { mu_c_short,  "115",             0, { .v_short = 115 } },
   { mu_c_short,  "-400",            0, { .v_short = -400 } },
   { mu_c_short,  "1a",              EINVAL,  },
-
   { mu_c_ushort, "110",             0, { .v_ushort = 110 } },
   { mu_c_ushort, "-110",            ERANGE  },
 
@@ -257,6 +257,19 @@ struct testdata tests[] = {
   { mu_c_long,   "-10568",          0, { .v_long = -10568 } },
 
   { mu_c_ulong,  "10568",           0, { .v_ulong = 10568 } },
+  
+  { mu_c_size,   "10568",           0, { .v_size = 10568 } },
+
+  { mu_c_hsize,  "0",               0, { .v_size = 0 } },
+  { mu_c_hsize,  "10",              0, { .v_size = 10 } },
+  { mu_c_hsize,  "10K",             0, { .v_size = 10240 } },
+  { mu_c_hsize,  " 10 M  ",         0, { .v_size = 10485760 } },
+  { mu_c_hsize,  "10s",             MU_ERR_PARSE },
+  { mu_c_hsize,  "-1",              MU_ERR_PARSE },
+  { mu_c_hsize,  "",                MU_ERR_PARSE },
+  { mu_c_hsize,  "   ",             MU_ERR_PARSE },
+  { mu_c_hsize,  " 1 M b  ",        MU_ERR_PARSE },
+  
   
   { mu_c_bool,   "true",            0, { .v_int = 1 } },
   { mu_c_bool,   "false",           0, { .v_int = 0 } },
@@ -289,7 +302,7 @@ print_test_id (int i, FILE *fp)
 void
 usage (int code, FILE *fp, char const *argv0)
 {
-  fprintf (fp, "usage: %s [-v]", argv0);
+  fprintf (fp, "usage: %s [-v]\n", argv0);
   exit (code);
 }
 
@@ -340,6 +353,12 @@ main (int argc, char **argv)
 	      free (errmsg);
 	      ++failures;
 	    }
+	}
+      else if (tests[i].err)
+	{
+	  print_test_id (i, stderr);
+	  fprintf (stderr, "FAIL: unexpected success\n");
+	  ++failures;
 	}
       else if (valcmp (tests[i].type, &tests[i].val, &val))
 	{

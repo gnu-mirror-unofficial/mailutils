@@ -191,6 +191,7 @@ enum mu_c_type
     mu_c_long,
     mu_c_ulong,
     mu_c_size,
+    mu_c_hsize,       /* mu_c_size with size suffix (KMG) allowed */
     mu_c_off,
     mu_c_time,
     mu_c_bool,

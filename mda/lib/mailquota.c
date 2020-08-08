@@ -51,32 +51,29 @@ struct mu_cfg_param mda_mailquota_cfg[] = {
 mu_off_t groupquota = 5*1024*1024UL;
 
 static int
-get_size (char *str, mu_off_t *size, char **endp)
+get_quota (mu_off_t *pquota, const char *str)
 {
-  mu_off_t s;
-
-  s = strtol (str, &str, 0);
-  switch (*str)
+  size_t n;
+  char *p;
+  int rc = mu_strtosize (str, &p, &n);
+  switch (rc)
     {
     case 0:
+      *pquota = n;
       break;
       
-    case 'k':
-    case 'K':
-      s *= 1024;
+    case ERANGE:
+      mu_error (_("quota value is out of allowed range: %s"), str);
       break;
-      
-    case 'm':
-    case 'M':
-      s *= 1024*1024;
+
+    case MU_ERR_PARSE:
+      mu_error (_("bad quota value: %s, stopped at %s"), str, p);
       break;
-      
+
     default:
-      *endp = str;
-      return -1;
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_strtosize", str, rc);
     }
-  *size = s;
-  return 0;
+  return rc;
 }
 
 enum {
@@ -164,12 +161,10 @@ dbm_retrieve_quota (char *name, mu_off_t *quota)
 		
       strncpy (buffer, contentd.mu_dptr, contentd.mu_dsize);
       buffer[contentd.mu_dsize] = 0;
+      
       *quota = strtoul (buffer, &p, 0);
-      if (get_size (buffer, quota, &p))
-	{
-	  mu_error (_("bogus mailbox quota for `%s' (near `%s')"), name, p);
-	  *quota = groupquota;
-	}
+      if (get_quota (quota, buffer))
+	*quota = groupquota;
     }
   
   mu_dbm_datum_free (&contentd);

@@ -31,6 +31,7 @@
 #include <mailutils/cctype.h>
 #include <mailutils/io.h>
 #include <mailutils/nls.h>
+#include <mailutils/cstr.h>
 
 typedef int (*str_to_c_t) (void *tgt, char const *string, char **errmsg);
 
@@ -245,6 +246,12 @@ to_incr (void *tgt, char const *string, char **errmsg)
   return 0;
 }
 
+static int
+to_hsize (void *tgt, char const *string, char **errmsg)
+{
+  return mu_strtosize (string, NULL, tgt);
+}
+
 static str_to_c_t str_to_c[] = {
   [mu_c_string] = to_string, 
   [mu_c_short]  = to_short,  
@@ -254,13 +261,14 @@ static str_to_c_t str_to_c[] = {
   [mu_c_long]   = to_long,   
   [mu_c_ulong]  = to_ulong,  
   [mu_c_size]   = to_size_t,   
+  [mu_c_hsize]  = to_hsize,
   /* FIXME  [mu_c_off]    = { to_off,    generic_dealloc }, */
   [mu_c_time]   = to_time_t, 
   [mu_c_bool]   = to_bool,
   /* FIXME [mu_c_ipv4]   = to_ipv4, */
   [mu_c_cidr]   = to_cidr,
   /* FIXME  [mu_c_host]   = { to_host,   generic_dealloc } */
-  [mu_c_incr]   = to_incr
+  [mu_c_incr]   = to_incr,
 };
 
 char const *mu_c_type_str[] = {
@@ -272,6 +280,7 @@ char const *mu_c_type_str[] = {
   [mu_c_long]    = "mu_c_long",   
   [mu_c_ulong]   = "mu_c_ulong",  
   [mu_c_size]    = "mu_c_size",   
+  [mu_c_hsize]   = "mu_c_hsize",
   [mu_c_off]     = "mu_c_off",    
   [mu_c_time]    = "mu_c_time",   
   [mu_c_bool]    = "mu_c_bool",   
@@ -279,7 +288,7 @@ char const *mu_c_type_str[] = {
   [mu_c_cidr]    = "mu_c_cidr",   
   [mu_c_host]    = "mu_c_host",   
   [mu_c_incr]    = "mu_c_incr",   
-  [mu_c_void]    = "mu_c_void"
+  [mu_c_void]    = "mu_c_void",
 };
 
 int

@@ -66,7 +66,9 @@ int mu_c_str_unescape_trans (char const *str, char const *trans,
 
 int mu_str_expand (char **output, char const *input, mu_assoc_t assoc);
 int mu_str_vexpand (char **output, char const *input, ...);
-  
+
+int mu_strtosize (char const *str, char **endp, size_t *ret_val);
+
 #ifdef __cplusplus
 }
 #endif

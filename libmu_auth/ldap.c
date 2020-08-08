@@ -458,29 +458,28 @@ _construct_attr_array (size_t *pargc, char ***pargv)
   return 0;
 }
 
-/* FIXME: Duplicated in other modules */
 static void
 get_quota (mu_off_t *pquota, const char *str)
 {
+  size_t n;
   char *p;
-  mu_off_t quota = strtoul (str, &p, 10);
-  switch (*p)
+  int rc = mu_strtosize (str, &p, &n);
+  switch (rc)
     {
     case 0:
-      break;
-	      
-    case 'k':
-    case 'K':
-      quota *= 1024;
+      *pquota = n;
       break;
       
-    case 'm':
-    case 'M':
-      quota *= 1024*1024;
+    case ERANGE:
+      mu_error (_("quota value is out of allowed range: %s"), str);
       break;
-	      
+
+    case MU_ERR_PARSE:
+      mu_error (_("bad quota value: %s, stopped at %s"), str, p);
+      break;
+
     default:
-      mu_error (_("invalid value for quota: %s"), str);
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_strtosize", str, rc);
     }
 }
 
@@ -517,7 +516,7 @@ _assign_partial_auth_data (struct mu_auth_data *d, const char *key,
     rc = (d->shell = strdup (val)) ? 0 : errno;
   else if (strcmp (key, MU_AUTH_MAILBOX) == 0)
     rc = (d->mailbox = strdup (val)) ? 0 : errno;
-  else if (strcmp (key, MU_AUTH_QUOTA) == 0)   
+  else if (strcmp (key, MU_AUTH_QUOTA) == 0)
     get_quota (&d->quota, val);
   return rc;
 }

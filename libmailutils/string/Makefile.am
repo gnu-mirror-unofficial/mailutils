@@ -38,6 +38,7 @@ libstring_la_SOURCES = \
  stripws.c\
  strlst.c\
  strrtrim.c\
+ strtosize.c\
  trueans.c\
  unfold.c\
  asnprintf.c\
