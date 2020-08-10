@@ -569,6 +569,8 @@ enum
     IO2_WR
   };
 
+static void disable_starttls (void);
+
 #ifdef WITH_TLS
 # include <gnutls/gnutls.h>
 
@@ -576,6 +578,29 @@ enum
 char *tls_cert;			/* TLS sertificate */
 char *tls_key;			/* TLS key */
 char *tls_cafile;
+
+static inline int
+set_tls_opt (int c)
+{
+  switch (c)
+    {
+    case 'c':
+      tls_cert = optarg;
+      break;
+      
+    case 'k':
+      tls_key = optarg;
+      break;
+      
+    case 'f':
+      tls_cafile = optarg;
+      break;
+
+    default:
+      return 1;
+    }
+  return 0;
+}
 
 static inline int
 enable_tls (void)
@@ -666,8 +691,6 @@ generate_dh_params (void)
   gnutls_dh_params_init (&dh_params);
   gnutls_dh_params_generate2 (dh_params, DH_BITS);
 }
-
-static void disable_starttls (void);
 
 static int
 tls_init (void)
@@ -766,6 +789,11 @@ iotls_create (int in, int out)
   return (struct iobase *)bp;
 }
 #else
+static inline int set_tls_opt (int c) {
+  terror ("option -%c not supported: program compiled without support for TLS",
+	  c);
+  return 1;
+}
 static inline int enable_tls(void) { return 0; }
 static inline int tls_init (void) { return -1; }
 static inline struct iobase *iotls_create (int in, int out) { return NULL; }
@@ -1300,7 +1328,9 @@ static struct smtp_transition smtp_transition_table[MAX_STATE][MAX_KW] = {
 static void
 disable_starttls (void)
 {
+#ifdef WITH_TLS
   tls_cert = tls_key = tls_cafile = NULL;
+#endif
   smtp_transition_table[STATE_EHLO][KW_STARTTLS].new_state = STATE_ERR;
 }
 
@@ -1474,20 +1504,9 @@ main (int argc, char **argv)
 	    }
 	  break;
 	  
-	case 'c':
-	  tls_cert = optarg;
-	  break;
-
-	case 'k':
-	  tls_key = optarg;
-	  break;
-
-	case 'f':
-	  tls_cafile = optarg;
-	  break;
-	  
 	default:
-	  exit (EX_USAGE);
+	  if (set_tls_opt (c))
+	    exit (EX_USAGE);
 	}
     }
 
