@@ -1213,7 +1213,7 @@ mail_send0 (compose_env_t *env, int save_to)
   char *escape;
 
   /* Prepare environment */
-  rc = mu_temp_file_stream_create (&env->compstr, NULL, 0);
+  rc = mu_temp_stream_create (&env->compstr, 0);
   if (rc)
     {
       mu_error (_("Cannot open temporary file: %s"), mu_strerror (rc));

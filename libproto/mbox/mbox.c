@@ -1426,7 +1426,7 @@ mbox_expunge0 (mu_mailbox_t mailbox, int remove_deleted)
       (status = mu_locker_lock (mailbox->locker)) != 0)
     return status;
 
-  status = mu_temp_file_stream_create (&tempstr, NULL, 0);
+  status = mu_temp_stream_create (&tempstr, 0);
   if (status == 0)
     {
       sigset_t signalset;

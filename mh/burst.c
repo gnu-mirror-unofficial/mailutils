@@ -331,7 +331,7 @@ flush_stream (struct burst_stream *bs, char *buf, size_t size)
     return;
   if (!bs->stream)
     {
-      if ((rc = mu_temp_file_stream_create (&bs->stream, NULL, 0))) 
+      if ((rc = mu_temp_stream_create (&bs->stream, 0))) 
 	{
 	  mu_error (_("Cannot open temporary file: %s"),
 		    mu_strerror (rc));

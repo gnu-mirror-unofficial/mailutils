@@ -78,10 +78,10 @@ make_tmp (const char *from)
       exit (EX_TEMPFAIL);
     }
 
-  rc = mu_temp_file_stream_create (&out, NULL, 0);
+  rc = mu_temp_stream_create (&out, 0);
   if (rc)
     {
-      mda_error (_("unable to open temporary file: %s"), mu_strerror (rc));
+      mda_error (_("unable to open temporary stream: %s"), mu_strerror (rc));
       exit (EX_TEMPFAIL);
     }
 

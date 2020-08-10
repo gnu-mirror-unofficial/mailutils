@@ -563,10 +563,10 @@ cfun_data (mu_stream_t iostr, char *arg)
       return 1;
     }
 
-  rc = mu_temp_file_stream_create (&tempstr, NULL, 0);
+  rc = mu_temp_stream_create (&tempstr, 0);
   if (rc)
     {
-      mda_error (_("unable to open temporary file: %s"), mu_strerror (rc));
+      mda_error (_("unable to open temporary stream: %s"), mu_strerror (rc));
       mu_stream_destroy (&flt);
       return 1;
     }

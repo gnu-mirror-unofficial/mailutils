@@ -206,10 +206,10 @@ make_tmp (mu_stream_t in)
   size_t size = 0, n;
   mu_message_t mesg;
   
-  rc = mu_temp_file_stream_create (&out, NULL, 0);
+  rc = mu_temp_stream_create (&out, 0);
   if (rc)
     {
-      mu_error (_("unable to open temporary file: %s"), mu_strerror (rc));
+      mu_error (_("unable to open temporary stream: %s"), mu_strerror (rc));
       exit (EX_UNAVAILABLE);
     }
 

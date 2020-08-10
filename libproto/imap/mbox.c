@@ -165,7 +165,7 @@ __imap_msg_get_stream (struct _mu_imap_message *imsg, size_t msgno,
 		(_("caching message %lu"), (unsigned long) msgno));
       if (!imbx->cache)
 	{
-	  rc = mu_temp_file_stream_create (&imbx->cache, NULL, 0);
+	  rc = mu_temp_stream_create (&imbx->cache, 0);
 	  if (rc)
 	    /* FIXME: Try to recover first */
 	    return rc;
