@@ -83,11 +83,11 @@ mbox_open (mu_mailbox_t mailbox, int flags)
   /* Get a stream.  */
   if (mailbox->stream == NULL)
     {
-      /* We do not try to mmap for CREAT or APPEND, it is not supported.  */
-      status = (flags & MU_STREAM_CREAT)
-	          || (mailbox->flags & MU_STREAM_APPEND);
-
-      /* Try to mmap () the file first.  */
+      /* Prefer mmap, unless the mailbox file does not exist and CREAT is
+	 requested or the mailbox is being opened for appending */
+      status = (((flags & MU_STREAM_CREAT) && access (mud->name, F_OK)) ||
+		(mailbox->flags & MU_STREAM_APPEND));
+      
       if (status == 0)
 	{
 	  status = mu_mapfile_stream_create (&mailbox->stream, mud->name,
@@ -119,7 +119,8 @@ mbox_close (mu_mailbox_t mailbox)
 {
   mbox_data_t mud = mailbox->data;
   size_t i; 
-
+  int rc;
+  
   if (mud == NULL)
     return EINVAL;
 
@@ -160,7 +161,10 @@ mbox_close (mu_mailbox_t mailbox)
   mud->uidnext = 0;
   mu_monitor_unlock (mailbox->monitor);
 
-  return mu_stream_close (mailbox->stream);
+  rc = mu_stream_close (mailbox->stream);
+  if (rc == 0)
+    mu_stream_destroy (&mailbox->stream);
+  return rc;
 }
 
 static int
@@ -1068,14 +1072,12 @@ append_message_to_stream (mu_stream_t ostr, mu_message_t msg,
 
       if (flags & MBOX_FIRSTMSG)
 	{
-	  /* FIXME: Perhaps printf should return error code,
-	     like the rest of stream functions. */
-	  mu_stream_printf (ostr, "%s: %lu %u\n",
-			    MU_HEADER_X_IMAPBASE,
-			    (unsigned long) mud->uidvalidity,
-			    (unsigned) mud->uidnext);
-	  if (mu_stream_err (ostr))
-	    return mu_stream_last_error (ostr);
+	  status = mu_stream_printf (ostr, "%s: %lu %u\n",
+				     MU_HEADER_X_IMAPBASE,
+				     (unsigned long) mud->uidvalidity,
+				     (unsigned) mud->uidnext);
+	  if (status)
+	    return status;
 	}
 
       status = msg_attr_to_stream (ostr, msg);
@@ -1140,9 +1142,8 @@ mbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     }
 
   status = mu_stream_seek (mailbox->stream, 0, MU_SEEK_END, &size);
-  if (status)
-    return status;
-  status = append_message_to_stream (mailbox->stream, msg, mud, 0);
+  if (status == 0)
+    status = append_message_to_stream (mailbox->stream, msg, mud, 0);
   if (mailbox->locker)
     mu_locker_unlock (mailbox->locker);
 

@@ -121,6 +121,47 @@ abend (int code)
   exit (code);
 }
 
+static void
+mailbox_truncate (mu_mailbox_t mbox)
+{
+  int rc;
+  mu_iterator_t itr;
+
+  mu_mailbox_get_iterator (mbox, &itr);
+  for (mu_iterator_first (itr); !mu_iterator_is_done (itr);
+       mu_iterator_next (itr))
+    {
+      mu_message_t m;
+      mu_attribute_t a;
+	      
+      if ((rc = mu_iterator_current (itr, (void **)&m)) != 0)
+	{
+	  mu_error (_("can't get current message while truncating the mailbox: %s"),
+		    mu_strerror (rc));
+	  exit (EX_OSERR);
+	}
+      mu_message_get_attribute (m, &a);
+      mu_attribute_set_deleted (a);
+    }
+  mu_iterator_destroy (&itr);
+  if ((rc = mu_mailbox_expunge (mbox)) != 0)
+    {
+      mu_error (_("error expunging destination mailbox: %s"),
+		mu_strerror (rc));
+      exit (EX_OSERR);
+    }
+}
+
+static void
+output_mbox_cleanup (void *arg)
+{
+  if (arg)
+    {
+      mu_mailbox_t mbox = arg;
+      mu_mailbox_unlock (mbox);
+    }
+}
+
 int
 main (int argc, char **argv)
 {
@@ -201,7 +242,31 @@ main (int argc, char **argv)
 		    mu_strerror (rc));
 	  abend (EX_OSERR);
 	}
-      rc = mu_mailbox_open (ombox, MU_STREAM_RDWR|MU_STREAM_CREAT);
+
+      mu_onexit (output_mbox_cleanup, ombox);
+      
+      if (truncate_opt)
+	{
+	  rc = mu_mailbox_open (ombox, MU_STREAM_RDWR);
+	  switch (rc)
+	    {
+	    case 0:
+	      mailbox_truncate (ombox);
+	      mu_mailbox_close (ombox);
+	      break;
+
+	    case ENOENT:
+	    case MU_ERR_NOENT:
+	      break;
+
+	    default:
+	      mu_error (_("could not open mailbox `%s': %s"),
+			ombox_name, mu_strerror (rc));
+	      abend (EX_OSERR);
+	    }
+	}	  
+
+      rc = mu_mailbox_open (ombox, MU_STREAM_APPEND|MU_STREAM_CREAT);
       if (rc)
 	{
 	  mu_error (_("could not open mailbox `%s': %s"),
@@ -214,21 +279,6 @@ main (int argc, char **argv)
 	  strcmp (type, "MBOX") == 0)
 	from_filter = 1;
       
-      if (truncate_opt)
-	{
-	  mu_mailbox_get_iterator (ombox, &itr);
-	  for (mu_iterator_first (itr), i = 1; !mu_iterator_is_done (itr);
-	       mu_iterator_next (itr), i++)
-	    {
-	      mu_message_t m;
-	      mu_attribute_t a;
-	      
-	      rc = mu_iterator_current (itr, (void **)&m);
-	      mu_message_get_attribute (m, &a);
-	      mu_attribute_set_deleted (a);
-	    }
-	  mu_iterator_destroy (&itr);
-	}
       message_store = message_store_mbox;
     }
   else
@@ -272,7 +322,7 @@ main (int argc, char **argv)
   enable_log_prefix (0);
   
   mu_mailbox_destroy (&imbox);
-  (truncate_opt ? mu_mailbox_expunge : mu_mailbox_sync) (ombox);
+  mu_mailbox_sync (ombox);
   mu_mailbox_destroy (&ombox);
 
   if (err)
