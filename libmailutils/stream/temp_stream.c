@@ -90,6 +90,8 @@ temp_stream_write (struct _mu_stream *str, const char *buf, size_t size,
 	    {
 	      /* Preserve the necessary stream data */
 	      temp_file->ref_count = str->ref_count;
+	      if (temp_file->buftype != mu_buffer_none)
+		free (temp_file->buffer);
 	      temp_file->buftype = str->buftype;
 	      temp_file->buffer = str->buffer;
 	      temp_file->level = str->level;

@@ -69,6 +69,7 @@
 #include <mailutils/observer.h>
 #include <mailutils/sys/stream.h>
 #include <mailutils/sys/mailbox.h>
+#include <mailutils/sys/message.h>
 #include <mailutils/sys/registrar.h>
 #include <mailutils/sys/url.h>
 #include <mailutils/sys/amd.h>
@@ -534,6 +535,13 @@ amd_message_qid (mu_message_t msg, mu_message_qid_t *pqid)
   return mhm->amd->cur_msg_file_name (mhm, pqid);
 }
 
+static void
+amd_message_detach (mu_message_t msg)
+{
+  struct _amd_message *mhm = mu_message_get_owner (msg);
+  mhm->message = NULL;
+}
+
 struct _amd_message *
 _amd_get_message (struct _amd_data *amd, size_t msgno)
 {
@@ -563,6 +571,8 @@ _amd_attach_message (mu_mailbox_t mailbox, struct _amd_message *mhm,
   if (status != 0)
     return status;
 
+  msg->_detach = amd_message_detach;
+  
   /* Set the header.  */
   {
     mu_header_t header = NULL;

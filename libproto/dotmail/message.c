@@ -233,6 +233,13 @@ dotmail_message_qid (mu_message_t msg, mu_message_qid_t *pqid)
   return mu_asprintf (pqid, "%lu", (unsigned long) dmsg->message_start);
 }
 
+static void
+dotmail_message_detach (mu_message_t msg)
+{
+  struct mu_dotmail_message *dmsg = mu_message_get_owner (msg);
+  dmsg->message = NULL;
+}  
+
 static int
 dotmail_message_setup (mu_message_t msg)
 {
@@ -271,7 +278,8 @@ mu_dotmail_message_get (struct mu_dotmail_message *dmsg, mu_message_t *mptr)
 	  mu_message_destroy (&msg, dmsg);
 	  return rc;
 	}
-
+      msg->_detach = dotmail_message_detach;
+      
       /* Set the UID.  */
       mu_message_set_uid (msg, dotmail_message_uid, dmsg);
       mu_message_set_qid (msg, dotmail_message_qid, dmsg);

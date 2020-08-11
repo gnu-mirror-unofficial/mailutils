@@ -61,9 +61,11 @@ _mu_message_free (mu_message_t msg)
   mu_stream_destroy (&msg->outstream);
   mu_mime_destroy (&msg->mime);
       
-  /* Loose the owner.  */
+  /* Detach from the owner.  */
+  if (msg->_detach)
+    msg->_detach (msg);
   msg->owner = NULL;
-      
+        
   free (msg);
 }
 

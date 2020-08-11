@@ -268,6 +268,10 @@ message_body_stream (mu_message_t msg, int unix_header, char const *charset,
 	  mu_stream_unref (stream);
 	  stream = d_stream;
 	}
+      else if (rc == MU_ERR_NOENT)
+	{
+	  mu_error ("unknown encoding: %s", encoding);
+	}
       else
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_filter_create", encoding, rc);

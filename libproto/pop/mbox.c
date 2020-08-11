@@ -55,6 +55,7 @@
 
 #include <mailutils/sys/folder.h>
 #include <mailutils/sys/mailbox.h>
+#include <mailutils/sys/message.h>
 #include <mailutils/sys/registrar.h>
 #include <mailutils/sys/url.h>
 
@@ -586,6 +587,13 @@ pop_message_lines (mu_message_t msg, size_t *plines, int quick)
   return 0;
 }
 
+static void
+pop_message_detach (mu_message_t msg)
+{
+  struct _pop3_message *mpm = mu_message_get_owner (msg);
+  mpm->message = NULL;
+}
+
 static int
 pop_create_message (struct _pop3_message *mpm, struct _pop3_mailbox *mpd)
 {
@@ -595,7 +603,7 @@ pop_create_message (struct _pop3_message *mpm, struct _pop3_mailbox *mpd)
   status = mu_message_create (&msg, mpm);
   if (status)
     return status;
-
+  msg->_detach = pop_message_detach;
   mu_message_set_get_stream (msg, pop_message_get_stream, mpm);
   mu_message_set_size (msg, pop_message_size, mpm);
   mu_message_set_lines (msg, pop_message_lines, mpm);

@@ -65,6 +65,7 @@ struct _mu_message
   int (*_is_multipart)   (mu_message_t, int *);
   int (*_lines)          (mu_message_t, size_t *, int);
   int (*_size)           (mu_message_t, size_t *);
+  void (*_detach)        (mu_message_t);
 };
 
 #ifdef __cplusplus

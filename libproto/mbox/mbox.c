@@ -29,6 +29,7 @@
 #include <mailutils/filter.h>
 #include <mailutils/cctype.h>
 #include <mailutils/datetime.h>
+#include <mailutils/sys/message.h>
 
 #define ATTRIBUTE_IS_DELETED(flag)        (flag & MU_ATTRIBUTE_DELETED)
 #define ATTRIBUTE_IS_EQUAL(flag1, flag2)  (flag1 == flag2)
@@ -519,6 +520,13 @@ _msg_attribute_setup (mu_message_t msg, mbox_message_t mum)
     }
   return status;
 }
+
+static void
+mbox_message_detach (mu_message_t msg)
+{
+  mbox_message_t mum = mu_message_get_owner (msg);
+  mum->message = NULL;
+}
 
 /* Initialize a message */
 static int
@@ -558,6 +566,8 @@ new_message (mu_mailbox_t mailbox, mbox_message_t mum, mu_message_t *pmsg)
   if (status != 0)
     return status;
 
+  msg->_detach = mbox_message_detach;
+    
   status = _msg_setup (msg, mum);
   if (status)
     {

@@ -267,6 +267,7 @@ main (int argc, char **argv)
       newmsg = message_decode (msg, &crd, 1);
       message_store (newmsg, ombox);
       mu_message_unref (newmsg);
+      mu_message_unref (msg);
     }
   enable_log_prefix (0);
   

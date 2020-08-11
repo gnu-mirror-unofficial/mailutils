@@ -40,6 +40,7 @@
 #include <mailutils/body.h>
 #include <mailutils/msgset.h>
 #include <mailutils/sys/imap.h>
+#include <mailutils/sys/message.h>
 
 #define _imap_mbx_clrerr(imbx) ((imbx)->last_error = 0)
 #define _imap_mbx_errno(imbx) ((imbx)->last_error)
@@ -612,6 +613,13 @@ _imap_msg_bodystructure (mu_message_t msg, struct mu_bodystructure **pbs)
   return rc;
 }
 
+static void
+_imap_msg_detach (mu_message_t msg)
+{
+  struct _mu_imap_message *imsg = mu_message_get_owner (msg);
+  imsg->message = NULL;
+}
+
 static int
 _imap_mbx_get_message (mu_mailbox_t mailbox, size_t msgno, mu_message_t *pmsg)
 {
@@ -634,6 +642,9 @@ _imap_mbx_get_message (mu_mailbox_t mailbox, size_t msgno, mu_message_t *pmsg)
       rc = mu_message_create (&msg, imsg);
       if (rc)
 	return rc;
+      
+      msg->_detach = _imap_msg_detach;
+	
       mu_message_set_get_stream (msg, _imap_msg_get_stream, imsg);
       mu_message_set_size (msg, _imap_msg_size, imsg);
       mu_message_set_lines (msg, _imap_msg_lines, imsg);
