@@ -1104,14 +1104,18 @@ mu_stream_close (mu_stream_t stream)
   if (!(stream->flags & _MU_STR_OPEN))
     return MU_ERR_NOT_OPEN;
   
-  mu_stream_flush (stream);
-  /* Do close the stream only if it is not used by anyone else */
-  if (stream->ref_count > 1)
-    return 0;
-  _stream_event (stream, _MU_STR_EVENT_CLOSE, 0, NULL);
-  if (stream->close)
-    rc = stream->close (stream);
-  _stream_clrflag (stream, _MU_STR_OPEN);
+  rc = mu_stream_flush (stream);
+  if (rc == 0)
+    {
+      /* Do close the stream only if it is not used by anyone else */
+      if (stream->ref_count > 1)
+	return 0;
+      _stream_event (stream, _MU_STR_EVENT_CLOSE, 0, NULL);
+      if (stream->close)
+	rc = stream->close (stream);
+      if (rc == 0)
+	_stream_clrflag (stream, _MU_STR_OPEN);
+    }
   return rc;
 }
 

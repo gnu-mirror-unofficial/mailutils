@@ -99,7 +99,7 @@ _mapfile_write (mu_stream_t stream, const char *iptr, size_t isize,
 	}
       if (ftruncate (mfs->fd, mfs->offset + isize) != 0)
 	return errno;
-      mfs->ptr = mmap (0, mfs->offset + isize, mfs->flags,
+      mfs->ptr = mmap (NULL, mfs->offset + isize, mfs->flags,
 		       MAP_SHARED, mfs->fd, 0);
       if (mfs->ptr == MAP_FAILED)
 	{
@@ -138,7 +138,7 @@ _mapfile_truncate (mu_stream_t stream, mu_off_t len)
     }
   if (ftruncate (mfs->fd, len) != 0)
     return errno;
-   mfs->ptr = len ? mmap (0, len, mfs->flags, MAP_SHARED, mfs->fd, 0) : NULL;
+   mfs->ptr = len ? mmap (NULL, len, mfs->flags, MAP_SHARED, mfs->fd, 0) : NULL;
    if (mfs->ptr == MAP_FAILED)
      {
        int err = errno;
@@ -171,7 +171,7 @@ _mapfile_size (mu_stream_t stream, mu_off_t *psize)
 	  mfs->size = stbuf.st_size;
 	  if (mfs->size)
 	    {
-	      mfs->ptr = mmap (0, mfs->size, mfs->flags , MAP_SHARED,
+	      mfs->ptr = mmap (NULL, mfs->size, mfs->flags, MAP_SHARED,
 			       mfs->fd, 0);
 	      if (mfs->ptr == MAP_FAILED)
 		err = errno;
@@ -306,7 +306,7 @@ _mapfile_open (mu_stream_t stream)
   else if (flags & MU_STREAM_WRITE)
     {
       mflag = PROT_WRITE;
-      flg = O_WRONLY;
+      flg = O_RDWR;
     }
   else if (flags & MU_STREAM_CREAT)
     return ENOSYS;
@@ -328,7 +328,7 @@ _mapfile_open (mu_stream_t stream)
   mfs->size = st.st_size;
   if (mfs->size)
     {
-      mfs->ptr = mmap (0, mfs->size, mflag , MAP_SHARED, mfs->fd, 0);
+      mfs->ptr = mmap (NULL, mfs->size, mflag, MAP_SHARED, mfs->fd, 0);
       if (mfs->ptr == MAP_FAILED)
 	{
 	  int err = errno;
