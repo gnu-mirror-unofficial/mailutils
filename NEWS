@@ -1,13 +1,13 @@
-GNU mailutils NEWS -- history of user-visible changes. 2020-06-26
+GNU mailutils NEWS -- history of user-visible changes. 2020-08-14
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.9.90 (Git)
+Version 3.10, 2020-08-14
 
 * mail
 
-** Changed syntax for addressing MIME message part.
+** Changed syntax for addressing MIME message part
 
 The familiar dot notation is used.  E.g. 1.2 extracts part 2
 from multipart message 1.
@@ -19,9 +19,16 @@ messages.  Decoding is automatic.
 
 * New utility: decodemail
 
+This is a filter program that reads messages from the input mailbox,
+decodes textual parts of each multipart message to plain text, and
+stores the processed messages in the output mailbox.  Non-multipart
+messages as well as message parts that cannot be decoded are
+transferred to the output mailbox verbatim.  Optionally, textual parts
+can be recoded from their original character set.
+
 * readmsg
 
-** MIME messages are decoded on output.
+** MIME messages are decoded on output
 
 ** Improve searches
 
@@ -34,13 +41,128 @@ search used.
 
 * imap client code
 
-** Fix handling of [TRYCREATE] and similar imap responses.
+** Fix handling of [TRYCREATE] and similar imap responses
+
+* sieve: quoted strings may span several lines
+
+This fixes the sieve parser to comply to RFC 5228.  Quoted strings may
+span several lines and are allowed to contain special characters.
+Backslash and double-quotes appearing within a quoted string must be
+escaped by a backslash.  A backslash in front of any other character
+is silently removed.
 
 * Dropped support for Python 2.x
 
+* Rewrite the AM_GNU_MAILUTILS macro to avoid using mailutils-config
+
+* mda: restore the message-id-header configuration statement
+
+* Changes to the libmailutils library
+
+** New functions for MIME parsing and mime object creation:
+
+int mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype,
+ 		              mu_assoc_t param)
+int mu_mime_sget_content_type (mu_mime_t mime, const char **value)
+int mu_mime_aget_content_type (mu_mime_t mime, const **value)
+int mu_mime_sget_content_subtype (mu_mime_t mime, const char **value)
+int mu_mime_aget_content_subtype (mu_mime_t mime, const **value)
+int mu_mime_content_type_get_param (mu_mime_t mime, char const *name,
+				   const char **value);
+int mu_mime_content_type_set_param (mu_mime_t mime, char const *name,
+				    const char *value);
+
+** New function for parsing the Content-Type header
+
+int mu_content_type_parse_ext (const char *input, const char *charset,
+			       int flags, mu_content_type_t *retct);
+
+The "flags" parameter controls the parser error tolerance and the
+amount of data to be returned.
+
+** mu_mime_create_multipart: Signature changed
+
+The function takes third argument: an assoc table of additional
+content-type parameters:
+
+int mu_mime_create_multipart (mu_mime_t *pmime, char const *subtype,
+			      mu_assoc_t param);
+
+** New function mu_stream_shift
+
+int mu_stream_shift (mu_stream_t str, mu_off_t dst, mu_off_t src,
+		     size_t bufsize);
+
+Moves the data in stream "str" from offset "src" to "dst".  The "bufsize"
+parameter specifies the size of transfer buffer.  If 0, the size is determined
+automatically..
+
+** New simplified interface to command line option parser
+
+void mu_cli_simple (int argc, char **argv, ...);
+
+Variadic arguments consist of key and optional value pairs, specifying
+various additional parameters (e.g. array of allowed option definitions,
+program docstring, etc).				    
+
+** Reconstructing message envelope
+
+int mu_message_reconstruct_envelope (mu_message_t msg, mu_envelope_t *penv);
+
+Creates an envelope reconstructed from the headers of the message "msg".
+
+** logstream: optional prefix
+
+The prefix, if set, is output at the beginning of each line, after
+the location and before the severity. It can be used to provide
+additional information about the diagnostics, such as, e.g. the number
+or UID of the message.
+
+The prefix is controlled by the MU_LOGMODE_PREFIX ioctl subfunction.
+
+** stream API: remove the readdelim method
+
+The method is superfluous as the API itself provides the necessary
+functionality.  Besides, it interacted poorly with positioning in
+buffered streams.
+
+** New string conversion function
+
+ int mu_strtosize (char const *str, char **endp, size_t *ret_val);
+
+** Temporary streams
+
+This new stream type combines the functionality of memory and temporary
+file streams.  A temporary stream works as memory stream for as long as
+its size remains below a preconfigured threshold value.  Once the threshold
+is reached, the stream storage is automatically converted to temporary file,
+and all data written so far are transferred to the new storage.  If the
+temporary file cannot be created, the stream continues to operate in
+memory-based mode.
+
+The stream is created using the following call:
+   
+    int mu_temp_stream_create (mu_stream_t *pstream, size_t threshold);
+
+** The caller is allowed to free messages obtained from the mailbox
+
 * Bugfixes
 
-** Fix intermixed I/O in buffered streams.
+** Fix intermixed I/O in buffered streams
+
+** Fix handling of INTR in the "mail" utility shell
+
+** Fix compilation without libunistring
+
+** Fix operation of associative arrays in case-insensitive mode
+
+** Fix memory leaks
+
+** Fix compilation with gcc 10
+
+** smtp mailer: fix multiple open/close on the same mailer
+
+** Fix list sort function
 
 
 Version 3.9, 2020-03-13
