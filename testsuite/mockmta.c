@@ -1433,6 +1433,8 @@ mta_open (int port)
       exit (EX_FAILURE);
     }
   
+  listen (fd, 5);
+
   if (!port)
     {
       socklen_t len = sizeof (address);
@@ -1452,7 +1454,6 @@ mta_open (int port)
 void
 mta_run (int fd)
 {
-  listen (fd, 5);
   while (1)
     {
       int sfd;
