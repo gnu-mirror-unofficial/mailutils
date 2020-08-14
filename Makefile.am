@@ -38,11 +38,12 @@ SUBDIRS = . \
  mu-aux\
  include\
  po\
+ testsuite\
  libmailutils\
  sql\
  libmu_auth\
  libproto\
- testsuite\
+ libtests\
  lib\
  $(LIBMU_CPP_DIR)\
  $(GINT_DIR)\

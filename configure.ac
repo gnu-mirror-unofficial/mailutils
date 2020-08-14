@@ -1359,6 +1359,8 @@ AC_CONFIG_FILES([include/mailutils/types.h:include/mailutils/types.hin])
 
 AC_CONFIG_TESTDIR(testsuite)
 AC_CONFIG_FILES([testsuite/Makefile testsuite/atlocal])
+AC_CONFIG_TESTDIR(libtests)
+AC_CONFIG_FILES([libtests/Makefile libtests/atlocal])
 
 MU_CONFIG_TESTSUITE(libmailutils)
 MU_CONFIG_TESTSUITE(frm)

@@ -44,27 +44,14 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 noinst_DATA = package.m4
 
 ## -------------------------- ##
-## Non-installable programs
+## Non-installable programs   ##
 ## -------------------------- ##
 
 AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 noinst_PROGRAMS = \
- bs\
  cwdrepl\
- fldel\
- lstuid\
- mbdel\
- msgset\
- mimetest\
  mockmail\
  mockmta
-
-LDADD = \
- $(MU_LIB_MAILBOX)\
- $(MU_LIB_MAILER)\
- $(MU_LIB_AUTH)\
- $(MU_AUTHLIBS)\
- $(MU_LIB_MAILUTILS)
 
 cwdrepl_LDADD =
 mockmta_LDADD = $(TLS_LIBS)
@@ -75,13 +62,6 @@ mockmta_LDADD = $(TLS_LIBS)
 
 TESTSUITE_AT += \
  cwdrepl.at\
- fldel.at\
- lstuid00.at\
- lstuid01.at\
- lstuid02.at\
- mbdel.at\
- mime.at\
- mime01.at\
  mockmail.at\
  mockmta.at
 

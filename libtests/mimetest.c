@@ -35,6 +35,7 @@ const char *subject;
 const char *charset;
 int print_attachments;
 int indent_level = 4;
+int debug = 0;
 
 void
 print_file (const char *fname, int indent)
@@ -54,6 +55,18 @@ print_file (const char *fname, int indent)
   unlink (fname);
 }
 
+struct mu_option options[] = {
+  { "debug", 'd', NULL, MU_OPTION_DEFAULT,
+    "enable debugging", mu_c_bool, &debug },
+  { "print-attachment", 'p', NULL, MU_OPTION_DEFAULT,
+    "print attachments", mu_c_bool, &print_attachments },
+  { "indent", 'i', "N", MU_OPTION_DEFAULT,
+    "indentation level", mu_c_int, &indent_level },
+  { "charset", 'c', NULL, MU_OPTION_DEFAULT,
+    "output character set", mu_c_string, &charset },
+  MU_OPTION_END
+};
+
 int
 main (int argc, char **argv)
 {
@@ -61,41 +74,25 @@ main (int argc, char **argv)
   size_t i;
   size_t count = 0;
   char *mailbox_name;
-  int debug = 0;
 
-  for (i = 1; i < argc; i++)
+  mu_set_program_name (argv[0]);
+  mu_cli_simple (argc, argv,
+                 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "mime test tool",
+		 MU_CLI_OPTION_PROG_ARGS, "MBOX",
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+                 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
+
+  if (argc != 1)
     {
-      if (strcmp (argv[i], "-d") == 0)
-        debug = 1;
-      else if (strcmp (argv[i], "-p") == 0)
-        print_attachments = 1;
-      else if (strcmp (argv[i], "-i") == 0)
-	{
-	  if (++i == argc)
-	    {
-	      mu_error ("-i requires argument");
-	      exit (1);
-	    }
-	  indent_level = strtoul (argv[i], NULL, 0);
-	}
-      else if (strcmp (argv[i], "-c") == 0)
-	{
-	  if (++i == argc)
-	    {
-	      mu_error ("-c requires argument");
-	      exit (1);
-	    }
-	  charset = argv[i];
-	}
-      else
-        break;
+      mu_error ("exactly one argument required");
+      return 2;
     }
-
-  mailbox_name = argv[i];
+  
+  mailbox_name = argv[0];
 
   /* Registration.  */
-  mu_registrar_record (mu_imap_record);
-  mu_registrar_record (mu_pop_record);
   mu_registrar_record (mu_mbox_record);
   mu_registrar_set_default_record (mu_mbox_record);
 
