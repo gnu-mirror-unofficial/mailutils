@@ -33,7 +33,7 @@
 char mem[1024];
 
 int
-main(int argc, char **argv)
+main (int argc, char **argv)
 {
   mu_stream_t str;
   char buf[128];

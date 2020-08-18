@@ -26,37 +26,42 @@ main (int argc, char **argv)
   int flags = 0;
   int rc;
   int i;
-  
+  int sub_opt = 0, icase_opt = 0, collapse_opt = 0;
+  struct mu_option options[] = {
+    { "icase", 'i', NULL, MU_OPTION_DEFAULT,
+      "ignore case", mu_c_incr, &icase_opt },
+    { "sub", 's', NULL, MU_OPTION_DEFAULT,
+      "treat each wildcard as regexp parenthesized group",
+      mu_c_incr, &sub_opt },
+    { "collapse", 'c', NULL, MU_OPTION_DEFAULT,
+      "collapse contiguous runs of *", mu_c_incr, &collapse_opt },
+    MU_OPTION_END
+  };    
+        
   mu_set_program_name (argv[0]);
-  for (i = 1; i < argc; i++)
-    {
-      char *a = argv[i];
-      if (strcmp (a, "-i") == 0)
-	flags |= MU_GLOBF_ICASE;
-      else if (strcmp (a, "-s") == 0)
-	flags |= MU_GLOBF_SUB;
-      else if (strcmp (a, "-c") == 0)
-	flags |= MU_GLOBF_COLLAPSE;
-      else if (strcmp (a, "--") == 0)
-	{
-	  i++;
-	  break;
-	}
-      else if (*a != '-')
-	break;
-      else
-	{
-	  mu_error ("unknown option %s", a);
-	  return 1;
-	}
-    }
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "convert globbing pattern to regexp",
+		 MU_CLI_OPTION_PROG_ARGS, "PATTERN [STRING ...]",
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+		 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
+
+  if (icase_opt)
+    flags |= MU_GLOBF_ICASE;
+  if (sub_opt)
+    flags |= MU_GLOBF_SUB;
+  if (collapse_opt)
+    flags |= MU_GLOBF_COLLAPSE;
   
-  if (i == argc)
+  if (argc == 0)
     {
-      mu_printf ("usage: %s [-ics] PATTERN [WORD...]\n", mu_program_name);
+      mu_error ("pattern must be given; try %s --help for details",
+		mu_program_name);
       return 1;
     }
 
+  i = 0;
   pattern = argv[i++];
   
   if (i == argc)

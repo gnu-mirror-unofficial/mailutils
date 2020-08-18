@@ -20,19 +20,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <string.h>
-
 #include <mailutils/mailutils.h>
-
-#define ISPRINT(c) ((c)=='\t'||(c)==' '||(c)=='\n'||\
-                    ((unsigned char)(c)>' '&&(unsigned char)(c)<128)) 
 
 void
 print (char *p, int printable)
 {
   for (; *p; p++)
     {
-      if (printable && *p != '\n' && !ISPRINT (*p))
+      if (printable && *p != '\n' && !mu_isprint (*p))
 	printf ("\\%03o", *(unsigned char *) p);
       else
 	putchar (*p);
@@ -43,23 +38,22 @@ int
 main (int argc, char *argv[])
 {
   char buf[256];
-  int c, printable = 0;
+  int printable = 0;
   char *charset = "iso-8859-1";
-  
-  while ((c = getopt (argc, argv, "c:p")) != EOF)
-    switch (c)
-      {
-      case 'c':
-	charset = optarg;
-	break;
-      case 'p':
-	printable = 1;
-	break;
+  struct mu_option options[] = {
+    { "charset", 'c', "NAME", MU_OPTION_DEFAULT,
+      "define output character set", mu_c_string, &charset },
+    { "printable", 'p', NULL, MU_OPTION_DEFAULT,
+      "make sure the output is printable", mu_c_incr, &printable },
+    MU_OPTION_END
+  };  
 
-      default:
-	exit (1);
-      }
-
+  mu_set_program_name (argv[0]);
+  mu_cli_simple (argc, argv,
+                 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "Test RFC 2047 decoding function",
+		 MU_CLI_OPTION_END);
+		 
   while (fgets (buf, sizeof (buf), stdin))
     {
       char *p = NULL;

@@ -93,7 +93,7 @@ fat man
 3: 'fat man'
 ])
 
-m4_pushdef([IMAPIO_FLAGS],[-server])
+m4_pushdef([IMAPIO_FLAGS],[--server])
 IMAPIO([literals (server)],[literal],
 [A001 LOGIN {11}
 FRED FOOBAR {7}

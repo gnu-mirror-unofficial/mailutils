@@ -39,6 +39,13 @@ selector (mu_mailcap_entry_t entry, void *data)
 
 static void list_entry (mu_mailcap_entry_t ent, unsigned long n);
 
+static void
+cli_locus (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  int *pflag = opt->opt_ptr;
+  *pflag |= MU_MAILCAP_FLAG_LOCUS;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -49,31 +56,29 @@ main (int argc, char **argv)
   mu_mailcap_entry_t entry;
   size_t n;
   int flags = MU_MAILCAP_FLAG_DEFAULT;
-  char *arg;
 
-  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
+  struct mu_option options[] = {
+    { "locus", 'l', NULL, MU_OPTION_DEFAULT,
+      "record location of each entry in the source file",
+      mu_c_incr, &flags, cli_locus },
+    MU_OPTION_END
+  };
 
-  while (--argc && (arg = *++argv)[0] == '-')
-    {
-      if (strcmp (arg, "--") == 0)
-	{
-	  argc--;
-	  argv++;
-	  break;
-	}
-      else if (strcmp (arg, "-l") == 0)
-	flags |= MU_MAILCAP_FLAG_LOCUS;
-      else
-	{
-	  mu_error ("unrecognized option: %s", arg);
-	  usage (mu_strerr);
-	  return 1;
-	}
-    }
-
+  mu_set_program_name (argv[0]);
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC,
+		 "extracts entries matching TYPE/SUBTYPE from the "
+		 "given mailcap FILEs",
+		 MU_CLI_OPTION_PROG_ARGS, "TYPE/SUBTYPE FILE...",
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+		 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
+  
   if (argc < 2)
     {
-      usage (mu_strerr);
+      mu_error ("required arguments missing; try %s --help for assistance",
+		mu_program_name);
       return 1;
     }
   type = argv[0];

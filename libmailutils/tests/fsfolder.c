@@ -33,6 +33,7 @@
 #include <mailutils/sys/registrar.h>
 #include <mailutils/assoc.h>
 #include <mailutils/iterator.h>
+#include <mailutils/cli.h>
 #include "tesh.h"
 
 int sort_option;
@@ -227,16 +228,6 @@ static struct mu_tesh_command comtab[] = {
   { NULL }
 };
 
-static void
-usage (void)
-{
-  mu_printf (
-    "usage: %s [-debug=SPEC] -name=URL [-sort] [-glob] OP ARG... [\\; OP ARG...]...]\n",
-    mu_program_name);
-  mu_printf ("OPerations and corresponding ARGuments are:\n");
-  mu_tesh_help (comtab, NULL);
-}
-
 static int
 _always_is_scheme (mu_record_t record, mu_url_t url, int flags)
 {
@@ -314,39 +305,42 @@ static struct _mu_record reg_record =
 int
 main (int argc, char **argv)
 {
-  int i;
   int rc;
   mu_folder_t folder;
   char *fname = NULL;
   int glob_option = 0;
-
+  struct mu_option options[] = {
+    { "name", 0, "NAME-OR-URL", MU_OPTION_DEFAULT,
+      "set file name (mandatory)", mu_c_string, &fname },
+    { "sort", 0, NULL, MU_OPTION_DEFAULT,
+      "sort folders", mu_c_incr, &sort_option },
+    { "glob", 0, NULL, MU_OPTION_DEFAULT,
+      "assume globbing patterns", mu_c_incr, &glob_option },
+    MU_OPTION_END
+  };
+  char *capa[] = { "debug", NULL };
+   
+  mu_set_program_name (argv[0]);
   mu_tesh_init (argv[0]);
   mu_registrar_record (&any_record);
   mu_registrar_record (&reg_record);
 
-  if (argc == 1)
-    {
-      usage ();
-      exit (0);
-    }
-
-  for (i = 1; i < argc; i++)
-    {
-      if (strncmp (argv[i], "-debug=", 7) == 0)
-	mu_debug_parse_spec (argv[i] + 7);
-      else if (strncmp (argv[i], "-name=", 6) == 0)
-	fname = argv[i] + 6;
-      else if (strcmp (argv[i], "-sort") == 0)
-	sort_option = 1;
-      else if (strcmp (argv[i], "-glob") == 0)
-	glob_option = 1;
-      else
-	break;
-    }
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_SINGLE_DASH,
+		 MU_CLI_OPTION_IN_ORDER,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_CAPABILITIES, capa,
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+		 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_PROG_DOC, "Test file system folder traversal",
+		 MU_CLI_OPTION_PROG_ARGS, "[OP ARG... [\\; OP ARG...]...]",
+		 MU_CLI_OPTION_END);
+		 
 
   if (!fname)
     {
-      mu_error ("name not specified");
+      mu_error ("-name not specified; try %s -help for more info",
+		mu_program_name);
       exit (1);
     }
   
@@ -376,7 +370,7 @@ main (int argc, char **argv)
   if (glob_option)
     mu_folder_set_match (folder, mu_folder_glob_match);
 
-  mu_tesh_read_and_eval (argc - i, argv + i, comtab, folder);
+  mu_tesh_read_and_eval (argc, argv, comtab, folder);
 
   mu_folder_close (folder);
   mu_folder_destroy (&folder);

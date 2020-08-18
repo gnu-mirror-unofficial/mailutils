@@ -31,6 +31,13 @@ static void list_single_entry (mu_mailcap_entry_t ent);
 static int list_field (char const *name, char const *value, void *data);
 static int list_entry (mu_mailcap_entry_t ent, void *closure);
 
+static void
+cli_locus (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  int *pflag = opt->opt_ptr;
+  *pflag |= MU_MAILCAP_FLAG_LOCUS;
+}
+
 /* usage:
      mailcap [-f FILE]
        List entries
@@ -46,39 +53,29 @@ main (int argc, char **argv)
   int flags = MU_MAILCAP_FLAG_DEFAULT;
   mu_mailcap_t mailcap;
   char *file = NULL;
-  char *arg;
 
-  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
+  struct mu_option options[] = {
+    { "file", 'f', "NAME", MU_OPTION_DEFAULT,
+      "mailcap file name", mu_c_string, &file },
+    { "locus", 'l', NULL, MU_OPTION_DEFAULT,
+      "record location of each entry in the source file",
+      mu_c_incr, &flags, cli_locus },
+    MU_OPTION_END
+  };
 
-  while (--argc && (arg = *++argv)[0] == '-')
-    {
-      if (strcmp (arg, "--") == 0)
-	{
-	  argc--;
-	  argv++;
-	  break;
-	}
-      else if (strncmp (arg, "-f", 2) == 0)
-	{
-	  if (arg[2])
-	    file = arg + 2;
-	  else if (--argc)
-	    file = *++argv;
-	  else
-	    {
-	      mu_error ("-f requires arguments");
-	      return 1;
-	    }
-	}
-      else if (strcmp (arg, "-l") == 0)
-	flags |= MU_MAILCAP_FLAG_LOCUS;
-      else
-	{
-	  mu_error ("unrecognized option: %s", arg);
-	  return 1;
-	}
-    }
-
+  mu_set_program_name (argv[0]);
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC,
+		 "mailcap test: without arguments lists all mailcap entries, "
+		 "with single argument, prints the first entry matching TYPE, "
+		 "with two arguments prints FIELD from the first entry "
+		 "matching TYPE.",
+		 MU_CLI_OPTION_PROG_ARGS, "[TYPE [FIELD]]",
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+		 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
+  
   MU_ASSERT (mu_mailcap_create (&mailcap));
   mu_mailcap_set_error (mailcap, &mu_mailcap_default_error_closure);
   if (flags != MU_MAILCAP_FLAG_DEFAULT)

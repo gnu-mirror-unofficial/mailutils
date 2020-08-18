@@ -25,75 +25,56 @@
 #include <mailutils/errno.h>
 #include <mailutils/error.h>
 #include <mailutils/stream.h>
+#include <mailutils/stdstream.h>
+#include <mailutils/cli.h>
 
 char *progname;
-
-void
-usage (FILE *fp, int code)
-{
-  fprintf (fp,
-	   "usage: %s [-tmpdir=DIR] [-suffix=SUF] [-dry-run | -unlink] { file | dir }\n",
-	   progname);
-  exit (code);
-}
 
 int
 main (int argc, char **argv)
 {
-  struct mu_tempfile_hints hints, *phints;
+  struct mu_tempfile_hints hints;
   int flags = 0;
   int fd;
-  int *pfd = &fd;
   char *filename;
-  char **pname = &filename;
   char *infile = NULL;
+  int yes = 1;
   int verify = 0;
   int verbose = 0;
-  int yes = 1;
-
-  progname = argv[0];
+  int dry_run = 0;
+  int unlink_opt = 0;
+  int mkdir_opt = 0;
   
-  if (argc == 1)
-    usage (stdout, 0);
+  struct mu_option options[] = {
+    { "tmpdir", 'D', "DIRNAME", MU_OPTION_DEFAULT,
+      "set the temporary directory to use", mu_c_string, &hints.tmpdir },
+    { "suffix", 's', "STRING", MU_OPTION_DEFAULT,
+      "set file name suffix", mu_c_string, &hints.suffix },
+    { "dry-run", 'n', NULL, MU_OPTION_DEFAULT,
+      "dry run mode", mu_c_incr, &dry_run },
+    { "unlink", 'u', NULL, MU_OPTION_DEFAULT,
+      "unlink the file", mu_c_incr, &unlink_opt },
+    { "infile", 'f', "FILE", MU_OPTION_DEFAULT,
+      "copy the content of the FILE to the temporary file",
+      mu_c_string, &infile },
+    { "verify", 'V', NULL, MU_OPTION_DEFAULT,
+      "dump the stream?", mu_c_incr, &verify },
+    { "verbose", 'v', NULL, MU_OPTION_DEFAULT,
+      "verbose mode", mu_c_incr, &verbose },
+    { "dir", 'm', NULL, MU_OPTION_DEFAULT,
+      "create temporary directory, instead of file",
+      mu_c_incr, &mkdir_opt },
+    MU_OPTION_END
+  };
+
+  memset (&hints, 0, sizeof (hints));
+  mu_set_program_name (argv[0]);
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "test temporary file creation",
+		 MU_CLI_OPTION_END);
   
-  while (--argc)
-    {
-      char *arg = *++argv;
-
-      if (strncmp (arg, "-tmpdir=", 8) == 0)
-	{
-	  hints.tmpdir = arg + 8;
-	  flags |= MU_TEMPFILE_TMPDIR;
-	}
-      else if (strncmp (arg, "-suffix=", 8) == 0)
-	{
-	  hints.suffix = arg + 8;
-	  flags |= MU_TEMPFILE_SUFFIX;
-	}
-      else if (strcmp (arg, "-dry-run") == 0)
-	pfd = NULL;
-      else if (strcmp (arg, "-unlink") == 0)
-	pname = NULL;
-      else if (strncmp (arg, "-infile=", 8) == 0)
-	infile = arg + 8;
-      else if (strncmp (arg, "-verify", 7) == 0)
-	verify = 1;
-      else if (strncmp (arg, "-verbose", 8) == 0)
-	verbose = 1;
-      else
-	break;
-    }
-
-  if (argv[0] == NULL)
-    usage (stderr, 1);
-  if (strcmp (argv[0], "file") == 0)
-    /* nothing */;
-  else if (strcmp (argv[0], "dir") == 0)
-    flags |= MU_TEMPFILE_MKDIR;
-  else
-    usage (stderr, 1);
-
-  if (pname == NULL && pfd == NULL)
+  if (dry_run && unlink_opt)
     {
       mu_error ("both -unlink and -dry-run given");
       exit (1);
@@ -103,30 +84,37 @@ main (int argc, char **argv)
     {
       if (flags & MU_TEMPFILE_MKDIR)
 	{
-	  mu_error ("-infile is useless with dir");
+	  mu_error ("--infile is useless with --mkdir");
 	  exit (1);
 	}
-      else if (pfd == NULL)
+      else if (dry_run)
 	{
-	  mu_error ("-infile is useless with -dry-run");
+	  mu_error ("--infile is useless with --dry-run");
 	  exit (1);
 	}
     }
 
-  if (verify && pfd == NULL)
+  if (verify && dry_run)
     {
-      mu_error ("-verify is useless with -dry-run");
+      mu_error ("--verify is useless with --dry-run");
       exit (1);
     }
-  
-  phints = flags ? &hints : NULL;
-  
-  MU_ASSERT (mu_tempfile (phints, flags, pfd, pname));
+
+  if (hints.tmpdir)
+    flags |= MU_TEMPFILE_TMPDIR;
+  if (hints.suffix)
+    flags |= MU_TEMPFILE_SUFFIX;
+  if (mkdir_opt)
+    flags |= MU_TEMPFILE_MKDIR;
+
+  MU_ASSERT (mu_tempfile (flags ? &hints : NULL, flags,
+			  dry_run ? NULL : &fd,
+			  unlink_opt ? NULL : &filename));
 
   if (filename)
-    printf ("created file name %s\n", filename);
+    mu_printf ("created file name %s\n", filename);
     
-  if (!pfd)
+  if (dry_run)
     return 0;
   
   if (infile)
@@ -143,24 +131,22 @@ main (int argc, char **argv)
       mu_stream_ioctl (out, MU_IOCTL_FD, MU_IOCTL_FD_SET_BORROW, &yes);
       MU_ASSERT (mu_stream_copy (out, in, 0, &size));
       if (verbose)
-	printf ("copied %lu bytes to the temporary\n", (unsigned long) size);
+	mu_printf ("copied %lu bytes to the temporary\n", (unsigned long) size);
       mu_stream_unref (out);
       mu_stream_unref (in);
     }
 
   if (verify)
     {
-      mu_stream_t in, out;
+      mu_stream_t in;
       mu_off_t size;
 
-      MU_ASSERT (mu_stdio_stream_create (&out, MU_STDOUT_FD, 0));
       MU_ASSERT (mu_fd_stream_create (&in, filename, fd,
 				      MU_STREAM_READ|MU_STREAM_SEEK));
       mu_stream_ioctl (in, MU_IOCTL_FD, MU_IOCTL_FD_SET_BORROW, &yes);
-      MU_ASSERT (mu_stream_copy (out, in, 0, &size));
+      MU_ASSERT (mu_stream_copy (mu_strout, in, 0, &size));
       if (verbose)
-	printf ("dumped %lu bytes\n", (unsigned long) size);
-      mu_stream_unref (out);
+	mu_printf ("dumped %lu bytes\n", (unsigned long) size);
       mu_stream_unref (in);
     }
 

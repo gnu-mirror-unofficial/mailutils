@@ -27,60 +27,50 @@
 #include <mailutils/cctype.h>
 #include <mailutils/cstr.h>
 #include <mailutils/stdstream.h>
-
-void
-usage ()
-{
-  mu_stream_printf (mu_strout, "usage: %s [-format=FMT] [-tz=TZ]\n",
-		    mu_program_name);
-  exit (0);
-}
+#include <mailutils/cli.h>
 
 int
 main (int argc, char **argv)
 {
-  int rc, i;
+  int rc;
   char *format = "%c";
   char *buf = NULL;
   size_t size = 0;
   size_t n;
   struct mu_timezone tz, *tzp = NULL;
-
-  mu_set_program_name (argv[0]);
+  char *tzstr = NULL;
+  
+  struct mu_option options[] = {
+    { "format", 0, "FMT", MU_OPTION_DEFAULT,
+      "set scanning format", mu_c_string, &format },
+    { "tz", 0, "UTCOFF", MU_OPTION_DEFAULT,
+      "set time zone", mu_c_string, &tzstr },
+    MU_OPTION_END
+  };
   
   mu_set_program_name (argv[0]);
-  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_SINGLE_DASH,
+		 MU_CLI_OPTION_PROG_DOC, "mu_c_streamftime tester",
+		 MU_CLI_OPTION_END);
 
   memset (&tz, 0, sizeof tz);
-  for (i = 1; i < argc; i++)
+  if (tzstr)
     {
-      char *opt = argv[i];
-
-      if (strncmp (opt, "-format=", 8) == 0)
-	format = opt + 8;
-      else if (strncmp (opt, "-tz=", 4) == 0)
+      int sign;
+      int n = atoi (tzstr);
+      if (n < 0)
 	{
-	  int sign;
-	  int n = atoi (opt + 4);
-	  if (n < 0)
-	    {
-	      sign = -1;
-	      n = - n;
-	    }
-	  else
-	    sign = 1;
-	  tz.utc_offset = sign * ((n / 100 * 60) + n % 100) * 60;
-	  tzp = &tz;
+	  sign = -1;
+	  n = - n;
 	}
-      else if (strcmp (opt, "-h") == 0)
-	usage ();
       else
-	{
-	  mu_error ("%s: unrecognized argument", opt);
-	  exit (1);
-	}
+	sign = 1;
+      tz.utc_offset = sign * ((n / 100 * 60) + n % 100) * 60;
+      tzp = &tz;
     }
-
+    
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
       char *p;

@@ -3,9 +3,9 @@ NAME
   stream-getdelim - test the mu_stream_getdelim function.
 
 DESCRIPTION
-  This implements a simple memory-based stream implementation and
-  tests mu_stream_getdelim on a predefined stream content with various
-  combinations of buffering type and buffer size settings.
+  This implements a simple memory-based stream and tests the
+  mu_stream_getdelim function on a predefined stream content with
+  various combinations of buffering type and buffer size settings.
 
   On success, returns 0.  On error, prints diagnostics on stderr and
   exits with a non-0 code or aborts.

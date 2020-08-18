@@ -25,14 +25,7 @@
 #include <mailutils/error.h>
 #include <mailutils/stream.h>
 #include <mailutils/stdstream.h>
-
-void
-usage ()
-{
-  mu_stream_printf (mu_strout, "usage: %s [debug=SPEC] [-transcript] [-server]\n",
-		    mu_program_name);
-  exit (0);
-}
+#include <mailutils/cli.h>
 
 int
 main (int argc, char **argv)
@@ -41,31 +34,32 @@ main (int argc, char **argv)
   int transcript = 0;
   mu_imapio_t io;
   mu_stream_t str;
-  int imapio_mode = MU_IMAPIO_CLIENT;
+  int imapio_mode;
+  int server_opt = 0;
+  struct mu_option options[] = {
+    { "transcript", 't', NULL, MU_OPTION_DEFAULT,
+      "enable transcript", mu_c_incr, &transcript },
+    { "server", 's', NULL, MU_OPTION_DEFAULT,
+      "server mode", mu_c_incr, &server_opt },
+    MU_OPTION_END
+  };    
+  char *capa[] = { "debug", NULL };
+  mu_stream_t dstr;
+  int t = 1;
   
-  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
-  
-  for (i = 1; i < argc; i++)
-    {
-      char *opt = argv[i];
+  /* Create a separate diagnostic stream, independent from mu_strerr */
+  MU_ASSERT (mu_stdio_stream_create (&dstr, MU_STDERR_FD, 0));
+  mu_stream_ioctl (dstr, MU_IOCTL_FD, MU_IOCTL_FD_SET_BORROW, &t);
 
-      if (strncmp (opt, "debug=", 6) == 0)
-	mu_debug_parse_spec (opt + 6);
-      else if (strcmp (opt, "-transcript") == 0)
-	transcript = 1;
-      else if (strcmp (opt, "-server") == 0)
-	imapio_mode = MU_IMAPIO_SERVER;
-      else if (strcmp (opt, "-h") == 0)
-	usage ();
-      else
-	{
-	  mu_error ("%s: unrecognized argument", opt);
-	  exit (1);
-	}
-    }
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_CAPABILITIES, capa,
+		 MU_CLI_OPTION_PROG_DOC, "imap parser test tool",
+		 MU_CLI_OPTION_END);
+
+  imapio_mode = server_opt ? MU_IMAPIO_SERVER : MU_IMAPIO_CLIENT;
 
   MU_ASSERT (mu_iostream_create (&str, mu_strin, mu_strout));
-
   
   MU_ASSERT (mu_imapio_create (&io, str, imapio_mode));
 
@@ -82,10 +76,10 @@ main (int argc, char **argv)
       if (wc == 0)
 	break;
 
-      mu_stream_printf (mu_strerr, "%lu\n", (unsigned long) wc);
+      mu_stream_printf (dstr, "%lu\n", (unsigned long) wc);
       for (i = 0; i < wc; i++)
 	{
-	  mu_stream_printf (mu_strerr, "%d: '%s'\n", i, wv[i]);
+	  mu_stream_printf (dstr, "%d: '%s'\n", i, wv[i]);
 	}
     }
 

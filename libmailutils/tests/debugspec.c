@@ -29,47 +29,35 @@ main (int argc, char **argv)
 {
   char *names = NULL;
   int showunset = 0;
-  char *arg;
+  struct mu_option options[] = {
+    { "names", 0, "NAME[;NAME...]", MU_OPTION_DEFAULT,
+      "show only selected categories", mu_c_string, &names },
+    { "showunset", 0, NULL, MU_OPTION_DEFAULT,
+      "show unset debug categories as well", mu_c_incr, &showunset },
+    MU_OPTION_END
+  };  
   
   mu_set_program_name (argv[0]);
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
 
-  if (argc == 1)
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_SINGLE_DASH,
+                 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "Mailutils debug specification test tool",
+		 MU_CLI_OPTION_PROG_ARGS, "SPEC",
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+                 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
+  
+  
+  if (argc != 1)
     {
-      mu_printf ("usage: %s spec\n", argv[0]);
+      mu_error ("exactly one argument expected; try %s -help for more info",
+		mu_program_name);
       return 0;
     }
 
-  while (argc--)
-    {
-      arg = *++argv;
-
-      if (strncmp (arg, "-names=", 7) == 0)
-	names = arg + 7;
-      else if (strcmp (arg, "-showunset") == 0)
-	showunset = 1;
-      else if (arg[0] == '-')
-	{
-	  if (arg[1] == '-' && arg[2] == 0)
-	    {
-	      argc--;
-	      argv++;
-	      break;
-	    }
-	  mu_error ("unrecognised argument: %s", arg);
-	  return 1;
-	}
-      else
-	break;
-    }
-
-  if (argc != 1)
-    {
-      mu_error ("usage: %s spec", mu_program_name);
-      return 1;
-    }
-  
-  mu_debug_parse_spec (arg);
+  mu_debug_parse_spec (argv[0]);
   
   mu_debug_format_spec (mu_strout, names, showunset);
   mu_printf ("\n");

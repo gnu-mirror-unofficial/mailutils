@@ -21,7 +21,7 @@
 mu_msgset_format_t format = mu_msgset_fmt_imap;
 
 static void
-parse_msgrange (char *arg, struct mu_msgrange *range)
+parse_msgrange (char const *arg, struct mu_msgrange *range)
 {
   size_t msgnum;
   char *p;
@@ -98,88 +98,125 @@ print_last (mu_msgset_t msgset)
   printf ("%zu\n", n);
 }
 
+static void
+cli_msgset (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  mu_msgset_t *msgset = opt->opt_ptr;
+  if (*msgset)
+    {
+      mu_parseopt_error (po, "message set already defined");
+      exit (po->po_exit_error);
+    }
+  *msgset = parse_msgset (arg);
+}
+
+static void
+cli_mh (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  format = mu_msgset_fmt_mh;
+}
+
+static mu_msgset_t
+get_msgset (struct mu_option *opt)
+{
+  mu_msgset_t *msgset = opt->opt_ptr;
+  if (!*msgset)
+    {
+      *msgset = parse_msgset (NULL);
+    }
+  return *msgset;
+}
+    
+static void
+cli_add (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  struct mu_msgrange range;
+  parse_msgrange (arg, &range);
+  MU_ASSERT (mu_msgset_add_range (get_msgset (opt), range.msg_beg,
+				  range.msg_end, MU_MSGSET_NUM));
+}
+
+static void
+cli_sub (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  struct mu_msgrange range;
+  parse_msgrange (arg, &range);
+  MU_ASSERT (mu_msgset_sub_range (get_msgset (opt), range.msg_beg,
+				  range.msg_end, MU_MSGSET_NUM));
+}
+
+static void
+cli_addset (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  mu_msgset_t tset = parse_msgset (arg);
+  MU_ASSERT (mu_msgset_add (get_msgset (opt), tset));
+  mu_msgset_free (tset);
+}
+
+static void
+cli_subset (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  mu_msgset_t tset = parse_msgset (arg);
+  MU_ASSERT (mu_msgset_sub (get_msgset (opt), tset));
+  mu_msgset_free (tset);
+}
+
+static void
+cli_first (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  void (**print) (mu_msgset_t) = opt->opt_ptr;
+  *print = print_first;
+}
+
+static void
+cli_last (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
+{
+  void (**print) (mu_msgset_t) = opt->opt_ptr;
+  *print = print_last;
+}
+
 int
 main (int argc, char **argv)
 {
-  int i;
-  char *msgset_string = NULL;
-  mu_msgset_t msgset;
+  mu_msgset_t msgset = NULL;
   void (*print) (mu_msgset_t) = print_all;
-
-  mu_set_program_name (argv[0]);
-  for (i = 1; i < argc; i++)
-    {
-      char *arg = argv[i];
-
-      if (strcmp (arg, "-h") == 0 || strcmp (arg, "-help") == 0)
-	{
-	  mu_printf ("usage: %s [-mh] [-msgset=SET] [-add=X[:Y]] [-del=X[:Y]] "
-		     "[-addset=SET] [-delset=SET] [-first] [-last] ...\n",
-		     mu_program_name);
-	  return 0;
-	}
-      else if (strncmp (arg, "-msgset=", 8) == 0)
-	msgset_string = arg + 8;
-      else if (strcmp (arg, "-mh") == 0)
-	format = mu_msgset_fmt_mh;
-      else
-	break;
-    }
-
-  msgset = parse_msgset (msgset_string);
   
-  for (; i < argc; i++)
+  struct mu_option options[] = {
+    { "mh", 0, NULL, MU_OPTION_DEFAULT,
+      "use MH message set format for output", mu_c_incr, NULL, cli_mh },
+    { "msgset", 0, "SET", MU_OPTION_DEFAULT,
+      "define message set", mu_c_string, &msgset, cli_msgset },
+    { "add", 0, "X[:Y]", MU_OPTION_DEFAULT,
+      "add range to message set", mu_c_string, &msgset, cli_add },
+    { "sub", 0, "X[:Y]", MU_OPTION_DEFAULT,
+      "subtract range from message set", mu_c_string, &msgset, cli_sub },
+    { "addset", 0, "SET", MU_OPTION_DEFAULT,
+      "add message set to message set", mu_c_string, &msgset, cli_addset },
+    { "subset", 0, "SET", MU_OPTION_DEFAULT,
+      "subtract message set from message set", mu_c_string, &msgset,
+      cli_subset },
+    { "first", 0, NULL, MU_OPTION_DEFAULT,
+      "print only first element from the resulting set",
+      mu_c_string, &print, cli_first },
+    { "last", 0, NULL, MU_OPTION_DEFAULT,
+      "print only last element from the resulting set",
+      mu_c_string, &print, cli_last },
+    MU_OPTION_END
+  };
+    
+  mu_set_program_name (argv[0]);
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_SINGLE_DASH,
+		 MU_CLI_OPTION_PROG_DOC, "message set parser test utility",
+		 MU_CLI_OPTION_END);
+
+  if (!msgset)
     {
-      char *arg = argv[i];
-      struct mu_msgrange range;
-      
-      if (strncmp (arg, "-add=", 5) == 0)
-	{
-	  parse_msgrange (arg + 5, &range);
-	  MU_ASSERT (mu_msgset_add_range (msgset, range.msg_beg,
-					  range.msg_end, MU_MSGSET_NUM));
-	}
-      else if (strncmp (arg, "-sub=", 5) == 0)
-	{
-	  parse_msgrange (arg + 5, &range);
-	  MU_ASSERT (mu_msgset_sub_range (msgset, range.msg_beg,
-					  range.msg_end, MU_MSGSET_NUM));
-	}
-      else if (strncmp (arg, "-addset=", 8) == 0)
-	{
-	  mu_msgset_t tset = parse_msgset (arg + 8);
-	  if (!msgset)
-	    msgset = tset;
-	  else
-	    {
-	      MU_ASSERT (mu_msgset_add (msgset, tset));
-	      mu_msgset_free (tset);
-	    }
-	}
-      else if (strncmp (arg, "-subset=", 8) == 0)
-	{
-	  mu_msgset_t tset = parse_msgset (arg + 8);
-	  if (!msgset)
-	    {
-	      mu_error ("no initial message set");
-	      exit (1);
-	    }
-	  else
-	    {
-	      MU_ASSERT (mu_msgset_sub (msgset, tset));
-	      mu_msgset_free (tset);
-	    }
-	}
-      else if (strcmp (arg, "-first") == 0)
-	print = print_first;
-      else if (strcmp (arg, "-last") == 0)
-	print = print_last;
-      else
-      	{
-	  mu_error ("unknown option %s", arg);
-	  return 1;
-	}
+      mu_error ("nothing to do; try %s -help for assistance", mu_program_name);
+      exit (1);
     }
+  
   print (msgset);
   mu_msgset_free (msgset);
   

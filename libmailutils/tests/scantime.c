@@ -27,43 +27,30 @@
 #include <mailutils/cctype.h>
 #include <mailutils/cstr.h>
 #include <mailutils/stdstream.h>
-
-void
-usage ()
-{
-  mu_stream_printf (mu_strout, "usage: %s [-format=FMT] [-tz=TZ]\n",
-		    mu_program_name);
-  exit (0);
-}
+#include <mailutils/cli.h>
 
 int
 main (int argc, char **argv)
 {
-  int rc, i;
+  int rc;
   char *format = "%d-%b-%Y%? %H:%M:%S %z";
   char *buf = NULL;
   size_t size = 0;
   size_t n;
   int line;
-  
+
+  struct mu_option options[] = {
+    { "format", 0, "FMT", MU_OPTION_DEFAULT,
+      "set scanning format", mu_c_string, &format },
+    MU_OPTION_END
+  };
+
   mu_set_program_name (argv[0]);
-  
-  mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
-
-  for (i = 1; i < argc; i++)
-    {
-      char *opt = argv[i];
-
-      if (strncmp (opt, "-format=", 8) == 0)
-	format = opt + 8;
-      else if (strcmp (opt, "-h") == 0)
-	usage ();
-      else
-	{
-	  mu_error ("%s: unrecognized argument", opt);
-	  exit (1);
-	}
-    }
+  mu_cli_simple (argc, argv,
+		 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_SINGLE_DASH,
+		 MU_CLI_OPTION_PROG_DOC, "mu_scan_datetime tester",
+		 MU_CLI_OPTION_END);
 
   line = 0;
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)

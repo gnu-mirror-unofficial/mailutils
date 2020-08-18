@@ -30,36 +30,40 @@ print_bytes (unsigned char *b, size_t l)
   printf ("\n");
 }
 
+static int ipv6_simplify;
+
+struct mu_option options[] = {
+  { "simplify", 's', NULL, MU_OPTION_DEFAULT,
+    "simplify IPv6 addresses", mu_c_bool, &ipv6_simplify },
+  MU_OPTION_END
+};  
+
 int
 main (int argc, char **argv)
 {
-  int flags = 0;
-  
   mu_set_program_name (argv[0]);
-  if (argc < 2)
+  mu_cli_simple (argc, argv,
+                 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "cidr test tool",	
+		 MU_CLI_OPTION_PROG_ARGS, "CIDR [CIDR...]",
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+                 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
+	 
+  if (argc == 0)
     {
-      mu_error ("usage: %s [-sS] CIDR [CIDR...]", argv[0]);
+      mu_error ("required argument missing; try %s --help for more info",
+		mu_program_name);
       return 1;
     }
 
-  while (--argc)
+  while (argc--)
     {
-      char *arg = *++argv;
+      char *arg = *argv++;
       struct mu_cidr cidr;
       int rc;
       char *str;
 
-      if (strcmp (arg, "-s") == 0)
-	{
-	  flags |= MU_CIDR_FMT_SIMPLIFY;
-	  continue;
-	}
-      else if (strcmp (arg, "-S") == 0)
-	{
-	  flags &= ~MU_CIDR_FMT_SIMPLIFY;
-	  continue;
-	}
-	       
       rc = mu_cidr_from_string (&cidr, arg);
       if (rc)
 	{
@@ -74,10 +78,11 @@ main (int argc, char **argv)
       print_bytes (cidr.address, cidr.len);
       printf ("netmask =");
       print_bytes (cidr.netmask, cidr.len);
-      rc = mu_cidr_format (&cidr, flags, &str);
+      rc = mu_cidr_format (&cidr, ipv6_simplify ? MU_CIDR_FMT_SIMPLIFY : 0,
+			   &str);
       if (rc)
 	{
-	  mu_error ("cannot covert to string: %s", mu_strerror (rc));
+	  mu_error ("cannot convert to string: %s", mu_strerror (rc));
 	  return 2;
 	}
 

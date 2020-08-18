@@ -110,35 +110,24 @@ main (int argc, char *argv[])
   char *charset = "iso-8859-1";
   char *encoding = "quoted-printable";
   int octal = 0;
-  
-  while ((rc = getopt (argc, argv, "c:e:hot")) != EOF)
-    switch (rc)
-      {
-      case 'c':
-	charset = optarg;
-	break;
-	
-      case 'e':
-	encoding = optarg;
-	break;
+  struct mu_option options[] = {
+    { "charset", 'c', "NAME", MU_OPTION_DEFAULT,
+      "define input character set", mu_c_string, &charset },
+    { "encoding", 'e', "NAME", MU_OPTION_DEFAULT,
+      "define input encoding", mu_c_string, &encoding },
+    { "octal", 'o', NULL, MU_OPTION_DEFAULT,
+      "decode octal escape notations on input", mu_c_bool, &octal },
+    MU_OPTION_END
+  };  
 
-      case 'o':
-	octal = 1;
-	break;
-
-      case 't':
-	octal = 0;
-	break;
-	
-      case 'h':
-	printf ("usage: %s [-c charset] [-e encoding] [-ot]\n", argv[0]);
-	exit (0);
-	
-      default:
-	exit (1);
-      }
-
+  mu_set_program_name (argv[0]);
   mu_stdstream_setup (MU_STDSTREAM_RESET_NONE);
+  mu_cli_simple (argc, argv,
+                 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "Test RFC 2047 encoding function",
+		 MU_CLI_OPTION_EXTRA_INFO, "Defaults are: --charset=iso-8859-1 --encoding=quoted-printable",
+		 MU_CLI_OPTION_END);
+
   while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
     {
       char *p;
