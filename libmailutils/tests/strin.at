@@ -17,20 +17,15 @@
 AT_SETUP([strin])
 AT_KEYWORDS([stdstream])
 
-AT_DATA([input],
+AT_DATA([expout],
 [Omnis enim res, quae dando non deficit,
 dum habetur et non datur, nondum habetur,
 quomodo habenda est.
 ])
 
-AT_CHECK([
-strin < input
-],
+AT_CHECK([strin < expout],
 [0],
-[Omnis enim res, quae dando non deficit,
-dum habetur et non datur, nondum habetur,
-quomodo habenda est.
-])
+[expout])
 
 AT_CLEANUP
 

@@ -110,7 +110,6 @@ TESTSUITE_AT += \
  fsfolder02.at\
  fsfolder03.at\
  fsfolder04.at\
- getdelim.at\
  hdrcpy.at\
  hdrflt.at\
  htmlent.at\
@@ -123,10 +122,7 @@ TESTSUITE_AT += \
  logstr.at\
  mailcap.at\
  mimehdr.at\
- modmesg00.at\
- modmesg01.at\
- modmesg02.at\
- modmesg03.at\
+ modmesg.at\
  modtofsaf.at\
  msgset.at\
  parseopt00.at\
@@ -176,13 +172,10 @@ TESTSUITE_AT += \
  recenv.at\
  scantime.at\
  strftime.at\
- streamshift.at\
+ streams.at\
  strerr.at\
  strin.at\
  strout.at\
- strtoc.at\
- t0-stream.at\
- t1-stream.at\
  url.at\
  url-comp.at\
  xml.at\

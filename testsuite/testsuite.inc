@@ -27,7 +27,7 @@ dnl          [RUN-IF-FAIL], [RUN-IF-PASS])
 dnl ------------------------------------------------------------
 m4_define([MU_CHECK],[AT_SETUP([$1])
 AT_KEYWORDS([$2])
-AT_CHECK([m4_shift2($@)])
+AT_CHECK(m4_shift2($@))
 AT_CLEANUP
 ])
 

@@ -99,16 +99,10 @@ MU_FILTER_TEST_NIBBLE([$1],[$2],[$3],[write],[$4],[$5],[$6],[$7])
 AT_INIT
 
 AT_BANNER([Basic streams])
-m4_include([t0-stream.at])
-m4_include([t1-stream.at])
-m4_include([streamshift.at])
-m4_include([getdelim.at])
-
-AT_BANNER([Stream implementations])
-MU_CHECK([temp_stream],[stream],[temp_stream])
+m4_include([streams.at])
 
 AT_BANNER([Conversions])
-m4_include([strtoc.at])
+MU_CHECK([mu_str_to_c],[conv],[strtoc])
 
 AT_BANNER([Word wrapper])
 m4_include([wordwrap00.at])
@@ -185,7 +179,8 @@ m4_include([strin.at])
 m4_include([strout.at])
 m4_include([strerr.at])
 
-AT_BANNER([Streams])
+AT_BANNER([Stream implementations])
+MU_CHECK([temp_stream],[stream],[temp_stream])
 m4_include([logstr.at])
 m4_include([xscript.at])
 
@@ -244,10 +239,7 @@ m4_include([imapio.at])
 m4_include([readmesg.at])
 
 AT_BANNER(Message modification)
-m4_include([modmesg00.at])
-m4_include([modmesg01.at])
-m4_include([modmesg02.at])
-m4_include([modmesg03.at])
+m4_include([modmesg.at])
 
 m4_include([scantime.at])
 m4_include([strftime.at])

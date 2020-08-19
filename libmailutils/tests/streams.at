@@ -1,5 +1,5 @@
 # This file is part of GNU Mailutils. -*- Autotest -*-
-# Copyright (C) 2016-2020 Free Software Foundation, Inc.
+# Copyright (C) 2020 Free Software Foundation, Inc.
 #
 # GNU Mailutils is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -14,6 +14,30 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_SETUP([mu_str_to_c])
-AT_CHECK([strtoc])
-AT_CLEANUP
+MU_CHECK([intermixed rw: full buffering],
+         [stream],
+         [t0-stream])
+
+MU_CHECK([intermixed rw: line buffering],
+         [stream],
+         [t1-stream])
+
+MU_CHECK([temporary stream shift up],
+         [stream],
+         [t-streamshift 10 2050])
+
+MU_CHECK([temporary stream shift down],
+         [stream],
+         [t-streamshift 2050 10])
+
+MU_CHECK([getdelim],
+         [stream],
+         [stream-getdelim],
+         [0],
+[0: No buffering
+1: Linear buffering
+2: Linear buffering (small buffer)
+3: Full buffering (big buffer)
+4: Full buffering (moderate buffer)
+5: Full buffering (small buffer)
+])
