@@ -55,7 +55,9 @@ get_msgnum (struct parse_msgnum_env *env, size_t *pn)
   if (msgnum == ULONG_MAX && errno == ERANGE)
     return MU_ERR_PARSE;
   env->s = p;
-  if (env->msgset->mbox && env->maxval && msgnum > env->maxval)
+  if (env->minval && msgnum < env->minval)
+    msgnum = env->minval;
+  if (env->maxval && msgnum > env->maxval)
     msgnum = env->maxval;
   *pn = msgnum;
   return 0;
