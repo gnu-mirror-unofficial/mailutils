@@ -537,6 +537,8 @@ main (int argc, char **argv)
       struct pop3d_srv_config cfg;
       memset (&cfg, 0, sizeof cfg);
 
+      idle_timeout = mu_m_server_timeout (server);
+
       switch (stls_server_check (&cfg, "<inetd>"))
 	{
 	case MU_TLS_CONFIG_OK:

@@ -1023,8 +1023,10 @@ main (int argc, char **argv)
   else
     {
       struct imap4d_srv_config cfg;
-      memset (&cfg, 0, sizeof cfg);
+      memset (&cfg, 0, sizeof cfg);      
 
+      idle_timeout = mu_m_server_timeout (server);
+	
       if (mu_gsasl_enabled ())
 	{
 	  auth_gssapi_init ();
