@@ -21,6 +21,7 @@ TESTSUITE_AT += \
  lstuid00.at\
  lstuid01.at\
  lstuid02.at\
+ mbdel.at\
  mime.at\
  mime01.at
 
