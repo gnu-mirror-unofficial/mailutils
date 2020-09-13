@@ -466,7 +466,7 @@ main (int argc, char **argv)
   mu_mailbox_t mbox = NULL;
   struct mu_wordsplit ws;
   char **weedv;
-  int weedc;
+  int weedc = 0;
   int unix_header = 0;
   
   /* Native Language Support */
