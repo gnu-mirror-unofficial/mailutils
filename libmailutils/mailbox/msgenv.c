@@ -214,7 +214,7 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
   mu_header_t header;
   int status;
   const char *sender;
-  struct mu_auth_data *auth;
+  char *email;
   static char *hdrnames[] = {
     "Return-Path",
     "X-Envelope-Sender",
@@ -277,7 +277,7 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
       return 0;
     }
 
-  if (save_i)
+  if (save_i != -1)
     {
       status = mu_header_sget_value (header, hdrnames[save_i], &sender);
       if (status == 0)
@@ -287,11 +287,11 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
 	}
     }
 
-  auth = mu_get_auth_by_uid (getuid ());
-  if (!auth)
-    return MU_ERR_NOENT;
-  save_return (auth->name, buf, len, pnwrite);
-  mu_auth_data_free (auth);
+  email = mu_get_user_email (NULL);
+  if (!email)
+    return errno;
+  save_return (email, buf, len, pnwrite);
+  free (email);
 
   return 0;
 }

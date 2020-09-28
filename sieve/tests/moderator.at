@@ -30,7 +30,7 @@ sieve MUT_SIEVE_CMDLINE MUT_SIEVE_OPTIONS -f ./mailbox prog || exit 1
 cat $MAIL_DUMP
 ],
 [[MSGID: 0001
-SENDER: gray@nonexistent.net
+SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: bug-foobar-request@example.org
 LENGTH: 94
