@@ -318,8 +318,7 @@ amd_msg_lookup (struct _amd_data *amd, struct _amd_message *msg,
     }
   
   rc = amd_msg_bsearch (amd, 0, amd->msg_count - 1, msg, &i);
-  if (rc == 0)
-    *pret = i + 1;
+  *pret = i + 1;
   return rc;
 }
 
