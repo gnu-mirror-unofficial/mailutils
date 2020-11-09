@@ -34,7 +34,9 @@ _imap4_attrlist[] =
   { "\\Flagged", MU_ATTRIBUTE_FLAGGED },
   { "\\Deleted", MU_ATTRIBUTE_DELETED },
   { "\\Draft", MU_ATTRIBUTE_DRAFT },
-  { "\\Seen", MU_ATTRIBUTE_SEEN|MU_ATTRIBUTE_READ },
+  /* According to RFC 3501, 2.3.2, \Seen means "Message has been read".
+     This corresponds to the mailutils attribute MU_ATTRIBUTE_READ. */
+  { "\\Seen", MU_ATTRIBUTE_READ }, 
 };
 
 static int _imap4_nattr = MU_ARRAY_SIZE (_imap4_attrlist);

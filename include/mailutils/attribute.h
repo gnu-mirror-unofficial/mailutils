@@ -24,12 +24,34 @@
 extern "C" {
 #endif
 
+/*
+ * Message attributes:
+ */
+  
+/* The message has been replied to: */
 #define MU_ATTRIBUTE_ANSWERED 0x01
+
+/* The message is explicitly flagged for some purpose: */
 #define MU_ATTRIBUTE_FLAGGED  0x02
+
+/* The message is deleted.  It will remain in this state until it
+   is expunged (and, consequently, physically removed from the
+   mailbox, or the attribute is removed. */
 #define MU_ATTRIBUTE_DELETED  0x04
+
+/* This is a draft message */
 #define MU_ATTRIBUTE_DRAFT    0x08
+
+/* The user has seen the message.  Notice, that it does not mean that
+   they have read it, all it implies is that the user is aware about
+   existence of this message in the mailbox (e.g. it was displayed in
+   some kind of mailbox listing, as the mail "h" command). */
 #define MU_ATTRIBUTE_SEEN     0x10
+
+/* The user has read the message at least partially. */
 #define MU_ATTRIBUTE_READ     0x20
+
+/* The message was modified, but not yet saved to the mailbox. */  
 #define MU_ATTRIBUTE_MODIFIED 0x40
 
 /* A message is recent if the current session is the first session
@@ -46,7 +68,7 @@ extern "C" {
 
 extern int mu_attribute_create          (mu_attribute_t *, void *);
 extern void mu_attribute_destroy        (mu_attribute_t *, void *);
-extern void * mu_attribute_get_owner    (mu_attribute_t);
+extern void *mu_attribute_get_owner    (mu_attribute_t);
 extern int mu_attribute_is_modified     (mu_attribute_t);
 extern int mu_attribute_clear_modified  (mu_attribute_t);
 extern int mu_attribute_set_modified    (mu_attribute_t attr);
