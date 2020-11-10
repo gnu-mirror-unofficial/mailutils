@@ -55,9 +55,7 @@ struct _amd_message
   mu_off_t body_start;      /* Offset of body start in the message file */
   mu_off_t body_end;        /* Offset of body end (size of file, effectively)*/
 
-  int orig_flags;           /* Original attribute flags */
   int attr_flags;           /* Current attribute flags */
-	
 
   time_t mtime;             /* Time of last modification */
   size_t header_lines;      /* Number of lines in the header part */
@@ -70,6 +68,7 @@ struct _amd_message
 /* AMD capabilities */
 #define MU_AMD_STATUS    0x01  /* format keeps status flags */
 #define MU_AMD_IMAPBASE  0x02  /* format keeps IMAP base */
+#define MU_AMD_PROP      0x04  /* prop file existed */
 
 struct _amd_data
 {

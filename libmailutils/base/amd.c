@@ -223,6 +223,12 @@ _amd_prop_create (struct _amd_data *amd)
       free (mhprop);
       return errno;
     }
+
+  if (access (mhprop->filename, F_OK) == 0)
+    {
+      amd->capabilities |= MU_AMD_PROP;
+    }
+  
   rc = mu_property_create_init (&amd->prop, mu_mh_property_init, mhprop);
   if (rc)
     {
@@ -980,8 +986,6 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
 	    unlink (old_name);
 	}
       free (old_name);
-      
-      mhm->orig_flags = mhm->attr_flags;
     }
   free (msg_name);
   free (name);
@@ -1585,8 +1589,9 @@ msg_array_comp (const void *a, const void *b)
 void
 amd_sort (struct _amd_data *amd)
 {
-  qsort (amd->msg_array, amd->msg_count, sizeof (amd->msg_array[0]),
-	 msg_array_comp);
+  if (amd->msg_count)
+    qsort (amd->msg_array, amd->msg_count, sizeof (amd->msg_array[0]),
+	   msg_array_comp);
 }
 
 /* Scan given message and fill amd_message_t fields.

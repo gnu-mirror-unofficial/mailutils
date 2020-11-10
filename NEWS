@@ -1,7 +1,26 @@
-GNU mailutils NEWS -- history of user-visible changes. 2020-08-14
+GNU mailutils NEWS -- history of user-visible changes. 2020-11-10
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+Version 3.10.90 (git)
+
+* Fix incorrect message flags in maildir
+
+Message flags (the "info" filename part) used in maildir file names
+where incorrectly mapped to internal mailutils attributes.  This
+created interoperability problems.
+
+The bug was reported in http://savannah.gnu.org/bugs/?56428.
+
+After opening the mailbox, mailutils analyzes whether it uses
+incorrect flag mapping and fixes it if so.  If the mailbox is opened
+in read-write mode, the changes are immediately propagated to the disk
+storage.
+
+* Fix message ordering in maildir.
+
+* Fix parsing of IMAP ranges
 
 Version 3.10, 2020-08-14
 

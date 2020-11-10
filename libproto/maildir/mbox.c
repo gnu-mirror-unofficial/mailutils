@@ -68,6 +68,7 @@
 #include <mailutils/sys/registrar.h>
 #include <mailutils/sys/amd.h>
 #include <mailutils/io.h>
+#include <mailutils/cstr.h>
 #include <maildir.h>
 
 #ifndef PATH_MAX 
@@ -90,13 +91,36 @@ static struct info_map {
   char letter;
   int flag;
 } info_map[] = {
+  /* Draft: the user considers this message a draft; toggled at user
+     discretion.  */
   { 'D', MU_ATTRIBUTE_DRAFT },
+  /* Flagged: user-defined flag; toggled at user discretion. */
   { 'F', MU_ATTRIBUTE_FLAGGED },
-  { 'P', 0 }, /* (passed): the user has resent/forwarded/bounced this
-		 message to someone else. */
-  { 'R', MU_ATTRIBUTE_READ },
-  { 'S', MU_ATTRIBUTE_SEEN },
+  /* Passed: the user has resent/forwarded/bounced this message to
+     someone else.
+     FIXME: There's no corresponding flag in mailutils. */
+  { 'P', 0 }, 
+  /* Replied: the user has replied to this message. */
+  { 'R', MU_ATTRIBUTE_ANSWERED },
+  /* Seen: the user has viewed this message, though perhaps he didn't
+     read all the way through it.
+     This corresponds to the MU_ATTRIBUTE_READ attribute. */
+  { 'S', MU_ATTRIBUTE_READ },
+  /* Trashed: the user has moved this message to the trash; the trash
+     will be emptied by a later user action. */
   { 'T', MU_ATTRIBUTE_DELETED },
+  
+  /* Mailutils versions prior to 3.10.90 marked replied messages with the
+     'a' flag.  The discrepancy with the de-facto standard was reported
+     in http://savannah.gnu.org/bugs/?56428.
+
+     This entry is preserved for a while, for backward compatibility.
+
+     Keep it at the end, so the 'R' letter is used when converting
+     attributes to maildir info letters.
+
+     Info flags are fixed in maildir_scan_dir.
+  */
   { 'a', MU_ATTRIBUTE_ANSWERED },
 };
 #define info_map_size (sizeof (info_map) / sizeof (info_map[0]))
@@ -130,7 +154,7 @@ static char *
 maildir_name_info_ptr (char *name)
 {
   char *p = strchr (name, ':');
-  if (p && memcmp (p + 1, "2,", 2) == 0)
+  if (p && memcmp (p + 1, "2,", 2) == 0 && p[3])
     return p + 3;
   return NULL;
 }
@@ -682,18 +706,16 @@ maildir_deliver_new (struct _amd_data *amd, DIR *dir)
     }
   return err;
 }
-
 static int
-maildir_scan_dir (struct _amd_data *amd, DIR *dir, char *dirname)
+maildir_scan_dir (struct _amd_data *amd, DIR *dir, char *dirname, int init_flags)
 {
   struct dirent *entry;
   struct _maildir_message *msg, key;
   char *p;
   size_t index;
   int rc = 0;
-  int need_sort = 0;
   struct stat st;
-  
+   
   while ((entry = readdir (dir)))
     {
       char *fname;
@@ -742,20 +764,141 @@ maildir_scan_dir (struct _amd_data *amd, DIR *dir, char *dirname)
       msg->dir = dirname;
       msg->file_name = strdup (entry->d_name);
 
+      msg->amd_message.attr_flags = init_flags;
       p = maildir_name_info_ptr (msg->file_name);
       if (p)
-	msg->amd_message.attr_flags = info_to_flags (p);
-      else
-	msg->amd_message.attr_flags = 0;
-      msg->amd_message.orig_flags = msg->amd_message.attr_flags;
-      need_sort = 1;
+	msg->amd_message.attr_flags |= info_to_flags (p);
     }
 
-  if (rc == 0 && need_sort)
-    amd_sort (amd);
   return rc;
 }
+
+/*
+ * Maildir attribute fixup
+ * =======================
+ *
+ * Messag info flags used by Mailutils versions prior to 3.10.90 differ
+ * from those described in the reference maildir implementation
+ * (http://cr.yp.to/proto/maildir.html)
+ * This was reported in http://savannah.gnu.org/bugs/?56428.
+ *
+ * The difference is summarized in the table below:
+ *
+ *  Attribute              Reference  MU-3.10
+ *  ---------------------  ---------  -------
+ *  MU_ATTRIBUTE_READ          S         R
+ *  MU_ATTRIBUTE_ANSWERED      R         a
+ *  MU_ATTRIBUTE_SEEN          -         S
+ *
+ * The "Attribute" column lists the maiutils attribute flag, the
+ * "Reference" column contains the letter that corresponds to that flag
+ * in the reference implementation and the "MU-3.10" column shows the
+ * letter in mailutils 3.10 and earloer.
+ *
+ * Starting from version 3.10.90 this discrepancy is fixed.  To make sure
+ * both old and new message attributes are correctly recognized, we try 
+ * to detect whether the mailbox was created by mailutils versions prior to
+ * 3.10.90 and fix up the attributes if so.  This is done after the initial
+ * mailbox scan.
+ *
+ * To detect whether attributes need to be fixed, the .mu-prop file is
+ * examined.  If it does not exist, it is assumed that the mailbox was
+ * not created by mailutils and no fixup is needed.  If it exists and
+ * does not contain the "version" property, or if the value of that
+ * property is less than or equal to 3.10, then the fixup is needed.
+ * Otherwise, fixup is not needed.  This is done by the needs_fixup
+ * function.
+ *
+ * To assist in diagnostics, new AMD "capability" MU_AMD_PROP has been
+ * added.  It is set, if the .mu-prop file existed when the mailbox
+ * was opened.  The capability member was chosen to avoid adding new
+ * members to struct _amd_data.
+ *
+ * During fixup, the internal attribute flags are changed according to
+ * the table above.  If the mailbox is writable, each message file is
+ * renamed if its attributes changed.  Otherwise, changes remain
+ * in memory.  This is done by the maildir_attribute_fixup function.
+ *
+ * After successfully opening the (writable) mailbox, the "version"
+ * property in its .mu-prop file is updated so that subsequent accesses
+ * avoid performing the fixup again.
+ *
+ * The code below (up to the form feed character) will live for a couple
+ * of releases after 3.11 to make sure all existing mailboxes have been
+ * fixed up.
+ */
 
+static int
+needs_fixup (struct _amd_data *amd)
+{
+  char const *amd_version;
+  int rc;
+
+  if (!(amd->capabilities & MU_AMD_PROP))
+    {
+      /* Absence of the mu-prop file indicates that this mailbox was
+	 not created by mailutils (unless the file has been deleted,
+	 of course).  Let's assume the former.  This means that no
+	 attribute fixup is needed. */
+      return 0;
+    }
+
+  if (amd->prop)
+    {
+      switch (mu_property_sget_value (amd->prop, "version", &amd_version))
+	{
+	case 0:
+	  break;
+	  
+	case MU_ERR_NOENT:
+	  return 1;
+
+	default:
+	  return 0;
+	}
+      if (mu_version_string_cmp (amd_version, "3.10", 0, &rc) == 0)
+	return rc <= 0;
+    }
+  return 0;
+}
+
+static void
+maildir_attribute_fixup (struct _amd_data *amd)
+{
+  if (needs_fixup (amd))
+    {
+      size_t i;
+      int err;
+      
+      for (i = 0; i < amd->msg_count; i++)
+	{
+	  int flags = amd->msg_array[i]->attr_flags;
+
+	  flags &= ~MU_ATTRIBUTE_READ;
+	  if (flags & MU_ATTRIBUTE_ANSWERED)
+	    {
+	      flags &= ~MU_ATTRIBUTE_ANSWERED;
+	      flags |= MU_ATTRIBUTE_READ;
+	    }
+	  
+	  if (amd->msg_array[i]->attr_flags != flags)
+	    {
+	      amd->msg_array[i]->attr_flags = flags;
+	      if (amd->mailbox->flags & MU_STREAM_WRITE)
+		{  
+		  if (amd->chattr_msg (amd->msg_array[i], 0))
+		    err = 1;
+		}
+	    }
+	}
+
+      if (err)
+	mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		  ("maildir_scan_dir: errors during fixup"));
+      
+    }
+}
+
 static int
 maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
 {
@@ -780,7 +923,7 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
   if (status == 0)
     {
       if (maildir_deliver_new (amd, dir))
-	status = maildir_scan_dir (amd, dir, NEWSUF);
+	status = maildir_scan_dir (amd, dir, NEWSUF, MU_ATTRIBUTE_RECENT);
       closedir (dir);
     }
   free (name);
@@ -795,10 +938,36 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
 			    mu_stream_flags_to_mode (mailbox->flags, 1));
   if (status == 0)
     {
-      status = maildir_scan_dir (amd, dir, CURSUF);
+      status = maildir_scan_dir (amd, dir, CURSUF, MU_ATTRIBUTE_SEEN);
       closedir (dir);
     }
   free (name);
+
+  if (status)
+    return status;
+  
+  maildir_attribute_fixup (amd);
+
+  if (amd->mailbox->flags & MU_STREAM_WRITE)
+    {  
+      status = mu_property_set_value (amd->prop, "version", PACKAGE_VERSION, 1);
+      if (status)
+	{
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("maildir_scan_dir: mu_property_set_value failed during attribute fixup: %s",
+		     mu_strerror (status)));
+	}
+      
+      status = mu_property_save (amd->prop);
+      if (status)
+	{
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("maildir_scan_dir: mu_property_save failed during attribute fixup: %s",
+		     mu_strerror (status)));
+	}
+    }
+      
+  amd_sort (amd);
 
   for (i = 1; i <= amd->msg_count; i++)
     {
@@ -961,7 +1130,6 @@ maildir_qfetch (struct _amd_data *amd, mu_message_qid_t qid)
     msg->amd_message.attr_flags = info_to_flags (p);
   else
     msg->amd_message.attr_flags = 0;
-  msg->amd_message.orig_flags = msg->amd_message.attr_flags;
   msg->uid = amd->next_uid (amd);
   _amd_message_insert (amd, (struct _amd_message*) msg);
   return 0;
@@ -1042,10 +1210,14 @@ maildir_chattr_msg (struct _amd_message *amsg, int expunge)
       free (cur_name);
     }
 
+  free (mp->file_name);
+  mp->file_name = strdup (strrchr (new_name, '/') + 1);
   free (new_name);
+  if (!mp->file_name)
+    return errno;
+  
   return rc;
 }
-
      
 int
 _mailbox_maildir_init (mu_mailbox_t mailbox)

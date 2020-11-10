@@ -164,7 +164,9 @@ enum
     MU_AUTODETECT_ACCURACY_FAST = 0,
     /* Default: minimal accuracy */
     MU_AUTODETECT_ACCURACY_DEFAULT = 1,
-    /* Any non-negative value also allowed */
+    /* Maximal accuracy so far */
+    MU_AUTODETECT_ACCURACY_MAX = 2
+    /* Any non-negative value also allowed ... */
   };
 
 int mu_scheme_autodetect_p (mu_url_t);

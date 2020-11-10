@@ -25,6 +25,7 @@
 #ifdef HAVE_STRINGS_H
 # include <strings.h>
 #endif
+#include <unistd.h>
 
 #include <mailutils/iterator.h>
 #include <mailutils/list.h>
@@ -147,7 +148,9 @@ mu_registrar_lookup_url (mu_url_t url, int flags,
   mu_iterator_t iterator;
   mu_record_t last_record = NULL;
   int last_flags = 0;
-  int status = mu_registrar_get_iterator (&iterator);
+  int status;
+
+  status = mu_registrar_get_iterator (&iterator);
   if (status != 0)
     return status;
   status = MU_ERR_NOENT;
@@ -176,20 +179,26 @@ mu_registrar_lookup_url (mu_url_t url, int flags,
     }
   mu_iterator_destroy (&iterator);
 
+  if (status
+      && !mu_is_proto (mu_url_to_string (url)) /* FIXME: This check is not
+						  enough. */
+      && mu_default_record
+      && (mu_record_is_local (mu_default_record) == 0
+	  || access (mu_url_to_string (url), F_OK)))
+    {
+      /* If the default record is local and the mailbox does not exist,
+	 it possibly can be created if requested. */
+      status = 0;
+      last_record = mu_default_record;
+      last_flags = flags & MU_FOLDER_ATTRIBUTE_FILE; /* FIXME? */
+    }
+
   if (status == 0)
     {
       if (precord)
 	*precord = last_record;
       if (pflags)
 	*pflags = last_flags;
-    }
-  else if (!mu_is_proto (mu_url_to_string (url)) /* FIXME: This check is not
-						    enough. */
-	   && mu_registrar_get_default_record (precord) == 0)
-    {
-      status = 0;
-      if (pflags)
-	*pflags = flags & MU_FOLDER_ATTRIBUTE_FILE; /* FIXME? */
     }
   
   return status;

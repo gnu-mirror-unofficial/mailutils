@@ -64,6 +64,9 @@ int mu_c_str_unescape_trans (char const *str, char const *trans,
 			     char **ret_str);
 
 
+int mu_version_string_parse (char const *verstr, int version[3], char **endp);
+int mu_version_string_cmp (char const *a, char const *b, int ignoresuf, int *res);
+  
 int mu_str_expand (char **output, char const *input, mu_assoc_t assoc);
 int mu_str_vexpand (char **output, char const *input, ...);
 

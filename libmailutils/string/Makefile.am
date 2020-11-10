@@ -46,6 +46,7 @@ libstring_la_SOURCES = \
  muctype.c\
  vasnprintf.c\
  mkfilename.c\
+ version.c\
  wordsplit.c\
  xdecode.c
 

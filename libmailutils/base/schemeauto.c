@@ -19,6 +19,7 @@
 # include <config.h>
 #endif
 #include <stdlib.h>
+#include <string.h>
 #include <mailutils/url.h>
 
 /* Returns true if SCHEME represents a local (autodetect) mail folder.  */
@@ -47,8 +48,12 @@ mu_autodetect_accuracy (void)
   if (accuracy == MU_AUTODETECT_ACCURACY_AUTO)
     {
       char *p = getenv ("MU_AUTODETECT_ACCURACY");
-      if (!p)
+      if (!p || strcmp (p, "default") == 0)
 	accuracy = MU_AUTODETECT_ACCURACY_DEFAULT;
+      else if (strcmp (p, "fast") == 0)
+	accuracy = MU_AUTODETECT_ACCURACY_FAST;
+      else if (strcmp (p, "max") == 0)
+	accuracy = MU_AUTODETECT_ACCURACY_MAX;
       else
 	accuracy = atoi (p);
     }

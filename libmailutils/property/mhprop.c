@@ -187,7 +187,7 @@ _mh_prop_fill (struct _mu_property *prop)
   if (rc)
     {
       if ((rc = mu_header_create (&header, NULL, 0)) != 0)
-	mu_error (_("cannot create context %s: %s"),
+	mu_error (_("cannot create property %s: %s"),
 		  mhprop->filename, mu_strerror (rc));
     }
   else

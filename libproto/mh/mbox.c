@@ -245,14 +245,12 @@ mh_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED, size_t *pcount,
 
 	  msg->seq_number = num;
 	  msg->amd_message.attr_flags = attr_flags;
-	  msg->amd_message.orig_flags = msg->amd_message.attr_flags;
 
 	  need_sort = 1;
 	}
       else
 	{
 	  msg->amd_message.attr_flags = attr_flags;
-	  msg->amd_message.orig_flags = msg->amd_message.attr_flags;
 	}
     }
 
@@ -384,7 +382,6 @@ mh_qfetch (struct _amd_data *amd, mu_message_qid_t qid)
   msg = calloc (1, sizeof (*msg));
   msg->seq_number = num;
   msg->amd_message.attr_flags = attr_flags;
-  msg->amd_message.orig_flags = msg->amd_message.attr_flags;
   _amd_message_insert (amd, (struct _amd_message*) msg);
   return 0;
 }
