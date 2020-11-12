@@ -21,8 +21,6 @@
 # include <config.h>
 #endif
 
-#ifdef ENABLE_MAILDIR
-
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -75,14 +73,52 @@
 # define PATH_MAX _POSIX_PATH_MAX
 #endif
 
+/* The maildir mailbox */
+struct _maildir_data
+{
+  struct _amd_data amd;
+  int folder_fd;         /* Descriptor of the top-level maildir directory */
+  /* Additional data used during scanning: */
+  int needs_attribute_fixup; /* The mailbox is created by mailutils 3.10
+				or earlier and needs the attribute fixup
+				(see "Maildir attribute fixup"" below) */
+  int needs_uid_fixup;       /* Messages in the mailbox need to be assigned
+				new UIDS.  Consequently, the uidvalidity
+				value must be updated too. */
+  unsigned long next_uid;    /* Next UID value. */
+};
+  
 struct _maildir_message
 {
   struct _amd_message amd_message;
-  char *dir;
-  char *file_name;
+  int subdir;
+  char *file_name;  /* File name */
+  size_t uniq_len;  /* Length of the unique file name prefix. */
   unsigned long uid;
 };
 
+static char *subdir_name[] = { "cur", "new", "tmp" };
+
+char const *
+mu_maildir_subdir_name (int subdir)
+{
+  if (subdir < 0 || subdir >= MU_ARRAY_SIZE (subdir_name))
+    {
+      errno = EINVAL;
+      return NULL;
+    }
+  return subdir_name[subdir];
+}
+
+int
+mu_maildir_reserved_name (char const *name)
+{
+  return strcmp (name, subdir_name[SUB_TMP]) == 0
+         || strcmp (name, subdir_name[SUB_CUR]) == 0
+         || strcmp (name, subdir_name[SUB_NEW]) == 0
+	 || (strlen (name) > 3
+             && (memcmp (name, ".mh", 3) == 0 || memcmp (name, ".mu", 3) == 0));
+}
 
 /* Attribute handling.
    FIXME: P (Passed) is not handled */
@@ -119,11 +155,11 @@ static struct info_map {
      Keep it at the end, so the 'R' letter is used when converting
      attributes to maildir info letters.
 
-     Info flags are fixed in maildir_scan_dir.
+     Info flags are fixed in maildir_scan_unlocked.
   */
   { 'a', MU_ATTRIBUTE_ANSWERED },
 };
-#define info_map_size (sizeof (info_map) / sizeof (info_map[0]))
+#define info_map_size (MU_ARRAY_SIZE (info_map))
 
 /* NOTE: BUF must be at least info_map_size bytes long */
 static int
@@ -139,7 +175,7 @@ flags_to_info (int flags, char *buf)
 }
 
 static int
-info_to_flags (char *buf)
+info_to_flags (char const *buf)
 {
   int flags = 0;
   struct info_map *p;
@@ -149,503 +185,449 @@ info_to_flags (char *buf)
       flags |= p->flag;
   return flags;
 }
-
-static char *
-maildir_name_info_ptr (char *name)
-{
-  char *p = strchr (name, ':');
-  if (p && memcmp (p + 1, "2,", 2) == 0 && p[3])
-    return p + 3;
-  return NULL;
-}
 
 /*
- * Compare two maildir messages A and B.  The purpose is to determine
- * which one was delivered prior to another.
+ * Maildir message file handling.
+ * ==============================
  *
- * Compare seconds, microseconds and number of deliveries, in that
- * order.  If all match (shouldn't happen), resort to lexicographical
- * comparison.
+ * The format of the maildir message file name is described in:
+ * http://cr.yp.to/proto/maildir.html.
+ *
+ * It consists of:
+ *
+ *   uniq [ ',' attrs ] ':2,' info
+ *
+ * where:
+ *   uniq  - unique name prefix;
+ *   info  - message flags in alphabetical order;
+ *   attrs - implementation-defined attributes.
+ *
+ * The specification states that a "unique name can be anything that
+ * doesn't contain a colon (or slash) and doesn't start with a dot."
+ * This makes it possible to add to the unique prefix a list of comma-
+ * separated attributes.  Each attribute consists of the attribute name,
+ * immediately followed by '=' and attribute value.  Neither part can
+ * contain '=' or ','.
+ *
+ * Mailutils implementation defines the following attributes:
+ *
+ *  u  -  UID of the message.
+ *
  */
-static int
-maildir_message_cmp (struct _amd_message *a, struct _amd_message *b)
-{
-  char *name_a = ((struct _maildir_message *) a)->file_name;
-  char *name_b = ((struct _maildir_message *) b)->file_name;
-  char *pa, *pb;
-  unsigned long la, lb;
-  int d;
-  
-  la = strtoul (name_a, &name_a, 10);
-  lb = strtoul (name_b, &name_b, 10);
 
-  if (la > lb)
+/*
+ * Each attribute is represented by the following structure:
+ */  
+struct attrib
+{
+  char *name;             /* Attribute name */
+  char *value;            /* Attribute value */
+  struct attrib *next;    /* Pointer to the next attribute in list. */
+};
+
+/*
+ * Both name and value point to the memory allocated in one block with
+ * the attrib structure.  Attributes form a singly-linled list with the
+ * list head pointing to the first attribute defined in the file name.
+ *
+ * Functions for accessing attribute lists:
+ */
+
+/* Push new attribute at the head of the existing attribute list.
+
+   head - Pointer to the current list head;
+   name - Attribute name;
+   nlen - Length of the name;
+   val  - Value;
+   vlen - Length of the value.
+
+   On success, updates head and returns the new head attribute.
+   On memory allocation error, returne NULL and does not modify head.
+*/
+static inline struct attrib *
+attrib_push (struct attrib **head, char const *name, size_t nlen,
+	     char const *val, size_t vlen)
+{
+  struct attrib *attr;
+
+  attr = malloc (sizeof (*attr) + nlen + vlen + 2);
+  attr->next = *head;
+  attr->name = (char*)(attr + 1);
+  memcpy(attr->name, name, nlen);
+  attr->name[nlen] = 0;
+  attr->value = attr->name + nlen + 1;
+  memcpy(attr->value, val, vlen);
+  attr->value[vlen] = 0;
+  *head = attr;
+  return attr;
+}
+
+/* Free the attribute list */
+static void
+attrib_free (struct attrib *alist)
+{
+  while (alist)
+    {
+      struct attrib *next = alist->next;
+      free (alist);
+      alist = next;
+    }
+}
+
+/* If the attribute name is present in the list alist, return its value.
+   Otherwise, return NULL. */
+static char const *
+attrib_lookup (struct attrib *alist, char const *name)
+{
+  while (alist)
+    {
+      if (strcmp (alist->name, name) == 0)
+	return alist->value;
+      alist = alist->next;
+    }
+  return NULL;
+}
+
+/* Auxiliary function.  Returns 1 if the string STR of length LEN is
+   encountered in the NULL-terminated string list STRLIST, and 0 otherwise.
+*/
+static inline int
+is_member_of (char const *str, size_t len, char **strlist)
+{
+  char const *p;
+  
+  if (!strlist)
     return 1;
-  if (la < lb)
-    return -1;
-
-  if ((d = (*name_a - *name_b)) != 0)
-    return d;
-  
-  name_a++;
-  name_b++;
-
-  if ((pa = strchr (name_a, 'M')) != 0 && (pb = strchr (name_b, 'M')) != 0)
+  while ((p = *strlist) != NULL)
     {
-      la = strtoul (name_a, &name_a, 10);
-      lb = strtoul (name_b, &name_b, 10);
-
-      if (la > lb)
+      if (strlen (p) == len && memcmp (p, str, len) == 0)
 	return 1;
-      if (la < lb)
-	return -1;
+      strlist++;
     }
-
-  if ((pa = strchr (name_a, 'Q')) != 0 && (pb = strchr (name_b, 'Q')) != 0)
-    {
-      la = strtoul (name_a, &name_a, 10);
-      lb = strtoul (name_b, &name_b, 10);
-
-      if (la > lb)
-	return 1;
-      if (la < lb)
-	return -1;
-    }
-
-  for (; *name_a && *name_a != ':' && *name_b && *name_b != ':';
-       name_a++, name_b++)
-    {
-      if ((d = (*name_a - *name_b)) != 0)
-	return d;
-    }
-  
-  if ((*name_a == ':' || *name_a == 0) && (*name_b == ':' || *name_b == 0))
-    return 0;
-
-  return *name_a - *name_b;
-}
-
-void
-msg_free (struct _amd_message *amsg)
-{
-  struct _maildir_message *mp = (struct _maildir_message *) amsg;
-  free (mp->file_name);
-}
-
-char *
-maildir_gethostname ()
-{
-  char hostname[256];
-  char *hp;
-  char *p;
-  size_t s;
-  
-  if (gethostname (hostname, sizeof hostname) < 0)
-    strcpy (hostname, "localhost");
-
-  for (s = 0, p = hostname; *p; p++)
-    if (*p == '/' || *p == ':')
-      s += 4;
-
-  if (s)
-    {
-      char *q;
-      
-      hp = malloc (strlen (hostname) + s + 1);
-      for (p = hostname, q = hp; *p; p++)
-	switch (*p)
-	  {
-	  case '/':
-	    memcpy (q, "\\057", 4);
-	    q += 4;
-	    break;
-
-	  case ':':
-	    memcpy (q, "\\072", 4);
-	    q += 4;
-	    break;
-
-	  default:
-	    *q++ = *p++;
-	  }
-      *q = 0;
-    }
-  else
-    hp = strdup (hostname);
-  return hp;
-}
-
-int
-read_random (void *buf, size_t size)
-{
-  int rc;
-  int fd = open ("/dev/urandom", O_RDONLY);
-  if (fd == -1)
-    return -1;
-  rc = read (fd, buf, size);
-  close (fd);
-  return rc != size;
-}
-
-int
-maildir_mkfilename (const char *directory, const char *suffix, const char *name,
-		    char **ret_name)
-{
-  size_t size = strlen (directory) + 1 + strlen (suffix) + 1;
-  char *tmp;
-
-  if (name)
-    size += 1 + strlen (name);
-  
-  tmp = malloc (size);
-  if (!tmp)
-    return errno;
-  sprintf (tmp, "%s/%s", directory, suffix);
-  if (name)
-    {
-      strcat (tmp, "/");
-      strcat (tmp, name);
-    }
-  *ret_name = tmp;
   return 0;
 }
 
-static int
-mk_info_filename (char *directory, char *suffix, char *name, int flags,
-		  char **ret_name)
+/*
+ * Message name parser.
+ *
+ * Alphabet:
+ *      0   ANY
+ *      1   ','
+ *      2   '1'
+ *      3   '2'
+ *      4   ':'
+ *      5   '='
+ *
+ *    Transitions:
+ *
+ *      \      input
+ *      state
+ *      
+ *      \  0 1 2 3 4 5
+ *      -+ -----------
+ *      0| 0 1 0 0 0 0
+ *      1| 0 0 2 3 0 0
+ *      2| 0 0 0 0 4 0 
+ *      3| 0 0 0 0 5 0
+ *      4| 6 8 6 6 6 8   experimental semantics: any except ,=
+ *      5| 6 8 6 6 6 8   flags : any except ,=
+ *      6| 6 8 6 6 6 7   consume value; ends at =
+ *      7| 7 6 7 7 7 8   consume keyword; ends at ,
+ *      8|<stop>
+ */
+
+/* Convert input character to alphabet symbol code. */
+static inline int
+alpha (int input)
 {
-  char fbuf[info_map_size + 1];
-  char *tmp;
-  int namelen;
-
-  tmp = strchr (name, ':');
-  if (!tmp)
-    namelen = strlen (name);
-  else
-    namelen = tmp - name;
-
-  flags_to_info (flags, fbuf);
-
-  return mu_asprintf (ret_name, "%s/%s/%*.*s:2,%s",
-		      directory, suffix, namelen, namelen, name, fbuf);
-}
-
-char *
-maildir_uniq (struct _amd_data *amd, int fd)
-{
-  char buffer[PATH_MAX];
-  int ind = 0;
-#define FMT(fmt,val) do {\
-  ind += snprintf(buffer+ind, sizeof buffer-ind, fmt, val); \
-} while (0) 
-#define PFX(pfx,fmt,val) do {\
-  if (ind < sizeof buffer-1) {\
-    buffer[ind++] = pfx;\
-    FMT(fmt,val);\
-  }\
-} while (0) 
-#define COPY(s) do {\
-  char *p; \
-  for (p = s; ind < sizeof buffer-1 && *p;) \
-    buffer[ind++] = *p++;\
-} while (0);
-  char *hostname = maildir_gethostname ();
-  struct timeval tv;
-  unsigned long n;
-  struct stat st;
-
-  gettimeofday (&tv, NULL);
-  FMT ("%lu", tv.tv_sec);
-  COPY (".");
-
-  if (read_random (&n, sizeof (unsigned long))) /* FIXME: 32 bits */
-    PFX ('R', "%lX", n);
-
-  if (fd > 0 && fstat (fd, &st) == 0)
+  switch (input)
     {
-      PFX ('I', "%lX", (unsigned long) st.st_ino);
-      PFX ('V', "%lX", (unsigned long) st.st_dev);
+    case ',':
+      return 1;
+
+    case '1':
+      return 2;
+
+    case '2':
+      return 3;
+
+    case ':':
+      return 4;
+
+    case '=':
+      return 5;
     }
 
-  PFX ('M', "%lu", tv.tv_usec);
-  PFX ('P', "%lu", (unsigned long) getpid ());
-  PFX ('Q', "%lu", (unsigned long) amd->msg_count);
-  PFX ('.', "%s", hostname);
-  free (hostname);
+  return 0;
+}
 
-  buffer[ind] = 0;
+/* Extract information from the maildir message name NAME.
+   
+   Input:
+     name      - Message file name.
+     attrnames - Pointer to the array of attribute names we are interested in.
+                 NULL means all attributes, if attrs is not NULL.
+
+   Output:
+     flags     - Parsed out flags.  Can be NULL.
+     attrs     - Linked list of extracted attributes.  
+
+   If attrs is NULL, no attributes are returned and attrnames is not referenced.
+     
+   Returns length of the unique name prefix, or (size_t)-1 if memory
+   allocation fails.
+*/
+static size_t
+maildir_message_name_parse (char const *name, char **attrnames,
+			    int *flags, struct attrib **attrs)
+{
+  char const *p = name + strlen (name);
+  static int transition[][6] = {
+    { 0, 1, 0, 0, 0, 0 },
+    { 0, 0, 2, 3, 0, 0 },
+    { 0, 0, 0, 0, 4, 0 }, 
+    { 0, 0, 0, 0, 5, 0 },
+    { 6, 8, 6, 6, 6, 8 },
+    { 6, 8, 6, 6, 6, 8 },
+    { 6, 8, 6, 6, 6, 7 },
+    { 7, 6, 7, 7, 7, 8 },
+  };
+  int state = 0, oldstate;
+  char const *endp = p;
+  char const *startval;
+  char const *endval;
+  struct attrib *athead = NULL;
+  size_t len;
+  int f = 0;
   
-  return strdup (buffer);
-}
-
-/* FIXME: The following two functions dump core on ENOMEM */
-static int
-maildir_cur_message_name (struct _amd_message *amsg, char **pname)
-{
-  struct _maildir_message *msg = (struct _maildir_message *) amsg;
-  return maildir_mkfilename (amsg->amd->name, msg->dir, msg->file_name, pname);
-}
-
-static int
-maildir_new_message_name (struct _amd_message *amsg, int flags, int expunge,
-			  char **pname)
-{
-  struct _maildir_message *msg = (struct _maildir_message *) amsg;
-  if (expunge && (flags & MU_ATTRIBUTE_DELETED))
+  while (p > name)
     {
-      /* Force amd.c to unlink the file. */
-      *pname = NULL;
+      p--;
+      oldstate = state;
+      state = transition[state][alpha(*p)];
+      switch (state)
+	{
+	case 4:
+	  endp = p;
+	  endval = p;
+	  f = 0;
+	  break;
+
+	case 5:
+	  endp = p;
+	  endval = p;
+	  f = info_to_flags (p + 3);
+	  break;
+
+	case 6:
+	  if (oldstate == 7)
+	    {
+	      len = startval - p - 2;
+	      if (attrs && is_member_of (p + 1, len, attrnames))
+		{
+		  if (!attrib_push (&athead, p + 1, len,
+				    startval, endval - startval))
+		    {
+		      attrib_free (athead);
+		      return (size_t)-1;
+		    }
+		}
+	      endp = p;
+	      endval = p;
+	    }
+	  else if (oldstate != state)
+	    endval = p + 1;
+	  break;
+
+	case 7:
+	  if (oldstate != state)
+	    startval = p + 1;
+	  break;
+
+	case 8:
+	  /* error */
+	  if (endval)
+	    endp = endval;
+	  else
+	    endp = p + 2;
+	  goto end;
+	}
     }
-  else if (strcmp (msg->dir, CURSUF) == 0)
-    return mk_info_filename (amsg->amd->name, CURSUF, msg->file_name, flags,
-			     pname);
-  else
-    return maildir_mkfilename (amsg->amd->name, msg->dir, msg->file_name,
-			       pname);
+ end:
+  if (flags)
+    *flags = f;
+  if (attrs)
+    *attrs = athead;
+  return endp - name;
+}
+
+static int
+maildir_open (struct _maildir_data *md)
+{
+  if (md->folder_fd == -1)
+    {
+      int fd = open(md->amd.name, O_RDONLY | O_NONBLOCK | O_DIRECTORY);
+      if (fd == -1)
+	{
+	  int rc = errno;
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("can't open directory %s: %s",
+		     md->amd.name, mu_strerror (rc)));
+	  return rc;
+	}
+      else
+	md->folder_fd = fd;
+    }
   return 0;
 }
 
 static void
-maildir_msg_free (struct _amd_message *amsg)
+maildir_close (struct _maildir_data *md)
+{
+  if (md->folder_fd == -1)
+    {
+      close (md->folder_fd);
+      md->folder_fd = -1;
+    }
+}
+
+/* Open subdirectory SUBDIR in MD.
+   Note: maildir must be open.
+ */
+static int
+maildir_subdir_open (struct _maildir_data *md, int subdir,
+		     DIR **pdir, int *pfd)
+{
+  int rc;
+  int fd;
+  DIR *dir;
+  
+  fd = openat (md->folder_fd, subdir_name[subdir],
+	       O_RDONLY | O_NONBLOCK | O_DIRECTORY);
+  if (fd == -1)
+    {
+      if (errno == ENOENT)
+	{
+	  int perms = PERMS | mu_stream_flags_to_mode (md->amd.mailbox->flags, 1);
+	  if (mkdirat (md->folder_fd, subdir_name[subdir], perms) == 0)
+	    {
+	      fd = openat (md->folder_fd, subdir_name[subdir],
+			   O_RDONLY | O_NONBLOCK | O_DIRECTORY);
+	    }
+	  else
+	    {
+	      rc = errno;
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("can't create directory %s/%s: %s",
+			 md->amd.name, subdir_name[subdir], mu_strerror (rc)));
+	      return rc;
+	      
+	    }
+	}
+
+      if (fd == -1)
+	{
+	  rc = errno;
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("can't open directory %s/%s: %s",
+		     md->amd.name, subdir_name[subdir], mu_strerror (rc)));
+	  return rc;
+	}
+    }
+
+  if (pdir)
+    {
+      dir = fdopendir (fd);
+      if (!dir)
+	{
+	  rc = errno;
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("can't fdopen directory %s/%s: %s",
+		     md->amd.name, subdir_name[subdir], mu_strerror (rc)));
+	  close (fd);
+	  return rc;
+	}
+
+      *pdir = dir;
+    }
+  *pfd = fd;
+  
+  return 0;
+}
+
+static int
+maildir_message_alloc (struct _maildir_data *md, int subdir, char const *name,
+		       struct _maildir_message **pmsg)
+{
+  struct _maildir_message *msg;
+  size_t n;
+  static char *attrnames[] = { "u", NULL };
+  struct attrib *attrs;
+  char const *p;
+  
+  msg = calloc (1, sizeof (*msg));
+  if (!msg)
+    return errno;
+  msg->subdir = subdir;
+  msg->file_name = strdup (name);
+  if (!msg->file_name)
+    {
+      free (msg);
+      return ENOMEM;
+    }
+  
+  n = maildir_message_name_parse (name, attrnames,
+				  &msg->amd_message.attr_flags,
+				  &attrs);
+  if (n == (size_t)-1)
+    {
+      free (msg->file_name);
+      free (msg);
+      return ENOMEM;
+    }
+  msg->uniq_len = n;
+  
+  if ((p = attrib_lookup (attrs, "u")) != NULL)
+    {
+      char *endp;
+      unsigned long n = strtoul (p, &endp, 10);
+      if ((n == ULONG_MAX && errno == ERANGE) || *endp)
+	/* The uid remains set to 0 and will be fixed up later */;
+      else
+	msg->uid = n;
+    }
+
+  attrib_free (attrs);
+  *pmsg = msg;
+  return 0;
+}
+
+static void
+maildir_message_free (struct _amd_message *amsg)
 {
   struct _maildir_message *mp = (struct _maildir_message *) amsg;
   if (mp)
     free (mp->file_name);
 }
-
-static int
-maildir_message_uid (mu_message_t msg, size_t *puid)
-{
-  struct _maildir_message *mp = mu_message_get_owner (msg);
-  if (puid)
-    *puid = mp->uid;
-  return 0;
-}
-
-static size_t
-maildir_next_uid (struct _amd_data *amd)
-{
-  struct _maildir_message *msg = (struct _maildir_message *)
-                                   _amd_get_message (amd, amd->msg_count);
-  return (msg ? msg->uid : 0) + 1;
-}
-
-/* According to http://www.qmail.org/qmail-manual-html/man5/maildir.html 
-   a file in tmp may be safely removed if it has not been accessed in 36
-   hours */
-
-static void
-maildir_delete_file (char *dirname, char *filename)
-{
-  struct stat st;
-  char *name;
-  int rc;
-
-  rc = maildir_mkfilename (dirname, filename, NULL, &name);
-  if (rc)
-    {
-      mu_error ("maildir: failed to create file name: %s",
-		mu_strerror (errno));
-      return;
-    }
-
-  if (stat (name, &st) == 0)
-    {
-      if (time (NULL) - st.st_atime > 36 * 3600)	
-	remove (name);
-    }
-  free (name);
-}
-
 
-
-static int
-maildir_opendir (DIR **dir, char *name, int permissions)
-{
-  int rc = 0;
-      
-  *dir = opendir (name);
-  if (!*dir)
-    {
-      if (errno == ENOENT)
-	{
-	  if (mkdir (name, permissions))
-	    {
-	      rc = errno;
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("can't create directory %s: %s",
-			 name, mu_strerror (rc)));
-	      return rc;
-	    }
-	  
-	  *dir = opendir (name);
-	  if (*dir)
-	    return 0;
-	}
-      rc = errno;
-      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("can't open directory %s: %s",
-		 name, mu_strerror (rc)));
-    }
-  return rc;
-}
-
-static int
-maildir_create (struct _amd_data *amd, int flags)
-{
-  static char *dirs[] = { TMPSUF, NEWSUF, CURSUF };
-  int i;
-
-  for (i = 0; i < 3; i++)
-    {
-      DIR *dir;
-      int rc;
-      char *tmpname;
-
-      rc = maildir_mkfilename (amd->name, dirs[i], NULL, &tmpname);
-      if (rc)
-	return rc;
-      
-      rc = maildir_opendir (&dir, tmpname,
-			    PERMS |
-			    mu_stream_flags_to_mode (amd->mailbox->flags,
-						     1));
-      free (tmpname);
-      if (rc)
-	return rc;
-      closedir (dir);
-    }
-  return 0;
-}
-
-
-#define NTRIES 30
-
-/* Delivery to "dir/new" */
-
-static int
-maildir_msg_init (struct _amd_data *amd, struct _amd_message *amm)
-{
-  struct _maildir_message *msg = (struct _maildir_message *) amm;
-  char *name, *fname;
-  struct stat st;
-  int i;
-  int rc;
-  
-  name = maildir_uniq (amd, -1);
-  rc = maildir_mkfilename (amd->name, NEWSUF, name, &fname);
-  if (rc)
-    {
-      free (name);
-      return rc;
-    }
-  
-  msg->dir = TMPSUF;
-  
-  for (i = 0; i < NTRIES; i++)
-    {
-      if (stat (fname, &st) < 0 && errno == ENOENT)
-	{
-	  msg->uid = amd->next_uid (amd);
-	  msg->file_name = name;
-	  free (fname);
-	  return 0;
-	}
-      mu_diag_output (MU_DIAG_WARNING, "cannot stat %s: %s", fname,
-		      mu_strerror (errno));
-      sleep (2);
-    }
-  free (fname);
-  free (name);
-  return EAGAIN;
-}
-
-static int
-maildir_msg_finish_delivery (struct _amd_data *amd, struct _amd_message *amm,
-			     const mu_message_t orig_msg)
-{
-  struct _maildir_message *msg = (struct _maildir_message *) amm;
-  char *oldname, *newname;
-  mu_attribute_t attr;
-  int flags;
-  int rc;
-  
-  rc = maildir_mkfilename (amd->name, TMPSUF, msg->file_name, &oldname);
-  if (rc)
-    return rc;
-  
-  if (mu_message_get_attribute (orig_msg, &attr) == 0
-      && mu_attribute_is_read (attr)
-      && mu_attribute_get_flags (attr, &flags) == 0)
-    {
-      msg->dir = CURSUF;
-      rc = mk_info_filename (amd->name, CURSUF, msg->file_name, flags,
-			     &newname);
-    }
-  else
-    {
-      msg->dir = NEWSUF;
-      rc = maildir_mkfilename (amd->name, NEWSUF, msg->file_name, &newname);
-    }
-
-  if (rc == 0)
-    {
-      if (unlink (newname) && errno != ENOENT)
-	{
-	  rc = errno;
-	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		    ("can't unlink %s: %s",
-		     newname, mu_strerror (errno)));
-	}
-      else if (link (oldname, newname) == 0)
-	{
-	  if (unlink (oldname))
-	    mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		      ("can't unlink %s: %s",
-		       oldname, mu_strerror (errno)));
-	}
-      else
-	{
-	  rc = errno;
-	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		    ("renaming %s to %s failed: %s",
-		     oldname, newname, mu_strerror (rc)));
-	}
-
-    }
-  
-  free (oldname);
-  free (newname);
-  return rc;
-}
-
-
-/* Maldir scanning */
-
+/*
+ * Maldir scanning
+ */
 int
-maildir_flush (struct _amd_data *amd)
+maildir_tmp_flush (struct _maildir_data *md)
 {
   int rc;
+  int fd;
   DIR *dir;
   struct dirent *entry;
-  char *tmpname;
+    
+  if (!(md->amd.mailbox->flags & MU_STREAM_WRITE))
+    return 0; /* Do nothing in read-only mode */
 
-  if (!(amd->mailbox->flags & MU_STREAM_WRITE))
-    return EACCES;
-
-  rc = maildir_mkfilename (amd->name, TMPSUF, NULL, &tmpname);
+  rc = maildir_subdir_open (md, SUB_TMP, &dir, &fd);
   if (rc)
     return rc;
 
-  rc = maildir_opendir (&dir, tmpname,
-			PERMS |
-			mu_stream_flags_to_mode (amd->mailbox->flags, 1));
-  if (rc)
-    {
-      free (tmpname);
-      return rc;
-    }
-      
   while ((entry = readdir (dir)))
     {
       switch (entry->d_name[0])
@@ -654,124 +636,83 @@ maildir_flush (struct _amd_data *amd)
 	  break;
 
 	default:
-	  maildir_delete_file (tmpname, entry->d_name);
+	  unlinkat (fd, entry->d_name, 0);
 	  break;
 	}
     }
-
-  free (tmpname);
 
   closedir (dir);
   return 0;
 }
 
-int
-maildir_deliver_new (struct _amd_data *amd, DIR *dir)
-{
-  struct dirent *entry;
-  int err = 0;
-
-  if (!(amd->mailbox->flags & MU_STREAM_WRITE))
-    return EACCES;
-  while ((entry = readdir (dir)))
-    {
-      char *oldname, *newname;
-      int rc;
-      
-      switch (entry->d_name[0])
-	{
-	case '.':
-	  break;
-
-	default:
-	  rc = maildir_mkfilename (amd->name, NEWSUF, entry->d_name, &oldname);
-	  if (rc)
-	    return rc;
-	  rc = mk_info_filename (amd->name, CURSUF, entry->d_name, 0, &newname);
-	  if (rc)
-	    {
-	      free (oldname);
-	      return rc;
-	    }
-	  if (rename (oldname, newname))
-	    {
-	      err = MU_ERR_FAILURE;
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("renaming %s to %s failed: %s",
-			 oldname, newname, mu_strerror (errno)));
-	    }
-	  free (oldname);
-	  free (newname);
-	}
-    }
-  return err;
-}
 static int
-maildir_scan_dir (struct _amd_data *amd, DIR *dir, char *dirname, int init_flags)
+maildir_subdir_scan (struct _maildir_data *md, int subdir)
 {
+  int rc;
+  int fd;
+  DIR *dir;
   struct dirent *entry;
-  struct _maildir_message *msg, key;
-  char *p;
-  size_t index;
-  int rc = 0;
-  struct stat st;
-   
+
+  rc = maildir_subdir_open (md, subdir, &dir, &fd);
+  if (rc)
+    return rc;
+
   while ((entry = readdir (dir)))
     {
-      char *fname;
+      struct stat st;
+      struct _maildir_message *msg;
+      size_t index;
       
       if (entry->d_name[0] == '.')
 	continue;
 
-      rc = maildir_mkfilename (amd->name, dirname, entry->d_name, &fname);
-      if (rc)
+      if (fstatat (fd, entry->d_name, &st, 0))
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "maildir_mkfilename",
-			   entry->d_name, rc);
+	  if (errno != ENOENT)
+	    {
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("can't stat %s/%s/%s: %s",
+			 md->amd.name, subdir_name[subdir], entry->d_name,
+			 mu_strerror (errno)));
+	    }
 	  continue;
 	}
-      
-      if (stat (fname, &st))
-	{
-	  rc = errno;
-	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		    ("can't stat %s: %s", fname, mu_strerror (rc)));
-	  free (fname);
-	  continue;
-	}
-
-      free (fname);
 
       if (!S_ISREG (st.st_mode))
 	continue;
-      
+
       msg = calloc (1, sizeof (*msg));
       if (!msg)
 	{
 	  rc = ENOMEM;
 	  break;
 	}
-      key.file_name = entry->d_name;
-      if (!amd_msg_lookup (amd, (struct _amd_message *) &key, &index))
-	continue;
-      rc = _amd_message_append (amd, (struct _amd_message *) msg);
+
+      rc = maildir_message_alloc (md, subdir, entry->d_name, &msg);
+
+      if (subdir == SUB_CUR)
+	/* FIXME: Implement MU_ATTRIBUTE_SEEN via attribs */
+	msg->amd_message.attr_flags |= MU_ATTRIBUTE_SEEN;
+      
+      if (!amd_msg_lookup (&md->amd, (struct _amd_message *) msg, &index))
+	{
+	  /* should not happen */
+	  maildir_message_free ((struct _amd_message *) msg);
+	  continue;
+	}
+
+      rc = _amd_message_append (&md->amd, (struct _amd_message *) msg);
       if (rc)
 	{
-	  free (msg);
+	  maildir_message_free ((struct _amd_message *) msg);
 	  break;
 	}
-	      
-      msg->dir = dirname;
-      msg->file_name = strdup (entry->d_name);
-
-      msg->amd_message.attr_flags = init_flags;
-      p = maildir_name_info_ptr (msg->file_name);
-      if (p)
-	msg->amd_message.attr_flags |= info_to_flags (p);
     }
-
-  return rc;
+  
+  closedir (dir);
+  return 0;
 }
+
 
 /*
  * Maildir attribute fixup
@@ -863,134 +804,599 @@ needs_fixup (struct _amd_data *amd)
 }
 
 static void
-maildir_attribute_fixup (struct _amd_data *amd)
+maildir_message_fixup (struct _maildir_data *md, struct _maildir_message *msg)
 {
-  if (needs_fixup (amd))
+  int update = 0;
+  
+  if (md->needs_attribute_fixup)
     {
-      size_t i;
-      int err;
-      
-      for (i = 0; i < amd->msg_count; i++)
+      int flags = msg->amd_message.attr_flags;
+
+      flags &= ~MU_ATTRIBUTE_READ;
+      if (flags & MU_ATTRIBUTE_ANSWERED)
 	{
-	  int flags = amd->msg_array[i]->attr_flags;
-
-	  flags &= ~MU_ATTRIBUTE_READ;
-	  if (flags & MU_ATTRIBUTE_ANSWERED)
-	    {
-	      flags &= ~MU_ATTRIBUTE_ANSWERED;
-	      flags |= MU_ATTRIBUTE_READ;
-	    }
-	  
-	  if (amd->msg_array[i]->attr_flags != flags)
-	    {
-	      amd->msg_array[i]->attr_flags = flags;
-	      if (amd->mailbox->flags & MU_STREAM_WRITE)
-		{  
-		  if (amd->chattr_msg (amd->msg_array[i], 0))
-		    err = 1;
-		}
-	    }
+	  flags &= ~MU_ATTRIBUTE_ANSWERED;
+	  flags |= MU_ATTRIBUTE_READ;
 	}
+	  
+      if (msg->amd_message.attr_flags != flags)
+	{
+	  msg->amd_message.attr_flags = flags;
+	  update = 1;
+	}
+    }
 
-      if (err)
-	mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		  ("maildir_scan_dir: errors during fixup"));
-      
+  if (msg->uid == 0 || msg->uid < md->next_uid)
+    md->needs_uid_fixup = 1;
+
+  if (md->needs_uid_fixup)
+    {
+      msg->uid = md->next_uid++;
+      update = 1;
+    }
+  else
+    md->next_uid = msg->uid + 1;
+
+  if (update && md->amd.mailbox->flags & MU_STREAM_WRITE)
+    {  
+      md->amd.chattr_msg (&msg->amd_message, 0);
     }
 }
 
 static int
 maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
 {
-  struct _amd_data *amd = mailbox->data;
-  DIR *dir;
-  int status = 0;
-  char *name;
+  struct _maildir_data *md = mailbox->data;
+  int rc;
+  char const *s;
   struct stat st;
   size_t i;
+  int has_new = 0;
   
-  /* 1st phase: Flush tmp/ */
-  maildir_flush (amd);
+  rc = maildir_open (md);
+  if (rc)
+    return rc;
+  md->needs_attribute_fixup = needs_fixup (&md->amd);
+  md->needs_uid_fixup = 0;
+  md->next_uid = 1;
+  
+  /* Flush tmp/ */
+  rc = maildir_tmp_flush (md);
+  if (rc)
+    goto err;
 
-  /* 2nd phase: Scan and deliver messages from new */
-  status = maildir_mkfilename (amd->name, NEWSUF, NULL, &name);
-  if (status)
-    return status;
+  /* Scan cur/ */
+  rc = maildir_subdir_scan (md, SUB_CUR);
+  if (rc)
+    goto err;
+
+  /* Scan new/ */
+  rc = maildir_subdir_scan (md, SUB_NEW);
+  if (rc)
+    goto err;
   
-  status = maildir_opendir (&dir, name,
-			    PERMS |
-			    mu_stream_flags_to_mode (mailbox->flags, 1));
-  if (status == 0)
+  /* Sort messages */
+  amd_sort (&md->amd);
+
+  /* Fix up messages and send out dispatch notifications, if necessary. */
+  for (i = 1; i <= md->amd.msg_count; i++)
     {
-      if (maildir_deliver_new (amd, dir))
-	status = maildir_scan_dir (amd, dir, NEWSUF, MU_ATTRIBUTE_RECENT);
-      closedir (dir);
+      struct _maildir_message *msg = (struct _maildir_message *)
+	_amd_get_message (&md->amd, i);
+      if (msg->subdir == SUB_NEW && md->amd.mailbox->flags & MU_STREAM_WRITE)
+	{
+	  if (md->amd.chattr_msg (&msg->amd_message, 0) == 0)
+	    has_new = 1;
+	}
+      else
+	{
+	  if (has_new) /* should not happen */
+	    md->needs_uid_fixup = 1;
+	  maildir_message_fixup (md, msg);
+	}
+      if (do_notify)
+	DISPATCH_ADD_MSG (mailbox, &md->amd, i);
     }
-  free (name);
 
-  /* 3rd phase: Scan cur/ */
-  status = maildir_mkfilename (amd->name, CURSUF, NULL, &name);
-  if (status)
-    return status;
-  
-  status = maildir_opendir (&dir, name,
-			    PERMS |
-			    mu_stream_flags_to_mode (mailbox->flags, 1));
-  if (status == 0)
+  /* Reset uidvalidity if any of the UIDs changed */
+  if (md->needs_uid_fixup)
     {
-      status = maildir_scan_dir (amd, dir, CURSUF, MU_ATTRIBUTE_SEEN);
-      closedir (dir);
-    }
-  free (name);
-
-  if (status)
-    return status;
+      // FIXME: Fix AMD API.
+      _amd_prop_store_off (&md->amd, _MU_AMD_PROP_UIDVALIDITY, time (NULL));
+    }  
   
-  maildir_attribute_fixup (amd);
-
-  if (amd->mailbox->flags & MU_STREAM_WRITE)
-    {  
-      status = mu_property_set_value (amd->prop, "version", PACKAGE_VERSION, 1);
-      if (status)
+  /* Update version marker in the property file */
+  if ((md->amd.mailbox->flags & MU_STREAM_WRITE) &&
+      (mu_property_sget_value (md->amd.prop, "version", &s) ||
+       strcmp (s, PACKAGE_VERSION)))
+    {
+      rc = mu_property_set_value (md->amd.prop, "version", PACKAGE_VERSION, 1);
+      if (rc)
 	{
 	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		    ("maildir_scan_dir: mu_property_set_value failed during attribute fixup: %s",
-		     mu_strerror (status)));
+		     mu_strerror (rc)));
 	}
       
-      status = mu_property_save (amd->prop);
-      if (status)
+      rc = mu_property_save (md->amd.prop);
+      if (rc)
 	{
 	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		    ("maildir_scan_dir: mu_property_save failed during attribute fixup: %s",
-		     mu_strerror (status)));
+		     mu_strerror (rc)));
 	}
+      rc = 0;
     }
-      
-  amd_sort (amd);
 
-  for (i = 1; i <= amd->msg_count; i++)
-    {
-      struct _maildir_message *msg = (struct _maildir_message *)
-	_amd_get_message (amd, i);
-      msg->uid = i;
-      if (do_notify)
-	DISPATCH_ADD_MSG (mailbox, amd, i);
-    }
+  if (stat (md->amd.name, &st) == 0)
+    md->amd.mtime = st.st_mtime;
+  else
+    md->amd.mtime = time (NULL);
+  if (rc == 0 && pcount)
+    *pcount = md->amd.msg_count;
+
+ err:
+  maildir_close (md);
+
+  return rc;
+}
+
+/*
+ * Functions for generating the unique part of the filename.
+ */
+
+/* Auxiliary functions operate on a buffer of the following structure: */
+struct string_buffer
+{
+  char *base;   /* Buffer pointer. */
+  size_t size;  /* Number of bytes allocated for base. */
+  size_t off;   /* Offset of the first uninitialized byte. */
+};
+
+#define STRING_BUFFER_INITIALIZER { NULL, 0, 0 }
+
+static void
+string_buffer_free (struct string_buffer *buf)
+{
+  free (buf->base);
+}
+
+/* Expand the buffer to approx. 3/2 of its current size. */
+static int
+string_buffer_expand (struct string_buffer *buf)
+{
+  size_t n;
+  char *p;
   
-  if (stat (amd->name, &st) == 0)
-    amd->mtime = st.st_mtime;
+  if (!buf->base)
+    {
+      n = 64;
+    }
+  else
+    {
+      n = buf->size;
+      
+      if ((size_t) -1 / 3 * 2 <= n)
+	return ENOMEM;
 
-  if (pcount)
-    *pcount = amd->msg_count;
+      n += (n + 1) / 2;
+    }
+  p = realloc (buf->base, n);
+  if (!p)
+    return ENOMEM;
+  buf->base = p;
+  buf->size = n;
+  return 0;
+}
 
-  return status;
+/* Append LEN bytes from S to the buffer. */
+static int
+string_buffer_append (struct string_buffer *buf, char const *s, size_t len)
+{
+  while (buf->off + len > buf->size)
+    {
+      if (string_buffer_expand (buf))
+	return ENOMEM;
+    }
+  memcpy (buf->base + buf->off, s, len);
+  buf->off += len;
+  return 0;
+}
+
+/* Append nul-terminated string S. */
+static inline int
+string_buffer_appendz (struct string_buffer *buf, char const *s)
+{
+  return string_buffer_append (buf, s, strlen (s));
+}
+
+static char const digits[] = "0123456789ABCDEF";
+
+/* Format the number N to the buffer.  BASE must be 10 or 16, no other
+   value is allowed. */
+static int
+string_buffer_format_long (struct string_buffer *buf, unsigned long n,
+			   int base)
+{
+  size_t start = buf->off;
+  char *p, *q;
+  do
+    {
+      if (string_buffer_append (buf, &digits[n % base], 1))
+	return ENOMEM;
+      n /= base;
+    }
+  while (n > 0);
+  p = buf->base + start;
+  q = buf->base + buf->off - 1;
+  while (p < q)
+    {
+      int t = *q;
+      *q = *p;
+      *p = t;
+      p++;
+      q--;
+    }
+  return 0;
+}
+
+/* Format this host name to the buffer. */
+static int
+string_buffer_format_hostname (struct string_buffer *buf)
+{
+  size_t start = buf->off;
+  size_t len, i;
+  
+  while (gethostname (buf->base + buf->off, buf->size - buf->off) != 0)
+    {
+      if (errno != 0 && errno != ENAMETOOLONG && errno != EINVAL
+	  && errno != ENOMEM)
+	return errno;
+      if (string_buffer_expand (buf))
+	return ENOMEM;
+    }
+
+  len = strlen (buf->base + buf->off);
+  buf->off += len;
+  
+  /* encode '/', ':', '.', and ',' */
+  for (i = start; i < buf->off; i++)
+    {
+      switch (buf->base[i])
+	{
+	case '/':
+	case ':':
+	case ',':
+	  break;
+
+	default:
+	  continue;
+	}
+
+      while (buf->off + 3 > buf->size)
+	{
+	  if (string_buffer_expand (buf))
+	    return ENOMEM;
+	}
+      memmove (buf->base + i + 4, buf->base + i + 1, buf->off - i - 1);
+      buf->base[i+1] = digits[(buf->base[i] >> 6) & 7];
+      buf->base[i+2] = digits[(buf->base[i] >> 3) & 7];
+      buf->base[i+3] = digits[buf->base[i] & 7];
+      buf->base[i] = '\\';
+      i += 3;
+      buf->off += 3;
+    }
+
+  return 0;
+}
+
+/* Format message flags to buffer. */
+static int
+string_buffer_format_flags (struct string_buffer *buf, int flags)
+{
+  int rc;
+  char fbuf[info_map_size + 1];
+
+  flags_to_info (flags, fbuf);
+  if ((rc = string_buffer_append (buf, ":2,", 3)) != 0)
+    return rc;
+  return string_buffer_appendz (buf, fbuf);
 }
 
 static int
+string_buffer_format_message_name (struct string_buffer *buf,
+				   struct _maildir_message *msg,
+				   int flags)
+{
+  int rc;
+  
+  if ((rc = string_buffer_append (buf, msg->file_name, msg->uniq_len)) == 0 &&
+      (rc = string_buffer_append (buf, ",u=", 3)) == 0 &&
+      (rc = string_buffer_format_long (buf, msg->uid, 10)) == 0 &&
+      (rc = string_buffer_format_flags (buf, flags)) == 0)
+    ;
+  return rc;
+}
+
+static int
+read_random (void *buf, size_t size)
+{
+  int rc;
+  int fd = open ("/dev/urandom", O_RDONLY);
+  if (fd == -1)
+    return -1;
+  rc = read (fd, buf, size);
+  close (fd);
+  return rc != size;
+}
+
+/* Create unique part.  If FD is supplied, use its inode and dev numbers
+   as part of the created string.  Return the allocated string or NULL on
+   memory shortage.
+ */
+static char *
+maildir_uniq_create (struct _amd_data *amd, int fd)
+{
+  struct string_buffer sb = STRING_BUFFER_INITIALIZER;
+  struct timeval tv;
+  unsigned long n;
+  char *ret;
+  int rc;
+  struct stat st;
+  
+  gettimeofday (&tv, NULL);
+  rc = string_buffer_format_long (&sb, (unsigned long) tv.tv_sec, 10);
+  if (rc)
+    goto err;
+
+  rc = string_buffer_append (&sb, ".", 1);
+  if (rc)
+    goto err;
+  
+  if (read_random (&n, sizeof (unsigned long))) /* FIXME: 32 bits */
+    {
+      rc = string_buffer_append (&sb, "R", 1);
+      if (rc)
+	goto err;
+      rc = string_buffer_format_long (&sb, n, 16);
+      if (rc)
+	goto err;
+    }
+
+  if (fd > 0 && fstat (fd, &st) == 0)
+    {
+      rc = string_buffer_append (&sb, "I", 1);
+      if (rc)
+	goto err;
+      rc = string_buffer_format_long (&sb, st.st_ino, 16);
+      if (rc)
+	goto err;
+
+      rc = string_buffer_append (&sb, "V", 1);
+      if (rc)
+	goto err;
+      rc = string_buffer_format_long (&sb, st.st_dev, 16);
+      if (rc)
+	goto err;
+    }
+  
+  rc = string_buffer_append (&sb, "M", 1);
+  if (rc)
+    goto err;
+  rc = string_buffer_format_long (&sb, tv.tv_usec, 10);
+  if (rc)
+    goto err;
+  
+  rc = string_buffer_append (&sb, "P", 1);
+  if (rc)
+    goto err;
+  rc = string_buffer_format_long (&sb, getpid (), 10);
+  if (rc)
+    goto err;
+
+  rc = string_buffer_append (&sb, "Q", 1);
+  if (rc)
+    goto err;
+  rc = string_buffer_format_long (&sb, amd->msg_count, 10);
+  if (rc)
+    goto err;
+
+  rc = string_buffer_append (&sb, ".", 1);
+  if (rc)
+    goto err;
+  rc = string_buffer_format_hostname (&sb);
+  if (rc)
+    goto err;
+  
+  rc = string_buffer_append (&sb, "", 1);
+  
+ err:
+  if (rc == 0)
+    {
+      ret = sb.base;
+      sb.base = NULL;
+    }
+  else
+    ret = NULL;
+  string_buffer_free (&sb);
+  return ret;
+}
+
+/*
+ * AMD interface functions.
+ */
+static int
+maildir_cur_message_name (struct _amd_message *amsg, char **pname)
+{
+  struct _maildir_message *msg = (struct _maildir_message *) amsg;
+  struct string_buffer sb = STRING_BUFFER_INITIALIZER;
+  int rc;
+
+  if ((rc = string_buffer_appendz (&sb, amsg->amd->name)) == 0 &&
+      (rc = string_buffer_append (&sb, "/", 1)) == 0 &&
+      (rc = string_buffer_appendz (&sb, subdir_name[msg->subdir])) == 0 &&
+      (rc = string_buffer_append (&sb, "/", 1)) == 0 &&
+      (rc = string_buffer_appendz (&sb, msg->file_name)) == 0 &&
+      (rc = string_buffer_append (&sb, "", 1)) == 0)
+    {
+      *pname = sb.base;
+      sb.base = NULL;
+    }
+  string_buffer_free (&sb);
+  return rc;
+}
+
+static int
+maildir_new_message_name (struct _amd_message *amsg, int flags, int expunge,
+			  char **pname)
+{
+  struct _maildir_message *msg = (struct _maildir_message *) amsg;
+  int rc = 0;
+  
+  if (expunge && (flags & MU_ATTRIBUTE_DELETED))
+    {
+      /* Force amd.c to unlink the file. */
+      *pname = NULL;
+    }
+  else
+    {
+      struct string_buffer sb = STRING_BUFFER_INITIALIZER;
+      if ((rc = string_buffer_appendz (&sb, amsg->amd->name)) == 0 &&
+	  (rc = string_buffer_append (&sb, "/", 1)) == 0 &&
+	  (rc = string_buffer_appendz (&sb, subdir_name[msg->subdir])) == 0 &&
+	  (rc = string_buffer_append (&sb, "/", 1)) == 0)
+	{
+	  if (msg->subdir == SUB_CUR)
+	    rc = string_buffer_format_message_name (&sb, msg, flags);
+	  else
+	    rc = string_buffer_appendz (&sb, msg->file_name);
+
+	  if (rc == 0)
+	    rc = string_buffer_append (&sb, "", 1);
+	}
+
+      if (rc == 0)
+	{
+	  *pname = sb.base;
+	}
+      else
+	string_buffer_free (&sb);
+    }
+  return rc;
+}
+
+static int
+maildir_create (struct _amd_data *amd, int flags)
+{
+  int rc;
+  struct _maildir_data *md = (struct _maildir_data *)amd;
+  
+  rc = maildir_open (md);
+  if (rc == 0) 
+    {
+      int i;
+      
+      for (i = 0; i < MU_ARRAY_SIZE (subdir_name); i++)
+	{
+	  int fd;
+	  rc = maildir_subdir_open (md, i, NULL, &fd);
+	  if (rc)
+	    break;
+	  close (fd);
+	}
+      maildir_close (md);
+    }
+
+  return rc;
+}
+
+static int
+maildir_msg_finish_delivery (struct _amd_data *amd, struct _amd_message *amm,
+			     const mu_message_t orig_msg)
+{
+  struct _maildir_data *md = (struct _maildir_data *)amd;
+  struct _maildir_message *msg = (struct _maildir_message *) amm;
+  mu_attribute_t attr;
+  int flags;
+  int rc;
+  int src_fd = -1, dst_fd = -1;
+  struct string_buffer sb = STRING_BUFFER_INITIALIZER;
+  char const *newname;
+  
+  if (mu_message_get_attribute (orig_msg, &attr) == 0
+      && mu_attribute_is_read (attr)
+      && mu_attribute_get_flags (attr, &flags) == 0)
+    {
+      msg->subdir = SUB_CUR;
+      rc = string_buffer_format_message_name (&sb, msg, flags);
+      if (rc == 0)
+	rc = string_buffer_append (&sb, "", 1);
+      if (rc)
+	{
+	  string_buffer_free (&sb);
+	  return rc;
+	}
+      newname = sb.base;
+    }
+  else
+    {
+      msg->subdir = SUB_NEW;
+      newname = msg->file_name;
+    }
+
+  rc = maildir_open (md);
+  if (rc)
+    goto err;
+    
+  rc = maildir_subdir_open (md, SUB_TMP, NULL, &src_fd);
+  if (rc)
+    goto err;
+  
+  rc = maildir_subdir_open (md, msg->subdir, NULL, &dst_fd);
+  if (rc)
+    goto err;
+
+  if (unlinkat (dst_fd, newname, 0) && errno != ENOENT)
+    {
+      rc = errno;
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("can't unlink %s/%s/%s: %s",
+		 amd->name, subdir_name[msg->subdir],
+		 newname, mu_strerror (rc)));
+    }
+  else if (linkat (src_fd, msg->file_name, dst_fd, newname, 0) == 0)
+    {
+      if (unlinkat (src_fd, msg->file_name, 0))
+	{
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("can't unlink %s/%s/%s: %s",
+		     amd->name, subdir_name[SUB_TMP], msg->file_name,
+		     mu_strerror (errno)));
+	}
+    }
+  else
+    {
+      rc = errno;
+      
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("renaming %s/%s to %s/%s in %s failed: %s",
+		 subdir_name[SUB_TMP], msg->file_name,
+		 subdir_name[msg->subdir], newname, 
+		 amd->name, mu_strerror (rc)));
+    }
+
+ err:
+  string_buffer_free (&sb);
+  close (src_fd);
+  close (dst_fd);
+  maildir_close (md);
+  
+  return rc;
+}
+    
+static int
 maildir_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED,
-	       size_t *pcount, 
-	       int do_notify)
+	       size_t *pcount, int do_notify)
 {
   struct _amd_data *amd = mailbox->data;
   int rc;
@@ -1004,82 +1410,297 @@ maildir_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED,
   mu_monitor_unlock (mailbox->monitor);
   return rc;
 }
-  
+
 static int
-maildir_size_dir (struct _amd_data *amd, char *dirsuf, mu_off_t *psize)
+maildir_qfetch (struct _amd_data *amd, mu_message_qid_t qid)
 {
+  struct _maildir_data *md = (struct _maildir_data *)amd;
+  struct _maildir_message *msg;
+  char *name = (char*)qid;
+  char *p;
+  int rc;
+  int subdir;
+  struct stat st;
+  
+  p = strrchr (name, '/');
+  if (!p || p - qid != 3)
+    return EINVAL;
+  
+  if (memcmp (name, subdir_name[SUB_CUR], strlen (subdir_name[SUB_CUR])) == 0)
+    subdir = SUB_CUR;
+  else if (memcmp (name, subdir_name[SUB_NEW], strlen (subdir_name[SUB_NEW])) == 0)
+    subdir = SUB_NEW;
+  else
+    return EINVAL;
+  
+  rc = maildir_open (md);
+  if (fstatat (md->folder_fd, name, &st, 0) == 0)
+    {
+      name = p + 1;
+  
+      rc = maildir_message_alloc (md, subdir, name, &msg);
+      if (rc == 0)
+	{
+	  rc = _amd_message_insert (amd, (struct _amd_message*) msg);
+	  if (rc)
+	    maildir_message_free ((struct _amd_message*) msg);
+	}
+    }
+  else
+    rc = errno;
+
+  maildir_close (md);
+  
+  return rc;
+}
+
+/*
+ * Compare two maildir messages A and B.  The purpose is to determine
+ * which one was delivered prior to another.
+ *
+ * Compare seconds, microseconds and number of deliveries, in that
+ * order.  If all match (shouldn't happen), resort to lexicographical
+ * comparison.
+ *
+ * FIXME: Use uid, if it is present in both message names?
+ */
+static int
+maildir_message_cmp (struct _amd_message *a, struct _amd_message *b)
+{
+  char *name_a = ((struct _maildir_message *) a)->file_name;
+  char *name_b = ((struct _maildir_message *) b)->file_name;
+  char *pa, *pb;
+  unsigned long la, lb;
+  int d;
+  
+  la = strtoul (name_a, &name_a, 10);
+  lb = strtoul (name_b, &name_b, 10);
+
+  if (la > lb)
+    return 1;
+  if (la < lb)
+    return -1;
+
+  if ((d = (*name_a - *name_b)) != 0)
+    return d;
+  
+  name_a++;
+  name_b++;
+
+  if ((pa = strchr (name_a, 'M')) != 0 && (pb = strchr (name_b, 'M')) != 0)
+    {
+      la = strtoul (name_a, &name_a, 10);
+      lb = strtoul (name_b, &name_b, 10);
+
+      if (la > lb)
+	return 1;
+      if (la < lb)
+	return -1;
+    }
+
+  if ((pa = strchr (name_a, 'Q')) != 0 && (pb = strchr (name_b, 'Q')) != 0)
+    {
+      la = strtoul (name_a, &name_a, 10);
+      lb = strtoul (name_b, &name_b, 10);
+
+      if (la > lb)
+	return 1;
+      if (la < lb)
+	return -1;
+    }
+
+  for (; *name_a && *name_a != ':' && *name_b && *name_b != ':';
+       name_a++, name_b++)
+    {
+      if ((d = (*name_a - *name_b)) != 0)
+	return d;
+    }
+  
+  if ((*name_a == ':' || *name_a == 0) && (*name_b == ':' || *name_b == 0))
+    return 0;
+
+  return *name_a - *name_b;
+}
+
+static int
+maildir_message_uid (mu_message_t msg, size_t *puid)
+{
+  struct _maildir_message *mp = mu_message_get_owner (msg);
+  if (puid)
+    *puid = mp->uid;
+  return 0;
+}
+
+static size_t
+maildir_next_uid (struct _amd_data *amd)
+{
+  struct _maildir_message *msg = (struct _maildir_message *)
+                                   _amd_get_message (amd, amd->msg_count);
+  return (msg ? msg->uid : 0) + 1;
+}
+
+static int
+maildir_remove (struct _amd_data *amd)
+{
+  int i;
+  int rc = 0;
+  struct string_buffer sb = STRING_BUFFER_INITIALIZER;
+  size_t off;
+
+  /* FIXME: amd_remove_dir requires absolute file names */
+  if ((rc = string_buffer_appendz (&sb, amd->name)) == 0 &&
+      (rc = string_buffer_append (&sb, "/", 1)) == 0)
+    {
+      off = sb.off;
+      for (i = 0; i < MU_ARRAY_SIZE (subdir_name); i++)
+	{
+	  string_buffer_appendz (&sb, subdir_name[i]);
+	  string_buffer_append (&sb, "", 1);
+	  
+	  rc = amd_remove_dir (sb.base);
+	  if (rc)
+	    {
+	      mu_diag_output (MU_DIAG_WARNING,
+			      "removing contents of %s failed: %s", sb.base,
+			      mu_strerror (rc));
+	      break;
+	    }
+	  sb.off = off;
+	}
+    }
+  string_buffer_free (&sb);
+  return rc;
+}
+
+static int
+maildir_chattr_msg (struct _amd_message *amsg, int expunge)
+{
+  struct _maildir_message *mp = (struct _maildir_message *) amsg;
+  struct _amd_data *amd = amsg->amd;
+  int rc;
+  int old_subdir;
+  char *cur_name, *new_name;
+
+  rc = maildir_cur_message_name (amsg, &cur_name);
+  if (rc)
+    return rc;
+
+  old_subdir = mp->subdir; 
+  mp->subdir = SUB_CUR;
+  rc = amd->new_msg_file_name (amsg, amsg->attr_flags, expunge, &new_name);
+  if (rc == 0)
+    {
+      if (!new_name)
+	{
+	  if (unlink (mp->file_name))
+	    {
+	      rc = errno;
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("can't unlink %s: %s",
+			 mp->file_name, mu_strerror (rc)));
+	    }
+	}
+      else
+	{
+	  if (rename (cur_name, new_name))
+	    {
+	      rc = errno;
+	      if (rc == ENOENT)
+		mu_observable_notify (amd->mailbox->observable,
+				      MU_EVT_MAILBOX_CORRUPT,
+				      amd->mailbox);
+	      else
+		{
+		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			    ("renaming %s to %s failed: %s",
+			     cur_name, new_name, mu_strerror (rc)));
+		}
+	    }
+	}
+      if (rc)
+	mp->subdir = old_subdir;
+      else
+	{
+	  free (mp->file_name);
+	  mp->file_name = strdup (strrchr (new_name, '/') + 1);
+	  if (!mp->file_name)
+	    rc = errno;
+	  else
+	    mp->uniq_len = maildir_message_name_parse (mp->file_name,
+						       NULL, NULL, NULL);
+	}
+      free (new_name);
+    }
+  
+  free (cur_name);
+
+  return rc;
+}
+
+/* Compute size of the subdirectory SUBDIR.  Add the computed value to
+   *PSIZE.
+   Note: Maildir must be open. */
+static int
+maildir_subdir_size (struct _maildir_data *md, int subdir, mu_off_t *psize)
+{
+  int fd;
   DIR *dir;
   struct dirent *entry;
   int rc = 0;
   struct stat st;
-  char *name;
+  mu_off_t size = 0;
   
-  rc = maildir_mkfilename (amd->name, dirsuf, NULL, &name);
+  rc = maildir_subdir_open (md, subdir, &dir, &fd);
   if (rc)
     return rc;
-  dir = opendir (name);
-  
-  if (!dir)
-    {
-      rc = errno;
-      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("can't open directory %s: %s", name, mu_strerror (rc)));
-      free (name);
-      if (rc == ENOENT)
-	return 0;
-      return rc;
-    }
 
   while ((entry = readdir (dir)))
     {
-      char *fname;
-      
-      if (entry->d_name[0] == '.')
-	continue;
-
-      rc = maildir_mkfilename (amd->name, dirsuf, entry->d_name, &fname);
-      if (rc)
+      switch (entry->d_name[0])
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "maildir_mkfilename",
-			   entry->d_name, rc);
-	  continue;
-	}
-      
-      if (stat (fname, &st))
-	{
-	  rc = errno;
-	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		    ("can't stat %s: %s", fname, mu_strerror (rc)));
-	  free (fname);
-	  continue;
-	}
+	case '.':
+	  break;
 
-      free (fname);
-
-      if (S_ISREG (st.st_mode))
-	*psize += st.st_size;
+	default:
+	  if (fstatat (fd, entry->d_name, &st, 0))
+	    {
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("can't stat %s/%s/%s: %s",
+			 md->amd.name, subdir_name[subdir], entry->d_name,
+			 mu_strerror (errno)));
+	      continue;
+	    }
+	  if (S_ISREG (st.st_mode))
+	    size += st.st_size;
+	}
     }
 
   closedir (dir);
-  free (name);
-  
+  *psize += size;
+
   return 0;
 }
 
 static int
 maildir_size_unlocked (struct _amd_data *amd, mu_off_t *psize)
 {
+  struct _maildir_data *md = (struct _maildir_data *) amd;
   mu_off_t size = 0;
   int rc;
 
-  rc = maildir_size_dir (amd, NEWSUF, &size);
-  if (rc)
-    return rc;
-  rc = maildir_size_dir (amd, CURSUF, &size);
-  if (rc)
-    return rc;
-  *psize = size;
-  return 0;
+  rc = maildir_open (md);
+  if (rc == 0)
+    {
+      rc = maildir_subdir_size (md, SUB_NEW, &size);
+      if (rc == 0)
+	{
+	  rc = maildir_subdir_size (md, SUB_CUR, &size);
+	  if (rc == 0)
+	    *psize = size;
+	}
+      maildir_close (md);
+    }
+  return rc;
 }
 
 static int
@@ -1097,140 +1718,78 @@ maildir_size (mu_mailbox_t mailbox, mu_off_t *psize)
 
   return rc;
 }
-  
-
-static int
-maildir_qfetch (struct _amd_data *amd, mu_message_qid_t qid)
-{
-  struct _maildir_message *msg;
-  char *name = strrchr (qid, '/');
-  char *p;
-  char *dir;
-  
-  if (!name)
-    return EINVAL;
-  name++;
-  if (name - qid < 4)
-    return EINVAL;
-  else if (memcmp (name - 4, CURSUF, sizeof (CURSUF) - 1) == 0)
-    dir = CURSUF;
-  else if (memcmp (name - 4, NEWSUF, sizeof (NEWSUF) - 1) == 0)
-    dir = NEWSUF;
-  else if (memcmp (name - 4, TMPSUF, sizeof (TMPSUF) - 1) == 0)
-    dir = TMPSUF;
-  else
-    return EINVAL;
-  
-  msg = calloc (1, sizeof(*msg));
-  msg->file_name = strdup (name);
-  msg->dir = dir;
-  
-  p = maildir_name_info_ptr (msg->file_name);
-  if (p)
-    msg->amd_message.attr_flags = info_to_flags (p);
-  else
-    msg->amd_message.attr_flags = 0;
-  msg->uid = amd->next_uid (amd);
-  _amd_message_insert (amd, (struct _amd_message*) msg);
-  return 0;
-}
 
-
+/* Delivery to "dir/new" */
+#define NTRIES 30
+
 static int
-maildir_remove (struct _amd_data *amd)
+maildir_msg_init (struct _amd_data *amd, struct _amd_message *amm)
 {
+  struct _maildir_data *md = (struct _maildir_data *)amd;
+  struct _maildir_message *msg = (struct _maildir_message *) amm;
+  struct stat st;
   int i;
-  static char *suf[3] = { NEWSUF, CURSUF, TMPSUF };
-  int rc = 0;
-
-  for (i = 0; rc == 0 && i < 3; i++)
-    {
-      char *name;
-
-      rc = maildir_mkfilename (amd->name, suf[i], NULL, &name);
-      if (rc)
-	return rc;
-      rc = amd_remove_dir (name);
-      if (rc)
-	mu_diag_output (MU_DIAG_WARNING,
-			"removing contents of %s failed: %s", name,
-			mu_strerror (rc));
-      free (name);
-    }
-  
-  return rc;
-}
-
-
-static int
-maildir_chattr_msg (struct _amd_message *amsg, int expunge)
-{
-  struct _maildir_message *mp = (struct _maildir_message *) amsg;
-  struct _amd_data *amd = amsg->amd;
   int rc;
-  char *new_name;
+  char *name = NULL;
+  int fd;
   
-  rc = amd->new_msg_file_name (amsg, amsg->attr_flags, expunge, &new_name);
-  if (rc)
-    return rc;
-  if (!new_name)
+  rc = maildir_open (md);
+  if (rc == 0)
     {
-      if (unlink (mp->file_name))
+      rc = maildir_subdir_open (md, SUB_TMP, NULL, &fd);
+      if (rc == 0)
 	{
-	  rc = errno;
-	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		    ("can't unlink %s: %s",
-		     mp->file_name, mu_strerror (rc)));
-	}
-    }
-  else
-    {
-      char *cur_name;
-      
-      rc = maildir_cur_message_name (amsg, &cur_name);
-      if (rc)
-	{
-	  free (new_name);
-	  return rc;
-	}
-      if (rename (cur_name, new_name))
-	{
-	  if (errno == ENOENT)
-	    mu_observable_notify (amd->mailbox->observable,
-				  MU_EVT_MAILBOX_CORRUPT,
-				  amd->mailbox);
-	  else
+	  name = maildir_uniq_create (amd, -1);
+	  rc = EAGAIN;
+	  for (i = NTRIES; i > 0; i--)
 	    {
-	      rc = errno;
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("renaming %s to %s failed: %s",
-			 cur_name, new_name, mu_strerror (rc)));
+	      if (fstatat (fd, name, &st, 0) == 0)
+		{
+		  mu_diag_output (MU_DIAG_WARNING,
+				  "%s/%s/%s exists during delivery",
+				  md->amd.name, subdir_name[SUB_TMP], name);
+		  if (i > 1)
+		    sleep (2);
+		}
+	      else if (errno == ENOENT)
+		{
+		  msg->subdir = SUB_TMP;
+		  msg->uid = amd->next_uid (amd);
+		  msg->file_name = name;
+		  msg->uniq_len = strlen (name);
+		  name = NULL;
+		  rc = 0;
+		  break;
+		}
+	      else
+		{
+		  mu_diag_output (MU_DIAG_WARNING, "cannot stat %s/%s/%s: %s",
+				  md->amd.name, subdir_name[SUB_TMP], name,
+				  mu_strerror (errno));
+		  break;
+		}
 	    }
+	  close (fd);
 	}
-      free (cur_name);
+      maildir_close (md);
     }
-
-  free (mp->file_name);
-  mp->file_name = strdup (strrchr (new_name, '/') + 1);
-  free (new_name);
-  if (!mp->file_name)
-    return errno;
-  
+  free (name);
   return rc;
 }
-     
+
 int
 _mailbox_maildir_init (mu_mailbox_t mailbox)
 {
   int rc;
   struct _amd_data *amd;
+  struct _maildir_data *md;
 
-  rc = amd_init_mailbox (mailbox, sizeof (struct _amd_data), &amd);
+  rc = amd_init_mailbox (mailbox, sizeof (struct _maildir_data), &amd);
   if (rc)
     return rc;
 
   amd->msg_size = sizeof (struct _maildir_message);
-  amd->msg_free = maildir_msg_free;
+  amd->msg_free = maildir_message_free;
   amd->create = maildir_create;
   amd->msg_init_delivery = maildir_msg_init;
   amd->msg_finish_delivery = maildir_msg_finish_delivery;
@@ -1253,6 +1812,9 @@ _mailbox_maildir_init (mu_mailbox_t mailbox)
     mu_property_set_value (property, "TYPE", "MAILDIR", 1);
   }
 
+  md = (struct _maildir_data *) amd;
+  md->folder_fd = -1;
+  
   return 0;
 }
-#endif
+

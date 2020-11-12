@@ -16,9 +16,15 @@
    <http://www.gnu.org/licenses/>. */
 
 #define PERMS 0700
-#define TMPSUF "tmp"
-#define CURSUF "cur"
-#define NEWSUF "new"
 
-int maildir_mkfilename (const char *dir, const char *suffix,
-			const char *name, char **retname);
+/* Subdirectories in maildir folder */
+enum
+  {
+    SUB_CUR,
+    SUB_NEW,
+    SUB_TMP,
+  };
+
+char const *mu_maildir_subdir_name (int subdir);
+int mu_maildir_reserved_name (char const *name);
+
