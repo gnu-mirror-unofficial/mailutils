@@ -262,8 +262,10 @@ dotmail_dispatch (mu_mailbox_t mailbox, int evt, void *data)
 	  message's uid value from the X-UID header. The first
 	  message that lacks X-UID or with an X-UID that cannot
 	  be parsed, gets assigned new UID. The subsequent
-	  messages are assigned new UIDs no matterwhether they
-	  have X-UID headers.
+	  messages are assigned new UIDs no matter whether they
+	  have X-UID headers. In this case, the uidvalidity value
+	  is reset to the current timestamp, to indicate that all
+	  UIDs might have changed.
 
       3b. When any of the following functions are called for
 	  the first time: dotmail_uidvalidity, dotmail_uidnext,
@@ -545,7 +547,11 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 			&& dmsg->hdr[mu_dotmail_hdr_x_uid]
 			&& sscanf (dmsg->hdr[mu_dotmail_hdr_x_uid],
 				   "%lu", &dmsg->uid) == 1))
-		    force_init_uids = 1;
+		    {
+		      force_init_uids = 1;
+		      dmp->uidvalidity = (unsigned long) time (NULL);
+		    }
+		  
 		  if (force_init_uids)
 		    dotmail_message_alloc_uid (dmsg);
 		}
