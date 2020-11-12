@@ -24,6 +24,7 @@
 #include <mailutils/stream.h>
 #include <mailutils/message.h>
 #include <mailutils/attribute.h>
+#include <mailutils/header.h>
 #include <mailutils/cstr.h>
 
 int
@@ -38,7 +39,6 @@ mu_stream_scan_message (mu_stream_t stream, struct mu_message_scan *sp)
   size_t blines = 0;
   size_t body_start = 0;
   int attr_flags = 0;
-  unsigned long uidvalidity = 0;
   
   if (sp->flags & MU_SCAN_SEEK)
     {
@@ -74,14 +74,8 @@ mu_stream_scan_message (mu_stream_t stream, struct mu_message_scan *sp)
 	    hlines++;
 	    
 	  /* Process particular attributes */
-	  if (mu_c_strncasecmp (buf, "status:", 7) == 0)
+	  if (mu_c_strncasecmp (buf, MU_HEADER_STATUS ":", 7) == 0)
 	    mu_string_to_flags (buf, &attr_flags);
-	  else if (mu_c_strncasecmp (buf, "x-imapbase:", 11) == 0)
-	    {
-	      char *p;
-	      uidvalidity = strtoul (buf + 11, &p, 10);
-	      /* second number is next uid. Ignored */
-	    }
 	}
       else
 	{
@@ -100,7 +94,6 @@ mu_stream_scan_message (mu_stream_t stream, struct mu_message_scan *sp)
       sp->header_lines = hlines;
       sp->body_lines = blines;
       sp->attr_flags = attr_flags;
-      sp->uidvalidity = uidvalidity;
     }
   return status;
 }

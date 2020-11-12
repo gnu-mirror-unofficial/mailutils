@@ -860,8 +860,6 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
 	break;
 
       if (!(mu_c_strncasecmp (buf, "status:", 7) == 0
-	    || mu_c_strncasecmp (buf, "x-imapbase:", 11) == 0
-	    || mu_c_strncasecmp (buf, "x-uid:", 6) == 0
 	    || mu_c_strncasecmp (buf, 
                 MU_HEADER_ENV_DATE ":", sizeof (MU_HEADER_ENV_DATE)) == 0
 	    || mu_c_strncasecmp (buf, 
@@ -1659,8 +1657,7 @@ amd_scan_message (struct _amd_message *mhm)
 		  mu_string_to_flags (buf, &mhm->attr_flags);
 		  mhm->attr_flags |= deleted;
 		}
-	      else if (!(amd_capa & MU_AMD_IMAPBASE) &&
-		       mu_c_strncasecmp (buf, "x-imapbase:", 11) == 0)
+	      else if (!(amd_capa & MU_AMD_IMAPBASE))
 		{
 		  if (_amd_prop_fetch_ulong (amd, _MU_AMD_PROP_UIDVALIDITY,
 					     NULL))

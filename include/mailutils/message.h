@@ -97,7 +97,6 @@ struct mu_message_scan
   size_t header_lines;
   size_t body_lines;
   int attr_flags;
-  unsigned long uidvalidity;
 };
 
 int mu_stream_scan_message (mu_stream_t stream, struct mu_message_scan *sp);
