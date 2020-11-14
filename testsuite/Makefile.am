@@ -50,6 +50,7 @@ noinst_DATA = package.m4
 AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 noinst_PROGRAMS = \
  cwdrepl\
+ mbox2dir\
  mockmail\
  mockmta
 

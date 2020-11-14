@@ -24,5 +24,6 @@ libmu_maildir_la_SOURCES = \
  maildir.h \
  mbox.c 
 
+SUBDIRS = . tests
 
 

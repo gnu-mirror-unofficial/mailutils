@@ -334,17 +334,33 @@ mu_tesh_read_and_eval (int argc, char **argv,
       struct mu_wordsplit ws;
       int wsflags;
       int rc;
+      mu_transport_t trans[2];
+      int interactive;
 
+      if (mu_stream_ioctl (mu_strin, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET, trans) == 0)
+	interactive = isatty ((intptr_t)trans[0]);
+      else
+	interactive = 0;
+      
       wsflags  = MU_WRDSF_DEFFLAGS
 	       | MU_WRDSF_COMMENT
 	       | MU_WRDSF_ALLOC_DIE
 	       | MU_WRDSF_SHOWERR;
       ws.ws_comment = "#";
 
-      while ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) == 0 && n > 0)
+      while (1)
 	{
 	  char *larg[2];
 
+	  if (interactive)
+	    {
+	      mu_stream_printf (mu_strout, "%s", "(tesh) ");
+	      mu_stream_flush (mu_strout);
+	    }
+	  if ((rc = mu_stream_getline (mu_strin, &buf, &size, &n)) != 0 ||
+	      n == 0)
+	    break;
+	  
 	  mu_ltrim_class (buf, MU_CTYPE_SPACE);
 	  mu_rtrim_class (buf, MU_CTYPE_SPACE);
 

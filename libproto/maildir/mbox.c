@@ -168,8 +168,13 @@ flags_to_info (int flags, char *buf)
   struct info_map *p;
   
   for (p = info_map; p < info_map + info_map_size; p++)
-    if (p->flag & flags)
-      *buf++ = p->letter;
+    {
+      if (p->flag & flags)
+	*buf++ = p->letter;
+      /* Avoid handling the same flag again.  See the description of
+	 'a' in info_map above and "Maildir attribute fixup" below. */
+      flags &= ~p->flag;
+    }
   *buf = 0;
   return 0;
 }
@@ -318,7 +323,7 @@ is_member_of (char const *str, size_t len, char **strlist)
  *      4   ':'
  *      5   '='
  *
- *    Transitions:
+ * Transitions:
  *
  *      \      input
  *      state
@@ -466,7 +471,7 @@ maildir_open (struct _maildir_data *md)
 {
   if (md->folder_fd == -1)
     {
-      int fd = open(md->amd.name, O_RDONLY | O_NONBLOCK | O_DIRECTORY);
+      int fd = open (md->amd.name, O_RDONLY | O_NONBLOCK | O_DIRECTORY);
       if (fd == -1)
 	{
 	  int rc = errno;
@@ -712,7 +717,6 @@ maildir_subdir_scan (struct _maildir_data *md, int subdir)
   closedir (dir);
   return 0;
 }
-
 
 /*
  * Maildir attribute fixup
@@ -852,6 +856,7 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
   struct stat st;
   size_t i;
   int has_new = 0;
+  int save_prop = 0;
   
   rc = maildir_open (md);
   if (rc)
@@ -903,6 +908,7 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
     {
       // FIXME: Fix AMD API.
       _amd_prop_store_off (&md->amd, _MU_AMD_PROP_UIDVALIDITY, time (NULL));
+      save_prop = 1;
     }  
   
   /* Update version marker in the property file */
@@ -917,7 +923,11 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
 		    ("maildir_scan_dir: mu_property_set_value failed during attribute fixup: %s",
 		     mu_strerror (rc)));
 	}
-      
+      save_prop = 1;
+    }
+
+  if (save_prop)
+    {
       rc = mu_property_save (md->amd.prop);
       if (rc)
 	{

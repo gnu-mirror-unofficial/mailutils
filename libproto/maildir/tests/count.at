@@ -1,0 +1,10 @@
+AT_SETUP([message count])
+AT_CHECK([
+set -e
+mbox2dir inbox $spooldir/mbox1
+mbop inbox count
+],
+[0],
+[count: 5
+])
+AT_CLEANUP

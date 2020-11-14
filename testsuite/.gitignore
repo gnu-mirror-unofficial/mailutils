@@ -9,6 +9,7 @@ testsuite
 testsuite.dir
 testsuite.log
 mbdel
+mbox2dir
 mimetest
 mockmail
 mockmta
