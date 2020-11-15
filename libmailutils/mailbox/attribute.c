@@ -240,6 +240,12 @@ mu_attribute_set_recent (mu_attribute_t attr)
 }
 
 int
+mu_attribute_set_forwarded (mu_attribute_t attr)
+{
+  return mu_attribute_set_flags (attr, MU_ATTRIBUTE_FORWARDED);
+}
+
+int
 mu_attribute_is_userflag (mu_attribute_t attr, int flag)
 {
   if (attr == NULL)
@@ -311,6 +317,15 @@ mu_attribute_is_recent (mu_attribute_t attr)
 }
 
 int
+mu_attribute_is_forwarded (mu_attribute_t attr)
+{
+  int flags = 0;
+  if (mu_attribute_get_flags (attr, &flags) == 0)
+    return flags & MU_ATTRIBUTE_FORWARDED;
+  return 0;
+}
+
+int
 mu_attribute_unset_userflag (mu_attribute_t attr, int flag)
 {
   if (attr == NULL)
@@ -362,6 +377,12 @@ mu_attribute_unset_recent (mu_attribute_t attr)
 }
 
 int
+mu_attribute_unset_forwarded (mu_attribute_t attr)
+{
+  return mu_attribute_unset_flags (attr, MU_ATTRIBUTE_FORWARDED);
+}
+
+int
 mu_attribute_is_equal (mu_attribute_t attr, mu_attribute_t attr2)
 {
   int flags2 = 0, flags = 0;
@@ -401,6 +422,7 @@ static struct flagtrans flagtrans[] = {
   { MU_ATTRIBUTE_DRAFT, 'd' },
   { MU_ATTRIBUTE_SEEN, 'O' },
   { MU_ATTRIBUTE_READ, 'R' },
+  { MU_ATTRIBUTE_FORWARDED, 'P' },
   { 0 }
 };
 

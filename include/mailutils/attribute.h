@@ -54,6 +54,9 @@ extern "C" {
 /* The message was modified, but not yet saved to the mailbox. */  
 #define MU_ATTRIBUTE_MODIFIED 0x40
 
+/* The message has been forwarded to someone else */ 
+#define MU_ATTRIBUTE_FORWARDED 0x80
+
 /* A message is recent if the current session is the first session
    to have been notified about it. Practically, a message is considered
    "recent" if it does not have MU_ATTRIBUTE_SEEN set. For consistency
@@ -81,6 +84,7 @@ extern int mu_attribute_is_deleted      (mu_attribute_t);
 extern int mu_attribute_is_draft        (mu_attribute_t);
 extern int mu_attribute_is_recent       (mu_attribute_t);
 extern int mu_attribute_is_read         (mu_attribute_t);
+extern int mu_attribute_is_forwarded    (mu_attribute_t);
 
 extern int mu_attribute_set_userflag    (mu_attribute_t, int);
 extern int mu_attribute_set_seen        (mu_attribute_t);
@@ -90,6 +94,7 @@ extern int mu_attribute_set_deleted     (mu_attribute_t);
 extern int mu_attribute_set_draft       (mu_attribute_t);
 extern int mu_attribute_set_recent      (mu_attribute_t);
 extern int mu_attribute_set_read        (mu_attribute_t);
+extern int mu_attribute_set_forwarded   (mu_attribute_t);
 
 extern int mu_attribute_unset_userflag  (mu_attribute_t, int);
 extern int mu_attribute_unset_seen      (mu_attribute_t);
@@ -99,6 +104,7 @@ extern int mu_attribute_unset_deleted   (mu_attribute_t);
 extern int mu_attribute_unset_draft     (mu_attribute_t);
 extern int mu_attribute_unset_recent    (mu_attribute_t);
 extern int mu_attribute_unset_read      (mu_attribute_t);
+extern int mu_attribute_unset_forwarded (mu_attribute_t);
 
 extern int mu_attribute_get_flags       (mu_attribute_t, int *);
 extern int mu_attribute_set_flags       (mu_attribute_t, int);
@@ -118,7 +124,7 @@ extern int mu_attribute_is_equal        (mu_attribute_t, mu_attribute_t att2);
 extern int mu_attribute_copy            (mu_attribute_t, mu_attribute_t);
 
 /* Maximum size of buffer for mu_attribute_to_string call, including nul */
-#define MU_STATUS_BUF_SIZE sizeof("AFDdOR")
+#define MU_STATUS_BUF_SIZE sizeof("AFDdORP")
   
 extern int mu_attribute_to_string       (mu_attribute_t, char *, size_t, size_t *);
 extern int mu_string_to_flags           (const char *, int *);

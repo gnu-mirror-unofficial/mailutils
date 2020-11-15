@@ -120,8 +120,9 @@ mu_maildir_reserved_name (char const *name)
              && (memcmp (name, ".mh", 3) == 0 || memcmp (name, ".mu", 3) == 0));
 }
 
-/* Attribute handling.
-   FIXME: P (Passed) is not handled */
+/*
+ * Attribute handling.
+ */
 
 static struct info_map {
   char letter;
@@ -133,9 +134,8 @@ static struct info_map {
   /* Flagged: user-defined flag; toggled at user discretion. */
   { 'F', MU_ATTRIBUTE_FLAGGED },
   /* Passed: the user has resent/forwarded/bounced this message to
-     someone else.
-     FIXME: There's no corresponding flag in mailutils. */
-  { 'P', 0 }, 
+     someone else. */
+  { 'P', MU_ATTRIBUTE_FORWARDED }, 
   /* Replied: the user has replied to this message. */
   { 'R', MU_ATTRIBUTE_ANSWERED },
   /* Seen: the user has viewed this message, though perhaps he didn't
