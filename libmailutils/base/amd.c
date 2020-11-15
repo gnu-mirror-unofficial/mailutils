@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -2140,6 +2141,14 @@ amd_remove_dir (const char *name)
 	}
     }
   return rc;
+}
+
+void
+amd_reset_uidvalidity (struct _amd_data *amd)
+{
+  struct timeval tv;
+  gettimeofday (&tv, NULL);
+  _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY, tv.tv_sec);
 }
 
 

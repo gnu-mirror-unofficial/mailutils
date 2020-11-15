@@ -128,5 +128,6 @@ struct _amd_message *_amd_get_message (struct _amd_data *amd, size_t msgno);
 int amd_msg_lookup (struct _amd_data *amd, struct _amd_message *msg,
 		    size_t *pret);
 int amd_remove_dir (const char *name);
+void amd_reset_uidvalidity (struct _amd_data *amd);
 
 #endif		    

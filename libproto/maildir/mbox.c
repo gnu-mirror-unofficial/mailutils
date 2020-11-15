@@ -906,8 +906,7 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
   /* Reset uidvalidity if any of the UIDs changed */
   if (md->needs_uid_fixup)
     {
-      // FIXME: Fix AMD API.
-      _amd_prop_store_off (&md->amd, _MU_AMD_PROP_UIDVALIDITY, time (NULL));
+      amd_reset_uidvalidity (&md->amd);
       save_prop = 1;
     }  
   
