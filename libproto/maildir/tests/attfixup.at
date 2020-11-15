@@ -20,25 +20,18 @@ cp inbox/.mu-prop saved_mu_prop
 ],
 [0],
 [count: 5
-inbox/cur/1284628225.M17468P3883Q0.Trurl,u=1:2,
-inbox/cur/1284628225.M19181P3883Q1.Trurl,u=2:2,S
-inbox/cur/1284628225.M20118P3883Q2.Trurl,u=3:2,
-inbox/cur/1284628225.M21284P3883Q3.Trurl,u=4:2,
-inbox/cur/1284628225.M22502P3883Q4.Trurl,u=5:2,
+inbox/cur/1284628225.M17468P3883Q0.Trurl,a=O,u=1:2,
+inbox/cur/1284628225.M19181P3883Q1.Trurl,a=O,u=2:2,S
+inbox/cur/1284628225.M20118P3883Q2.Trurl,a=O,u=3:2,
+inbox/cur/1284628225.M21284P3883Q3.Trurl,a=O,u=4:2,
+inbox/cur/1284628225.M22502P3883Q4.Trurl,a=O,u=5:2,
 ])
 
 AT_CHECK([
-set -e
 mbop -m inbox count
-find inbox/cur -type f | sort
 ],
 [0],
 [count: 5
-inbox/cur/1284628225.M17468P3883Q0.Trurl,u=1:2,
-inbox/cur/1284628225.M19181P3883Q1.Trurl,u=2:2,S
-inbox/cur/1284628225.M20118P3883Q2.Trurl,u=3:2,
-inbox/cur/1284628225.M21284P3883Q3.Trurl,u=4:2,
-inbox/cur/1284628225.M22502P3883Q4.Trurl,u=5:2,
 ])
 
 AT_CHECK([

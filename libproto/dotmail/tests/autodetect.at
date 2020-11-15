@@ -110,6 +110,7 @@ do
     mbop --mailbox $mbox --detect
   done
 done
+exit 0
 ],
 [0],
 [MU_AUTODETECT_ACCURACY=0

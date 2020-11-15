@@ -16,8 +16,8 @@
 
 AT_SETUP([attributes])
 AT_DATA([names],
-[cur/1284628225.M17468P3883Q0.Trurl,u=1:2,
-cur/1284628225.M19181P3883Q1.Trurl,u=20:2,S
+[cur/1284628225.M17468P3883Q0.Trurl,a=O,u=1:2,
+cur/1284628225.M19181P3883Q1.Trurl,a=O,u=20:2,S
 cur/1284628225.M20118P3883Q2.Trurl,u=22:2,
 cur/1284628225.M21284P3883Q3.Trurl,u=43:2,
 cur/1284628225.M22502P3883Q4.Trurl,u=50:2,
@@ -45,6 +45,7 @@ set_draft
 5
 # Set the answered attribute
 set_answered
+set_seen
 # Synchronize with the disk storage
 sync
 ])
@@ -56,6 +57,7 @@ mbop -m inbox < commands
 3 set_draft: OK
 5 current message
 5 set_answered: OK
+5 set_seen: OK
 sync: OK
 ])
 AT_CHECK([
@@ -63,7 +65,7 @@ mbop -m inbox 3 \; attr \; 5 \; attr
 ],
 [0],
 [3 current message
-3 attr: dOR
+3 attr: dR
 5 current message
 5 attr: AO
 ])

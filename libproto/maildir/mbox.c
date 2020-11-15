@@ -566,7 +566,7 @@ maildir_message_alloc (struct _maildir_data *md, int subdir, char const *name,
 {
   struct _maildir_message *msg;
   size_t n;
-  static char *attrnames[] = { "u", NULL };
+  static char *attrnames[] = { "a", "u", NULL };
   struct attrib *attrs;
   char const *p;
   
@@ -591,6 +591,13 @@ maildir_message_alloc (struct _maildir_data *md, int subdir, char const *name,
       return ENOMEM;
     }
   msg->uniq_len = n;
+  
+  if ((p = attrib_lookup (attrs, "a")) != NULL)
+    {
+      /* NOTICE: mu_attribute_string_to_flags preserves existing bits
+	 in its second argument. */
+      mu_attribute_string_to_flags (p, &msg->amd_message.attr_flags);
+    }
   
   if ((p = attrib_lookup (attrs, "u")) != NULL)
     {
@@ -695,10 +702,6 @@ maildir_subdir_scan (struct _maildir_data *md, int subdir)
 
       rc = maildir_message_alloc (md, subdir, entry->d_name, &msg);
 
-      if (subdir == SUB_CUR)
-	/* FIXME: Implement MU_ATTRIBUTE_SEEN via attribs */
-	msg->amd_message.attr_flags |= MU_ATTRIBUTE_SEEN;
-      
       if (!amd_msg_lookup (&md->amd, (struct _amd_message *) msg, &index))
 	{
 	  /* should not happen */
@@ -816,7 +819,12 @@ maildir_message_fixup (struct _maildir_data *md, struct _maildir_message *msg)
     {
       int flags = msg->amd_message.attr_flags;
 
-      flags &= ~MU_ATTRIBUTE_READ;
+      if (flags & MU_ATTRIBUTE_READ)
+	{
+	  flags &= ~MU_ATTRIBUTE_READ;
+	  flags |= MU_ATTRIBUTE_SEEN;
+	}
+      
       if (flags & MU_ATTRIBUTE_ANSWERED)
 	{
 	  flags &= ~MU_ATTRIBUTE_ANSWERED;
@@ -1112,6 +1120,28 @@ string_buffer_format_flags (struct string_buffer *buf, int flags)
   return string_buffer_appendz (buf, fbuf);
 }
 
+/* Format mailutils-specific attribute flags to the string buffer.
+   Mailutils-specific flags are the flags that have no corresponding
+   info letter in the maildir memo.  These flags are encoded in the
+   'a' attribute setting.
+*/
+static int
+string_buffer_format_mu_flags (struct string_buffer *buf, int flags)
+{
+  int rc = 0;
+  char fb[MU_STATUS_BUF_SIZE];
+  size_t len;
+  
+  mu_attribute_flags_to_string (flags & (MU_ATTRIBUTE_FLAGGED|MU_ATTRIBUTE_SEEN),
+				fb, sizeof (fb), &len);
+  if (len > 0)
+    {
+      if ((rc = string_buffer_append (buf, ",a=", 3)) == 0)
+	rc = string_buffer_append (buf, fb, len);
+    }
+  return rc;
+}
+
 static int
 string_buffer_format_message_name (struct string_buffer *buf,
 				   struct _maildir_message *msg,
@@ -1120,6 +1150,7 @@ string_buffer_format_message_name (struct string_buffer *buf,
   int rc;
   
   if ((rc = string_buffer_append (buf, msg->file_name, msg->uniq_len)) == 0 &&
+      (rc = string_buffer_format_mu_flags (buf, flags)) == 0 &&
       (rc = string_buffer_append (buf, ",u=", 3)) == 0 &&
       (rc = string_buffer_format_long (buf, msg->uid, 10)) == 0 &&
       (rc = string_buffer_format_flags (buf, flags)) == 0)
