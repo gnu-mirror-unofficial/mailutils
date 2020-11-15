@@ -41,6 +41,7 @@ TESTSUITE_AT += \
  append.at\
  attr.at\
  attfixup.at\
+ autodetect.at\
  body.at\
  count.at\
  delete.at\

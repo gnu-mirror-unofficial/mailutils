@@ -1,5 +1,5 @@
 # GNU Mailutils -- a suite of utilities for electronic mail
-# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+# Copyright (C) 2020 Free Software Foundation, Inc.
 #
 # This library is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -13,28 +13,20 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
-
-m4_include([testsuite.inc])
-
-AT_INIT
-m4_include([autodetect.at])
-
-m4_include([count.at])
-
-m4_include([attr.at])
-m4_include([envelope.at])
-m4_include([header.at])
-m4_include([body.at])
-m4_include([uid.at])
-m4_include([uidvalidity.at])
-m4_include([qget.at])
-
-m4_include([append.at])
-m4_include([delete.at])
-
-m4_include([attfixup.at])
-m4_include([uidfixup.at])
-
-# Local Variables:
-# mode: autotest
-# End:
+AT_SETUP([format detection])
+AT_KEYWORDS([autodetect])
+AT_CHECK([
+mkdir inbox inbox/cur inbox/new
+mbop -m inbox --detect
+],
+[1],
+[inbox: 0
+])
+AT_CHECK([
+mkdir inbox/tmp
+mbop -m inbox --detect
+],
+[0],
+[inbox: 2
+])
+AT_CLEANUP

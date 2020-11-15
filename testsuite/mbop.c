@@ -517,7 +517,7 @@ main (int argc, char **argv)
       n = mu_record_is_scheme (rec, url, MU_FOLDER_ATTRIBUTE_FILE);
       mu_printf ("%s: %d\n", env.mbxname, n);
       mu_url_destroy (&url);
-      exit (n != 0);
+      exit (n & MU_FOLDER_ATTRIBUTE_FILE ? 0 : 1);
     }
   
   MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
