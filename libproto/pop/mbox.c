@@ -785,7 +785,7 @@ pop_get_attribute (mu_attribute_t attr, int *pflags)
       mu_message_get_header (mpm->message, &header);
       mu_header_get_value (header, MU_HEADER_STATUS,
 			   hdr_status, sizeof hdr_status, NULL);
-      mu_string_to_flags (hdr_status, &mpm->attr_flags);
+      mu_attribute_string_to_flags (hdr_status, &mpm->attr_flags);
     }
   *pflags = mpm->attr_flags;
   return 0;

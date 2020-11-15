@@ -431,17 +431,17 @@ static struct flagtrans flagtrans[] = {
 mu_verify (MU_ARRAY_SIZE (flagtrans) == MU_STATUS_BUF_SIZE);
 
 int
-mu_string_to_flags (const char *buffer, int *pflags)
+mu_attribute_string_to_flags (const char *buffer, int *pflags)
 {
   const char *sep;
 
   if (pflags == NULL)
     return EINVAL;
 
-  /* Set the attribute */
+  /* Skip the header name */
   if (mu_c_strncasecmp (buffer, "Status:", 7) == 0)
     {
-      sep = strchr(buffer, ':'); /* pass the ':' */
+      sep = strchr (buffer, ':'); /* pass the ':' */
       sep++;
     }
   else
@@ -461,6 +461,35 @@ mu_string_to_flags (const char *buffer, int *pflags)
   return 0;
 }
 
+int
+mu_attribute_flags_to_string (int flags, char *buffer, size_t len, size_t *pn)
+{
+  int i, j;
+  struct flagtrans *ft;
+
+  if (!buffer || len == 0)
+    return EINVAL;
+  
+  len--;
+
+  i = j = 0;
+  for (ft = flagtrans; ft->flag; ft++)
+    {
+      if (ft->flag & flags)
+	{
+	  if (buffer && i < len)
+	    buffer[i++] = ft->letter;
+	  j++;
+	}
+    }
+  if (buffer)
+    buffer[i++] = 0;
+
+  if (pn)
+    *pn = j;
+  return j <= len ? 0 : MU_ERR_BUFSPACE;
+}
+
 /* NOTE: When adding/removing flags, make sure to update the
    MU_STATUS_BUF_SIZE define in include/mailutils/attribute.h */
 int
@@ -468,24 +497,11 @@ mu_attribute_to_string (mu_attribute_t attr, char *buffer, size_t len,
 			size_t *pn)
 {
   int flags = 0;
-  char buf[MU_STATUS_BUF_SIZE];
-  int i;
   int rc;
-  struct flagtrans *ft;
   
   rc = mu_attribute_get_flags (attr, &flags);
   if (rc)
     return rc;
-
-  i = 0;
-  for (ft = flagtrans; ft->flag; ft++)
-    if (ft->flag & flags)
-      buf[i++] = ft->letter;
-  buf[i++] = 0;
-
-  i = mu_cpystr (buffer, buf, i);
-  if (pn)
-    *pn = i;
-  return 0;
+  return mu_attribute_flags_to_string (flags, buffer, len, pn);
 }
 

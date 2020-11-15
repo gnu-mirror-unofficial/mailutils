@@ -125,10 +125,15 @@ extern int mu_attribute_copy            (mu_attribute_t, mu_attribute_t);
 
 /* Maximum size of buffer for mu_attribute_to_string call, including nul */
 #define MU_STATUS_BUF_SIZE sizeof("AFDdORP")
-  
-extern int mu_attribute_to_string       (mu_attribute_t, char *, size_t, size_t *);
-extern int mu_string_to_flags           (const char *, int *);
 
+extern int mu_attribute_to_string       (mu_attribute_t, char *, size_t, size_t *);
+extern int mu_attribute_flags_to_string (int flags, char *buffer, size_t len, size_t *pn);
+extern int mu_attribute_string_to_flags (const char *, int *);
+static int mu_string_to_flags (const char *, int *) MU_DEPRECATED;
+static inline int mu_string_to_flags (const char *b, int *f)
+{
+  return mu_attribute_string_to_flags (b, f);
+}
 #ifdef __cplusplus
 }
 #endif

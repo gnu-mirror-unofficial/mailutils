@@ -1655,7 +1655,7 @@ amd_scan_message (struct _amd_message *mhm)
 		  mu_c_strncasecmp (buf, "status:", 7) == 0)
 		{
 		  int deleted = mhm->attr_flags & MU_ATTRIBUTE_DELETED;
-		  mu_string_to_flags (buf, &mhm->attr_flags);
+		  mu_attribute_string_to_flags (buf, &mhm->attr_flags);
 		  mhm->attr_flags |= deleted;
 		}
 	    }

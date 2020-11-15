@@ -75,7 +75,7 @@ mu_stream_scan_message (mu_stream_t stream, struct mu_message_scan *sp)
 	    
 	  /* Process particular attributes */
 	  if (mu_c_strncasecmp (buf, MU_HEADER_STATUS ":", 7) == 0)
-	    mu_string_to_flags (buf, &attr_flags);
+	    mu_attribute_string_to_flags (buf, &attr_flags);
 	}
       else
 	{

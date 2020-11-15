@@ -156,7 +156,8 @@ mu_dotmail_message_attr_load (struct mu_dotmail_message *dmsg)
   if (!dmsg->attr_scanned)
     {
       if (dmsg->hdr[mu_dotmail_hdr_status])
-	mu_string_to_flags (dmsg->hdr[mu_dotmail_hdr_status], &dmsg->attr_flags);
+	mu_attribute_string_to_flags (dmsg->hdr[mu_dotmail_hdr_status], 
+                                      &dmsg->attr_flags);
       else
 	dmsg->attr_flags = 0;
       dmsg->attr_scanned = 1;
