@@ -15,7 +15,7 @@
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 DM_TEST([unseen],
-[dm_mesg unseen],
+[mbop unseen],
 [Return-Path: hare@wonder.land
 Received: (from hare@wonder.land) 
 	by wonder.land id 3301

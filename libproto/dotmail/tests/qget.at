@@ -15,7 +15,7 @@
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 DM_TEST([qget],
-[dm_qget 369],
+[mbop qget 369],
 [Received: (from hare@wonder.land) 
 	by wonder.land id 3301
 	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
@@ -44,7 +44,7 @@ X-UID: 2
 I don't see any wine
 .
 ],
-[Received: (from alice@wonder.land) 
+[qget: Received: (from alice@wonder.land) 
 	by wonder.land id 3302
 	for hare@wonder.land; Mon, 29 Jul 2002 22:00:07 +0100
 Date: Mon, 29 Jul 2002 22:00:02 +0100
@@ -56,4 +56,5 @@ Return-Path: alice@wonder.land
 X-UID: 2
 
 I don't see any wine
+
 ])

@@ -35,10 +35,10 @@ m4_define([DM_MESG],
 AT_CHECK(
  [AT_DATA([dmbx],[$2])
 AT_DATA([input],[$5]) 
+$3
 MAIL=./dmbx
 export MAIL
-$3
-dm_mesg < input
+mbop < input
 $4
 ],
 [0],

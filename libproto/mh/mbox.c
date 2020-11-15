@@ -425,8 +425,7 @@ _mh_msg_delete (struct _amd_data *amd, struct _amd_message *amm)
   
   if (proc[0] == 0)
     {
-      rc = unlink (name);
-      if (rc)
+      if (unlink (name))
 	rc = errno;
     }
   else

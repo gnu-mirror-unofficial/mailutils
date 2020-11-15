@@ -20,15 +20,18 @@ include $(top_srcdir)/testsuite/testsuite.am
 ## Non-installable programs
 ## -------------------------- ##
 
-AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
-noinst_PROGRAMS = \
- dm_mesg\
- dm_qget\
- dm_detect
-dm_mesg_LDADD = -L$(top_builddir)/libmailutils/tests -lmu_tesh $(LDADD)
-dm_mesg_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/libmailutils/tests
+AM_CPPFLAGS = \
+ $(MU_LIB_COMMON_INCLUDES)\
+ -I$(top_srcdir)/libmailutils/tests\
+ -DMBOP_RECORD=mu_dotmail_record \
+ -DMBOP_SCHEME=\"dotmail\"
 
-LDADD = $(MU_LIB_DOTMAIL) $(MU_LIB_MAILUTILS)
+noinst_PROGRAMS = \
+ mbop
+LDADD = -L$(top_builddir)/libmailutils/tests -lmu_tesh $(MU_LIB_DOTMAIL) $(MU_LIB_MAILUTILS)
+
+VPATH += $(top_srcdir)/testsuite
+nodist_mbop_SOURCES = mbop.c
 
 ## ------------ ##
 ## Test suite.  ##
@@ -49,6 +52,7 @@ TESTSUITE_AT += \
  append.at\
  delete.at\
  setattr.at
+
 
 
 

@@ -1,9 +1,7 @@
 /atconfig
 /atlocal
-/dm_detect
-/dm_mesg
-/dm_qget
 /package.m4
+/mbop
 /testsuite
 /testsuite.dir
 /testsuite.log

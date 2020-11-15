@@ -64,7 +64,7 @@ Return-Path: alice@wonder.land
 Then it wasn't very civil of you to offer it
 .
 ],
-[],[dm_mesg count],
+[],[mbop count],
 [# Mark third message as deleted
 3
 set_deleted

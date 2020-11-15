@@ -15,7 +15,7 @@
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
 DM_TEST([uidvalidity],
-[dm_mesg uidvalidity \; uidnext],
+[mbop uidvalidity \; uidnext],
 [Received: (from hare@wonder.land) 
 	by wonder.land id 3301
 	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100

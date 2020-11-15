@@ -471,7 +471,8 @@ int
 main (int argc, char **argv)
 {
   struct interp_env env = { NULL, NULL, NULL, 0 };
-  int debug_option;
+  int debug_option = 0;
+  int detect_option = 0;
   struct mu_option options[] = {
     { "debug", 'd', NULL, MU_OPTION_DEFAULT,
       "enable debugging",
@@ -479,6 +480,9 @@ main (int argc, char **argv)
     { "mailbox", 'm', "FILE", MU_OPTION_DEFAULT,
       "use this mailbox",
       mu_c_string, &env.mbxname },
+    { "detect", 'D', NULL, MU_OPTION_DEFAULT,
+      "detect mailbox format",
+      mu_c_incr, &detect_option },
     MU_OPTION_END
   };
 
@@ -499,6 +503,22 @@ main (int argc, char **argv)
   if (debug_option)
     mu_debug_enable_category ("mailbox", 7,
 			      MU_DEBUG_LEVEL_UPTO (MU_DEBUG_PROT));
+
+  if (detect_option)
+    {
+      mu_url_t url;
+      mu_record_t rec;
+      int n;
+
+      MU_ASSERT (mu_registrar_lookup_scheme (MBOP_SCHEME, &rec));
+      MU_ASSERT (mu_url_create_hint (&url, env.mbxname,
+				     MU_URL_PARSE_SLASH | MU_URL_PARSE_LOCAL,
+				     NULL));
+      n = mu_record_is_scheme (rec, url, MU_FOLDER_ATTRIBUTE_FILE);
+      mu_printf ("%s: %d\n", env.mbxname, n);
+      mu_url_destroy (&url);
+      exit (n != 0);
+    }
   
   MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
   MU_ASSERT (mu_mailbox_open (env.mbx, MU_STREAM_RDWR));

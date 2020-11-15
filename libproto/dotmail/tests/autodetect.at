@@ -105,7 +105,10 @@ export MU_AUTODETECT_ACCURACY
 for MU_AUTODETECT_ACCURACY in 0 1 2
 do
   echo "MU_AUTODETECT_ACCURACY=$MU_AUTODETECT_ACCURACY"
-  dm_detect empty dotmail mbox nodot badheader garbage
+  for mbox in empty dotmail mbox nodot badheader garbage
+  do
+    mbop --mailbox $mbox --detect
+  done
 done
 ],
 [0],
