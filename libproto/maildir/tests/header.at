@@ -34,9 +34,9 @@ header_size
 header_count
 headers
 ])
+AT_CHECK([mbox2dir -i names -p -v 10 inbox $spooldir/mbox1])
 AT_CHECK([
-mbox2dir -i names -p -v 10 inbox $spooldir/mbox1
-mbop inbox < commands
+mbop -m inbox < commands
 ],
 [0],
 [1 current message

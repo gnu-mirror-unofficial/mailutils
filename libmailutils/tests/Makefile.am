@@ -208,5 +208,5 @@ $(srcdir)/wordsplit-version.h: $(top_srcdir)/configure.ac
 noinst_PROGRAMS += wsp
 nodist_wsp_SOURCES = wsp.c
 wsp.o: $(srcdir)/wordsplit-version.h
-VPATH = $(srcdir):$(top_srcdir)/libmailutils/wordsplit
+VPATH += $(top_srcdir)/libmailutils/wordsplit
 

@@ -25,9 +25,10 @@ body_lines
 body_size
 body_text
 ])
+AT_CHECK([mbox2dir -p -v 10 inbox $spooldir/mbox1])
+
 AT_CHECK([
-mbox2dir -p -v 10 inbox $spooldir/mbox1
-mbop inbox < commands
+mbop -m inbox < commands
 ],
 [0],
 [1 current message

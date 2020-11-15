@@ -350,6 +350,7 @@ static char const *mbox_actions[] = {
   "count",
   "recent",
   "unseen",
+  "qget",
   NULL
 };
 
@@ -464,35 +465,40 @@ struct mu_tesh_command commands[] = {
   { "qget",           "QID", mbop_qget },
   { NULL }
 };
+
 
 int
 main (int argc, char **argv)
 {
   struct interp_env env = { NULL, NULL, NULL, 0 };
+  int debug_option;
+  struct mu_option options[] = {
+    { "debug", 'd', NULL, MU_OPTION_DEFAULT,
+      "enable debugging",
+      mu_c_incr, &debug_option },
+    { "mailbox", 'm', "FILE", MU_OPTION_DEFAULT,
+      "use this mailbox",
+      mu_c_string, &env.mbxname },
+    MU_OPTION_END
+  };
 
   env.mbxname = getenv ("MAIL");
-
   mu_tesh_init (argv[0]);
   mu_registrar_record (MBOP_RECORD);
   mu_registrar_set_default_scheme (MBOP_SCHEME);
-  
-  argc--;
-  argv++;
 
-  if (argc && strcmp (argv[0], "-d") == 0)
-    {
-      mu_debug_enable_category ("mailbox", 7,
-				MU_DEBUG_LEVEL_UPTO (MU_DEBUG_PROT));
-      argc--;
-      argv++;
-    }
+  mu_cli_simple (argc, argv,
+                 MU_CLI_OPTION_OPTIONS, options,
+		 MU_CLI_OPTION_PROG_DOC, "test tool for " MBOP_SCHEME " mailboxes",
+		 MU_CLI_OPTION_PROG_ARGS, "CMD [; CMD ;...]",
+		 MU_CLI_OPTION_EX_USAGE, 2,
+		 MU_CLI_OPTION_RETURN_ARGC, &argc,
+                 MU_CLI_OPTION_RETURN_ARGV, &argv,
+		 MU_CLI_OPTION_END);
 
-  if (argc)
-    {
-      env.mbxname = argv[0];
-      argc--;
-      argv++;
-    }
+  if (debug_option)
+    mu_debug_enable_category ("mailbox", 7,
+			      MU_DEBUG_LEVEL_UPTO (MU_DEBUG_PROT));
   
   MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
   MU_ASSERT (mu_mailbox_open (env.mbx, MU_STREAM_RDWR));

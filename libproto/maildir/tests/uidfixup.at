@@ -7,11 +7,10 @@ cur/1284628225.M21284P3883Q3.Trurl:2,
 cur/1284628225.M22502P3883Q4.Trurl:2,
 ])
 
-AT_CHECK([
-set -e
-mbox2dir -i names -p -v 10 inbox $spooldir/mbox1
+AT_CHECK([mbox2dir -i names -p -v 10 inbox $spooldir/mbox1])
 
-mbop inbox count
+AT_CHECK([
+mbop -m inbox count
 
 find inbox/cur -type f | sort
 

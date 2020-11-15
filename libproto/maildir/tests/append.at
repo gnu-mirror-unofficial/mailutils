@@ -40,7 +40,7 @@ headers
 body_text
 ])
 AT_CHECK([
-mbop inbox < commands
+mbop -m inbox < commands
 ],
 [0],
 [append: OK
@@ -63,7 +63,7 @@ X-Envelope-Sender:alice@wonder.land
 
 ])
 AT_CHECK([
-mbop inbox uidvalidity
+mbop -m inbox uidvalidity
 ],
 [0],
 [uidvalidity: 10

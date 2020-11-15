@@ -22,10 +22,8 @@ cur/1284628225.M20118P3883Q2.Trurl,u=22:2,
 cur/1284628225.M21284P3883Q3.Trurl,u=43:2,
 cur/1284628225.M22502P3883Q4.Trurl,u=50:2,
 ])
-AT_CHECK([
-mbox2dir -i names -p -v 10 inbox $spooldir/mbox1
-mbop inbox 2 \; env_date \; env_sender
-],
+AT_CHECK([mbox2dir -i names -p -v 10 inbox $spooldir/mbox1])
+AT_CHECK([mbop -m inbox 2 \; env_date \; env_sender],
 [0],
 [2 current message
 2 env_date: Fri Dec 28 20:18:08 2001

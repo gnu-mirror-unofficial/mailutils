@@ -22,12 +22,12 @@ cur/1284628225.M20118P3883Q2.Trurl,u=3:2,
 cur/1284628225.M21284P3883Q3.Trurl,u=4:2,
 cur/1284628225.M22502P3883Q4.Trurl,u=5:2,
 ])
+AT_CHECK([mbox2dir -i names -p -v 10 inbox $spooldir/mbox1])
 AT_CHECK([
-mbox2dir -i names -p -v 10 inbox $spooldir/mbox1
-mbop inbox qget cur/1284628225.M19181P3883Q1.Trurl,u=2:2,S
+mbop -m inbox qget cur/1284628225.M19181P3883Q1.Trurl,u=2:2,S
 ],
 [0],
-[Received: (from bar@dontmailme.org)
+[qget: Received: (from bar@dontmailme.org)
 	by dontmailme.org id fERKR9N16790
 	for foobar@nonexistent.net; Fri, 28 Dec 2001 22:18:08 +0200
 Date: Fri, 28 Dec 2001 23:28:08 +0200
@@ -40,6 +40,7 @@ It seems very pretty, but it's *rather* hard to understand!'
 Somehow it seems to fill my head with ideas -- only I don't
 exactly know what they are!  However, SOMEBODY killed SOMETHING:
 that's clear, at any rate...
+
 ])
 AT_CLEANUP
 

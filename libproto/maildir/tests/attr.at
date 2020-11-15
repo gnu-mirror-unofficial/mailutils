@@ -22,9 +22,10 @@ cur/1284628225.M20118P3883Q2.Trurl,u=22:2,
 cur/1284628225.M21284P3883Q3.Trurl,u=43:2,
 cur/1284628225.M22502P3883Q4.Trurl,u=50:2,
 ])
+AT_CHECK([mbox2dir -i names -p -v 10 inbox $spooldir/mbox1])
+
 AT_CHECK([
-mbox2dir -i names -p -v 10 inbox $spooldir/mbox1
-mbop inbox 1 \; attr \; 2 \; attr
+mbop -m inbox 1 \; attr \; 2 \; attr
 ],
 [0],
 [1 current message
@@ -47,7 +48,7 @@ set_answered
 # Synchronize with the disk storage
 sync
 ])
-mbop inbox < commands
+mbop -m inbox < commands
 ],
 [0],
 [3 current message
@@ -58,7 +59,7 @@ mbop inbox < commands
 sync: OK
 ])
 AT_CHECK([
-mbop inbox 3 \; attr \; 5 \; attr
+mbop -m inbox 3 \; attr \; 5 \; attr
 ],
 [0],
 [3 current message

@@ -8,13 +8,13 @@ cur/1284628225.M21284P3883Q3.Trurl:2,S
 cur/1284628225.M22502P3883Q4.Trurl:2,S
 ])
 
+AT_CHECK([mbox2dir -i names inbox $spooldir/mbox1])
+
 AT_CHECK([
-set -e
-mbox2dir -i names inbox $spooldir/mbox1
 AT_DATA([inbox/.mu-prop],
 [uid-validity: 10
 ])
-mbop inbox count
+mbop -m inbox count
 find inbox/cur -type f | sort
 cp inbox/.mu-prop saved_mu_prop
 ],
@@ -29,7 +29,7 @@ inbox/cur/1284628225.M22502P3883Q4.Trurl,u=5:2,
 
 AT_CHECK([
 set -e
-mbop inbox count
+mbop -m inbox count
 find inbox/cur -type f | sort
 ],
 [0],
