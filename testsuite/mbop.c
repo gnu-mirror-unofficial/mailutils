@@ -34,6 +34,7 @@ get_num (char const *s)
 
 struct interp_env
 {
+  char const *mbxname;
   mu_mailbox_t mbx;
   mu_message_t msg;
   size_t msgno;
@@ -399,6 +400,27 @@ mbop_nocmd (int argc, char **argv, mu_assoc_t options, void *env)
     }
   return MU_ERR_PARSE;
 }
+
+int
+mbop_qget (int argc, char **argv, mu_assoc_t options, void *data)
+{
+  struct interp_env *env = data;
+  mu_mailbox_t mbx;
+  mu_message_qid_t qid;
+  mu_message_t msg;
+  mu_stream_t str;
+  
+  MU_ASSERT (mu_mailbox_create_default (&mbx, env->mbxname));
+  MU_ASSERT (mu_mailbox_open (mbx, MU_STREAM_READ|MU_STREAM_QACCESS));
+  qid = argv[1];
+  MU_ASSERT (mu_mailbox_quick_get_message (mbx, qid, &msg));
+  MU_ASSERT (mu_message_get_streamref (msg, &str));
+
+  MU_ASSERT (mu_stream_copy (mu_strout, str, 0, NULL));
+  mu_stream_destroy (&str);
+  mu_mailbox_destroy (&mbx);
+  return 0;
+}
 
 struct mu_tesh_command commands[] = {
   { "__ENVINIT__",    "", mbop_envinit  },
@@ -439,14 +461,16 @@ struct mu_tesh_command commands[] = {
   { "count",          "", mbop_count },
   { "recent",         "", mbop_recent },
   { "unseen",         "", mbop_unseen },
+  { "qget",           "QID", mbop_qget },
   { NULL }
 };
 
 int
 main (int argc, char **argv)
 {
-  struct interp_env env = { NULL, NULL, 0 };
-  char *mailbox_name = getenv ("MAIL");
+  struct interp_env env = { NULL, NULL, NULL, 0 };
+
+  env.mbxname = getenv ("MAIL");
 
   mu_tesh_init (argv[0]);
   mu_registrar_record (MBOP_RECORD);
@@ -465,12 +489,12 @@ main (int argc, char **argv)
 
   if (argc)
     {
-      mailbox_name = argv[0];
+      env.mbxname = argv[0];
       argc--;
       argv++;
     }
   
-  MU_ASSERT (mu_mailbox_create_default (&env.mbx, mailbox_name));
+  MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
   MU_ASSERT (mu_mailbox_open (env.mbx, MU_STREAM_RDWR));
 
   mu_tesh_read_and_eval (argc, argv, commands, &env);

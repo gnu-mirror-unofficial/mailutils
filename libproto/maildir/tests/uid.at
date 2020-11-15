@@ -14,13 +14,30 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_SETUP([message count])
+AT_SETUP([uid])
+AT_DATA([names],
+[cur/1284628225.M17468P3883Q0.Trurl,u=1:2,
+cur/1284628225.M19181P3883Q1.Trurl,u=20:2,S
+cur/1284628225.M20118P3883Q2.Trurl,u=22:2,
+cur/1284628225.M21284P3883Q3.Trurl,u=43:2,
+cur/1284628225.M22502P3883Q4.Trurl,u=50:2,
+])
 AT_CHECK([
-set -e
-mbox2dir inbox $spooldir/mbox1
-mbop inbox count
+mbox2dir -i names -p -v 10 inbox $spooldir/mbox1
+mbop inbox 1 \; uid \; 2 \; uid \; 3 \; uid \; 4 \; uid \; 5 \; uid
 ],
 [0],
-[count: 5
+[1 current message
+1 uid: 1
+2 current message
+2 uid: 20
+3 current message
+3 uid: 22
+4 current message
+4 uid: 43
+5 current message
+5 uid: 50
 ])
 AT_CLEANUP
+
+

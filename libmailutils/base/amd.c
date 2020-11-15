@@ -1657,18 +1657,6 @@ amd_scan_message (struct _amd_message *mhm)
 		  mu_string_to_flags (buf, &mhm->attr_flags);
 		  mhm->attr_flags |= deleted;
 		}
-	      else if (!(amd_capa & MU_AMD_IMAPBASE))
-		{
-		  if (_amd_prop_fetch_ulong (amd, _MU_AMD_PROP_UIDVALIDITY,
-					     NULL))
-		    {
-		      char *p;
-		      unsigned long uidval = strtoul (buf + 11, &p, 10);
-		      /* The next number is next uid. Ignored */
-		      _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY,
-					   uidval);
-		    }
-		}
 	    }
 	  else
 	    {

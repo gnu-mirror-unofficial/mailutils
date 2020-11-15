@@ -25,6 +25,7 @@ EXTRA_DIST += \
  spool\
  folder\
  maildir\
+ mbop.c\
  mh 
 
 ## ------------ ##

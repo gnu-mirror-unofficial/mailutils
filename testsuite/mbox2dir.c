@@ -256,7 +256,7 @@ maildir_generate_name (NAME_INPUT *input)
     }
   if (!new_option)
     {
-      i += snprintf (buf + i, sizeof (buf) - i, ",2:");
+      i += snprintf (buf + i, sizeof (buf) - i, ":2,");
       assert (i < sizeof (buf));
     }      
   return strdup (buf);
@@ -486,6 +486,14 @@ copy_till (FILE *in, FILE *out, int state)
   return -1;
 }
 
+static void
+skip_line (FILE *fp)
+{
+  int c;
+  while ((c = fgetc (fp)) != EOF && c != '\n')
+    ;
+}
+    
 static int
 store_file (int dirfd, char const *name, FILE *input)
 {
@@ -504,7 +512,7 @@ store_file (int dirfd, char const *name, FILE *input)
   fp = fdopen (fd, "w");
   if (!fp)
     abort ();
-  
+
   rc = copy_till (input, fp, 0);
   fclose (fp);
   return rc;
@@ -660,6 +668,7 @@ main (int argc, char **argv)
   while ((name = next_name (&input)) != NULL)
     {
       validate_name (name);
+      skip_line (fp);
       if (store_file (fd, name, fp))
 	break;
       free (name);

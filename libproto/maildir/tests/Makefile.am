@@ -30,16 +30,26 @@ noinst_PROGRAMS = \
 
 LDADD =  -L$(top_builddir)/libmailutils/tests -lmu_tesh $(MU_LIB_MAILDIR) $(MU_LIB_MAILUTILS)
 
-VPATH = $(top_srcdir)/testsuite
+VPATH += $(top_srcdir)/testsuite
+nodist_mbop_SOURCES = mbop.c
 
 ## ------------ ##
 ## Test suite.  ##
 ## ------------ ##
 
 TESTSUITE_AT += \
+ append.at\
+ attr.at\
  attfixup.at\
+ body.at\
  count.at\
- uidfixup.at
+ delete.at\
+ envelope.at\
+ header.at\
+ uid.at\
+ uidfixup.at\
+ uidvalidity.at\
+ qget.at
 
 
 

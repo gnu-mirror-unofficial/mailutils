@@ -19,6 +19,17 @@ m4_include([testsuite.inc])
 AT_INIT
 m4_include([count.at])
 
+m4_include([attr.at])
+m4_include([envelope.at])
+m4_include([header.at])
+m4_include([body.at])
+m4_include([uid.at])
+m4_include([uidvalidity.at])
+m4_include([qget.at])
+
+m4_include([append.at])
+m4_include([delete.at])
+
 m4_include([attfixup.at])
 m4_include([uidfixup.at])
 

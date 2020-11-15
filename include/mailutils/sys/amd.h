@@ -67,7 +67,7 @@ struct _amd_message
 
 /* AMD capabilities */
 #define MU_AMD_STATUS    0x01  /* format keeps status flags */
-#define MU_AMD_IMAPBASE  0x02  /* format keeps IMAP base */
+
 #define MU_AMD_PROP      0x04  /* prop file existed */
 
 struct _amd_data

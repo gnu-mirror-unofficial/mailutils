@@ -1499,8 +1499,8 @@ maildir_message_cmp (struct _amd_message *a, struct _amd_message *b)
 
   if ((pa = strchr (name_a, 'M')) != 0 && (pb = strchr (name_b, 'M')) != 0)
     {
-      la = strtoul (name_a, &name_a, 10);
-      lb = strtoul (name_b, &name_b, 10);
+      la = strtoul (pa + 1, &name_a, 10);
+      lb = strtoul (pb + 1, &name_b, 10);
 
       if (la > lb)
 	return 1;
@@ -1510,8 +1510,8 @@ maildir_message_cmp (struct _amd_message *a, struct _amd_message *b)
 
   if ((pa = strchr (name_a, 'Q')) != 0 && (pb = strchr (name_b, 'Q')) != 0)
     {
-      la = strtoul (name_a, &name_a, 10);
-      lb = strtoul (name_b, &name_b, 10);
+      la = strtoul (pa + 1, &name_a, 10);
+      lb = strtoul (pb + 1, &name_b, 10);
 
       if (la > lb)
 	return 1;
