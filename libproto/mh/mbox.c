@@ -353,30 +353,19 @@ mh_size (mu_mailbox_t mailbox, mu_off_t *psize)
 static int
 mh_qfetch (struct _amd_data *amd, mu_message_qid_t qid)
 {
-  char *p;
+  char *p = (char *)qid;
   size_t num = 0;
   int attr_flags = 0;
   struct _mh_message *msg;
 
-  p = qid + strlen (qid) - 1;
-  if (!mu_isdigit (*p))
-    return EINVAL;
-  
-  for (p--; p >= qid && mu_isdigit (*p); p--)
-    ;
-
-  if (p == qid)
-    return EINVAL;
-
-  num = strtoul (p + 1, NULL, 10);
-  
   if (*p == ',')
     {
       attr_flags |= MU_ATTRIBUTE_DELETED;
-      p--;
+      p++;
     }
 
-  if (*p != '/')
+  num = strtoul (p, &p, 10);
+  if ((num == ULONG_MAX && errno == ERANGE) || *p != 0)
     return EINVAL;
   
   msg = calloc (1, sizeof (*msg));

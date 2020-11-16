@@ -24,4 +24,5 @@ libmu_mh_la_SOURCES = \
  mbox.c\
  profile.c
 
+SUBDIRS = . tests
 

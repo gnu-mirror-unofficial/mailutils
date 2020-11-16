@@ -1,0 +1,49 @@
+# GNU Mailutils -- a suite of utilities for electronic mail -*- autotest -*-
+# Copyright (C) 2020 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([delete])
+AT_CHECK([mbox2dir -m -p -v 10 -u inbox $spooldir/mbox1])
+AT_DATA([commands],
+[3
+set_deleted
+expunge
+# Message 4 becomes 3 after expunge. Re-select it.
+3
+uid
+headers
+])
+AT_CHECK([
+mbop -m inbox < commands
+],
+[0],
+[3 current message
+3 set_deleted: OK
+expunge: OK
+3 current message
+3 uid: 4
+3 headers: Organization:Mailutils-tests
+Received:from example.net (localhost [[127.0.0.1]]) by example.net with ESMTP id g6CLowb05126 for <gray@example.net>; Sat, 13 Jul 2002 00:50:58 +0300
+Message-Id:<200207122150.g6CLowb05126@example.net>
+To:Foo Bar <foobar@nonexistent.net>
+Subject:Nested MIME
+MIME-Version:1.0
+Content-Type:multipart/mixed; boundary="----- =_aaaaaaaaaa0"
+Content-ID:<5122.1026510654.1@example.net>
+Date:Sat, 13 Jul 2002 00:50:58 +0300
+From:Sergey Poznyakoff <gray@example.net>
+
+])
+AT_CLEANUP

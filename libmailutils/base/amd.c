@@ -2037,6 +2037,15 @@ amd_get_attr_flags (mu_attribute_t attr, int *pflags)
 
   if (mhm == NULL)
     return EINVAL;
+  if (!(mhm->amd->capabilities & MU_AMD_STATUS))
+    {
+      /* If AMD implementation doesn't handle status (attribute) bits, they
+	 must be retrieved from the Status: header.  To ensure that, the
+	 message must be scanned: */
+      int rc = amd_check_message (mhm);
+      if (rc)
+	return rc;
+    }
   if (pflags)
     *pflags = mhm->attr_flags;
   return 0;

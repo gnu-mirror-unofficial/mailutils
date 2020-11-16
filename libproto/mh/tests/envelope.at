@@ -1,0 +1,25 @@
+# GNU Mailutils -- a suite of utilities for electronic mail -*- autotest -*-
+# Copyright (C) 2020 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([envelope])
+AT_CHECK([mbox2dir -m inbox $spooldir/mbox1])
+AT_CHECK([mbop -m inbox 2 \; env_date \; env_sender],
+[0],
+[2 current message
+2 env_date: Fri Dec 28 20:18:08 2001
+2 env_sender: bar@dontmailme.org
+])
+AT_CLEANUP
