@@ -20,7 +20,7 @@ m4_pushdef([MH_KEYWORDS],[sortm])
 m4_pushdef([scancmd],[scan -format '%4(msg)%<(cur)+%| %> %02(mon{date})/%02(mday{date}) %24(friendly{from}) %{subject}'])
 
 MH_CHECK([sortm -textfield],[sortm00 sortm-textfield],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo "cur: 11" > Mail/teaparty/.mh_sequences
 sortm -text From -nodate +teaparty || exit $?
 scancmd
@@ -124,7 +124,7 @@ scancmd
 ])
 
 MH_CHECK([sortm -datefield],[sortm01 sortm-datefield],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo "cur: 11" > Mail/teaparty/.mh_sequences
 sortm -text From -nodate +teaparty || exit $?
 scancmd

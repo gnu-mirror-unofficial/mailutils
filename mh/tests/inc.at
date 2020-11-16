@@ -59,7 +59,7 @@ inc +new -file ./mbox1 | sed 's/ *$//'
 ])
 
 MH_CHECK([inc -changecur],[inc03 inc-changecur],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 MUT_MBCOPY([$abs_top_srcdir/testsuite/spool/mbox1])
 inc -changecur -file ./mbox1 | sed 's/ *$//'
 ],
@@ -72,7 +72,7 @@ inc -changecur -file ./mbox1 | sed 's/ *$//'
 ])
 
 MH_CHECK([inc -nochangecur],[inc04 inc-nochangecur],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 1" > Mail/inbox/.mh_sequences
 MUT_MBCOPY([$abs_top_srcdir/testsuite/spool/mbox1])
 inc -nochangecur -file ./mbox1 | sed 's/ *$//'
@@ -88,8 +88,14 @@ cur: 1
 ])
 
 MH_CHECK([sparse numbering],[inc05 inc-sparse],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
+AT_DATA([names],
+[1
+2
+3
+4
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCOPY([$abs_top_srcdir/testsuite/spool/mbox1])
 inc -changecur -file ./mbox1 | sed 's/ *$//'
 ],

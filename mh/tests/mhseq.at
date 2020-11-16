@@ -20,7 +20,7 @@ m4_pushdef([MH_KEYWORDS],[mhseq mh-sequences])
 dnl ---------------------------------------------------------------
 
 MH_CHECK([mhseq: existing message number],[mhseq00],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq 1
 ],
 [0],
@@ -28,7 +28,7 @@ mhseq 1
 ])
 
 MH_CHECK([mhseq: not existing message number],[mhseq01],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq 100
 ],
 [1],
@@ -38,7 +38,7 @@ dnl FIXME: See FIXME 3 in mhpath.at
 ])
 
 MH_CHECK([mhseq: contiguous message range],[mhseq02],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq 2-5
 ],
 [0],
@@ -49,7 +49,7 @@ mhseq 2-5
 ])
 
 MH_CHECK([mhseq: reversed contiguous message range],[mhseq03],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq 5-2
 ],
 [0],
@@ -60,7 +60,7 @@ mhseq 5-2
 ])
 
 MH_CHECK([mhseq: reversed non-contiguous message range],[mhseq04],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/3 Mail/inbox/4
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 5-2
@@ -71,7 +71,7 @@ mhseq 5-2
 ])
 
 MH_CHECK([mhseq: message range (left fixup)],[mhseq05],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1 Mail/inbox/2
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 1-5
@@ -83,7 +83,7 @@ mhseq 1-5
 ])
 
 MH_CHECK([mhseq: message range (right fixup)],[mhseq06],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/4 Mail/inbox/5
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 1-5
@@ -95,7 +95,7 @@ mhseq 1-5
 ])
 
 MH_CHECK([mhseq: message range (both fixups)],[mhseq07],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1 Mail/inbox/5
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 1-5
@@ -107,7 +107,7 @@ mhseq 1-5
 ])
 
 MH_CHECK([mhseq: non-existent message range (left)],[mhseq08],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1 Mail/inbox/2 Mail/inbox/3
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 1-2
@@ -118,7 +118,7 @@ mhseq 1-2
 ])
 
 MH_CHECK([mhseq: non-existent message range (right)],[mhseq09],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq 6-10
 ],
 [1],
@@ -127,7 +127,7 @@ mhseq 6-10
 ])
 
 MH_CHECK([mhseq: message set addition],[mhseq10],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 mhseq 5 8-10 15-20
 ],
 [0],
@@ -144,7 +144,7 @@ mhseq 5 8-10 15-20
 ])
 
 MH_CHECK([mhseq: message set optimization],[mhseq11],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 rm Mail/inbox/17 Mail/inbox/19
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 5 1-10 15-20
@@ -167,7 +167,7 @@ mhseq 5 1-10 15-20
 ])
 
 MH_CHECK([mhseq: counted range (positive)],[mhseq12],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 mhseq 10:4
 ],
 [0],
@@ -178,7 +178,7 @@ mhseq 10:4
 ])
 
 MH_CHECK([mhseq: non-contiguous counted range (positive)],[mhseq13],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 rm Mail/inbox/12 Mail/inbox/14
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 10:4
@@ -191,7 +191,7 @@ mhseq 10:4
 ])
 
 MH_CHECK([mhseq: counted range (positive, left fixup)],[mhseq14],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 rm Mail/inbox/1 Mail/inbox/2
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 1:3
@@ -203,7 +203,7 @@ mhseq 1:3
 ])
 
 MH_CHECK([mhseq: counted range (positive, right fixup)],[mhseq15],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq 2:10
 ],
 [0],
@@ -214,7 +214,7 @@ mhseq 2:10
 ])
 
 MH_CHECK([mhseq: invalid counted range (negative)],[mhseq16],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1 Mail/inbox/2
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 10:2
@@ -225,7 +225,7 @@ mhseq 10:2
 ])
 
 MH_CHECK([mhseq: counted range (negative)],[mhseq17],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 mhseq 10:-4
 ],
 [0],
@@ -236,7 +236,7 @@ mhseq 10:-4
 ])
 
 MH_CHECK([mhseq: non-contiguous counted range (negative)],[mhseq18],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 rm Mail/inbox/8 Mail/inbox/6
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 10:-4
@@ -249,7 +249,7 @@ mhseq 10:-4
 ])
 
 MH_CHECK([mhseq: counted range (negative, left fixup)],[mhseq19],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1 Mail/inbox/2
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 4:-30
@@ -260,7 +260,7 @@ mhseq 4:-30
 ])
 
 MH_CHECK([mhseq: counted range (negative, right fixup)],[mhseq20],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1 Mail/inbox/2
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 4:30
@@ -271,7 +271,7 @@ mhseq 4:30
 ])
 
 MH_CHECK([mhseq: invalid counted range (negative)],[mhseq21],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1 Mail/inbox/2
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 1:-30
@@ -282,7 +282,7 @@ mhseq 1:-30
 ])
 
 MH_CHECK([mhseq: cur],[mhseq22 cur],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq cur
@@ -292,7 +292,7 @@ mhseq cur
 ])
 
 MH_CHECK([mhseq: cur:n -- default direction],[mhseq23 cur:n],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq cur:2
@@ -303,7 +303,7 @@ mhseq cur:2
 ])
 
 MH_CHECK([mhseq: cur:n -- explicit dir (negative)],[mhseq24 cur:n cur:n-],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq cur:-2
@@ -314,7 +314,7 @@ mhseq cur:-2
 ])
 
 MH_CHECK([mhseq: cur:n -- explicit dir (positive)],[mhseq25 cur:n cur:n+],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq cur:+2
@@ -325,7 +325,7 @@ mhseq cur:+2
 ])
 
 MH_CHECK([mhseq: next],[mhseq26 next],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 rm Mail/inbox/4
 MUT_MBCHMOD(Mail/inbox, 700)
@@ -336,7 +336,7 @@ mhseq next
 ])
 
 MH_CHECK([mhseq: next:n -- default direction],[mhseq27 next:n],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq next:2
@@ -347,7 +347,7 @@ mhseq next:2
 ])
 
 MH_CHECK([mhseq: prev],[mhseq28 prev],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 rm Mail/inbox/2
 MUT_MBCHMOD(Mail/inbox, 700)
@@ -358,7 +358,7 @@ mhseq prev
 ])
 
 MH_CHECK([mhseq: prev:n -- default direction],[mhseq29 prev:n],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "cur: 3" > Mail/inbox/.mh_sequences
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq prev:2
@@ -369,7 +369,7 @@ mhseq prev:2
 ])
 
 MH_CHECK([mhseq: first],[mhseq30 first],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq first
@@ -379,7 +379,7 @@ mhseq first
 ])
 
 MH_CHECK([mhseq: first:n -- default direction],[mhseq31 first:n],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 rm Mail/inbox/1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq first:2
@@ -390,7 +390,7 @@ mhseq first:2
 ])
 
 MH_CHECK([mhseq: last],[mhseq32 last],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq last
 ],
 [0],
@@ -398,7 +398,7 @@ mhseq last
 ])
 
 MH_CHECK([mhseq: last:n -- default direction],[mhseq33 last:n],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhseq last:2
 ],
 [0],
@@ -408,10 +408,15 @@ mhseq last:2
 
 MH_CHECK([mhseq: sparse increasing message range (left fixup in the middle)],
 [mhseq34],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_CHECK([AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
+])
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 5-15
 ],
@@ -422,10 +427,14 @@ mhseq 5-15
 
 MH_CHECK([mhseq: sparse increasing message range (right fixup in the middle)],
 [mhseq35],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 8-17
 ],
@@ -436,10 +445,14 @@ mhseq 8-17
 
 MH_CHECK([mhseq: sparse increasing message range (both fixups in the middle)],
 [mhseq36],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 5-17
 ],
@@ -450,10 +463,14 @@ mhseq 5-17
 
 MH_CHECK([mhseq: sparse decreasing message range (left fixup in the middle)],
 [mhseq37],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 15-5
 ],
@@ -464,10 +481,14 @@ mhseq 15-5
 
 MH_CHECK([mhseq: sparse decreasing message range (right fixup in the middle)],
 [mhseq38],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 17-8
 ],
@@ -478,10 +499,14 @@ mhseq 17-8
 
 MH_CHECK([mhseq: sparse decreasing message range (both fixups in the middle)],
 [mhseq39],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 17-5
 ],
@@ -492,10 +517,14 @@ mhseq 17-5
 
 MH_CHECK([mhseq: sparse counted range (positive, fixup)],
 [mhseq40],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 3:2
 ],
@@ -506,10 +535,14 @@ mhseq 3:2
 
 MH_CHECK([mhseq: sparse counted range (negative, fixup)],
 [mhseq41],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-mv Mail/inbox/5 Mail/inbox/20
-mv Mail/inbox/4 Mail/inbox/15
-mv Mail/inbox/3 Mail/inbox/8
+AT_DATA([names],
+[1
+2
+8
+15
+20
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 MUT_MBCHMOD(Mail/inbox, 700)
 mhseq 17:-3
 ],

@@ -22,7 +22,7 @@ dnl 1. List mode
 dnl -------------------------------------------------------------------
 
 MH_CHECK([mhn -list],[mhn00 mhn-list],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhn +inbox -list all
 ],
 [0],
@@ -45,7 +45,7 @@ mhn +inbox -list all
 ])
 
 MH_CHECK([mhn -list -realsize],[mhn01 mhn-list-realsize],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhn +inbox -list -realsize all
 ],
 [0],
@@ -72,7 +72,7 @@ dnl 2. Store mode
 dnl -------------------------------------------------------------------
 
 MH_CHECK([mhn -store],[mhn02 mhn-store],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhn +inbox -store 4 || exit $?
 for file in 4.1.plain 4.2.1.octet-stream 4.2.2.1.octet-stream 4.2.2.2.octet-stream
 do
@@ -129,7 +129,7 @@ Be off, or I'll kick you down stairs!'
 ])
 
 MH_CHECK([mhn -store -auto],[mhn03 mhn-store-auto],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhn +inbox -store -auto 4 | cwdrepl || exit $?
 ],
 [0],
@@ -140,7 +140,7 @@ storing message 4 part 2.2.2 as file ./msg.24
 ])
 
 MH_CHECK([mhn -store -auto -part],[mhn04 mhn-store-auto-part],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mhn +inbox -store -auto -part 2.2.1 4 | cwdrepl || exit $?
 ],
 [0],
@@ -149,9 +149,93 @@ mhn +inbox -store -auto -part 2.2.1 4 | cwdrepl || exit $?
 
 MH_CHECK([mhn -store -auto (pathname safety)],[mhn05 mhn-store-auto-safety],[
 mkdir Mail/inbox
-sed 's|; *name="msg|; name="../msg|' \
-  $abs_top_srcdir/testsuite/mh/mbox1/4 > Mail/inbox/4
-MUT_MBCHMOD(Mail/inbox, 700)
+AT_DATA([Mail/inbox/4],
+[From gray@example.net Sat Jul 13 00:50:58 2002
+Organization: Mailutils-tests
+Received: from example.net (localhost [127.0.0.1])
+	by example.net with ESMTP id g6CLowb05126
+	for <gray@example.net>; Sat, 13 Jul 2002 00:50:58 +0300
+Message-Id: <200207122150.g6CLowb05126@example.net>
+To: Foo Bar <foobar@nonexistent.net>
+Subject: Nested MIME
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa0"
+Content-ID: <5122.1026510654.1@example.net>
+Date: Sat, 13 Jul 2002 00:50:58 +0300
+From: Sergey Poznyakoff <gray@example.net>
+
+------- =_aaaaaaaaaa0
+Content-Type: text/plain; name="../msg.21"; charset="us-ascii"
+Content-ID: <5122.1026510654.2@example.net>
+Content-Description: Father William Part I
+
+`You are old, Father William,' the young man said,
+`And your hair has become very white;
+And yet you incessantly stand on your head--
+Do you think, at your age, it is right?'
+
+`In my youth,' Father William replied to his son,
+`I feared it might injure the brain;
+But, now that I'm perfectly sure I have none,
+Why, I do it again and again.'
+
+
+------- =_aaaaaaaaaa0
+Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa1"
+Content-ID: <5122.1026510654.3@example.net>
+
+------- =_aaaaaaaaaa1
+Content-Type: application/octet-stream; name="../msg.22"
+Content-ID: <5122.1026510654.4@example.net>
+Content-Description: Father William Part II
+Content-Transfer-Encoding: base64
+
+YFlvdSBhcmUgb2xkLCcgc2FpZCB0aGUgeW91dGgsIGBhcyBJIG1lbnRpb25lZCBiZWZvcmUsCkFu
+ZCBoYXZlIGdyb3duIG1vc3QgdW5jb21tb25seSBmYXQ7CllldCB5b3UgdHVybmVkIGEgYmFjay1z
+b21lcnNhdWx0IGluIGF0IHRoZSBkb29yLS0KUHJheSwgd2hhdCBpcyB0aGUgcmVhc29uIG9mIHRo
+YXQ/JwoKYEluIG15IHlvdXRoLCcgc2FpZCB0aGUgc2FnZSwgYXMgaGUgc2hvb2sgaGlzIGdyZXkg
+bG9ja3MsCmBJIGtlcHQgYWxsIG15IGxpbWJzIHZlcnkgc3VwcGxlCkJ5IHRoZSB1c2Ugb2YgdGhp
+cyBvaW50bWVudC0tb25lIHNoaWxsaW5nIHRoZSBib3gtLQpBbGxvdyBtZSB0byBzZWxsIHlvdSBh
+IGNvdXBsZT8nCg==
+
+------- =_aaaaaaaaaa1
+Content-Type: multipart/mixed; boundary="----- =_aaaaaaaaaa2"
+Content-ID: <5122.1026510654.5@example.net>
+
+------- =_aaaaaaaaaa2
+Content-Type: application/octet-stream; name="../msg.23"
+Content-ID: <5122.1026510654.6@example.net>
+Content-Description: Father William Part III
+Content-Transfer-Encoding: base64
+
+YFlvdSBhcmUgb2xkLCcgc2FpZCB0aGUgeW91dGgsIGBhbmQgeW91ciBqYXdzIGFyZSB0b28gd2Vh
+awpGb3IgYW55dGhpbmcgdG91Z2hlciB0aGFuIHN1ZXQ7CllldCB5b3UgZmluaXNoZWQgdGhlIGdv
+b3NlLCB3aXRoIHRoZSBib25lcyBhbmQgdGhlIGJlYWstLQpQcmF5IGhvdyBkaWQgeW91IG1hbmFn
+ZSB0byBkbyBpdD8nCgpgSW4gbXkgeW91dGgsJyBzYWlkIGhpcyBmYXRoZXIsIGBJIHRvb2sgdG8g
+dGhlIGxhdywKQW5kIGFyZ3VlZCBlYWNoIGNhc2Ugd2l0aCBteSB3aWZlOwpBbmQgdGhlIG11c2N1
+bGFyIHN0cmVuZ3RoLCB3aGljaCBpdCBnYXZlIHRvIG15IGphdywKSGFzIGxhc3RlZCB0aGUgcmVz
+dCBvZiBteSBsaWZlLicK
+
+------- =_aaaaaaaaaa2
+Content-Type: application/octet-stream; name="../msg.24"
+Content-ID: <5122.1026510654.7@example.net>
+Content-Description: Father William Part IV
+Content-Transfer-Encoding: base64
+
+YFlvdSBhcmUgb2xkLCcgc2FpZCB0aGUgeW91dGgsIGBvbmUgd291bGQgaGFyZGx5IHN1cHBvc2UK
+VGhhdCB5b3VyIGV5ZSB3YXMgYXMgc3RlYWR5IGFzIGV2ZXI7CllldCB5b3UgYmFsYW5jZWQgYW4g
+ZWVsIG9uIHRoZSBlbmQgb2YgeW91ciBub3NlLS0KV2hhdCBtYWRlIHlvdSBzbyBhd2Z1bGx5IGNs
+ZXZlcj8nCgpgSSBoYXZlIGFuc3dlcmVkIHRocmVlIHF1ZXN0aW9ucywgYW5kIHRoYXQgaXMgZW5v
+dWdoLCcKU2FpZCBoaXMgZmF0aGVyOyBgZG9uJ3QgZ2l2ZSB5b3Vyc2VsZiBhaXJzIQpEbyB5b3Ug
+dGhpbmsgSSBjYW4gbGlzdGVuIGFsbCBkYXkgdG8gc3VjaCBzdHVmZj8KQmUgb2ZmLCBvciBJJ2xs
+IGtpY2sgeW91IGRvd24gc3RhaXJzIScK
+
+------- =_aaaaaaaaaa2--
+
+------- =_aaaaaaaaaa1--
+
+------- =_aaaaaaaaaa0--
+])
 mhn +inbox -store -auto -part 2.1 4 || echo $?
 echo == 4.2.1.octet-stream ==
 cat 4.2.1.octet-stream
@@ -171,9 +255,7 @@ Allow me to sell you a couple?'
 ])
 
 MH_CHECK([mhn-storage],[mhn06 mhn-store-auto],[
-mkdir Mail/inbox
-cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
-MUT_MBCHMOD(Mail/inbox, 700)
+mbox2dir -m Mail/inbox $spooldir/mbox1
 
 mkdir out
 echo "mhn-storage: $HOME/out" >> $MH
@@ -188,10 +270,7 @@ storing message 4 part 2.2.2 as file ./out/4.2.2.2.octet-stream
 ])
 
 MH_CHECK([mhn-store-: all escapes],[mhn07 mhn-store_escapes],[
-mkdir Mail/inbox
-cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
-MUT_MBCHMOD(Mail/inbox, 700)
-
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "mhn-store-application: %%-%m%P.%s-%p" >> $MH
 mhn +inbox -store 4 || exit $?
 find . -name '%*' | sort
@@ -207,11 +286,8 @@ storing message 4 part 2.2.2 as file %4.2.2.2.octet-stream-2.2.2
 ])
 
 MH_CHECK([mhn-store-: absolute path],[mhn08 mhn-store_abspath],[
-mkdir Mail/inbox
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mkdir out
-cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
-MUT_MBCHMOD(Mail/inbox, 700)
-
 echo "mhn-store-application: $HOME/out/%m%P.%s" >> $MH
 mhn +inbox -store 4 | cwdrepl || exit $?
 ],
@@ -223,11 +299,8 @@ storing message 4 part 2.2.2 as file ./out/4.2.2.2.octet-stream
 ])
 
 MH_CHECK([mhn-store-: +folder],[mhn09 mhn-store+folder],[
-mkdir Mail/inbox
+mbox2dir -m Mail/inbox $spooldir/mbox1
 mkdir Mail/app
-cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
-MUT_MBCHMOD(Mail, 700)
-
 echo "mhn-store-application: +app" >> $MH
 mhn +inbox -store 4 | cwdrepl || exit $?
 ],
@@ -239,9 +312,7 @@ storing message 4 part 2.2.2 to folder +app as message 3
 ])
 
 MH_CHECK([mhn-store-: +],[mhn10 mhn-store+],[
-mkdir Mail/inbox
-cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
-MUT_MBCHMOD(Mail/inbox, 700)
+mbox2dir -m Mail/inbox $spooldir/mbox1
 
 echo "Current-Folder: inbox" > Mail/context
 cat >> $MH <<EOT
@@ -250,13 +321,11 @@ EOT
 mhn +inbox -store -part 2.2.1 4 | cwdrepl || exit $?
 ],
 [0],
-[storing message 4 part 2.2.1 to folder inbox as message 5
+[storing message 4 part 2.2.1 to folder inbox as message 6
 ])
 
 MH_CHECK([mhn-store-: pipe],[mhn11 mhn-store-pipe],[
-mkdir Mail/inbox
-cp $abs_top_srcdir/testsuite/mh/mbox1/4 Mail/inbox
-MUT_MBCHMOD(Mail/inbox, 700)
+mbox2dir -m Mail/inbox $spooldir/mbox1
 
 echo "Current-Folder: inbox" > Mail/context
 echo "mhn-store-text: | $abs_top_srcdir/mh/tests/mhed -" >> $MH
@@ -285,8 +354,8 @@ dnl -------------------------------------------------------------------
 dnl 3. Show mode
 dnl -------------------------------------------------------------------
 MH_CHECK([mhn-show msg1],[mhn12 mhn-show-msg1],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
-mhn -show 1 | sed /^X-IMAPbase/d
+mbox2dir -m Mail/inbox $spooldir/mbox1
+mhn -show 1
 ],
 [0],
 [Date:    Fri, 28 Dec 2001 22:18:08 +0200
@@ -294,8 +363,7 @@ To:      Bar <bar@dontmailme.org>
 From:    Foo Bar <foobar@nonexistent.net>
 Subject: Jabberwocky
 
-X-Envelope-Date: Fri Dec 28 20:18:08 2001
-X-Envelope-Sender: foobar@nonexistent.net
+
 
 part       text/plain               937
 `Twas brillig, and the slithy toves
@@ -336,9 +404,8 @@ And the mome raths outgrabe.
 ])
 
 MH_CHECK([mhn-show type=tar],[mhn13 mhn-show-type=tar],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mime,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mime.mbox
 AT_DATA([filter.awk],[
-/^X-IMAPbase/ { next }
 /^-rw-r--r--/ { print $NF; next }
 { print }
 ])
@@ -351,8 +418,6 @@ From:    Sergey Poznyakoff <gray@example.net>
 Subject: Verses (type=tar)
 
 MIME-Version: 1.0
-X-Envelope-Date: Mon Nov 29 14:04:19 2010
-X-Envelope-Sender: gray@example.net
 
 part     1 text/plain               15
 Initial text.
@@ -364,8 +429,8 @@ Jabberwocky
 # FIXME: What about exit code?
 # FIXME: See comment about the error message, near mhn.c:792
 MH_CHECK([mhn-show unsupported type],[mhn14 mhn-show-unsupported-type],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mime,[Mail/inbox],[700])
-mhn -show 1 | sed /^X-IMAPbase/d
+mbox2dir -m Mail/inbox $spooldir/mime.mbox
+mhn -show 1
 ],
 [0],
 [Date:    Mon, 29 Nov 2010 14:00:03 +0200
@@ -374,8 +439,6 @@ From:    Sergey Poznyakoff <gray@example.net>
 Subject: Verses (x-tar)
 
 MIME-Version: 1.0
-X-Envelope-Date: Mon Nov 29 14:00:03 2010
-X-Envelope-Sender: gray@example.net
 
 part     1 text/plain               15
 Initial text.
@@ -386,10 +449,9 @@ Initial text.
 
 MH_CHECK([mhn-show- variable (with subtype)],
 [mhn15 mhn-show-with-subtype],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mime,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mime.mbox
 echo "mhn-show-application/x-tar: %ltar tvf '%F'" >> $MH
 AT_DATA([filter.awk],[
-/^X-IMAPbase/ { next }
 /^-rw-r--r--/ { print $NF; next }
 { sub(/  *$/,"");  print }
 ])
@@ -402,8 +464,6 @@ From:    Sergey Poznyakoff <gray@example.net>
 Subject: Verses (x-tar)
 
 MIME-Version: 1.0
-X-Envelope-Date: Mon Nov 29 14:00:03 2010
-X-Envelope-Sender: gray@example.net
 
 part     1 text/plain               15
 Initial text.
@@ -415,10 +475,9 @@ Jabberwocky
 
 MH_CHECK([mhn-show- variable (without subtype)],
 [mhn16 mhn-show-without-subtype],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mime,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mime.mbox
 echo "mhn-show-application: %ltar tvf '%F'" >> $MH
 AT_DATA([filter.awk],[
-/^X-IMAPbase/ { next }
 /^-rw-r--r--/ { print $NF; next }
 { sub(/  *$/,"");  print }
 ])
@@ -431,8 +490,6 @@ From:    Sergey Poznyakoff <gray@example.net>
 Subject: Verses (x-tar)
 
 MIME-Version: 1.0
-X-Envelope-Date: Mon Nov 29 14:00:03 2010
-X-Envelope-Sender: gray@example.net
 
 part     1 text/plain               15
 Initial text.
@@ -572,7 +629,7 @@ Cze=C5=9B=C4=87
 
 MH_CHECK([mhn-compose: forward],
 [mhn21 mhn-compose mhn-compose-05],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 AT_DATA([input],
 [From: gray@example.net
 Subject: Forwards
@@ -601,8 +658,6 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 20:18:08 2001
-X-Envelope-Sender: foobar@nonexistent.net
 
 `Twas brillig, and the slithy toves
 Did gyre and gimble in the wabe;
@@ -651,8 +706,6 @@ From: Bar <bar@dontmailme.org>
 To: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
 Subject: Re: Jabberwocky
-X-Envelope-Date: Fri Dec 28 20:18:08 2001
-X-Envelope-Sender: bar@dontmailme.org
 
 It seems very pretty, but it's *rather* hard to understand!'
 Somehow it seems to fill my head with ideas -- only I don't
@@ -674,8 +727,6 @@ Content-Type: multipart/mixed; boundary="BOUNDARY-2"
 Content-ID: 1
 Date: Sat, 13 Jul 2002 00:43:18 +0300
 From: Sergey Poznyakoff <gray@example.net>
-X-Envelope-Date: Fri Jul 12 21:43:18 2002
-X-Envelope-Sender: gray@example.net
 
 --BOUNDARY-2
 Content-Type: text/plain; name="empty"; charset="us-ascii"
@@ -698,7 +749,7 @@ Content-Description: Single line part
 
 MH_CHECK([mhn-compose: forward (current folder)],
 [mhn22 mhn-compose mhn-compose-06],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "Current-Folder: inbox" > Mail/context
 AT_DATA([input],
 [From: gray@example.net
@@ -728,8 +779,6 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 20:18:08 2001
-X-Envelope-Sender: foobar@nonexistent.net
 
 `Twas brillig, and the slithy toves
 Did gyre and gimble in the wabe;
@@ -778,8 +827,6 @@ From: Bar <bar@dontmailme.org>
 To: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112232808.fERKR9N16790@dontmailme.org>
 Subject: Re: Jabberwocky
-X-Envelope-Date: Fri Dec 28 20:18:08 2001
-X-Envelope-Sender: bar@dontmailme.org
 
 It seems very pretty, but it's *rather* hard to understand!'
 Somehow it seems to fill my head with ideas -- only I don't
@@ -801,8 +848,6 @@ Content-Type: multipart/mixed; boundary="BOUNDARY-2"
 Content-ID: 1
 Date: Sat, 13 Jul 2002 00:43:18 +0300
 From: Sergey Poznyakoff <gray@example.net>
-X-Envelope-Date: Fri Jul 12 21:43:18 2002
-X-Envelope-Sender: gray@example.net
 
 --BOUNDARY-2
 Content-Type: text/plain; name="empty"; charset="us-ascii"
@@ -825,7 +870,7 @@ Content-Description: Single line part
 
 MH_CHECK([mhn-compose: forward (single message)],
 [mhn23 mhn-compose mhn-compose-07],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 AT_DATA([input],
 [From: gray@example.net
 Subject: Forwards
@@ -851,8 +896,6 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 20:18:08 2001
-X-Envelope-Sender: foobar@nonexistent.net
 
 `Twas brillig, and the slithy toves
 Did gyre and gimble in the wabe;
@@ -929,7 +972,7 @@ Content-Description: GNU Mailutils distribution
 MH_CHECK([mhn-compose: multipart],
 [mhn25 mhn-compose mhn-compose-09],[
 
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail],[700])
+mbox2dir -m Mail/mbox1 $spooldir/mbox1
 
 AT_DATA([foo.tar],
 [Not a tarball, really
@@ -984,8 +1027,6 @@ From: Foo Bar <foobar@nonexistent.net>
 Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 To: Bar <bar@dontmailme.org>
 Subject: Jabberwocky
-X-Envelope-Date: Fri Dec 28 20:18:08 2001
-X-Envelope-Sender: foobar@nonexistent.net
  
 `Twas brillig, and the slithy toves
 Did gyre and gimble in the wabe;

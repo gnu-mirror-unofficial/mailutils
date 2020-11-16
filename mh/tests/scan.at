@@ -19,7 +19,7 @@ AT_BANNER(scan)
 m4_pushdef([MH_KEYWORDS],[scan])
 
 MH_CHECK([scan],[scan00],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "Current-Folder: inbox" > Mail/context
 scan | sed 's/ *$//'
 ],
@@ -32,7 +32,7 @@ scan | sed 's/ *$//'
 ])
 
 MH_CHECK([scan -folder],[scan01 scan-folder],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 scan +inbox | sed 's/ *$//'
 ],
 [0],
@@ -44,7 +44,7 @@ scan +inbox | sed 's/ *$//'
 ])
 
 MH_CHECK([scan -format],[scan02 scan-format],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail],[700])
+mbox2dir -m Mail/mbox1 $spooldir/mbox1
 scan +mbox1 -format '%4(msg) %{from} - %{to}'
 ],
 [0],
@@ -56,7 +56,7 @@ scan +mbox1 -format '%4(msg) %{from} - %{to}'
 ])
 
 MH_CHECK([scan -form],[scan03 scan-form],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail],[700])
+mbox2dir -m Mail/mbox1 $spooldir/mbox1
 echo '%4(msg) %(decode(friendly{from})) - %(decode(friendly{to}))' > formfile
 scan +mbox1 -form formfile
 ],
@@ -69,7 +69,7 @@ scan +mbox1 -form formfile
 ])
 
 MH_CHECK([scan -reverse],[scan04 scan-reverse],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail],[700])
+mbox2dir -m Mail/mbox1 $spooldir/mbox1
 scan +mbox1 -reverse | sed 's/ *$//'
 ],
 [0],
@@ -81,7 +81,7 @@ scan +mbox1 -reverse | sed 's/ *$//'
 ])
 
 MH_CHECK([Local mailbox],[scan05 local-mailbox],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "Local-Mailbox: gray@example.net" >> $MH
 scan | sed 's/ *$//'
 ],
@@ -94,7 +94,7 @@ scan | sed 's/ *$//'
 ])
 
 MH_CHECK([default format],[scan06 scan.default],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 scan -form $MHETCDIR/scan.default| sed 's/ *$//'
 ],
 [0],
@@ -106,7 +106,7 @@ scan -form $MHETCDIR/scan.default| sed 's/ *$//'
 ])
 
 MH_CHECK([mailx format],[scan07 scan.mailx],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 scan -form $MHETCDIR/scan.mailx| sed 's/ *$//'
 ],
 [0],
@@ -118,19 +118,19 @@ scan -form $MHETCDIR/scan.mailx| sed 's/ *$//'
 ])
 
 MH_CHECK([size format],[scan08 scan.size],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 scan -form $MHETCDIR/scan.size| sed 's/ *$//'
 ],
 [0],
-[   1  12/28  1354 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy
-   2  12/28   614 Bar                Re: Jabberwocky<<It seems very pretty, but
-   3  07/13  1647 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Content
-   4  07/13  3477 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Content
-   5  07/13   935 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Co
+[   1  12/28  1254 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy
+   2  12/28   534 Bar                Re: Jabberwocky<<It seems very pretty, but
+   3  07/13  1569 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Content
+   4  07/13  3399 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Content
+   5  07/13   857 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Co
 ])
 
 MH_CHECK([time format],[scan08 scan.time],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 scan -form $MHETCDIR/scan.time| sed 's/ *$//'
 ],
 [0],
@@ -142,7 +142,7 @@ scan -form $MHETCDIR/scan.time| sed 's/ *$//'
 ])
 
 MH_CHECK([timely format],[scan09 scan.timely],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox],[700])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 scan -form $MHETCDIR/scan.timely| sed 's/ *$//'
 ],
 [0],

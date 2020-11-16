@@ -18,7 +18,7 @@ AT_BANNER(pick)
 m4_pushdef([MH_KEYWORDS],[pick])
 
 MH_CHECK([pick -from],[pick00 pick-from],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -from dormouse
@@ -42,7 +42,7 @@ pick -from dormouse
 ])
 
 MH_CHECK([pick -from -sequence],[pick01 pick-from-sequence],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -from dormouse -sequence dormouse || exit $?
@@ -53,7 +53,7 @@ sed -n '/^dormouse:/{s/  */ /g;s/ $//;p;}' Mail/inbox/.mh_sequences
 ])
 
 MH_CHECK([pick -search],[pick02 pick-search],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -search 'Why not'
@@ -63,7 +63,7 @@ pick -search 'Why not'
 ])
 
 MH_CHECK([pick -search regex],[pick03 pick-search-regex],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -search 'I.*think'
@@ -75,7 +75,7 @@ pick -search 'I.*think'
 ])
 
 MH_CHECK([pick -subject -from],[pick04 pick-subject-from],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -subject Story -from Dormouse
@@ -96,7 +96,7 @@ pick -subject Story -from Dormouse
 ])
 
 MH_CHECK([pick -subject -and -from],[pick05 pick-subject-and-from],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -subject Story -and -from Dormouse
@@ -117,7 +117,7 @@ pick -subject Story -and -from Dormouse
 ])
 
 MH_CHECK([pick -subject -or -from],[pick06 pick-subject-or-from],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -subject Story -or -from Dormouse
@@ -159,7 +159,7 @@ pick -subject Story -or -from Dormouse
 ])
 
 MH_CHECK([pick: default precedence],[pick07 pick-subject-and-from-or-from],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -subject Story -and -from Dormouse -or -from Alice
@@ -218,7 +218,7 @@ pick -subject Story -and -from Dormouse -or -from Alice
 ])
 
 MH_CHECK([pick: explicit precedence (1)],[pick08 pick-expl-1],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -lbrace -subject Story -and -from Dormouse -rbrace -or -from Alice
@@ -277,7 +277,7 @@ pick -lbrace -subject Story -and -from Dormouse -rbrace -or -from Alice
 ])
 
 MH_CHECK([pick: explicit precedence (2)],[pick09 pick-expl-2],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 echo "cur: 1" > Mail/inbox/.mh_sequences
 pick -subject Story -and -lbrace -from Dormouse -or -from Alice -rbrace
@@ -311,7 +311,7 @@ pick -subject Story -and -lbrace -from Dormouse -or -from Alice -rbrace
 ])
 
 MH_CHECK([pick -before],[pick10 pick-before],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/teaparty.mbox
 echo "Current-Folder: inbox" > Mail/context
 pick -before 'Mon, 29 Jul 2002 21:00:03 +0000'
 ],
@@ -321,7 +321,10 @@ pick -before 'Mon, 29 Jul 2002 21:00:03 +0000'
 ])
 
 MH_CHECK([pick --Component pattern],[pick11 pick-component],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+mkdir Mail/inbox
+# FIXME: inc is used instead of mbox2dir to insert X-Envelope headers.
+cat $spooldir/teaparty.mbox > teaparty.mbox
+inc -file teaparty.mbox > /dev/null
 pick --X-Envelope-Sender hare
 ],
 [0],
@@ -343,7 +346,8 @@ pick --X-Envelope-Sender hare
 ])
 
 MH_CHECK([pick --Component pattern -or ...],[pick12 pick-component0or],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail/inbox])
+cat $spooldir/teaparty.mbox > teaparty.mbox
+inc -file teaparty.mbox > /dev/null
 pick --X-Envelope-Sender hare -or -to hare
 ],
 [0],

@@ -83,17 +83,28 @@ month, and doesn't tell what o'clock it is!
 
 BIFFTEST([maildir qid],[comsatd02],
 [
-MUT_MBCOPY($abs_top_srcdir/testsuite/maildir/teaparty, mailbox)
 test "$MAILDIR_SUPPORT" = yes || AT_SKIP_TEST
-comsatcmd maildir:$cwd/mailbox new/1284627340.M364969P3770Q81.Trurl
+AT_DATA([names],
+[cur/1284628225.M17468P3883Q0.Trurl:2,
+cur/1284628225.M19181P3883Q1.Trurl:2,S
+cur/1284628225.M20118P3883Q2.Trurl:2,
+cur/1284628225.M21284P3883Q3.Trurl:2,
+new/1284628225.M22502P3883Q4.Trurl
+])
+mbox2dir -i names -p -u mailbox $spooldir/mbox1
+comsatcmd maildir:$cwd/mailbox new/1284628225.M22502P3883Q4.Trurl
 sed '1s/^Mail to .*/Mail to test user/' output
 ],
 [Mail to test user
 ---
-From: Alice  <alice@wonder.land>
-Subject: Re: Story
+From: Sergey Poznyakoff <gray@example.net>
+Subject: Empty MIME Parts
 ---
-What did they draw?
+------- =_aaaaaaaaaa0
+Content-Type: text/plain; name="empty"; charset="us-ascii"
+Content-ID: <5082.1026510189.1@example.net>
+Content-Description: Empty part
+
 
 ---
 ])
@@ -101,8 +112,8 @@ What did they draw?
 
 BIFFTEST([MH qid],[comsatd03],
 [
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty, mailbox)
 test "$MH_SUPPORT" = yes || AT_SKIP_TEST
+mbox2dir -m -p -u mailbox $spooldir/teaparty.mbox
 comsatcmd mh:$cwd/mailbox 58
 sed '1s/^Mail to .*/Mail to test user/' output
 ],

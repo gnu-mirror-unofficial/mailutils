@@ -19,7 +19,7 @@ AT_BANNER(rmm)
 m4_pushdef([MH_KEYWORDS],[rmm])
 
 MH_CHECK([rmm msg],[rmm00 rmm-msg],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo 'Current-Folder: inbox' > Mail/context
 rmm 4 || exit $?
 find Mail/inbox -name '[[0-9]]' | sort
@@ -32,7 +32,7 @@ Mail/inbox/5
 ])
 
 MH_CHECK([rmm seq],[rmm01 rmm-seq],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo 'Current-Folder: inbox' > Mail/context
 cat > Mail/inbox/.mh_sequences <<EOT
 test: 2 3 5 
@@ -49,7 +49,7 @@ cur: 1
 ])
 
 MH_CHECK([rmm rmmproc],[rmm02 rmmproc],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "rmmproc: $abs_top_srcdir/mh/tests/movemsg" >> $MH
 rmm 1 4 || exit $?
 find Mail/inbox -name '[[0-9]]' | sort
@@ -64,7 +64,7 @@ Mail/removed/4
 ])
 
 MH_CHECK([rmm -- null rmmproc],[rmm03 null-rmmproc],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 echo "rmmproc:" >> $MH
 rmm 1 4 || exit $?
 find Mail/inbox -name '[[0-9]]' | sort

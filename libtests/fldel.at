@@ -37,7 +37,7 @@ test -f dir/mbox1
 FLDEL_TEST([mh],
 [test "$MH_SUPPORT" = yes || AT_SKIP_TEST
 mkdir dir
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1, dir/mbox1)
+mbox2dir -m -p -u dir/mbox1 $spooldir/mbox1
 fldel mh:dir mbox1 || exit 2
 test -d dir/mbox1
 ],
@@ -46,7 +46,7 @@ test -d dir/mbox1
 FLDEL_TEST([maildir],
 [test "$MAILDIR_SUPPORT" = yes || AT_SKIP_TEST
 mkdir dir
-MUT_MBCOPY($abs_top_srcdir/testsuite/maildir/mbox1, dir/mbox1)
+mbox2dir -p -u dir/mbox1 $spooldir/mbox1
 fldel maildir:dir mbox1 || exit 2
 test -d dir/mbox1
 ],
@@ -55,7 +55,7 @@ test -d dir/mbox1
 FLDEL_TEST([mh with subdirs],
 [test "$MH_SUPPORT" = yes || AT_SKIP_TEST
 mkdir dir
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1, dir/mbox1)
+mbox2dir -m -p -u dir/mbox1 $spooldir/mbox1
 mkdir dir/mbox1/subfolder
 fldel mh:dir mbox1 || exit 2
 test -d dir/mbox1 && find dir/mbox1
@@ -69,7 +69,7 @@ dir/mbox1/subfolder
 FLDEL_TEST([maildir with subdirs],
 [test "$MAILDIR_SUPPORT" = yes || AT_SKIP_TEST
 mkdir dir
-MUT_MBCOPY($abs_top_srcdir/testsuite/maildir/mbox1, dir/mbox1)
+mbox2dir -p -u dir/mbox1 $spooldir/mbox1
 mkdir dir/mbox1/subfolder
 fldel maildir:dir mbox1 || exit 2
 test -d dir/mbox1 && find dir/mbox1

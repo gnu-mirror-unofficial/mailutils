@@ -24,9 +24,7 @@ EXTRA_DIST += \
  etc\
  spool\
  folder\
- maildir\
- mbop.c\
- mh 
+ mbop.c
 
 ## ------------ ##
 ## package.m4.  ##

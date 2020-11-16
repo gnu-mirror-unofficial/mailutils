@@ -118,7 +118,7 @@ Sergey
 ])
 
 MH_CHECK([burst mime],[burst02 burst-mime],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 burst +inbox 3 || exit $?
 grep -v ^X-Envelope- Mail/inbox/6
 ],
@@ -139,7 +139,7 @@ With gently smiling jaws!
 ])
 
 MH_CHECK([burst mime recursive],[burst03 burst-mime-recursive],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 burst +inbox -recursive 4 || exit $?
 grep -v ^X-Envelope- Mail/inbox/6
 grep -v ^X-Envelope- Mail/inbox/7
@@ -200,7 +200,7 @@ IGtpY2sgeW91IGRvd24gc3RhaXJzIScK
 ])
 
 MH_CHECK([burst non-digest],[burst04 burst-non-digest],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
+mbox2dir -m Mail/inbox $spooldir/mbox1
 burst +inbox 1 || exit $?
 ],
 [0],

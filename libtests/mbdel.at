@@ -35,7 +35,7 @@ test -f mbox1
 
 MBDEL_TEST([mh],
 [test "$MH_SUPPORT" = yes || AT_SKIP_TEST
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1)
+mbox2dir -m -p -u mbox1 $spooldir/mbox1
 mbdel mh:mbox1 || exit 2
 test -d mbox1
 ],
@@ -43,7 +43,7 @@ test -d mbox1
 
 MBDEL_TEST([maildir],
 [test "$MAILDIR_SUPPORT" = yes || AT_SKIP_TEST
-MUT_MBCOPY($abs_top_srcdir/testsuite/maildir/mbox1)
+mbox2dir -p -u mbox1 $spooldir/mbox1
 mbdel maildir:mbox1 || exit 2
 test -d mbox1
 ],
@@ -51,7 +51,7 @@ test -d mbox1
 
 MBDEL_TEST([mh with subdirs],
 [test "$MH_SUPPORT" = yes || AT_SKIP_TEST
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1)
+mbox2dir -m -p -u mbox1 $spooldir/mbox1
 mkdir mbox1/subfolder
 mbdel mh:mbox1 || exit 2
 test -d mbox1 && find mbox1
@@ -64,7 +64,7 @@ mbox1/subfolder
 
 MBDEL_TEST([maildir with subdirs],
 [test "$MAILDIR_SUPPORT" = yes || AT_SKIP_TEST
-MUT_MBCOPY($abs_top_srcdir/testsuite/maildir/mbox1)
+mbox2dir -p -u mbox1 $spooldir/mbox1
 mkdir mbox1/subfolder
 mbdel maildir:mbox1 || exit 2
 test -d mbox1 && find mbox1

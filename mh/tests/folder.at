@@ -18,8 +18,8 @@ AT_BANNER(folder)
 m4_pushdef([MH_KEYWORDS],[folder])
 
 MH_CHECK([folder],[folder00 folder-print],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/inbox $spooldir/mbox1
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo 'Current-Folder: inbox' > Mail/context
 folder
 ],
@@ -28,8 +28,8 @@ folder
 ])
 
 MH_CHECK([folder -all],[folder01 folder-all],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/inbox $spooldir/mbox1
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo 'Current-Folder: inbox' > Mail/context
 folder -all
 ],
@@ -43,8 +43,8 @@ Folder                  # of messages     (  range  )  cur msg   (other files)
 ])
 
 MH_CHECK([folder -all -fast],[folder02 folder-all folder-all-fast],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/inbox $spooldir/mbox1
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo 'Current-Folder: inbox' > Mail/context
 folder -all -fast
 ],
@@ -54,8 +54,8 @@ teaparty
 ])
 
 MH_CHECK([folder +mbox],[folder03 folder+mbox],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/inbox $spooldir/mbox1
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo 'Current-Folder: inbox' > Mail/context
 folder +teaparty
 sed -n 's/^\(Current-Folder\): *\(.*\)/\1: \2/p' Mail/context
@@ -67,8 +67,8 @@ Current-Folder: teaparty
 ])
 
 MH_CHECK([folder +mbox msg],[folder04 folder+mbox_msg],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/inbox $spooldir/mbox1
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo 'Current-Folder: inbox' > Mail/context
 folder +teaparty 35
 sed -n 's/^\(Current-Folder\): *\(.*\)/context: \1: \2/p' Mail/context
@@ -82,11 +82,14 @@ mh_sequences: cur: 35
 ])
 
 MH_CHECK([folder -pack],[folder05 folder-pack],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-for i in 2 3 4 5
-do
-  mv Mail/inbox/$i Mail/inbox/${i}0
-done
+AT_DATA([names],
+[1
+20
+30
+40
+50
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 folder -pack || exit $?
 find Mail/inbox -not -name '.mu-prop' | sort
 ],
@@ -100,11 +103,14 @@ Mail/inbox/5
 ])
 
 MH_CHECK([folder -pack=N],[folder06 folder-pack=N],[
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-for i in 1 2 3 4 5
-do
-  mv Mail/inbox/$i Mail/inbox/${i}0
-done
+AT_DATA([names],
+[10
+20
+30
+40
+50
+])
+mbox2dir -m -i names Mail/inbox $spooldir/mbox1
 folder -pack=1 || exit $?
 find Mail/inbox -not -name '.mu-prop' | sort
 ],
@@ -119,8 +125,8 @@ Mail/inbox/5
 
 MH_CHECK([folder -push/-pop],[folder07 folder-push folder-pop folder-push-pop],
 [
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/mbox1,[Mail/inbox])
-MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty,[Mail])
+mbox2dir -m Mail/inbox $spooldir/mbox1
+mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 folder -push +teaparty
 folder -pop
 folder -push +teaparty
