@@ -96,7 +96,7 @@ _mh_next_seq (struct _amd_data *amd)
 /* Return current filename for the message.
    NOTE: Allocates memory. */
 static int
-_mh_cur_message_name (struct _amd_message *amsg, char **pname)
+_mh_cur_message_name (struct _amd_message *amsg, int abs, char **pname)
 {
   int status = 0;
   struct _mh_message *mhm = (struct _mh_message *) amsg;
@@ -107,12 +107,19 @@ _mh_cur_message_name (struct _amd_message *amsg, char **pname)
   status = mu_asprintf (&pnum, "%lu", (unsigned long) mhm->seq_number);
   if (status)
     return status;
-  len = strlen (amsg->amd->name) + 1 + strlen (pnum) + 1;
+  len = strlen (pnum) + 1;
+  if (abs)
+    len += strlen (amsg->amd->name) + 1;
   filename = malloc (len);
   if (filename)
     {
-      strcpy (filename, amsg->amd->name);
-      strcat (filename, "/");
+      if (abs)
+	{
+	  strcpy (filename, amsg->amd->name);
+	  strcat (filename, "/");
+	}
+      else
+	filename[0] = 0;
       strcat (filename, pnum);
       *pname = filename;
     }
@@ -408,7 +415,7 @@ _mh_msg_delete (struct _amd_data *amd, struct _amd_message *amm)
   if (!proc)
     return ENOSYS;
 
-  rc = amd->cur_msg_file_name (amm, &name);
+  rc = amd->cur_msg_file_name (amm, 1, &name);
   if (rc)
     return rc;
   

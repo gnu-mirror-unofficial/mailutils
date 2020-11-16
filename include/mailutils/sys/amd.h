@@ -78,7 +78,7 @@ struct _amd_data
   int (*msg_finish_delivery) (struct _amd_data *, struct _amd_message *,
 			      const mu_message_t);
   void (*msg_free) (struct _amd_message *);
-  int (*cur_msg_file_name) (struct _amd_message *, char **);	
+  int (*cur_msg_file_name) (struct _amd_message *, int, char **);	
   int (*new_msg_file_name) (struct _amd_message *, int, int, char **);
   int (*scan0)     (mu_mailbox_t mailbox, size_t msgno, size_t *pcount,
 		    int do_notify);

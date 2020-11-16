@@ -542,7 +542,7 @@ amd_message_qid (mu_message_t msg, mu_message_qid_t *pqid)
 {
   struct _amd_message *mhm = mu_message_get_owner (msg);
   
-  return mhm->amd->cur_msg_file_name (mhm, pqid);
+  return mhm->amd->cur_msg_file_name (mhm, 0, pqid);
 }
 
 static void
@@ -810,7 +810,7 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
     {
       /* Unlink the original file */
       char *old_name;
-      status = amd->cur_msg_file_name (mhm, &old_name);
+      status = amd->cur_msg_file_name (mhm, 1, &old_name);
       free (msg_name);
       if (status == 0 && unlink (old_name))
 	status = errno;
@@ -946,7 +946,7 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
   free (buf);
   fclose (fp);
 
-  status = amd->cur_msg_file_name (mhm, &old_name);
+  status = amd->cur_msg_file_name (mhm, 1, &old_name);
   if (status == 0)
     {
       if (rename (name, msg_name))
@@ -1053,7 +1053,7 @@ amd_append_message (mu_mailbox_t mailbox, mu_message_t msg)
   if (status == 0 && mailbox->observable)
     {
       char *qid;
-      if (amd->cur_msg_file_name (mhm, &qid) == 0)
+      if (amd->cur_msg_file_name (mhm, 0, &qid) == 0)
 	{
 	  mu_observable_notify (mailbox->observable, 
 	                        MU_EVT_MAILBOX_MESSAGE_APPEND,
@@ -1339,7 +1339,7 @@ amd_expunge (mu_mailbox_t mailbox)
 	      char *old_name;
 	      char *new_name;
 
-	      rc = amd->cur_msg_file_name (mhm, &old_name);
+	      rc = amd->cur_msg_file_name (mhm, 1, &old_name);
 	      if (rc)
 		return rc;
 	      rc = amd->new_msg_file_name (mhm, mhm->attr_flags, 1,
@@ -1613,7 +1613,7 @@ amd_scan_message (struct _amd_message *mhm)
   int amd_capa = amd->capabilities;
   
   /* Check if the message was modified after the last scan */
-  status = mhm->amd->cur_msg_file_name (mhm, &msg_name);
+  status = mhm->amd->cur_msg_file_name (mhm, 1, &msg_name);
   if (status)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
@@ -1811,7 +1811,7 @@ amd_message_stream_open (struct _amd_message *mhm)
   int status;
   int flags = 0;
 
-  status = amd->cur_msg_file_name (mhm, &filename);
+  status = amd->cur_msg_file_name (mhm, 1, &filename);
   if (status)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,

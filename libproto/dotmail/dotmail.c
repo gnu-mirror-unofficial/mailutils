@@ -937,20 +937,23 @@ dotmail_append_message (mu_mailbox_t mailbox, mu_message_t msg)
   rc = dotmail_refresh (mailbox);
   if (rc)
     return rc;
-  if (mailbox->locker
-      && (rc = mu_locker_lock (mailbox->locker)) != 0)
+  
+  mu_monitor_wrlock (mailbox->monitor);
+  if (mailbox->locker && (rc = mu_locker_lock (mailbox->locker)) != 0)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		("%s(%s):%s: %s",
 		 __func__, dmp->name, "mu_locker_lock",
 		 mu_strerror (rc)));
-      return rc;
     }
+  else
+    {
+      rc = mailbox_append_message (mailbox, msg);
 
-  rc = mailbox_append_message (mailbox, msg);
-
-  if (mailbox->locker)
-    mu_locker_unlock (mailbox->locker);
+      if (mailbox->locker)
+	mu_locker_unlock (mailbox->locker);
+    }
+  mu_monitor_unlock (mailbox->monitor);
   return rc;
 }
 

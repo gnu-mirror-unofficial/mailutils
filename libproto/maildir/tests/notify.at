@@ -1,5 +1,5 @@
 # GNU Mailutils -- a suite of utilities for electronic mail
-# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+# Copyright (C) 2020 Free Software Foundation, Inc.
 #
 # This library is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -14,28 +14,28 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_include([testsuite.inc])
+AT_SETUP([append notification])
+AT_CHECK([mbox2dir -p -v 10 -u inbox $spooldir/mbox1])
+AT_DATA([msg],
+[Received: (from alice@wonder.land)
+	by wonder.land id 3304
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+Date: Mon, 29 Jul 2002 22:00:04 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3304@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
 
-AT_INIT
-m4_include([autodetect.at])
+Then it wasn't very civil of you to offer it
+])
+AT_CHECK([
+mbop -m inbox --notify append msg
+],
+[0],
+[append: OK
+],
+[mbop: new message: Alice  <alice@wonder.land> Re: Invitation
+])
+AT_CLEANUP
 
-m4_include([count.at])
-
-m4_include([attr.at])
-m4_include([envelope.at])
-m4_include([header.at])
-m4_include([body.at])
-m4_include([uid.at])
-m4_include([uidvalidity.at])
-m4_include([qget.at])
-
-m4_include([append.at])
-m4_include([notify.at])
-m4_include([delete.at])
-
-m4_include([attfixup.at])
-m4_include([uidfixup.at])
-
-# Local Variables:
-# mode: autotest
-# End:

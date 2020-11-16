@@ -1266,14 +1266,21 @@ maildir_uniq_create (struct _amd_data *amd, int fd)
  * AMD interface functions.
  */
 static int
-maildir_cur_message_name (struct _amd_message *amsg, char **pname)
+maildir_cur_message_name (struct _amd_message *amsg, int abs, char **pname)
 {
   struct _maildir_message *msg = (struct _maildir_message *) amsg;
   struct string_buffer sb = STRING_BUFFER_INITIALIZER;
   int rc;
 
-  if ((rc = string_buffer_appendz (&sb, amsg->amd->name)) == 0 &&
-      (rc = string_buffer_append (&sb, "/", 1)) == 0 &&
+  if (abs)
+    {
+      if ((rc = string_buffer_appendz (&sb, amsg->amd->name)) == 0)
+	rc = string_buffer_append (&sb, "/", 1);
+    }
+  else
+    rc = 0;
+
+  if (rc == 0 &&
       (rc = string_buffer_appendz (&sb, subdir_name[msg->subdir])) == 0 &&
       (rc = string_buffer_append (&sb, "/", 1)) == 0 &&
       (rc = string_buffer_appendz (&sb, msg->file_name)) == 0 &&
@@ -1621,7 +1628,7 @@ maildir_chattr_msg (struct _amd_message *amsg, int expunge)
   int old_subdir;
   char *cur_name, *new_name;
 
-  rc = maildir_cur_message_name (amsg, &cur_name);
+  rc = maildir_cur_message_name (amsg, 1, &cur_name);
   if (rc)
     return rc;
 

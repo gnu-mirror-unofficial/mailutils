@@ -51,7 +51,8 @@ TESTSUITE_AT += \
  qget.at\
  append.at\
  delete.at\
- setattr.at
+ setattr.at\
+ notify.at
 
 
 

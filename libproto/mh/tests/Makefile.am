@@ -46,6 +46,7 @@ TESTSUITE_AT += \
  delete.at\
  envelope.at\
  header.at\
+ notify.at\
  qget.at\
  uid.at\
  uidvalidity.at

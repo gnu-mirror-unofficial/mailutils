@@ -103,7 +103,7 @@ BIFFTEST([MH qid],[comsatd03],
 [
 MUT_MBCOPY($abs_top_srcdir/testsuite/mh/teaparty, mailbox)
 test "$MH_SUPPORT" = yes || AT_SKIP_TEST
-comsatcmd mh:$cwd/mailbox teaparty/58
+comsatcmd mh:$cwd/mailbox 58
 sed '1s/^Mail to .*/Mail to test user/' output
 ],
 [Mail to test user

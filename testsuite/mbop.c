@@ -466,13 +466,55 @@ struct mu_tesh_command commands[] = {
   { NULL }
 };
 
+static int
+test_notify (mu_observer_t obs, size_t type, void *data, void *action_data)
+{
+  struct interp_env *env = mu_observer_get_owner (obs);
+  mu_mailbox_t mbx;
+  mu_message_qid_t qid = data;
+  int rc;
+  mu_message_t msg;
+  mu_header_t hdr;
+  char const *from = "(NONE)", *subj = "(NONE)";
 
+  MU_ASSERT (mu_mailbox_create_default (&mbx, env->mbxname));
+  MU_ASSERT (mu_mailbox_open (mbx, MU_STREAM_READ|MU_STREAM_QACCESS));
+  
+  rc = mu_mailbox_quick_get_message (mbx, qid, &msg);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_quick_get_message",
+		       NULL, rc);
+      goto err;
+    }
+  
+  rc = mu_message_get_header (msg, &hdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header",
+		       NULL, rc);
+      goto err;
+    }
+  
+  mu_header_sget_value (hdr, MU_HEADER_FROM, &from);
+  mu_header_sget_value (hdr, MU_HEADER_SUBJECT, &subj);
+  mu_stream_printf (mu_strerr, "new message: %s %s\n", from, subj);
+
+ err:
+  mu_mailbox_close (mbx);
+  mu_mailbox_destroy (&mbx);
+  
+  return 0;
+}
+
+
 int
 main (int argc, char **argv)
 {
   struct interp_env env = { NULL, NULL, NULL, 0 };
   int debug_option = 0;
   int detect_option = 0;
+  int notify_option = 0;
   struct mu_option options[] = {
     { "debug", 'd', NULL, MU_OPTION_DEFAULT,
       "enable debugging",
@@ -483,6 +525,9 @@ main (int argc, char **argv)
     { "detect", 'D', NULL, MU_OPTION_DEFAULT,
       "detect mailbox format",
       mu_c_incr, &detect_option },
+    { "notify", 'N', NULL, MU_OPTION_DEFAULT,
+      "test notification code",
+      mu_c_incr, &notify_option },
     MU_OPTION_END
   };
 
@@ -519,10 +564,22 @@ main (int argc, char **argv)
       mu_url_destroy (&url);
       exit (n & MU_FOLDER_ATTRIBUTE_FILE ? 0 : 1);
     }
-  
+
   MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
   MU_ASSERT (mu_mailbox_open (env.mbx, MU_STREAM_RDWR));
 
+  if (notify_option)
+    {
+      mu_observer_t observer;
+      mu_observable_t observable;
+
+      mu_observer_create (&observer, &env);
+      mu_observer_set_action (observer, test_notify, &env);
+      mu_mailbox_get_observable (env.mbx, &observable);
+      mu_observable_attach (observable, MU_EVT_MAILBOX_MESSAGE_APPEND, 
+			    observer);
+    }
+  
   mu_tesh_read_and_eval (argc, argv, commands, &env);
   mu_mailbox_close (env.mbx);
   mu_mailbox_destroy (&env.mbx);
