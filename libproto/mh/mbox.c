@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <dirent.h>
+#include <limits.h>
 
 #ifdef WITH_PTHREAD
 # ifdef HAVE_PTHREAD_H

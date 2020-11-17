@@ -128,14 +128,19 @@ typedef struct name_input
   int type;
   union
   {
-    FILE *file;
-    struct
+    struct             /* Structure for INPUT_FILE */
     {
-      int argc;
-      char **argv;
-      int idx;
+      FILE *file;      /* Input file */
+      char *bufptr;    /* Input buffer */
+      size_t bufsize;  /* Buffer size */
     };
-    unsigned long uid;
+    struct             /* Structure for INPUT_ARGV */
+    {
+      int argc;        /* Number of arguments */
+      char **argv;     /* Argument vector */
+      int idx;         /* Index of the next argument in argv */
+    };
+    unsigned long uid; /* Last assigned UID - for INPUT_GENERATE */
   };
 } NAME_INPUT;
 
@@ -284,10 +289,55 @@ next_name_from_argv (NAME_INPUT *input)
 static char *
 next_name_from_file (NAME_INPUT *input)
 {
-  char *result;
-  if (fscanf (input->file, "%ms\n", &result) != 1)
-    return NULL;
-  return result;
+  ssize_t off = 0;
+  do
+    {
+      if (off + 1 >= input->bufsize)
+	{
+	  size_t size;
+	  char *buf;
+	  if (input->bufsize == 0)
+	    {
+	      size = 64;
+	    }
+	  else
+	    {
+	      if ((size_t) -1 / 3 * 2 <= size)
+		{
+		  fprintf (stderr, "%s: out of memory\n", progname);
+		  exit (EX_OSERR);
+		}
+	      size += (size + 1) / 2;
+	    }
+	  buf = realloc (input->bufptr, size);
+	  if (!buf)
+	    {
+	      fprintf (stderr, "%s: out of memory\n", progname);
+	      exit (EX_OSERR);
+	    }
+	  input->bufptr = buf;
+	  input->bufsize = size;
+	}
+      if (!fgets(input->bufptr + off, input->bufsize - off, input->file))
+	{
+	  if (feof (input->file))
+	    {
+	      if (off == 0)
+		return NULL;
+	      break;
+	    }
+	  else
+	    {
+	      fprintf (stderr, "%s: read error: %s\n",
+		       progname, strerror (errno));
+	      exit (EX_OSERR);
+	    }	      
+        }
+      off += strlen(input->bufptr + off);
+    }
+  while (input->bufptr[off - 1] != '\n');
+  input->bufptr[--off] = 0;
+  return input->bufptr;
 }
 
 static char *
@@ -605,6 +655,8 @@ main (int argc, char **argv)
 	      exit (EX_OSERR);
 	    }
 	  input.type = INPUT_FILE;
+	  input.bufptr = NULL;
+	  input.bufsize = 0;
 	  break;
 
 	default:
@@ -671,7 +723,6 @@ main (int argc, char **argv)
       skip_line (fp);
       if (store_file (fd, name, fp))
 	break;
-      free (name);
     }
   if (input.type != INPUT_GENERATE && (name = next_name (&input)) != NULL)
     {
