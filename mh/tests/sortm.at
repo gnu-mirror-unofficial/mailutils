@@ -23,10 +23,12 @@ MH_CHECK([sortm -textfield],[sortm00 sortm-textfield],[
 mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo "cur: 11" > Mail/teaparty/.mh_sequences
 sortm -text From -nodate +teaparty || exit $?
+sed -e 's/ *//' Mail/teaparty/.mu-prop | grep -v '^uid-validity:10$' | grep uid-validity >/dev/null && echo OK
 scancmd
 ],
 [0],
-[   1  07/29 Alice                    Re: Invitation
+[OK
+   1  07/29 Alice                    Re: Invitation
    2  07/29 Alice                    Re: Invitation
    3  07/29 Alice                    Re: Invitation
    4  07/29 Alice                    Re: Personal remark
@@ -127,12 +129,15 @@ MH_CHECK([sortm -datefield],[sortm01 sortm-datefield],[
 mbox2dir -m Mail/teaparty $spooldir/teaparty.mbox
 echo "cur: 11" > Mail/teaparty/.mh_sequences
 sortm -text From -nodate +teaparty || exit $?
+sed -e 's/ *//' Mail/teaparty/.mu-prop | grep -v '^uid-validity:10$' | grep uid-validity >/dev/null && echo OK
 scancmd
 sortm
+sed -e 's/ *//' Mail/teaparty/.mu-prop | grep -v '^uid-validity:10$' | grep uid-validity >/dev/null && echo OK
 scancmd
 ],
 [0],
-[   1  07/29 Alice                    Re: Invitation
+[OK
+   1  07/29 Alice                    Re: Invitation
    2  07/29 Alice                    Re: Invitation
    3  07/29 Alice                    Re: Invitation
    4  07/29 Alice                    Re: Personal remark
@@ -227,6 +232,7 @@ scancmd
   93  07/29 March Hare               Request for a story (was Re: A guess)
   94  07/29 March Hare               Re: Request for a story
   95  07/29 March Hare               Remark
+OK  
    1  07/29 March Hare               Invitation
    2  07/29 Alice                    Re: Invitation
    3  07/29 March Hare               Re: Invitation

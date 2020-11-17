@@ -783,7 +783,7 @@ mbox_message_unseen (mu_mailbox_t mailbox, size_t *pmsgno)
 }
 
 static int
-mbox_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
+mbox_get_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
 {
   mbox_data_t mud = mailbox->data;
   int status = mbox_messages_count (mailbox, NULL);
@@ -798,6 +798,24 @@ mbox_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
     }
   if (puidvalidity)
     *puidvalidity = mud->uidvalidity;
+  return 0;
+}
+
+static int
+mbox_set_uidvalidity (mu_mailbox_t mailbox, unsigned long uidvalidity)
+{
+  mbox_data_t mud = mailbox->data;
+  int status = mbox_messages_count (mailbox, NULL);
+  if (status != 0)
+    return status;
+  /* If we did not start a scanning yet do it now.  */
+  if (mud->messages_count == 0)
+    {
+      status = mbox_scan0 (mailbox, 1, NULL, 0);
+      if (status != 0)
+	return status;
+    }
+  mud->uidvalidity = uidvalidity;
   return 0;
 }
 
@@ -1538,7 +1556,8 @@ _mailbox_mbox_init (mu_mailbox_t mailbox)
   mailbox->_message_unseen = mbox_message_unseen;
   mailbox->_expunge = mbox_expunge;
   mailbox->_sync = mbox_sync;
-  mailbox->_uidvalidity = mbox_uidvalidity;
+  mailbox->_get_uidvalidity = mbox_get_uidvalidity;
+  mailbox->_set_uidvalidity = mbox_set_uidvalidity;
   mailbox->_uidnext = mbox_uidnext;
   mailbox->_quick_get_message = mbox_quick_get_message;
 

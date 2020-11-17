@@ -635,8 +635,15 @@ mu_mailbox_get_size (mu_mailbox_t mbox, mu_off_t *psize)
 int
 mu_mailbox_uidvalidity (mu_mailbox_t mbox, unsigned long *pvalid)
 {
-  _MBOX_CHECK_Q (mbox, _uidvalidity);
-  return mbox->_uidvalidity (mbox, pvalid);
+  _MBOX_CHECK_Q (mbox, _get_uidvalidity);
+  return mbox->_get_uidvalidity (mbox, pvalid);
+}
+
+int
+mu_mailbox_uidvalidity_reset (mu_mailbox_t mbox)
+{
+  _MBOX_CHECK_Q (mbox, _set_uidvalidity);
+  return mbox->_set_uidvalidity (mbox, time (NULL));
 }
 
 int

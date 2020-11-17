@@ -486,7 +486,7 @@ sighandler (int sig)
 }
 
 void
-sort ()
+sort (void)
 {
   size_t *oldlist, i;
   oldlist = mu_alloc (msgcount * sizeof (*oldlist));
@@ -557,6 +557,7 @@ sort ()
     }
   if (action == ACTION_REORDER)
     {
+      mu_mailbox_uidvalidity_reset (mbox);
       mu_mailbox_close (mbox);
       mu_mailbox_open (mbox, MU_STREAM_RDWR);
       mh_mailbox_set_cur (mbox, current_num);

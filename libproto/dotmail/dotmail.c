@@ -758,12 +758,22 @@ mu_dotmail_mailbox_uid_setup (struct mu_dotmail_mailbox *dmp)
 }
 
 static int
-dotmail_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
+dotmail_get_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
 {
   struct mu_dotmail_mailbox *dmp = mailbox->data;
   int rc = mu_dotmail_mailbox_uid_setup (dmp);
   if (rc == 0)
     *puidvalidity = dmp->uidvalidity;
+  return rc;
+}
+
+static int
+dotmail_set_uidvalidity (mu_mailbox_t mailbox, unsigned long uidvalidity)
+{
+  struct mu_dotmail_mailbox *dmp = mailbox->data;
+  int rc = mu_dotmail_mailbox_uid_setup (dmp);
+  if (rc == 0)
+    dmp->uidvalidity = uidvalidity;
   return rc;
 }
 
@@ -1448,7 +1458,8 @@ mu_dotmail_mailbox_init (mu_mailbox_t mailbox)
   mailbox->_expunge = dotmail_expunge;
   mailbox->_sync = dotmail_sync;
 
-  mailbox->_uidvalidity = dotmail_uidvalidity;
+  mailbox->_get_uidvalidity = dotmail_get_uidvalidity;
+  mailbox->_set_uidvalidity = dotmail_set_uidvalidity;
   mailbox->_uidnext = dotmail_uidnext;
   mailbox->_get_size = dotmail_get_size;
   mailbox->_get_atime = dotmail_get_atime;

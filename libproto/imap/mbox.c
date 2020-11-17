@@ -1416,7 +1416,7 @@ _mu_imap_mailbox_init (mu_mailbox_t mailbox)
   mailbox->_messages_count = _imap_messages_count;
   mailbox->_messages_recent = _imap_messages_recent;
   mailbox->_message_unseen = _imap_message_unseen;
-  mailbox->_uidvalidity = _imap_uidvalidity;
+  mailbox->_get_uidvalidity = _imap_uidvalidity;
   mailbox->_uidnext = _imap_uidnext;
 
   mailbox->_scan = _imap_mbx_scan;

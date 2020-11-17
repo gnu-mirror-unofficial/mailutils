@@ -74,7 +74,8 @@ struct _mu_mailbox
   int  (*_message_unseen)  (mu_mailbox_t, size_t *);
   int  (*_expunge)         (mu_mailbox_t);
   int  (*_sync)            (mu_mailbox_t);
-  int  (*_uidvalidity)     (mu_mailbox_t, unsigned long *);
+  int  (*_get_uidvalidity) (mu_mailbox_t, unsigned long *);
+  int  (*_set_uidvalidity) (mu_mailbox_t, unsigned long);
   int  (*_uidnext)         (mu_mailbox_t, size_t *);
   int  (*_get_property)    (mu_mailbox_t, mu_property_t *);
 

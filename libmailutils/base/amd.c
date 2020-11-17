@@ -88,7 +88,8 @@ static int amd_message_unseen (mu_mailbox_t, size_t *);
 static int amd_expunge (mu_mailbox_t);
 static int amd_sync (mu_mailbox_t);
 static int amd_uidnext (mu_mailbox_t mailbox, size_t *puidnext);
-static int amd_uidvalidity (mu_mailbox_t, unsigned long *);
+static int amd_get_uidvalidity (mu_mailbox_t, unsigned long *);
+static int amd_set_uidvalidity (mu_mailbox_t, unsigned long);
 static int amd_scan (mu_mailbox_t, size_t, size_t *);
 static int amd_is_updated (mu_mailbox_t);
 static int amd_get_size (mu_mailbox_t, mu_off_t *);
@@ -418,7 +419,8 @@ amd_init_mailbox (mu_mailbox_t mailbox, size_t amd_size,
   mailbox->_message_unseen = amd_message_unseen;
   mailbox->_expunge = amd_expunge;
   mailbox->_sync = amd_sync;
-  mailbox->_uidvalidity = amd_uidvalidity;
+  mailbox->_get_uidvalidity = amd_get_uidvalidity;
+  mailbox->_set_uidvalidity = amd_set_uidvalidity;
   mailbox->_uidnext = amd_uidnext;
 
   mailbox->_scan = amd_scan;
@@ -1470,7 +1472,7 @@ amd_sync (mu_mailbox_t mailbox)
 }
 
 static int
-amd_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
+amd_get_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
 {
   struct _amd_data *amd = mailbox->data;
   int status = amd_messages_count (mailbox, NULL);
@@ -1485,6 +1487,23 @@ amd_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
     }
 
   return _amd_prop_fetch_ulong (amd, _MU_AMD_PROP_UIDVALIDITY, puidvalidity);
+}
+
+static int
+amd_set_uidvalidity (mu_mailbox_t mailbox, unsigned long uidvalidity)
+{
+  struct _amd_data *amd = mailbox->data;
+  int status = amd_messages_count (mailbox, NULL);
+  if (status != 0)
+    return status;
+  /* If we did not start scanning yet do it now.  */
+  if (amd->msg_count == 0)
+    {
+      status = _amd_scan0 (amd, 1, NULL, 0);
+      if (status != 0)
+	return status;
+    }
+  return _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY, uidvalidity);
 }
 
 static int
