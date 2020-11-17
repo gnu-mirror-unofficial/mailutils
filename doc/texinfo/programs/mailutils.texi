@@ -26,6 +26,7 @@ with Mailutils.
 * mailutils imap::                IMAP4 client shell.
 * mailutils send::                Send a message.
 * mailutils smtp::                Run a SMTP session.
+* mailutils maildir_fixup::       Fix-up maildirs created by versions prior to 3.10.90
 @end menu
 
 @node mailutils invocation syntax
@@ -1449,4 +1450,60 @@ message: send, edit, or quit (discard) it.
 
 Internal commands are the same as in @code{pop} shell: @xref{mailutils
 pop, Internal commands}.
+
+@node mailutils maildir_fixup
+@subsection mailutils maildir_fixup
+
+This command fixes attributes and UID assignments in @samp{maildir}
+mailboxes created by mailutils versions prior to 3.10.90.
+
+Attribute flags used in @samp{maildir} mailboxes by these versions of
+mailutils were a bit different from those described in the original
+description of the @samp{maildir} format@footnote{@uref{http://cr.yp.to/proto/maildir.html}}
+and those used by another implementations.  The discrepancy has been
+reported in the Mailutils bug tracker@footnote{@uref{http://savannah.gnu.org/bugs/?56428}}
+and was fixed in version 3.10.90.  Along with this fix, measures has
+been taken to ensure persistence of UID assignments between different
+sessions.  Starting from version 3.10.90, whenever @command{mailutils}
+library opens a maildir mailbox, it determines the version that
+created it.  If the mailbox is writable and the library determines
+that the mailbox is affected by the two problems described above, it
+fixes the mailbox on the fly.  This process is completely transparent
+to the user.
+
+If you operate a site with a large number of mailboxes in
+@samp{maildir} formats, you may choose to fix up all of them at once.
+That's what the @command{maildir_fixup} command is for.  It takes one
+or more directory names as its arguments and recursively scans these
+directories in search for @samp{maildir} mailboxes.  Each mailbox
+found is analyzed and a fix-up is performed, if necessary.  If a
+mailbox is already in the new format, it remains untouched.
+
+The following options modify the program's behavior:
+
+@table @option
+@item -v
+@itemx --verbose
+List each maildir name before processing it.
+
+@item -n
+@itemx --dry-run
+Don't touch maildirs, just print their names,
+@end table
+
+The @command{maildir_fixup} tool reads main mailutils configuration
+file by default.  It looks for program-specific settings in the
+section @samp{program maildir_fixup}.  If the @code{include} statement
+is present that has a directory name as its argument, the file
+@file{maildir_fixup} is looked up in that directory and parsed, if
+present.
+
+The program uses the following configuration statements:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug         @tab @xref{debug statement}.
+@item locking       @tab @xref{locking statement}.
+@item mandatory-locking @tab @FIXME-xref{mandatory-locking statement}.
+@end multitable
 

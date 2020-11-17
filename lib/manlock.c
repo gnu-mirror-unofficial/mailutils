@@ -237,10 +237,6 @@ manlock_cfg_init ()
   mu_create_canned_section ("mandatory-locking", &section);
   mu_cfg_section_add_params (section, manlock_param);
 }
-
-
-
-  
 
 int
 manlock_lock (mu_mailbox_t mbox)

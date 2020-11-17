@@ -83,6 +83,16 @@ if MU_COND_SUPPORT_IMAP
  $(MUTOOL_LIBRARIES_TAIL)
 endif
 
+if MU_COND_SUPPORT_MAILDIR
+ pkglibexec_PROGRAMS += mailutils-maildir_fixup
+ mailutils_maildir_fixup_SOURCES = maildir_fixup.c
+ mailutils_maildir_fixup_LDADD = \
+  $(MU_APP_LIBRARIES)\
+  $(MU_LIB_MAILDIR)\
+  $(MU_LIB_MAILUTILS)\
+  $(MUTOOL_LIBRARIES_TAIL)
+endif
+
 mailutils_send_SOURCES = send.c
 mailutils_send_CPPFLAGS = \
  $(AM_CPPFLAGS)\

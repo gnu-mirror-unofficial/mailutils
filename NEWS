@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2020-11-10
+GNU mailutils NEWS -- history of user-visible changes. 2020-11-17
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
@@ -17,6 +17,16 @@ After opening the mailbox, mailutils analyzes whether it uses
 incorrect flag mapping and fixes it if so.  If the mailbox is opened
 in read-write mode, the changes are immediately propagated to the disk
 storage.
+
+An auxiliary tool `maildir_fixup' is provided to fix up all maildirs
+in given folders recursively.  The tool can be used if you operate a
+site with a large number of mailboxes in maildir format and wish to
+convert all of them at once.  It is implemented as a subcommand of the
+`mailutils' utility.  Example usage:
+
+   mailutils maildir_fixup /var/spool/maildirs
+
+* Fix persistency of UIDs for all mailbox formats
 
 * Fix message ordering in maildir.
 

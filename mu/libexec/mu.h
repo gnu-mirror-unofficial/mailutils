@@ -21,6 +21,7 @@
 #include <stdarg.h>
 #include <mailutils/mailutils.h>
 
+extern struct mu_option common_options[];
 void mu_action_getopt (int *pargc, char ***pargv, struct mu_option *opt,
 		       char const *docstring, char const *argdoc);
 int mu_vgetans (const char *variants, const char *fmt, va_list ap);

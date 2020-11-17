@@ -117,13 +117,15 @@ mu_cli_simple (int argc, char **argv, ...)
 	  break;
 	  
 	case MU_CLI_OPTION_PROG_NAME:      
-	  pohint.po_flags |= MU_PARSEOPT_PROG_NAME;
 	  pohint.po_prog_name = va_arg (ap, char *);
+          if (pohint.po_prog_name)
+	    pohint.po_flags |= MU_PARSEOPT_PROG_NAME;
 	  break;
 
 	case MU_CLI_OPTION_PROG_DOC:       
-	  pohint.po_flags |= MU_PARSEOPT_PROG_DOC;
 	  pohint.po_prog_doc = va_arg (ap, char *);
+          if (pohint.po_prog_doc)
+	    pohint.po_flags |= MU_PARSEOPT_PROG_DOC;
 	  break;
 
 	case MU_CLI_OPTION_PROG_ARGS:
@@ -137,51 +139,60 @@ mu_cli_simple (int argc, char **argv, ...)
 	  break;
 
 	case MU_CLI_OPTION_BUG_ADDRESS:
-	  pohint.po_flags |= MU_PARSEOPT_BUG_ADDRESS;
 	  pohint.po_bug_address = va_arg (ap, char *);
+          if (pohint.po_bug_address)
+	    pohint.po_flags |= MU_PARSEOPT_BUG_ADDRESS;
 	  break;
 	  
 	case MU_CLI_OPTION_PACKAGE_NAME:
-	  pohint.po_flags |= MU_PARSEOPT_PACKAGE_NAME;
 	  pohint.po_package_name = va_arg (ap, char *);
+          if (pohint.po_package_name)
+	    pohint.po_flags |= MU_PARSEOPT_PACKAGE_NAME;
 	  break;
 	  
 	case MU_CLI_OPTION_PACKAGE_URL:
-	  pohint.po_flags |= MU_PARSEOPT_PACKAGE_URL;
 	  pohint.po_package_url = va_arg (ap, char *);
+          if (pohint.po_package_url)
+	    pohint.po_flags |= MU_PARSEOPT_PACKAGE_URL;
 	  break;
 	  
 	case MU_CLI_OPTION_EXTRA_INFO:
-	  pohint.po_flags |= MU_PARSEOPT_EXTRA_INFO;
 	  pohint.po_extra_info = va_arg (ap, char *);
+          if (pohint.po_extra_info)
+	    pohint.po_flags |= MU_PARSEOPT_EXTRA_INFO;
 	  break;
 	  
 	case MU_CLI_OPTION_HELP_HOOK:
-	  pohint.po_flags |= MU_PARSEOPT_HELP_HOOK;
 	  pohint.po_help_hook =
 	    va_arg (ap, void (*) (struct mu_parseopt *, mu_stream_t));
+          if (pohint.po_help_hook)
+	    pohint.po_flags |= MU_PARSEOPT_HELP_HOOK;
 	  break;
 	  
 	case MU_CLI_OPTION_VERSION_HOOK:
-	  pohint.po_flags |= MU_PARSEOPT_VERSION_HOOK;
 	  pohint.po_version_hook =
 	    va_arg (ap, void (*) (struct mu_parseopt *, mu_stream_t));
+          if (pohint.po_version_hook)
+	    pohint.po_flags |= MU_PARSEOPT_VERSION_HOOK;
 	  break;
 	  
 	case MU_CLI_OPTION_PROG_DOC_HOOK:
-	  pohint.po_flags |= MU_PARSEOPT_PROG_DOC_HOOK;
 	  pohint.po_prog_doc_hook =
 	    va_arg (ap, void (*) (struct mu_parseopt *, mu_stream_t));
+          if (pohint.po_prog_doc_hook)
+	    pohint.po_flags |= MU_PARSEOPT_PROG_DOC_HOOK;
 	  break;
 	  
 	case MU_CLI_OPTION_NEGATION:
-	  pohint.po_flags |= MU_PARSEOPT_NEGATION;
 	  pohint.po_negation = va_arg (ap, char *);
+	  if (pohint.po_negation)
+	    pohint.po_flags |= MU_PARSEOPT_NEGATION;
 	  break;
 	  
 	case MU_CLI_OPTION_SPECIAL_ARGS:
-	  pohint.po_flags |= MU_PARSEOPT_SPECIAL_ARGS;
 	  pohint.po_special_args = va_arg (ap, char *);
+          if (pohint.po_special_args)
+	    pohint.po_flags |= MU_PARSEOPT_SPECIAL_ARGS;
 	  break;
 
 	case MU_CLI_OPTION_CONF_SITE_FILE:
@@ -196,6 +207,11 @@ mu_cli_simple (int argc, char **argv, ...)
 	  
 	case MU_CLI_OPTION_CONF_NO_OVERRIDE:
 	  cfhint.flags |= MU_CFHINT_NO_CONFIG_OVERRIDE;
+	  break;
+
+	case MU_CLI_OPTION_CONF_PROGNAME:
+	  if ((cfhint.program = va_arg (ap, char *)) != NULL)
+	    cfhint.flags |= MU_CFHINT_PROGRAM;
 	  break;
 
 	default:

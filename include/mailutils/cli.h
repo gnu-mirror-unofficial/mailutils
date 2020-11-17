@@ -89,12 +89,14 @@ enum
 
     /* Argument: struct mu_cfg_param * 
      * Description: Supplies configuration definitions.
+     * NULL argument is a no-op.
      * Ref: cfg in struct mu_cli_setup
      */
     MU_CLI_OPTION_CONFIG,
 
     /* Argument: char **
      * Description: NULL-terminated array of capability strings.
+     * NULL argument is a no-op.
      * Ref: capa argument to mu_cli and mu_cli_ext.
      */
     MU_CLI_OPTION_CAPABILITIES,
@@ -167,6 +169,7 @@ enum
     /* Argument: char const *
      * Description: Override the name of the program to use in error
      * messages.
+     * NULL argument is a no-op.
      * Ref: MU_PARSEOPT_PROG_NAME flag in opt.h
      */
     MU_CLI_OPTION_PROG_NAME,      
@@ -174,6 +177,7 @@ enum
     /* Argument: char const *
      * Description: Documentation string for the program. It will be
      * displayed on the line following the usage summary.
+     * NULL argument is a no-op.
      * Ref: MU_PARSEOPT_PROG_DOC
      */
     MU_CLI_OPTION_PROG_DOC,       
@@ -186,6 +190,7 @@ enum
      *    Usage: foo A B
      *
      * Multiple instances are allowed.
+     * NULL argument is a no-op.
      * Ref: MU_PARSEOPT_PROG_ARGS flag in opt.h
      */
     MU_CLI_OPTION_PROG_ARGS,      
@@ -198,12 +203,14 @@ enum
 
     /* Argument: char const *
      * Description: Sets the PACKAGE_NAME.
+     * NULL argument is a no-op.
      * Ref: MU_PARSEOPT_PACKAGE_NAME in opt.h
      */
     MU_CLI_OPTION_PACKAGE_NAME,   
 
     /* Argument: char const *
      * Description: URL of the package.
+     * NULL argument is a no-op.
      * Ref: MU_PARSEOPT_PACKAGE_URL in opt.h
      */
     MU_CLI_OPTION_PACKAGE_URL,    
@@ -211,6 +218,7 @@ enum
     /* Argument: char const *
      * Description: Extra help information.  This will be displayed after
      * the option list.
+     * NULL argument is a no-op.
      * Ref: MU_PARSEOPT_EXTRA_INFO in opt.h
      */
     MU_CLI_OPTION_EXTRA_INFO,     
@@ -218,6 +226,7 @@ enum
     /* Argument: void (*) (struct mu_parseopt *, mu_stream_t)
      * Description: Pointer to a function to be called as a part of the
      * --help option handling, after outputting the option list.
+     * NULL argument is a no-op.
      * Ref: po_help_hook member of struct mu_parseopt and the
      * MU_PARSEOPT_HELP_HOOK flag in opt.h
      */
@@ -243,7 +252,9 @@ enum
      * --help option handling.  This function will be called after printing
      * initial program description (see MU_CLI_OPTION_PROG_DOC) and before
      * printing the option summary.
-     * Ref:
+     * NULL argument is a no-op.
+     * Ref: po_prog_doc_hook member of struct mu_parseopt and the
+     * MU_PARSEOPT_PROG_DOC_HOOK in opt.h
      */
     MU_CLI_OPTION_PROG_DOC_HOOK,  
 
@@ -256,6 +267,7 @@ enum
 
     /* Argument: char const *
      * Description: Prefix that negates the value of a boolean option.
+     * NULL argument is a no-op.
      * Ref: po_negation member of struct mu_parseopt and the
      * MU_PARSEOPT_NEGATION flag in opt.h
      */
@@ -264,6 +276,7 @@ enum
     /* Argument: char const *
      * Description: Descriptive names of special arguments. If given, this
      * will be printed in short usage summary after the regular options.
+     * NULL argument is a no-op.
      * Ref: The po_special_args member of struct mu_parseopt and the
      * MU_PARSEOPT_SPECIAL_ARGS flag in opt.h
      */
@@ -289,7 +302,17 @@ enum
      * from the command line.
      * Ref: MU_CFHINT_NO_CONFIG_OVERRIDE flag in cfg.h
      */
-    MU_CLI_OPTION_CONF_NO_OVERRIDE
+    MU_CLI_OPTION_CONF_NO_OVERRIDE,
+
+    /* Argument: char const *
+     * Description: Identifier of the per-program section in the configuration
+     * file or name of the per-program configuration file (used when
+     * processing the "include" statement with a directory name as its
+     * argument).  If NULL or not set, program name is used.  See also
+     * MU_CLI_OPTION_PROG_NAME.
+     * Ref: MU_CFHINT_PROGRAM flag in cfg.h
+     */
+    MU_CLI_OPTION_CONF_PROGNAME,
   };
 
 void mu_cli_simple (int argc, char **argv, ...);
