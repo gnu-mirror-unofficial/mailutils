@@ -17,3 +17,4 @@
 include $(top_srcdir)/testsuite/testsuite.am
 AUTOTEST_INCLUDES += -I $(srcdir)/../../tests
 TESTSUITE_AT += lmtpd.at
+testsuite: $(srcdir)/../../tests/mda.inc $(top_srcdir)/testsuite/testsuite.inc
