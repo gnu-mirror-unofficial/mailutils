@@ -76,7 +76,7 @@ mailbox_fixup (void *item, void *data)
     fail_count++;
   else
     succ_count++;
-  return rc;
+  return 0;
 }
 
 static inline int
