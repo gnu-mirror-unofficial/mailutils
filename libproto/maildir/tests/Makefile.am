@@ -48,6 +48,7 @@ TESTSUITE_AT += \
  envelope.at\
  header.at\
  notify.at\
+ new.at\
  uid.at\
  uidfixup.at\
  uidvalidity.at\

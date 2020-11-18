@@ -1,5 +1,5 @@
-# GNU Mailutils -- a suite of utilities for electronic mail
-# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+# GNU Mailutils -- a suite of utilities for electronic mail -*- autotest -*-
+# Copyright (C) 2020 Free Software Foundation, Inc.
 #
 # This library is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -14,29 +14,21 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_include([testsuite.inc])
-
-AT_INIT
-m4_include([autodetect.at])
-
-m4_include([count.at])
-
-m4_include([attr.at])
-m4_include([envelope.at])
-m4_include([header.at])
-m4_include([body.at])
-m4_include([uid.at])
-m4_include([uidvalidity.at])
-m4_include([qget.at])
-
-m4_include([new.at])
-m4_include([append.at])
-m4_include([notify.at])
-m4_include([delete.at])
-
-m4_include([attfixup.at])
-m4_include([uidfixup.at])
-
-# Local Variables:
-# mode: autotest
-# End:
+AT_SETUP([deliver messages from new])
+AT_DATA([names],
+[cur/1284628225.M17468P3883Q0.Trurl,u=1:2,
+cur/1284628225.M19181P3883Q1.Trurl,u=20:2,S
+cur/1284628225.M20118P3883Q2.Trurl,u=22:2,
+cur/1284628225.M21284P3883Q3.Trurl,u=43:2,
+new/1284628225.M22502P3883Q4.Trurl
+])
+AT_CHECK([mbox2dir -i names -p -v 10 -u inbox $spooldir/mbox1])
+AT_CHECK([mbop -m inbox count \; 5 \; uid \; uidvalidity \; uidnext],
+[0],
+[count: 5
+5 current message
+5 uid: 44
+uidvalidity: 10
+uidnext: 45
+])
+AT_CLEANUP

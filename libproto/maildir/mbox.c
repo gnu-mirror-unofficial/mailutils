@@ -849,7 +849,7 @@ maildir_message_fixup (struct _maildir_data *md, struct _maildir_message *msg)
   else
     md->next_uid = msg->uid + 1;
 
-  if (update && md->amd.mailbox->flags & MU_STREAM_WRITE)
+  if (update && (md->amd.mailbox->flags & MU_STREAM_WRITE))
     {  
       md->amd.chattr_msg (&msg->amd_message, 0);
     }
@@ -896,8 +896,9 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
     {
       struct _maildir_message *msg = (struct _maildir_message *)
 	_amd_get_message (&md->amd, i);
-      if (msg->subdir == SUB_NEW && md->amd.mailbox->flags & MU_STREAM_WRITE)
+      if (msg->subdir == SUB_NEW && (md->amd.mailbox->flags & MU_STREAM_WRITE))
 	{
+	  msg->uid = md->next_uid++;
 	  if (md->amd.chattr_msg (&msg->amd_message, 0) == 0)
 	    has_new = 1;
 	}
