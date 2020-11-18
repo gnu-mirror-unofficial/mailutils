@@ -51,7 +51,8 @@ enum node_type
     node_and,
     node_or,
     node_not,
-    node_value
+    node_value,
+    node_false
   };
 
 struct value
@@ -618,10 +619,11 @@ parse_simple_key (struct parsebuf *pb)
   if (!condp->name)
     {
       mu_msgset_t msgset = parse_msgset_create (pb, mbox, MU_MSGSET_NUM);
+      int rc = mu_msgset_parse_imap (msgset,
+				     pb->isuid ? MU_MSGSET_UID : MU_MSGSET_NUM,
+				     pb->token, NULL);
 
-      if (mu_msgset_parse_imap (msgset,
-				pb->isuid ? MU_MSGSET_UID : MU_MSGSET_NUM,
-				pb->token, NULL) == 0)
+      if (rc == 0)
 	{
 	  struct search_node *np = parse_alloc (pb, sizeof *np);
 	  np->type = node_value;
@@ -639,10 +641,18 @@ parse_simple_key (struct parsebuf *pb)
 
 	  return node;
 	}
-      else
+      else if (rc == MU_ERR_PARSE)
 	{
 	  pb->err_mesg = "Unknown search criterion";
 	  return NULL;
+	}
+      else
+	{
+	  /* MU_ERR_NOENT or similar */
+	  node = parse_alloc (pb, sizeof *node);
+	  node->type = node_false;
+	  parse_gettoken (pb, 0);
+	  return node;
 	}
     }
 
@@ -782,6 +792,11 @@ evaluate_node (struct search_node *node, struct parsebuf *pb,
 
     case node_value:
       *val = node->v.value;
+      break;
+
+    case node_false:
+      val->type = value_number;
+      val->v.number = 0;
       break;
     }
 }
