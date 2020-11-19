@@ -33,6 +33,8 @@ m4_include([append.at])
 m4_include([notify.at])
 m4_include([delete.at])
 
+m4_include([uidnext.at])
+
 # Local Variables:
 # mode: autotest
 # End:

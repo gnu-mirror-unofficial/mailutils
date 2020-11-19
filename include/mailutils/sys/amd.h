@@ -43,7 +43,7 @@
 } while (0);
 
 #define _MU_AMD_PROP_UIDVALIDITY "uid-validity"
-#define _MU_AMD_PROP_NEXT_UID "next-uid"
+#define _MU_AMD_PROP_UIDNEXT "uidnext"
 #define _MU_AMD_PROP_SIZE "size"
 
 #define _MU_AMD_PROP_FILE_NAME ".mu-prop"
@@ -68,10 +68,12 @@ struct _amd_message
 /* AMD capabilities */
 #define MU_AMD_STATUS    0x01  /* format keeps status flags */
 
-#define MU_AMD_PROP      0x04  /* prop file existed */
+#define MU_AMD_F_INIT_SCAN    0x01  /* Done initial scanning */
+#define MU_AMD_F_PROP         0x02  /* prop file existed */
 
 struct _amd_data
 {
+  int flags; /* MU_AMD_F_ bits above */
   size_t msg_size;               /* Size of struct _amd_message */
   int (*create) (struct _amd_data *, int flags);	
   int (*msg_init_delivery) (struct _amd_data *, struct _amd_message *);
@@ -86,7 +88,6 @@ struct _amd_data
   int (*qfetch)    (struct _amd_data *, mu_message_qid_t qid);
   int (*msg_cmp) (struct _amd_message *, struct _amd_message *);
   int (*message_uid) (mu_message_t msg, size_t *puid);
-  size_t (*next_uid) (struct _amd_data *mhd);
   int (*remove) (struct _amd_data *);
   int (*delete_msg) (struct _amd_data *, struct _amd_message *);
   int (*chattr_msg) (struct _amd_message *, int);
@@ -100,7 +101,7 @@ struct _amd_data
   int has_new_msg;  /* New messages have been appended */
   char *name;                    /* Directory name */
 
-  mu_property_t prop; /* Properties: uidvalidity, nextuid, etc. */
+  mu_property_t prop; /* Properties: uidvalidity, uidnext, etc. */
   
   /* Pool of open message streams */
   struct _amd_message *msg_pool[MAX_OPEN_STREAMS];
@@ -128,6 +129,8 @@ struct _amd_message *_amd_get_message (struct _amd_data *amd, size_t msgno);
 int amd_msg_lookup (struct _amd_data *amd, struct _amd_message *msg,
 		    size_t *pret);
 int amd_remove_dir (const char *name);
-void amd_reset_uidvalidity (struct _amd_data *amd);
+int amd_reset_uidvalidity (struct _amd_data *amd);
+int amd_update_uidnext (struct _amd_data *amd, size_t *newval);
+int amd_alloc_uid (struct _amd_data *amd, size_t *newval);
 
 #endif		    

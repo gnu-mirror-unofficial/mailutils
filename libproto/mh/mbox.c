@@ -86,14 +86,6 @@ mh_message_cmp (struct _amd_message *a, struct _amd_message *b)
   return 0;
 }
 
-static size_t
-_mh_next_seq (struct _amd_data *amd)
-{
-  struct _mh_message *msg = (struct _mh_message *)
-                              _amd_get_message (amd, amd->msg_count);
-  return (msg ? msg->seq_number : 0) + 1;
-}
-
 /* Return current filename for the message.
    NOTE: Allocates memory. */
 static int
@@ -189,7 +181,6 @@ mh_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED, size_t *pcount,
   struct dirent *entry;
   int status = 0;
   struct stat st;
-  int need_sort = 0;
 
   if (amd == NULL)
     return EINVAL;
@@ -253,8 +244,6 @@ mh_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED, size_t *pcount,
 
 	  msg->seq_number = num;
 	  msg->amd_message.attr_flags = attr_flags;
-
-	  need_sort = 1;
 	}
       else
 	{
@@ -264,11 +253,19 @@ mh_scan0 (mu_mailbox_t mailbox, size_t msgno MU_ARG_UNUSED, size_t *pcount,
 
   closedir (dir);
 
-  if (need_sort)
-    amd_sort (amd);
-
   if (status == 0)
     {
+      struct _mh_message *msg;
+      size_t next_uid;
+      
+      amd_sort (amd);
+
+      msg = (struct _mh_message *) _amd_get_message (amd, amd->msg_count);
+      next_uid = (msg ? msg->seq_number : 0) + 1;
+      
+      /* Update predicted next UID either way */
+      amd_update_uidnext (amd, &next_uid);
+
       if (do_notify)
 	{
 	  size_t i;
@@ -401,8 +398,7 @@ static int
 _mh_msg_init (struct _amd_data *amd, struct _amd_message *amm)
 {
   struct _mh_message *mhm = (struct _mh_message *) amm;
-  mhm->seq_number = _mh_next_seq (amd);
-  return 0;
+  return amd_alloc_uid (amd, &mhm->seq_number);
 }
 
 static int
@@ -522,7 +518,6 @@ _mailbox_mh_init (mu_mailbox_t mailbox)
   amd->qfetch = mh_qfetch;
   amd->msg_cmp = mh_message_cmp;
   amd->message_uid = mh_message_uid;
-  amd->next_uid = _mh_next_seq;
   amd->remove = mh_remove;
   amd->mailbox_size = mh_size;
   

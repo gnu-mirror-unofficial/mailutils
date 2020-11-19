@@ -67,7 +67,8 @@ struct mu_dotmail_mailbox
   unsigned long uidvalidity; /* Uidvalidity value */
   unsigned long uidnext;     /* Expected next UID value */
   unsigned uidvalidity_scanned:1; /* True if uidvalidity is initialized */
-  
+  unsigned uidvalidity_changed:1; /* True if uidvalidity or uidnext has changed */
+
   struct mu_dotmail_message **mesg; /* Array of messages */
   size_t mesg_count;       /* Number of messages in mesgv */
   size_t mesg_max;         /* Actual capacity of mesg */

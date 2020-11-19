@@ -228,7 +228,7 @@ _amd_prop_create (struct _amd_data *amd)
 
   if (access (mhprop->filename, F_OK) == 0)
     {
-      amd->capabilities |= MU_AMD_PROP;
+      amd->flags |= MU_AMD_F_PROP;
     }
   
   rc = mu_property_create_init (&amd->prop, mu_mh_property_init, mhprop);
@@ -1471,38 +1471,36 @@ amd_sync (mu_mailbox_t mailbox)
   return 0;
 }
 
+static inline int
+amd_initial_scan (struct _amd_data *amd)
+{
+  if (!(amd->flags & MU_AMD_F_INIT_SCAN))
+    {
+      int status = _amd_scan0 (amd, 1, NULL, 0);
+      if (status != 0)
+        return status;
+      amd->flags |= MU_AMD_F_INIT_SCAN;
+    }
+  return 0;
+}
+
 static int
-amd_get_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
+amd_get_uidvalidity (mu_mailbox_t mailbox, unsigned long *pval)
 {
   struct _amd_data *amd = mailbox->data;
-  int status = amd_messages_count (mailbox, NULL);
+  int status = amd_initial_scan (amd);
   if (status != 0)
     return status;
-  /* If we did not start scanning yet do it now.  */
-  if (amd->msg_count == 0)
-    {
-      status = _amd_scan0 (amd, 1, NULL, 0);
-      if (status != 0)
-	return status;
-    }
-
-  return _amd_prop_fetch_ulong (amd, _MU_AMD_PROP_UIDVALIDITY, puidvalidity);
+  return _amd_prop_fetch_ulong (amd, _MU_AMD_PROP_UIDVALIDITY, pval);
 }
 
 static int
 amd_set_uidvalidity (mu_mailbox_t mailbox, unsigned long uidvalidity)
 {
   struct _amd_data *amd = mailbox->data;
-  int status = amd_messages_count (mailbox, NULL);
+  int status = amd_initial_scan (amd);
   if (status != 0)
     return status;
-  /* If we did not start scanning yet do it now.  */
-  if (amd->msg_count == 0)
-    {
-      status = _amd_scan0 (amd, 1, NULL, 0);
-      if (status != 0)
-	return status;
-    }
   return _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY, uidvalidity);
 }
 
@@ -1510,23 +1508,10 @@ static int
 amd_uidnext (mu_mailbox_t mailbox, size_t *puidnext)
 {
   struct _amd_data *amd = mailbox->data;
-  int status;
-  
-  if (!amd->next_uid)
-    return ENOSYS;
-  status = mu_mailbox_messages_count (mailbox, NULL);
+  int status = amd_initial_scan (amd);
   if (status != 0)
     return status;
-  /* If we did not start a scanning yet do it now.  */
-  if (amd->msg_count == 0)
-    {
-      status = _amd_scan0 (amd, 1, NULL, 0);
-      if (status != 0)
-	return status;
-    }
-   if (puidnext)
-     *puidnext = amd->next_uid (amd);
-  return 0;
+  return _amd_prop_fetch_size (amd, _MU_AMD_PROP_UIDNEXT, puidnext);
 }
 
 /* FIXME: effectively the same as mbox_cleanup */
@@ -2171,12 +2156,49 @@ amd_remove_dir (const char *name)
   return rc;
 }
 
-void
+int
 amd_reset_uidvalidity (struct _amd_data *amd)
 {
   struct timeval tv;
   gettimeofday (&tv, NULL);
-  _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY, tv.tv_sec);
+  return _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY, tv.tv_sec);
+}
+
+int
+amd_update_uidnext (struct _amd_data *amd, size_t *newval)
+{
+  int rc;
+  size_t curval;
+  
+  rc = _amd_prop_fetch_size (amd, _MU_AMD_PROP_UIDNEXT, &curval);
+  if (rc == MU_ERR_NOENT)
+    curval = 1;
+  else if (rc)
+    return rc;
+  if (*newval < curval)
+    {
+      *newval = curval;
+      return 0;
+    }
+  return _amd_prop_store_off (amd, _MU_AMD_PROP_UIDNEXT, *newval);
+}
+
+int
+amd_alloc_uid (struct _amd_data *amd, size_t *newval)
+{
+  int rc;
+  size_t retval;
+  
+  rc = _amd_prop_fetch_size (amd, _MU_AMD_PROP_UIDNEXT, &retval);
+  if (rc == MU_ERR_NOENT)
+    retval = 1;
+  else if (rc)
+    return rc;
+  rc = _amd_prop_store_off (amd, _MU_AMD_PROP_UIDNEXT, retval + 1);
+  if (rc)
+    return rc;
+  *newval = retval;
+  return 0;
 }
 
 

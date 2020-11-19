@@ -85,16 +85,16 @@ struct _maildir_data
   int needs_uid_fixup;       /* Messages in the mailbox need to be assigned
 				new UIDS.  Consequently, the uidvalidity
 				value must be updated too. */
-  unsigned long next_uid;    /* Next UID value. */
+  size_t next_uid;           /* Predicted next UID. */
 };
-  
+
 struct _maildir_message
 {
   struct _amd_message amd_message;
   int subdir;
   char *file_name;  /* File name */
   size_t uniq_len;  /* Length of the unique file name prefix. */
-  unsigned long uid;
+  size_t uid;
 };
 
 static char *subdir_name[] = { "cur", "new", "tmp" };
@@ -118,6 +118,30 @@ mu_maildir_reserved_name (char const *name)
          || strcmp (name, subdir_name[SUB_NEW]) == 0
 	 || (strlen (name) > 3
              && (memcmp (name, ".mh", 3) == 0 || memcmp (name, ".mu", 3) == 0));
+}
+
+static inline void
+reset_uid (struct _maildir_data *md)
+{
+  md->next_uid = 1;
+}
+  
+static inline size_t
+alloc_uid (struct _maildir_data *md)
+{
+  return md->next_uid++;
+}
+
+static inline size_t
+next_uid (struct _maildir_data *md)
+{
+  return md->next_uid;
+}  
+
+static inline void
+update_uid (struct _maildir_data *md, size_t uid)
+{
+  md->next_uid = uid + 1;
 }
 
 /*
@@ -757,10 +781,9 @@ maildir_subdir_scan (struct _maildir_data *md, int subdir)
  * Otherwise, fixup is not needed.  This is done by the needs_fixup
  * function.
  *
- * To assist in diagnostics, new AMD "capability" MU_AMD_PROP has been
- * added.  It is set, if the .mu-prop file existed when the mailbox
- * was opened.  The capability member was chosen to avoid adding new
- * members to struct _amd_data.
+ * To assist in diagnostics, new AMD flag MU_AMD_F_PROP has been
+ * added.  It is set if the .mu-prop file existed when the mailbox
+ * was opened.
  *
  * During fixup, the internal attribute flags are changed according to
  * the table above.  If the mailbox is writable, each message file is
@@ -782,7 +805,7 @@ needs_fixup (struct _amd_data *amd)
   char const *amd_version;
   int rc;
 
-  if (!(amd->capabilities & MU_AMD_PROP))
+  if (!(amd->flags & MU_AMD_F_PROP))
     {
       /* Absence of the mu-prop file indicates that this mailbox was
 	 not created by mailutils (unless the file has been deleted,
@@ -838,16 +861,16 @@ maildir_message_fixup (struct _maildir_data *md, struct _maildir_message *msg)
 	}
     }
 
-  if (msg->uid == 0 || msg->uid < md->next_uid)
+  if (msg->uid == 0 || msg->uid < next_uid (md))
     md->needs_uid_fixup = 1;
 
   if (md->needs_uid_fixup)
     {
-      msg->uid = md->next_uid++;
+      msg->uid = alloc_uid (md);
       update = 1;
     }
   else
-    md->next_uid = msg->uid + 1;
+    update_uid (md, msg->uid);
 
   if (update && (md->amd.mailbox->flags & MU_STREAM_WRITE))
     {  
@@ -864,14 +887,13 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
   struct stat st;
   size_t i;
   int has_new = 0;
-  int save_prop = 0;
   
   rc = maildir_open (md);
   if (rc)
     return rc;
   md->needs_attribute_fixup = needs_fixup (&md->amd);
   md->needs_uid_fixup = 0;
-  md->next_uid = 1;
+  reset_uid (md);
   
   /* Flush tmp/ */
   rc = maildir_tmp_flush (md);
@@ -896,9 +918,16 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
     {
       struct _maildir_message *msg = (struct _maildir_message *)
 	_amd_get_message (&md->amd, i);
+
+      if (msg->subdir == SUB_NEW && !has_new)
+	{
+	  /* Update predicted next UID for allocation */
+ 	  amd_update_uidnext (&md->amd, &md->next_uid);
+  	}
+      
       if (msg->subdir == SUB_NEW && (md->amd.mailbox->flags & MU_STREAM_WRITE))
 	{
-	  msg->uid = md->next_uid++;
+	  msg->uid = alloc_uid (md);
 	  if (md->amd.chattr_msg (&msg->amd_message, 0) == 0)
 	    has_new = 1;
 	}
@@ -912,12 +941,12 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
 	DISPATCH_ADD_MSG (mailbox, &md->amd, i);
     }
 
+  /* Update predicted next UID either way */
+  amd_update_uidnext (&md->amd, &md->next_uid);
+  
   /* Reset uidvalidity if any of the UIDs changed */
   if (md->needs_uid_fixup)
-    {
-      amd_reset_uidvalidity (&md->amd);
-      save_prop = 1;
-    }  
+    amd_reset_uidvalidity (&md->amd);
   
   /* Update version marker in the property file */
   if ((md->amd.mailbox->flags & MU_STREAM_WRITE) &&
@@ -931,10 +960,9 @@ maildir_scan_unlocked (mu_mailbox_t mailbox, size_t *pcount, int do_notify)
 		    ("maildir_scan_dir: mu_property_set_value failed during attribute fixup: %s",
 		     mu_strerror (rc)));
 	}
-      save_prop = 1;
     }
 
-  if (save_prop)
+  if (md->amd.mailbox->flags & MU_STREAM_WRITE)
     {
       rc = mu_property_save (md->amd.prop);
       if (rc)
@@ -1579,14 +1607,6 @@ maildir_message_uid (mu_message_t msg, size_t *puid)
   return 0;
 }
 
-static size_t
-maildir_next_uid (struct _amd_data *amd)
-{
-  struct _maildir_message *msg = (struct _maildir_message *)
-                                   _amd_get_message (amd, amd->msg_count);
-  return (msg ? msg->uid : 0) + 1;
-}
-
 static int
 maildir_remove (struct _amd_data *amd)
 {
@@ -1802,7 +1822,7 @@ maildir_msg_init (struct _amd_data *amd, struct _amd_message *amm)
 	      else if (errno == ENOENT)
 		{
 		  msg->subdir = SUB_TMP;
-		  msg->uid = amd->next_uid (amd);
+		  msg->uid = alloc_uid (md);
 		  msg->file_name = name;
 		  msg->uniq_len = strlen (name);
 		  name = NULL;
@@ -1847,7 +1867,6 @@ _mailbox_maildir_init (mu_mailbox_t mailbox)
   amd->qfetch = maildir_qfetch;
   amd->msg_cmp = maildir_message_cmp;
   amd->message_uid = maildir_message_uid;
-  amd->next_uid = maildir_next_uid;
   amd->remove = maildir_remove;
   amd->chattr_msg = maildir_chattr_msg;
   amd->capabilities = MU_AMD_STATUS;

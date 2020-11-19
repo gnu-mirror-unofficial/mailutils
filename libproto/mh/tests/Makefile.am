@@ -49,6 +49,7 @@ TESTSUITE_AT += \
  notify.at\
  qget.at\
  uid.at\
+ uidnext.at\
  uidvalidity.at
 
 

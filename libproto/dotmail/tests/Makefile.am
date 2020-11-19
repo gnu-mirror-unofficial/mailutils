@@ -46,6 +46,7 @@ TESTSUITE_AT += \
  unseen.at\
  header.at\
  body.at\
+ uidnext.at\
  uidvalidity.at\
  uid.at\
  qget.at\

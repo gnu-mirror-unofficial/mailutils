@@ -51,6 +51,7 @@ TESTSUITE_AT += \
  new.at\
  uid.at\
  uidfixup.at\
+ uidnext.at\
  uidvalidity.at\
  qget.at
 

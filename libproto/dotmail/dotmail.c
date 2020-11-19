@@ -122,6 +122,15 @@ dotmail_open (mu_mailbox_t mailbox, int flags)
   return rc;
 }
 
+enum
+  {
+    FLUSH_SYNC,
+    FLUSH_EXPUNGE, /* implies SYNC */
+    FLUSH_UIDVALIDITY
+  };
+
+static int dotmail_flush (struct mu_dotmail_mailbox *dmp, int flag);
+
 static int
 dotmail_close (mu_mailbox_t mailbox)
 {
@@ -134,6 +143,9 @@ dotmail_close (mu_mailbox_t mailbox)
   mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE1,
 	    ("%s (%s)", __func__, dmp->name));
 
+  if (dmp->uidvalidity_changed)
+    dotmail_flush (dmp, FLUSH_UIDVALIDITY);
+  
   mu_locker_unlock (mailbox->locker);
   mu_monitor_wrlock (mailbox->monitor);
   for (i = 0; i < dmp->mesg_count; i++)
@@ -290,7 +302,7 @@ dotmail_dispatch (mu_mailbox_t mailbox, int evt, void *data)
 static unsigned long
 dotmail_alloc_next_uid (struct mu_dotmail_mailbox *mbox)
 {
-  mbox->mesg[0]->uid_modified = 1;
+  mbox->uidvalidity_changed = 1;
   return mbox->uidnext++;
 }
 
@@ -546,10 +558,14 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 		  if (!(!force_init_uids
 			&& dmsg->hdr[mu_dotmail_hdr_x_uid]
 			&& sscanf (dmsg->hdr[mu_dotmail_hdr_x_uid],
-				   "%lu", &dmsg->uid) == 1))
+				   "%lu", &dmsg->uid) == 1
+			&& dmsg->uid < dmp->uidnext
+			&& (dmsg->num == 0
+			    || dmsg->uid > dmp->mesg[dmsg->num - 1]->uid)))
 		    {
 		      force_init_uids = 1;
 		      dmp->uidvalidity = (unsigned long) time (NULL);
+		      dmp->uidvalidity_changed = 1;
 		    }
 		  
 		  if (force_init_uids)
@@ -750,7 +766,8 @@ mu_dotmail_mailbox_uid_setup (struct mu_dotmail_mailbox *dmp)
       dmp->uidvalidity = (unsigned long)time (NULL);
       dmp->uidnext = 1;
       dmp->uidvalidity_scanned = 1;
-
+      dmp->uidvalidity_changed = 1;
+      
       for (i = 0; i < dmp->mesg_count; i++)
 	dotmail_message_alloc_uid (dmp->mesg[i]);
     }
@@ -1217,7 +1234,7 @@ dotmail_flush_temp (struct mu_dotmail_flush_tracker *trk,
    Assumes that simultaneous access to the mailbox has been blocked.
 */
 static int
-dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int expunge)
+dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int mode)
 {
   struct mu_dotmail_mailbox *dmp = trk->dmp;
   int rc;
@@ -1232,29 +1249,45 @@ dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int expunge)
 	    ("%s (%s)", __func__, dmp->name));
   if (dmp->mesg_count == 0)
     return 0;
-
-  if (dmp->mailbox->flags & MU_STREAM_APPEND)
+  if (mode == FLUSH_UIDVALIDITY && !dmp->uidvalidity_changed)
+    return 0;
+  
+  if (dmp->mailbox->flags & MU_STREAM_APPEND)//FIXME
     return mu_stream_flush (dmp->mailbox->stream);
 
   rc = dotmail_refresh (dmp->mailbox);
   if (rc)
     return rc;
 
-  for (dirty = 0; dirty < dmp->mesg_count; dirty++)
+  if (dmp->uidvalidity_changed)
     {
-      struct mu_dotmail_message *dmsg = dmp->mesg[dirty];
-      if (dmsg->uid_modified)
-	break;
-      mu_dotmail_message_attr_load (dmsg);
-      if ((dmsg->attr_flags & MU_ATTRIBUTE_MODIFIED)
-	  || (dmsg->attr_flags & MU_ATTRIBUTE_DELETED)
-	  || (dmsg->message && mu_message_is_modified (dmsg->message)))
-	break;
+      size_t i;
+      
+      dirty = 0;
+      dmp->mesg[0]->uid_modified = 1;
+
+      for (i = 1; i < dmp->mesg_count; i++)
+	{
+	  struct mu_dotmail_message *dmsg = dmp->mesg[i];
+	  dmsg->uid_modified = 0;
+	  dmsg->attr_flags &= ~(MU_ATTRIBUTE_MODIFIED|MU_ATTRIBUTE_DELETED);
+	}
     }
-
-  if (dirty + 1 == dmp->mesg_count)
-    return 0;
-
+  else
+    {
+      for (dirty = 0; dirty < dmp->mesg_count; dirty++)
+	{
+	  struct mu_dotmail_message *dmsg = dmp->mesg[dirty];
+	  if (dmsg->uid_modified)
+	    break;
+	  mu_dotmail_message_attr_load (dmsg);
+	  if ((dmsg->attr_flags & MU_ATTRIBUTE_MODIFIED)
+	      || (dmsg->attr_flags & MU_ATTRIBUTE_DELETED)
+	      || (dmsg->message && mu_message_is_modified (dmsg->message)))
+	    break;
+	}
+    }
+  
   p = strrchr (dmp->name, '/');
   if (p)
     {
@@ -1287,7 +1320,7 @@ dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int expunge)
       return rc;
     }
 
-  rc = dotmail_flush_temp (trk, dirty, tempstr, expunge);
+  rc = dotmail_flush_temp (trk, dirty, tempstr, mode == FLUSH_EXPUNGE);
   mu_stream_unref (tempstr);
   if (rc == 0)
     {
@@ -1341,6 +1374,8 @@ dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int expunge)
   free (tempname);
   free (hints.tmpdir);
 
+  dmp->uidvalidity_changed = 0;  
+  
   return rc;
 }
 
@@ -1355,7 +1390,7 @@ dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int expunge)
    the original mailbox remains unchanged.
 */
 static int
-dotmail_flush (struct mu_dotmail_mailbox *dmp, int expunge)
+dotmail_flush (struct mu_dotmail_mailbox *dmp, int mode)
 {
   int rc;
   sigset_t signalset;
@@ -1383,7 +1418,7 @@ dotmail_flush (struct mu_dotmail_mailbox *dmp, int expunge)
   rc = tracker_init (&trk, dmp);
   if (rc == 0)
     {
-      rc = dotmail_flush_unlocked (&trk, expunge);
+      rc = dotmail_flush_unlocked (&trk, mode);
       tracker_free (&trk);
     }
 
@@ -1401,16 +1436,15 @@ static int
 dotmail_expunge (mu_mailbox_t mailbox)
 {
   struct mu_dotmail_mailbox *dmp = mailbox->data;
-  return dotmail_flush (dmp, 1);
+  return dotmail_flush (dmp, FLUSH_EXPUNGE);
 }
 
 static int
 dotmail_sync (mu_mailbox_t mailbox)
 {
   struct mu_dotmail_mailbox *dmp = mailbox->data;
-  return dotmail_flush (dmp, 0);
+  return dotmail_flush (dmp, FLUSH_SYNC);
 }
-
 
 int
 mu_dotmail_mailbox_init (mu_mailbox_t mailbox)
