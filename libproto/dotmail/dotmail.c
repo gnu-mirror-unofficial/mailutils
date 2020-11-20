@@ -315,6 +315,39 @@ dotmail_message_alloc_uid (struct mu_dotmail_message *dmsg)
   dmsg->uid_modified = 1;
 }
 
+/* Width of the decimal representation of the maximum value of the unsigned
+ * type t.  146/485 is the closest approximation of log10(2):
+ *
+ *  log10(2) = .301030
+ *  146/485  = .301031
+*/
+#define UINT_STRWIDTH(t) ((int)((sizeof(t) * 8 * 146 + 484) / 485))
+
+/*
+ * The format for the X-IMAPbase header is:
+ *
+ *    X-IMAPbase: <V> <N>
+ *
+ * where <V> and <N> are current values of the uidvalidity and uidnext
+ * parameters, correspondingly.
+ *
+ * The header is stored in the first message.  To avoid rewriting entire
+ * mailbox when one of the parameters chages, the values of <V> and <N>
+ * are left-padded with spaces to the maximum width of their data types.
+ *
+ * Offset of the header in the mailbox and its length (without the
+ * trailing newline) are stored in x_imapbase_off and x_imapbase_len
+ * members of struct mu_dotmail_mailbox.
+ *
+ * The X_IMAPBASE_MAX macro returns maximum size of the buffer necessary
+ * for formatting the X-IMAPbase header.  In fact, it is 2 bytes wider
+ * than necessary (due to the two '0' in the sample string below).
+ */
+#define X_IMAPBASE_MAX(d)		   \
+  (sizeof (MU_HEADER_X_IMAPBASE ": 0 0") + \
+   UINT_STRWIDTH ((d)->uidvalidity) +	   \
+   UINT_STRWIDTH ((d)->uidnext))
+
 static int
 dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 {
@@ -495,6 +528,23 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 		    }
 		  else
 		    free (buf);
+
+		  if (i == mu_dotmail_hdr_x_imapbase)
+		    {
+		      mu_off_t off;
+		      rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &off);
+		      if (rc)
+			{
+			  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+				    ("%s:%s (%s): %s",
+				     __func__, "mu_stream_seek", dmp->name,
+				     mu_strerror (rc)));
+			  return rc;
+			}
+		      dmp->x_imapbase_len = j + n;
+		      dmp->x_imapbase_off = off - dmp->x_imapbase_len - 1;
+		    }
+		  
 		  state = dotmail_scan_header_newline;
 		}
 	      else
@@ -907,9 +957,11 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
       if (dmp->uidvalidity_scanned)
 	{
 	  if (dmp->mesg_count == 0)
-	    mu_stream_printf (mailbox->stream, "%s: %lu %lu\n",
+	    mu_stream_printf (mailbox->stream, "%s: %*lu %*lu\n",
 			      MU_HEADER_X_IMAPBASE,
+			      UINT_STRWIDTH (dmp->uidvalidity),
 			      dmp->uidvalidity,
+			      UINT_STRWIDTH (dmp->uidnext),
 			      dmp->uidnext);
 	  mu_stream_printf (mailbox->stream, "%s: %lu\n",
 			    MU_HEADER_X_UID,
@@ -1208,8 +1260,11 @@ dotmail_flush_temp (struct mu_dotmail_flush_tracker *trk,
 	  dmsg->hdr[mu_dotmail_hdr_x_imapbase] = NULL;
 	  if (save_imapbase == i)
 	    {
-	      mu_asprintf (&dmsg->hdr[mu_dotmail_hdr_x_imapbase], "%lu %lu",
-			   dmp->uidvalidity, dmp->uidnext);
+	      mu_asprintf (&dmsg->hdr[mu_dotmail_hdr_x_imapbase], "%*lu %*lu",
+			   UINT_STRWIDTH (dmp->uidvalidity),
+			   dmp->uidvalidity,
+			   UINT_STRWIDTH (dmp->uidnext),
+			   dmp->uidnext);
 	    }
 
 	  rc = mu_dotmail_message_reconstruct (tempstr, dmsg,
@@ -1262,7 +1317,51 @@ dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int mode)
   if (dmp->uidvalidity_changed)
     {
       size_t i;
+      char buf[X_IMAPBASE_MAX (dmp)];
+      int n;
+      mu_stream_t stream = dmp->mailbox->stream;
+
+      /*
+       * Format the X-IMAPbase header and check if it will fit in place
+       * of the existing one (if any).  If so, write it at once and return.
+       */
+      n = snprintf (buf, sizeof (buf), "%s: %*lu %*lu",
+		    MU_HEADER_X_IMAPBASE,
+		    UINT_STRWIDTH (dmp->uidvalidity),
+		    dmp->uidvalidity,
+		    UINT_STRWIDTH (dmp->uidnext),
+		    dmp->uidnext);
       
+      if (dmp->x_imapbase_len && dmp->x_imapbase_len >= n)
+	{
+	  rc = mu_stream_seek (stream, dmp->x_imapbase_off, MU_SEEK_SET, NULL);
+	  if (rc)
+	    {
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("%s:%s (%s): %s",
+			 __func__, "mu_stream_seek", dmp->name,
+			 mu_strerror (rc)));
+	      return rc;
+	    }
+	  rc = mu_stream_printf (stream, "%-*s",
+				 (int) dmp->x_imapbase_len,
+				 buf);
+	  if (rc)
+	    {
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("%s:%s (%s): %s",
+			 __func__, "mu_stream_printf", dmp->name,
+			 mu_strerror (rc)));
+	    }
+	  return 0;
+	}
+
+      /*
+       * There is no X-IMAPbase header yet or it is not wide enough to
+       * accept the current value.  Fall back to reformatting entire
+       * mailbox.  Clear any other changes that might have been done
+       * to its messages.
+       */
       dirty = 0;
       dmp->mesg[0]->uid_modified = 1;
 
