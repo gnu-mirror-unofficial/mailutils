@@ -515,6 +515,7 @@ main (int argc, char **argv)
   int debug_option = 0;
   int detect_option = 0;
   int notify_option = 0;
+  int append_option = 0;
   struct mu_option options[] = {
     { "debug", 'd', NULL, MU_OPTION_DEFAULT,
       "enable debugging",
@@ -528,6 +529,9 @@ main (int argc, char **argv)
     { "notify", 'N', NULL, MU_OPTION_DEFAULT,
       "test notification code",
       mu_c_incr, &notify_option },
+    { "append", 'a', NULL, MU_OPTION_DEFAULT,
+      "open mailbox in append mode",
+      mu_c_incr, &append_option },
     MU_OPTION_END
   };
 
@@ -566,7 +570,8 @@ main (int argc, char **argv)
     }
 
   MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
-  MU_ASSERT (mu_mailbox_open (env.mbx, MU_STREAM_RDWR));
+  MU_ASSERT (mu_mailbox_open (env.mbx,
+			      append_option ? MU_STREAM_APPEND : MU_STREAM_RDWR));
 
   if (notify_option)
     {

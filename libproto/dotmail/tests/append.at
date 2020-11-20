@@ -230,3 +230,64 @@ Return-Path:hare@wonder.land
 1 body_text: Have some wine
 
 ])
+#
+# Test whether UIDs are updated in append mode.
+#
+AT_SETUP([append mode])
+AT_DATA([inbox],
+[Received: (from hare@wonder.land)
+	by wonder.land id 3301
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
+Date: Mon, 29 Jul 2002 22:00:01 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3301@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Invitation
+Return-Path: hare@wonder.land
+X-IMAPbase: 10 3
+X-UID: 1
+
+Have some wine
+.
+Received: (from alice@wonder.land)
+	by wonder.land id 3302
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:07 +0100
+Date: Mon, 29 Jul 2002 22:00:02 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3302@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+X-UID: 2
+
+I don't see any wine
+.
+])
+AT_DATA([msg],
+[Received: (from hare@wonder.land)
+	by wonder.land id 3303
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:08 +0100
+Date: Mon, 29 Jul 2002 22:00:03 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3303@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Re: Invitation
+Return-Path: hare@wonder.land
+
+There isn't any
+])
+AT_CHECK([mbop -a -m inbox append msg],
+[0],
+[append: OK
+])
+AT_CHECK([grep X-UID inbox],
+[0],
+[X-UID: 1
+X-UID: 2
+X-UID: 3
+])
+AT_CHECK([grep X-IMAPbase inbox | tr -s ' '],
+[0],
+[X-IMAPbase: 10 4
+])
+AT_CLEANUP

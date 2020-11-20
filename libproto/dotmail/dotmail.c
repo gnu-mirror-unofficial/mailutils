@@ -69,7 +69,15 @@ dotmail_mailbox_init_stream (struct mu_dotmail_mailbox *dmp)
   int rc;
   mu_mailbox_t mailbox = dmp->mailbox;
 
-  rc = mu_mapfile_stream_create (&mailbox->stream, dmp->name, mailbox->flags);
+  /*
+   * Initialize stream flags.  If append mode is requested, convert it to
+   * read-write, so that dotmail_flush_unlocked be able to update the
+   * X-IMAPbase header in the first message, if necessary.
+   */
+  dmp->stream_flags = mailbox->flags;
+  if (dmp->stream_flags & MU_STREAM_APPEND)
+    dmp->stream_flags = (dmp->stream_flags & ~MU_STREAM_APPEND) | MU_STREAM_RDWR;
+  rc = mu_mapfile_stream_create (&mailbox->stream, dmp->name, dmp->stream_flags);
   if (rc)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
@@ -376,7 +384,7 @@ dotmail_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
   int i, j;
   int force_init_uids = 0;
 
-  if (!(mailbox->flags & MU_STREAM_READ))
+  if (!(dmp->stream_flags & MU_STREAM_READ))
     return 0;
 
   rc = mu_streamref_create (&stream, mailbox->stream);
@@ -665,7 +673,7 @@ dotmail_rescan (mu_mailbox_t mailbox, mu_off_t offset)
   if (!dmp)
     return EINVAL;
 
-  if (!(mailbox->flags & MU_STREAM_READ))
+  if (!(dmp->stream_flags & MU_STREAM_READ))
     return 0;
       
   mu_monitor_wrlock (mailbox->monitor);
@@ -1307,9 +1315,6 @@ dotmail_flush_unlocked (struct mu_dotmail_flush_tracker *trk, int mode)
   if (mode == FLUSH_UIDVALIDITY && !dmp->uidvalidity_changed)
     return 0;
   
-  if (dmp->mailbox->flags & MU_STREAM_APPEND)//FIXME
-    return mu_stream_flush (dmp->mailbox->stream);
-
   rc = dotmail_refresh (dmp->mailbox);
   if (rc)
     return rc;

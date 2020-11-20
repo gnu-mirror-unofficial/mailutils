@@ -62,7 +62,8 @@ struct mu_dotmail_mailbox
 {
   char *name;                /* Disk file name */
   mu_mailbox_t mailbox;      /* Associated mailbox */
-
+  int stream_flags;          /* Flags used to create the mailbox stream */
+  
   mu_off_t size;             /* Size of the mailbox.  */
   unsigned long uidvalidity; /* Uidvalidity value */
   unsigned long uidnext;     /* Expected next UID value */
