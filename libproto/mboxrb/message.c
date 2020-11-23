@@ -546,7 +546,8 @@ msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
 }
 
 static int
-env_to_stream (struct mu_mboxrb_message *dmsg,
+env_to_stream (struct mu_mboxrb_message const *dmsg,
+	       struct mu_mboxrb_message_ref *ref,
 	       mu_envelope_t env, mu_stream_t dst)
 {
   char const *sender, *date;
@@ -554,13 +555,13 @@ env_to_stream (struct mu_mboxrb_message *dmsg,
 
   if ((rc = mu_envelope_sget_sender (env, &sender)) == 0 &&
       (rc = mu_envelope_sget_date (env, &date)) == 0)
-    {
+    {//FIXME
       mu_off_t off;
       rc = mu_stream_printf (dst, "From %s %s\n", sender, date);
       mu_stream_seek (dst, 0, MU_SEEK_CUR, &off);
-      dmsg->from_length = off - dmsg->message_start;
-      dmsg->env_sender_len = strlen (sender);
-      dmsg->env_date_start = strlen (sender) + 6;
+      ref->from_length = off - ref->message_start;
+      ref->env_sender_len = strlen (sender);
+      ref->env_date_start = strlen (sender) + 6;
     }
   
   return rc;
@@ -599,7 +600,7 @@ mu_mboxrb_message_reconstruct (mu_stream_t dest,
   rc = mu_message_get_envelope (dmsg->message, &env);
   if (rc)
     return rc;
-  rc = env_to_stream (dmsg, env, dest);
+  rc = env_to_stream (dmsg, ref, env, dest);
   if (rc)
     return rc;
   

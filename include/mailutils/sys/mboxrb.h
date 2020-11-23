@@ -43,6 +43,7 @@ struct mu_mboxrb_message
   unsigned body_from_escaped:1;  /* True if body is from-escaped (valid if
 				    body_lines_scanned is true) */
   unsigned uid_modified:1;/* UID|uidvalidity|uidnext has been modified */
+  unsigned mark:1;
   
   int attr_flags;         /* Packed "Status:" attribute flags */
 
@@ -60,6 +61,9 @@ struct mu_mboxrb_message_ref
 {
   size_t orig_num;        /* Original message index */
   mu_off_t message_start; /* Start of message */
+  size_t from_length;     /* Length of the From_ line */
+  int env_sender_len;
+  int env_date_start;
   mu_off_t body_start;    /* Start of body */
   mu_off_t message_end;   /* End of message */
   int rescan;

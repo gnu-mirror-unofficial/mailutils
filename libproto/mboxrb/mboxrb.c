@@ -37,6 +37,7 @@
 #include <mailutils/nls.h>
 #include <mailutils/header.h>
 #include <mailutils/attribute.h>
+#include <mailutils/envelope.h>
 #include <mailutils/util.h>
 #include <mailutils/cctype.h>
 #include <mailutils/sys/folder.h>
@@ -448,7 +449,7 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
     mboxrb_scan_header,
     mboxrb_scan_body
   } state = mboxrb_scan_init;
-  struct mu_mboxrb_message *dmsg;
+  struct mu_mboxrb_message *dmsg = NULL;
   char *zn, *ti;
   int force_init_uids = 0;
   size_t numlines = 0;
@@ -460,6 +461,11 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
    && b[sizeof (h) - 1] == ':')
   
 
+  rc = mu_stream_size (mailbox->stream, &dmp->size);
+  if (rc)
+    return rc;
+  if (offset == dmp->size)
+    return 0;
   if (!(dmp->stream_flags & MU_STREAM_READ))
     return 0;
 
@@ -642,24 +648,27 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	mboxrb_dispatch (mailbox, MU_EVT_MAILBOX_PROGRESS, NULL);
     }
 
-  /* Finalize the last message */
-  rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_end);
-  if (rc)
+  if (dmsg)
     {
-      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("%s:%s (%s): %s",
-		 __func__, "mu_stream_seek", dmp->name,
-		 mu_strerror (rc)));
-      goto err;
-    }
-  dmsg->message_end--;
-  if (dmsg->uid == 0)
-    force_init_uids = 1;
-  if (force_init_uids)
-    mboxrb_message_alloc_uid (dmsg);
+      /* Finalize the last message */
+      rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_end);
+      if (rc)
+	{
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("%s:%s (%s): %s",
+		     __func__, "mu_stream_seek", dmp->name,
+		     mu_strerror (rc)));
+	  goto err;
+	}
+      dmsg->message_end--;
+      if (dmsg->uid == 0)
+	force_init_uids = 1;
+      if (force_init_uids)
+	mboxrb_message_alloc_uid (dmsg);
 
-  count = dmp->mesg_count;
-  mboxrb_dispatch (mailbox, MU_EVT_MESSAGE_ADD, &count);
+      count = dmp->mesg_count;
+      mboxrb_dispatch (mailbox, MU_EVT_MESSAGE_ADD, &count);
+    }
   
  err:
   if (rc)
@@ -698,13 +707,6 @@ mboxrb_rescan (mu_mailbox_t mailbox, mu_off_t offset)
 #ifdef WITH_PTHREAD
   pthread_cleanup_push (mboxrb_cleanup, (void *)mailbox);
 #endif
-
-  rc = mu_stream_size (mailbox->stream, &dmp->size);
-  if (rc != 0)
-    {
-      mu_monitor_unlock (mailbox->monitor);
-      return rc;
-    }
 
   if (mailbox->locker && (rc = mu_locker_lock (mailbox->locker)))
     {
@@ -973,6 +975,48 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 
   do
     {
+      mu_envelope_t env;
+      char *date = NULL;
+      char *sender = NULL;
+
+      rc = mu_message_get_envelope (msg, &env);
+      if (rc)
+	break;
+
+      rc = mu_envelope_aget_sender (env, &sender);
+      if (rc == 0)
+	{
+	  rc = mu_envelope_aget_date (env, &date);
+	  if (rc == 0)
+	    {
+	      rc = mu_message_reconstruct_envelope (msg, &env);
+	      if (rc)
+		break;
+
+	      rc = mu_envelope_aget_sender (env, &sender);
+	      if (rc == 0)
+		{
+		  rc = mu_envelope_aget_date (env, &date);
+		  if (rc)
+		    free (sender);
+		}
+
+	      mu_envelope_destroy (&env, msg);
+	      if (rc)
+		break;
+
+	      rc = mu_stream_printf (mailbox->stream, "From %s %s\n",
+				     sender, date);
+	      free (sender);
+	      free (date);
+	    }
+	  else
+	    free (sender);
+	}
+
+      if (rc)
+	break;
+      
       rc = mu_stream_header_copy (mailbox->stream, istr, exclude_headers);
       if (rc)
 	break;
@@ -996,7 +1040,7 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
       if (rc)
 	break;
 
-      rc = mu_filter_create (&flt, istr, "DOT",
+      rc = mu_filter_create (&flt, istr, "FROMRB",
 			     MU_FILTER_ENCODE, MU_STREAM_READ);
       mu_stream_destroy (&istr);
       rc = mu_stream_copy (mailbox->stream, flt, 0, NULL);
@@ -1155,16 +1199,22 @@ mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
     }
   else
     {
+      /* Mark */
+      for (i = 0; i < trk->mesg_count; i++)
+	dmp->mesg[trk->ref[i].orig_num]->mark = 1;
+      /* Sweep */
+      for (i = 0; i < dmp->mesg_count; i++)
+	if (!dmp->mesg[i]->mark)
+	  mu_mboxrb_message_free (dmp->mesg[i]);
+      /* Reorder */
       for (i = 0; i < trk->mesg_count; i++)
 	{
-	  if (trk->ref[i].orig_num != i)
-	    {
-	      size_t j;
-	      for (j = i; j < trk->ref[i].orig_num; j++)
-		mu_mboxrb_message_free (dmp->mesg[j]);
-	      dmp->mesg[i] = dmp->mesg[trk->ref[i].orig_num];
-	    }
+	  dmp->mesg[i] = dmp->mesg[trk->ref[i].orig_num];
+	  dmp->mesg[i]->mark = 0;
 	  dmp->mesg[i]->message_start = trk->ref[i].message_start;
+	  dmp->mesg[i]->from_length = trk->ref[i].from_length;
+	  dmp->mesg[i]->env_sender_len = trk->ref[i].env_sender_len;
+	  dmp->mesg[i]->env_date_start = trk->ref[i].env_date_start;
 	  dmp->mesg[i]->body_start = trk->ref[i].body_start;
 	  dmp->mesg[i]->message_end = trk->ref[i].message_end;
 	  if (trk->ref[i].rescan)
@@ -1201,6 +1251,9 @@ mboxrb_mailbox_copy_unchanged (struct mu_mboxrb_flush_tracker *trk,
 	  struct mu_mboxrb_message *dmsg = trk->dmp->mesg[i];
 	  struct mu_mboxrb_message_ref *ref = tracker_next_ref (trk, i);
 	  ref->message_start = dmsg->message_start + off;
+	  ref->from_length = dmsg->from_length;
+	  ref->env_sender_len = dmsg->env_sender_len;
+	  ref->env_date_start = dmsg->env_date_start;
 	  ref->body_start = dmsg->body_start + off;
 	  ref->message_end = dmsg->message_end + off;
 	  ref->rescan = 0;
