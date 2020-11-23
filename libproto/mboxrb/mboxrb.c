@@ -119,7 +119,8 @@ mboxrb_open (mu_mailbox_t mailbox, int flags)
 
   rc = mboxrb_mailbox_init_stream (dmp);
 
-  if (mailbox->locker == NULL
+  if (rc == 0
+      && mailbox->locker == NULL
       && (flags & (MU_STREAM_WRITE | MU_STREAM_APPEND | MU_STREAM_CREAT)))
     {
       rc = mu_locker_create (&mailbox->locker, dmp->name, 0);
