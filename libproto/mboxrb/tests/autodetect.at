@@ -1,0 +1,71 @@
+# GNU Mailutils -- a suite of utilities for electronic mail
+# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([format detection])
+AT_KEYWORDS([autodetect])
+AT_CHECK(
+[
+AT_DATA([empty],[])
+
+# Valid mbox
+AT_DATA([mbox],
+[From user Wed Dec  2 05:53:22 1992
+From: Sergey <gray@example.net>
+To: Alice <alice@wonder.land>
+Subject: Test message
+
+Test
+])
+
+# Bad mbox
+AT_DATA([malformed],
+[From ...
+From: Sergey <gray@example.net>
+To: Alice <alice@wonder.land>
+Subject: Test message
+
+Test
+])
+
+export MU_AUTODETECT_ACCURACY
+for MU_AUTODETECT_ACCURACY in 0 1 2
+do
+  echo "MU_AUTODETECT_ACCURACY=$MU_AUTODETECT_ACCURACY"
+  for mbox in empty malformed mbox 
+  do
+    mbop --mailbox $mbox --detect
+  done
+done
+exit 0
+],
+[0],
+[MU_AUTODETECT_ACCURACY=0
+empty: 2
+malformed: 2
+mbox: 2
+MU_AUTODETECT_ACCURACY=1
+empty: 2
+malformed: 0
+mbox: 2
+MU_AUTODETECT_ACCURACY=2
+empty: 2
+malformed: 0
+mbox: 2
+])
+AT_CLEANUP
+
+
+  

@@ -1,0 +1,161 @@
+# GNU Mailutils -- a suite of utilities for electronic mail -*- autotest -*-
+# Copyright (C) 2020 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([body])
+AT_DATA([inbox],
+[From alice@wonder.land Mon Jul 29 22:00:21 2002
+Received: (from alice@wonder.land) 
+	by wonder.land id 3314
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:19 +0100
+Date: Mon, 29 Jul 2002 22:00:14 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3314@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Be specific
+
+I do, at least--at least I mean what
+I say--that's the same thing, you know.
+
+From hatter@wonder.land Mon Jul 29 22:00:22 2002
+Received: (from hatter@wonder.land) 
+	by wonder.land id 3315
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:20 +0100
+Date: Mon, 29 Jul 2002 22:00:15 +0100
+From: Hatter  <hatter@wonder.land>
+Message-Id: <200207292200.3315@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Re: Be specific
+
+Not the same thing a bit! You might just
+as well say that "I see what I eat" is the same thing as "I eat
+what I see"!
+
+From hare@wonder.land Mon Jul 29 22:00:23 2002
+Received: (from hare@wonder.land) 
+	by wonder.land id 3316
+	for alice@wonder.land; Mon, 29 Jul 2002 22:00:21 +0100
+Date: Mon, 29 Jul 2002 22:00:16 +0100
+From: March Hare  <hare@wonder.land>
+Message-Id: <200207292200.3316@wonder.land>
+To: Alice  <alice@wonder.land>
+Subject: Re: Be specific
+
+You might just as well say, that "I
+like what I get" is the same thing as "I get what I like"!
+])
+
+AT_CHECK([mbop -r -m inbox 1\; body_lines\; body_size],
+[0],
+[1 current message
+1 body_lines: 2
+1 body_size: 77
+])
+AT_CHECK([mbop -r -m inbox 1\; body_text],
+[0],
+[1 current message
+1 body_text: I do, at least--at least I mean what
+I say--that's the same thing, you know.
+
+])
+
+AT_CHECK([mbop -r -m inbox 2\; body_lines\; body_size],
+[0],
+[2 current message
+2 body_lines: 3
+2 body_size: 118
+])
+AT_CHECK([mbop -r -m inbox 2\; body_text],
+[0],
+[2 current message
+2 body_text: Not the same thing a bit! You might just
+as well say that "I see what I eat" is the same thing as "I eat
+what I see"!
+
+])
+
+AT_CHECK([mbop -r -m inbox 3\; body_lines\; body_size],
+[0],
+[3 current message
+3 body_lines: 2
+3 body_size: 95
+])
+AT_CHECK([mbop -r -m inbox 3\; body_text],
+[0],
+[3 current message
+3 body_text: You might just as well say, that "I
+like what I get" is the same thing as "I get what I like"!
+
+])
+
+AT_DATA([inbox1],
+[From alice@wonder.land Mon Jul 29 22:00:21 2002
+Date: Mon, 29 Jul 2002 22:00:14 +0100
+From: Alice  <alice@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Body excape
+
+This is the test message.
+>From what I can suppose, this line should be unescaped.
+However
+ >From line
+prefixed with space should not.
+
+On the other hand, already escaped
+>>From line
+and
+>>>From line
+should be unescaped too.
+
+That is not so if a whitespace appears before:
+ >>From line
+or in between:
+>> From line
+or if From is not followed by space:
+>>Fromline
+])
+
+AT_CHECK([mbop -r -m inbox1 1\; body_size\; body_lines],
+[0],
+[1 current message
+1 body_size: 359
+1 body_lines: 18
+])
+
+AT_CHECK([mbop -r -m inbox1 1\; body_text],
+[0],
+[1 current message
+1 body_text: This is the test message.
+From what I can suppose, this line should be unescaped.
+However
+ >From line
+prefixed with space should not.
+
+On the other hand, already escaped
+>From line
+and
+>>From line
+should be unescaped too.
+
+That is not so if a whitespace appears before:
+ >>From line
+or in between:
+>> From line
+or if From is not followed by space:
+>>Fromline
+
+])
+
+AT_CLEANUP

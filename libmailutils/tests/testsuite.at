@@ -220,6 +220,7 @@ m4_include([encode2047.at])
 
 AT_BANNER(Filters)
 m4_include([fromflt.at])
+m4_include([fromrb.at])
 m4_include([inline-comment.at])
 m4_include([hdrflt.at])
 m4_include([hdrcpy.at])

@@ -1,0 +1,56 @@
+AT_SETUP([FROMRB filter])
+AT_DATA([enc],
+[From me
+Fromme
+  From me
+Fram me
+From
+> From me
+>> From me
+> >From me
+>From me
+>>From me
+])
+AT_CHECK([fltst FROMRB encode read < enc],
+[0],
+[>From me
+Fromme
+  From me
+Fram me
+From
+> From me
+>> From me
+> >From me
+>>From me
+>>>From me
+])
+
+AT_DATA([dec],
+[From me
+>From me
+>>From me
+>>Fromme
+> From me
+>> From me
+> >From me
+>From
+>FroM X
+>FrOm X
+>FRom X
+])
+AT_CHECK([fltst FROMRB decode read < dec],
+[0],
+[From me
+From me
+>From me
+>>Fromme
+> From me
+>> From me
+> >From me
+>From
+>FroM X
+>FrOm X
+>FRom X
+])
+
+AT_CLEANUP

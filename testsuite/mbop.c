@@ -516,6 +516,8 @@ main (int argc, char **argv)
   int detect_option = 0;
   int notify_option = 0;
   int append_option = 0;
+  int ro_option = 0;
+  int mbox_flags;
   struct mu_option options[] = {
     { "debug", 'd', NULL, MU_OPTION_DEFAULT,
       "enable debugging",
@@ -532,6 +534,9 @@ main (int argc, char **argv)
     { "append", 'a', NULL, MU_OPTION_DEFAULT,
       "open mailbox in append mode",
       mu_c_incr, &append_option },
+    { "read-only", 'r', NULL, MU_OPTION_DEFAULT,
+      "open mailbox in read-only mode",
+      mu_c_incr, &ro_option },
     MU_OPTION_END
   };
 
@@ -569,9 +574,20 @@ main (int argc, char **argv)
       exit (n & MU_FOLDER_ATTRIBUTE_FILE ? 0 : 1);
     }
 
+  if (append_option && ro_option)
+    {
+      mu_error ("conflicting options");
+      exit (2);
+    }
+  if (append_option)
+    mbox_flags = MU_STREAM_APPEND;
+  else if (ro_option)
+    mbox_flags = MU_STREAM_READ;
+  else
+    mbox_flags = MU_STREAM_RDWR;
+  
   MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
-  MU_ASSERT (mu_mailbox_open (env.mbx,
-			      append_option ? MU_STREAM_APPEND : MU_STREAM_RDWR));
+  MU_ASSERT (mu_mailbox_open (env.mbx, mbox_flags));
 
   if (notify_option)
     {

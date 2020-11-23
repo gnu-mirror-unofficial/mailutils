@@ -103,6 +103,7 @@ TESTSUITE_AT += \
  encode2047.at\
  exp.at\
  fromflt.at\
+ fromrb.at\
  fsaf.at\
  fsaftomod.at\
  fsfolder00.at\
