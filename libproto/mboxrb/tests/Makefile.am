@@ -39,22 +39,21 @@ nodist_mbop_SOURCES = mbop.c
 
 TESTSUITE_AT += \
   append.at\
-  autodetect.at\
-  delete.at\
-  count.at\
-  env.at\
   attr.at\
-  header.at\
+  autodetect.at\
   body.at\
+  count.at\
+  delete.at\
+  env.at\
+  notify.at\
+  header.at\
   qget.at\
-  uidvalidity.at\
-  uidnext.at
-#  recent.at\
-#  unseen.at\
-#  uid.at\
-#  setattr.at\
-#  notify.at
+  uid.at\
+  uidnext.at\
+  uidvalidity.at
 
+#  recent.at\
+#  unseen.at
 
 
 
