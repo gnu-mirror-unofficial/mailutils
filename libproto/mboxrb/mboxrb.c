@@ -965,9 +965,21 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
   };
   struct mu_mboxrb_mailbox *dmp = mailbox->data;
 
-  rc = mu_stream_seek (mailbox->stream, 0, MU_SEEK_END, &size);
+  if (dmp->mesg_count)
+    size = dmp->mesg[dmp->mesg_count-1]->message_end + 1;
+  else
+    size = 0;
+  rc = mu_stream_seek (mailbox->stream, size, MU_SEEK_SET, NULL);
   if (rc)
     return rc;
+
+  if (dmp->mesg_count)
+    {
+      rc = mu_stream_write (mailbox->stream, "\n", 1, NULL);
+      if (rc)
+	return rc;
+      size++;
+    }
 
   rc = mu_message_get_streamref (msg, &istr);
   if (rc)
@@ -1045,6 +1057,8 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
       mu_stream_destroy (&istr);
       rc = mu_stream_copy (mailbox->stream, flt, 0, NULL);
       mu_stream_unref (flt);
+
+      rc = mu_stream_write (mailbox->stream, "\n", 1, NULL);
     }
   while (0);
 
@@ -1154,7 +1168,7 @@ mboxrb_get_atime (mu_mailbox_t mailbox, time_t *return_time)
 struct mu_mboxrb_flush_tracker
 {
   struct mu_mboxrb_mailbox *dmp;
-  struct mu_mboxrb_message_ref *ref;
+  size_t *ref;
   size_t mesg_count;
 };
 
@@ -1176,12 +1190,11 @@ tracker_free (struct mu_mboxrb_flush_tracker *trk)
   free (trk->ref);
 }
 
-static struct mu_mboxrb_message_ref *
+static struct mu_mboxrb_message *
 tracker_next_ref (struct mu_mboxrb_flush_tracker *trk, size_t orig_num)
 {
-  struct mu_mboxrb_message_ref *ref = &trk->ref[trk->mesg_count++];
-  ref->orig_num = orig_num;
-  return ref;
+  trk->ref[trk->mesg_count++] = orig_num;
+  return trk->dmp->mesg[orig_num];
 }
 
 static void
@@ -1201,7 +1214,7 @@ mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
     {
       /* Mark */
       for (i = 0; i < trk->mesg_count; i++)
-	dmp->mesg[trk->ref[i].orig_num]->mark = 1;
+	dmp->mesg[trk->ref[i]]->mark = 1;
       /* Sweep */
       for (i = 0; i < dmp->mesg_count; i++)
 	if (!dmp->mesg[i]->mark)
@@ -1209,21 +1222,13 @@ mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
       /* Reorder */
       for (i = 0; i < trk->mesg_count; i++)
 	{
-	  dmp->mesg[i] = dmp->mesg[trk->ref[i].orig_num];
+	  dmp->mesg[i] = dmp->mesg[trk->ref[i]];
 	  dmp->mesg[i]->mark = 0;
-	  dmp->mesg[i]->message_start = trk->ref[i].message_start;
-	  dmp->mesg[i]->from_length = trk->ref[i].from_length;
-	  dmp->mesg[i]->env_sender_len = trk->ref[i].env_sender_len;
-	  dmp->mesg[i]->env_date_start = trk->ref[i].env_date_start;
-	  dmp->mesg[i]->body_start = trk->ref[i].body_start;
-	  dmp->mesg[i]->message_end = trk->ref[i].message_end;
-	  if (trk->ref[i].rescan)
-	    dmp->mesg[i]->body_lines_scanned = 0;
 	}
       dmp->mesg_count = trk->mesg_count;
-      dmp->size = trk->ref[trk->mesg_count - 1].message_end + 1;
+      dmp->size = dmp->mesg[dmp->mesg_count - 1]->message_end + 1;
     }
-  /* FIXME: Check uidvalidity values */
+  /* FIXME: Check uidvalidity values?? */
 }
 
 /* Write to the output stream DEST messages in the range [from,to).
@@ -1236,43 +1241,37 @@ mboxrb_mailbox_copy_unchanged (struct mu_mboxrb_flush_tracker *trk,
 {
   if (to > from)
     {
+      struct mu_mboxrb_mailbox *dmp = trk->dmp;
+      mu_off_t start;
+      mu_off_t stop;
       size_t i;
       mu_off_t off;
       int rc;
-      struct mu_mboxrb_mailbox *dmp = trk->dmp;
+
+      start = dmp->mesg[from]->message_start;
+      if (to == dmp->mesg_count)
+	stop = dmp->mesg[to-1]->message_end + 1;
+      else
+	stop = dmp->mesg[to]->message_start;
 
       rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &off);
       if (rc)
 	return rc;
-      off -= trk->dmp->mesg[from]->message_start;
+      off -= start;
       /* Fixup offsets */
       for (i = from; i < to; i++)
 	{
-	  struct mu_mboxrb_message *dmsg = trk->dmp->mesg[i];
-	  struct mu_mboxrb_message_ref *ref = tracker_next_ref (trk, i);
-	  ref->message_start = dmsg->message_start + off;
-	  ref->from_length = dmsg->from_length;
-	  ref->env_sender_len = dmsg->env_sender_len;
-	  ref->env_date_start = dmsg->env_date_start;
-	  ref->body_start = dmsg->body_start + off;
-	  ref->message_end = dmsg->message_end + off;
-	  ref->rescan = 0;
+	  struct mu_mboxrb_message *ref = tracker_next_ref (trk, i);
+	  ref->message_start += off;
+	  ref->body_start += off;
+	  ref->message_end += off;
 	}
 
       /* Copy data */
-      if (to == dmp->mesg_count)
-	off = dmp->mesg[to-1]->message_end + 1;
-      else
-	off = dmp->mesg[to]->message_start;
-
-      rc = mu_stream_seek (dmp->mailbox->stream, dmp->mesg[from]->message_start,
-			   MU_SEEK_SET, NULL);
+      rc = mu_stream_seek (dmp->mailbox->stream, start, MU_SEEK_SET, NULL);
       if (rc)
 	return rc;
-      return mu_stream_copy (dest,
-			     dmp->mailbox->stream,
-			     off - dmp->mesg[from]->message_start,
-			     NULL);
+      return mu_stream_copy (dest, dmp->mailbox->stream, stop - start, NULL);
     }
   return 0;
 }

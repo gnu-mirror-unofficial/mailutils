@@ -462,7 +462,7 @@ mboxrb_message_uid_save (mu_stream_t dst,
 int
 mboxrb_message_copy_with_uid (mu_stream_t dst,
 			      struct mu_mboxrb_message const *dmsg,
-			      struct mu_mboxrb_message_ref *ref,
+			      struct mu_mboxrb_message *ref,
 			      char const *x_imapbase)
 {
   int rc;
@@ -510,7 +510,7 @@ mboxrb_message_copy_with_uid (mu_stream_t dst,
 
 static int
 msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
-		      struct mu_mboxrb_message *dmsg,
+		      struct mu_mboxrb_message const *dmsg,
 		      char const *x_imapbase)
 {
   static char *exclude_headers[] = {
@@ -547,7 +547,7 @@ msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
 
 static int
 env_to_stream (struct mu_mboxrb_message const *dmsg,
-	       struct mu_mboxrb_message_ref *ref,
+	       struct mu_mboxrb_message *ref,
 	       mu_envelope_t env, mu_stream_t dst)
 {
   char const *sender, *date;
@@ -573,7 +573,7 @@ env_to_stream (struct mu_mboxrb_message const *dmsg,
 int
 mu_mboxrb_message_reconstruct (mu_stream_t dest,
 			       struct mu_mboxrb_message *dmsg,
-			       struct mu_mboxrb_message_ref *ref,
+			       struct mu_mboxrb_message *ref,
 			       char const *x_imapbase)
 {
   int rc;
@@ -581,19 +581,19 @@ mu_mboxrb_message_reconstruct (mu_stream_t dest,
   mu_header_t hdr;
   mu_body_t body;
   mu_stream_t str, flt;
-
+  struct mu_mboxrb_message tmp;
+  int same_ref;
+  
+  if ((same_ref = (ref == dmsg)) != 0)
+    {
+      /* Operate on temporary copy of dmsg */
+      tmp = *ref;
+      ref = &tmp;
+    }
   rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_start);
   if (rc)
     return rc;
 
-  if (ref->message_start != 0)
-    {
-      rc = mu_stream_write (dest, "\n", 1, NULL);
-      if (rc)
-	return rc;
-      ref->message_start++;
-    }
-	  
   if (!dmsg->message)
     return mboxrb_message_copy_with_uid (dest, dmsg, ref, x_imapbase);
 
@@ -636,9 +636,14 @@ mu_mboxrb_message_reconstruct (mu_stream_t dest,
   mu_stream_unref (flt);
   if (rc == 0)
     {
+      rc = mu_stream_write (dest, "\n", 1, NULL);
+      if (rc)
+	return rc;
       rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_end);
-      ref->rescan = 1;
     }
 
+  if (same_ref)
+    *(struct mu_mboxrb_message *)dmsg = tmp;
+  
   return rc;
 }

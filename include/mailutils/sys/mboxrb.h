@@ -57,18 +57,6 @@ struct mu_mboxrb_message
   size_t num;             /* Number of this message in the mailbox (0-based) */  
 };
 
-struct mu_mboxrb_message_ref
-{
-  size_t orig_num;        /* Original message index */
-  mu_off_t message_start; /* Start of message */
-  size_t from_length;     /* Length of the From_ line */
-  int env_sender_len;
-  int env_date_start;
-  mu_off_t body_start;    /* Start of body */
-  mu_off_t message_end;   /* End of message */
-  int rescan;
-};
-
 struct mu_mboxrb_mailbox
 {
   char *name;                /* Disk file name */
@@ -96,7 +84,7 @@ int mu_mboxrb_message_attr_load (struct mu_mboxrb_message *dmsg);
 int mu_mboxrb_mailbox_uid_setup (struct mu_mboxrb_mailbox *dmp);
 int mu_mboxrb_message_reconstruct (mu_stream_t dest,
 				   struct mu_mboxrb_message *dmsg,
-				   struct mu_mboxrb_message_ref *ref,
+				   struct mu_mboxrb_message *ref,
 				   char const *x_imapbase);
 
 #endif  

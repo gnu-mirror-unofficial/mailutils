@@ -87,6 +87,7 @@ AT_DATA([commands],
 [3
 set_deleted
 expunge
+count
 # Message 4 becomes 3 after expunge. Re-select it.
 3
 uid
@@ -98,6 +99,7 @@ AT_CHECK([mbop -m inbox < commands],
 [3 current message
 3 set_deleted: OK
 expunge: OK
+count: 4
 3 current message
 3 uid: 4
 3 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
