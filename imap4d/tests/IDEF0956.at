@@ -38,10 +38,11 @@ X LOGOUT
 * FLAGS (\Answered \Flagged \Deleted \Seen \Draft)
 * OK [[PERMANENTFLAGS (\Answered \Flagged \Deleted \Seen \Draft)]] Permanent flags
 1 OK [[READ-WRITE]] SELECT Completed
-* 1 FETCH (BODY[[TEXT]]<0> {161}
+* 1 FETCH (BODY[[TEXT]]<0> {163}
 ABASEMENT, n.  A decent and customary mental attitude in the presence
 of wealth of power.  Peculiarly appropriate in an employee when
 addressing an employer.
+
 )
 2 OK FETCH Completed
 * BYE Session terminating.

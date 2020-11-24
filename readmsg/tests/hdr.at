@@ -17,7 +17,7 @@
 READMSGTEST([readmsg -h],[hdr],
 [readmsg -h SOMETHING],
 [0],
-[From bar@dontmailme.org  Fri Dec 28 23:28:09 2001
+[From bar@dontmailme.org Fri Dec 28 23:28:09 2001
 Received: (from bar@dontmailme.org) 
 	by dontmailme.org id fERKR9N16790
 	for foobar@nonexistent.net; Fri, 28 Dec 2001 22:18:08 +0200
@@ -31,6 +31,7 @@ It seems very pretty, but it's *rather* hard to understand!'
 Somehow it seems to fill my head with ideas -- only I don't
 exactly know what they are!  However, SOMEBODY killed SOMETHING:
 that's clear, at any rate...
+
 
 
 ])

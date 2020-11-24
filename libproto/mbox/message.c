@@ -499,13 +499,16 @@ mboxrb_message_copy_with_uid (mu_stream_t dst,
   if (rc)
     return rc;
 
-  rc = mu_stream_copy (dst, src,
-		       dmsg->message_end - dmsg->body_start + 1,
-		       NULL);
+  rc = mu_stream_copy_nl (dst, src,
+			  dmsg->message_end - dmsg->body_start + 1,
+			  NULL);
   if (rc)
     return rc;
 
-  return mu_stream_seek (dst, 0, MU_SEEK_CUR, &ref->message_end);
+  rc = mu_stream_seek (dst, 0, MU_SEEK_CUR, &ref->message_end);
+  if (rc == 0)
+    ref->message_end--;
+  return rc;
 }
 
 static int
@@ -595,53 +598,55 @@ mu_mboxrb_message_reconstruct (mu_stream_t dest,
     return rc;
 
   if (!dmsg->message)
-    return mboxrb_message_copy_with_uid (dest, dmsg, ref, x_imapbase);
-
-  rc = mu_message_get_envelope (dmsg->message, &env);
-  if (rc)
-    return rc;
-  rc = env_to_stream (dmsg, ref, env, dest);
-  if (rc)
-    return rc;
-  
-  rc = mu_message_get_header (dmsg->message, &hdr);
-  if (rc)
-    return rc;
-  rc = mu_header_get_streamref (hdr, &str);
-  if (rc)
-    return rc;
-  rc = msg_header_to_stream (dest, str, dmsg, x_imapbase);
-  mu_stream_unref (str);
-  if (rc)
-    return rc;
-
-  rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->body_start);
-  if (rc)
-    return rc;
-
-  /* Copy body */
-  rc = mu_message_get_body (dmsg->message, &body);
-  if (rc)
-    return rc;
-  rc = mu_body_get_streamref (body, &str);
-  if (rc)
-    return rc;
-  rc = mu_filter_create (&flt, str, "FROMRB",
-			 MU_FILTER_ENCODE, MU_STREAM_READ);
-  mu_stream_unref (str);
-  if (rc)
-    return rc;
-
-  rc = mu_stream_copy (dest, flt, 0, NULL);
-  mu_stream_unref (flt);
-  if (rc == 0)
+    rc = mboxrb_message_copy_with_uid (dest, dmsg, ref, x_imapbase);
+  else
     {
-      rc = mu_stream_write (dest, "\n", 1, NULL);
+      rc = mu_message_get_envelope (dmsg->message, &env);
       if (rc)
 	return rc;
-      rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_end);
-    }
+      rc = env_to_stream (dmsg, ref, env, dest);
+      if (rc)
+	return rc;
+  
+      rc = mu_message_get_header (dmsg->message, &hdr);
+      if (rc)
+	return rc;
+      rc = mu_header_get_streamref (hdr, &str);
+      if (rc)
+	return rc;
+      rc = msg_header_to_stream (dest, str, dmsg, x_imapbase);
+      mu_stream_unref (str);
+      if (rc)
+	return rc;
 
+      rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->body_start);
+      if (rc)
+	return rc;
+
+      /* Copy body */
+      rc = mu_message_get_body (dmsg->message, &body);
+      if (rc)
+	return rc;
+      rc = mu_body_get_streamref (body, &str);
+      if (rc)
+	return rc;
+      rc = mu_filter_create (&flt, str, "FROMRB",
+			     MU_FILTER_ENCODE, MU_STREAM_READ);
+      mu_stream_unref (str);
+      if (rc)
+	return rc;
+
+      rc = mu_stream_copy_nl (dest, flt, 0, NULL);
+      mu_stream_unref (flt);
+      if (rc == 0)
+	{
+	  rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_end);
+	  if (rc)
+	    return rc;
+	  ref->message_end--;
+	}
+    }
+  
   if (same_ref)
     *(struct mu_mboxrb_message *)dmsg = tmp;
   

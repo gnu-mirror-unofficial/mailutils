@@ -25,18 +25,20 @@ mail_command "set readonly"
 # line and a delimiter line between headers and the body. Thus, number
 # of lines is always two less then reported by BSD mail.
 mail_test "size *" \
-"> 1  44/1254 "\
-"  2  13/534  "\
-"  3  42/1569 "\
-"  4  84/3399 "
+"> 1  45/1255 "\
+"  2  14/535  "\
+"  3  43/1570 "\
+"  4  85/3400 "\
+"  5  27/857  "    
 
 ###########################################################################
 # `headers' and `print'
 mail_test "headers" \
-">N   1 Foo Bar            Fri Dec 28 22:18  44/1254  Jabberwocky" \
-" N   2 Bar                Fri Dec 28 23:28  13/534   Re: Jabberwocky" \
-" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  42/1569  Simple MIME" \
-" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  84/3399  Nested MIME" \
+">N   1 Foo Bar            Fri Dec 28 22:18  45/1255  Jabberwocky" \
+" N   2 Bar                Fri Dec 28 23:28  14/535   Re: Jabberwocky" \
+" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  43/1570  Simple MIME" \
+" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  85/3400  Nested MIME" \
+" N   5 Sergey Poznyakoff  Sat Jul 13 00:43  27/857   Empty MIME Parts"  
 
 mail_test "print"\
 	"Received: (from foobar@nonexistent.net)"\
@@ -81,7 +83,8 @@ mail_test "print"\
 	"`Twas brillig, and the slithy toves"\
 	"Did gyre and gimble in the wabe;"\
 	"All mimsy were the borogoves,"\
-	"And the mome raths outgrabe."
+        "And the mome raths outgrabe."\
+        ""
 
 # Initially, `Print' must yield the same output as `print'
 mail_test "Print"\
@@ -127,7 +130,8 @@ mail_test "Print"\
 	"`Twas brillig, and the slithy toves"\
 	"Did gyre and gimble in the wabe;"\
 	"All mimsy were the borogoves,"\
-	"And the mome raths outgrabe."
+        "And the mome raths outgrabe."\
+        ""
 
 ###########################################################################
 # Test the `top' command
@@ -156,10 +160,11 @@ mail_test -message "top (2)" "top" \
 # This checks if `headers' correctly reflects 'read' attribute
 
 mail_test -message "headers (2)" "headers" \
-">R   1 Foo Bar            Fri Dec 28 22:18  44/1254  Jabberwocky" \
-" N   2 Bar                Fri Dec 28 23:28  13/534   Re: Jabberwocky" \
-" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  42/1569  Simple MIME" \
-" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  84/3399  Nested MIME" \
+">R   1 Foo Bar            Fri Dec 28 22:18  45/1255  Jabberwocky" \
+" N   2 Bar                Fri Dec 28 23:28  14/535   Re: Jabberwocky" \
+" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  43/1570  Simple MIME" \
+" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  85/3400  Nested MIME" \
+" N   5 Sergey Poznyakoff  Sat Jul 13 00:43  27/857   Empty MIME Parts"  
 
 ###########################################################################
 # `next' should display the 2nd message
@@ -177,16 +182,18 @@ mail_test "next" \
 "It seems very pretty, but it's *rather* hard to understand!'"\
 "Somehow it seems to fill my head with ideas -- only I don't"\
 "exactly know what they are!  However, SOMEBODY killed SOMETHING:"\
-"that's clear, at any rate..."
+"that's clear, at any rate..."\
+""
 
 ###########################################################################
 # Now check if the cursor is placed correctly
 
 mail_test -message "headers (3)" "headers" \
-" R   1 Foo Bar            Fri Dec 28 22:18  44/1254  Jabberwocky" \
-">R   2 Bar                Fri Dec 28 23:28  13/534   Re: Jabberwocky" \
-" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  42/1569  Simple MIME" \
-" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  84/3399  Nested MIME" \
+" R   1 Foo Bar            Fri Dec 28 22:18  45/1255  Jabberwocky" \
+">R   2 Bar                Fri Dec 28 23:28  14/535   Re: Jabberwocky" \
+" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  43/1570  Simple MIME" \
+" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  85/3400  Nested MIME" \
+" N   5 Sergey Poznyakoff  Sat Jul 13 00:43  27/857   Empty MIME Parts"  
 
 ###########################################################################
 # Check for `prev'
@@ -210,10 +217,11 @@ mail_test "prev"\
 # `headers' again
 
 mail_test -message "headers (4)" "headers" \
-">R   1 Foo Bar            Fri Dec 28 22:18  44/1254  Jabberwocky" \
-" R   2 Bar                Fri Dec 28 23:28  13/534   Re: Jabberwocky" \
-" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  42/1569  Simple MIME" \
-" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  84/3399  Nested MIME" \
+">R   1 Foo Bar            Fri Dec 28 22:18  45/1255  Jabberwocky" \
+" R   2 Bar                Fri Dec 28 23:28  14/535   Re: Jabberwocky" \
+" N   3 Sergey Poznyakoff  Sat Jul 13 00:43  43/1570  Simple MIME" \
+" N   4 Sergey Poznyakoff  Sat Jul 13 00:50  85/3400  Nested MIME" \
+" N   5 Sergey Poznyakoff  Sat Jul 13 00:43  27/857   Empty MIME Parts"  
 
 ###########################################################################
 # print with an argument
@@ -231,7 +239,8 @@ mail_test -message "print (2)" "print 2"\
 "It seems very pretty, but it's *rather* hard to understand!'"\
 "Somehow it seems to fill my head with ideas -- only I don't"\
 "exactly know what they are!  However, SOMEBODY killed SOMETHING:"\
-"that's clear, at any rate..."
+"that's clear, at any rate..."\
+""  
 
 
 ###########################################################################
@@ -440,7 +449,8 @@ mail_test "print"\
 "It seems very pretty, but it's *rather* hard to understand!'"\
 "Somehow it seems to fill my head with ideas -- only I don't"\
 "exactly know what they are!  However, SOMEBODY killed SOMETHING:"\
-"that's clear, at any rate..."
+"that's clear, at any rate..."\
+""
 
 mail_test -message "Print (2)" "Print 2"\
 "Received: (from bar@dontmailme.org)"\
@@ -455,7 +465,8 @@ mail_test -message "Print (2)" "Print 2"\
 "It seems very pretty, but it's *rather* hard to understand!'"\
 "Somehow it seems to fill my head with ideas -- only I don't"\
 "exactly know what they are!  However, SOMEBODY killed SOMETHING:"\
-"that's clear, at any rate..."
+"that's clear, at any rate..."\
+""
 
 mail_test -message "default retain output" "retain"\
 	"No fields are currently being retained"
@@ -468,7 +479,8 @@ mail_test -message "working retain" "print 2"\
 "It seems very pretty, but it's *rather* hard to understand!'"\
 "Somehow it seems to fill my head with ideas -- only I don't"\
 "exactly know what they are!  However, SOMEBODY killed SOMETHING:"\
-"that's clear, at any rate..."
+"that's clear, at any rate..."\
+""
 
 mail_stop
 return 0

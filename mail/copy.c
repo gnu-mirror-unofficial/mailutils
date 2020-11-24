@@ -95,10 +95,9 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
   int status;
   msgset_t *mp;
   mu_stream_t ostr, mstr;
-  mu_off_t size;
-  size_t lines;
   mu_message_t msg;
   mu_locker_t locker;
+  mu_stream_stat_buffer stat;
 
   status = mu_file_stream_create (&ostr, filename,
 				  MU_STREAM_CREAT|MU_STREAM_APPEND);
@@ -130,12 +129,17 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
       return 1;
     }
 
+  mu_stream_set_stat (ostr,
+		      MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUT) |
+		      MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUTLN),
+		      stat);
+  
   for (mp = msglist; mp; mp = mp->next)
     {
       mu_envelope_t env;
       const char *s, *d;
       int n;
-
+      
       status = util_get_message (mbox, msgset_msgno (mp), &msg);
       if (status)
 	break;
@@ -168,9 +172,6 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 	  break;
 	}
 
-      totals->lines++;
-      totals->size += n;
-
       status = mu_message_get_streamref (msg, &mstr);
       if (status)
 	{
@@ -178,7 +179,7 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 	  break;
 	}
 
-      status = mu_stream_copy (ostr, mstr, 0, &size);
+      status = mu_stream_copy_nl (ostr, mstr, 0, NULL);
       if (status)
 	{
 	  mu_error (_("Cannot append message: %s"), mu_strerror (status));
@@ -186,12 +187,6 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 	}
 
       mu_stream_unref (mstr);
-
-      mu_stream_write (ostr, "\n", 1, NULL);
-
-      totals->size += size + 1;
-      mu_message_lines (msg, &lines);
-      totals->lines += lines + 1;
 
       if (mark)
 	{
@@ -206,6 +201,9 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
 
   mu_locker_unlock (locker);
   mu_locker_destroy (&locker);
+
+  totals->size = stat[MU_STREAM_STAT_OUT];
+  totals->lines = stat[MU_STREAM_STAT_OUTLN];
 
   return 0;
 }

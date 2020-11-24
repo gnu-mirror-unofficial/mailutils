@@ -93,10 +93,10 @@ FETCH_CHECK([envelope],[fetch-envelope fetch04],
 
 FETCH_CHECK([ALL],[fetch-all fetch05],
 [1:* ALL],
-[* 1 FETCH (FLAGS (\Recent) INTERNALDATE "28-Dec-2001 22:18:09 +0000" RFC822.SIZE 1298 ENVELOPE ("Fri, 28 Dec 2001 22:18:08 +0200" "Jabberwocky" (("Foo Bar" NIL "foobar" "nonexistent.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) (("Bar" NIL "bar" "dontmailme.org")) NIL NIL NIL "<200112282018.fBSKI8N04906@nonexistent.net>"))
-* 2 FETCH (FLAGS (\Recent) INTERNALDATE "28-Dec-2001 23:28:09 +0000" RFC822.SIZE 547 ENVELOPE ("Fri, 28 Dec 2001 23:28:08 +0200" "Re: Jabberwocky" (("Bar" NIL "bar" "dontmailme.org")) (("Bar" NIL "bar" "dontmailme.org")) (("Bar" NIL "bar" "dontmailme.org")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200112232808.fERKR9N16790@dontmailme.org>"))
-* 3 FETCH (FLAGS (\Recent) INTERNALDATE "13-Jul-2002 00:43:18 +0000" RFC822.SIZE 1611 ENVELOPE ("Sat, 13 Jul 2002 00:43:18 +0300" "Simple MIME" (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200207122143.g6CLhIb05086@example.net>"))
-* 4 FETCH (FLAGS (\Recent) INTERNALDATE "13-Jul-2002 00:50:58 +0000" RFC822.SIZE 3483 ENVELOPE ("Sat, 13 Jul 2002 00:50:58 +0300" "Nested MIME" (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200207122150.g6CLowb05126@example.net>"))
+[* 1 FETCH (FLAGS (\Recent) INTERNALDATE "28-Dec-2001 22:18:09 +0000" RFC822.SIZE 1300 ENVELOPE ("Fri, 28 Dec 2001 22:18:08 +0200" "Jabberwocky" (("Foo Bar" NIL "foobar" "nonexistent.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) (("Bar" NIL "bar" "dontmailme.org")) NIL NIL NIL "<200112282018.fBSKI8N04906@nonexistent.net>"))
+* 2 FETCH (FLAGS (\Recent) INTERNALDATE "28-Dec-2001 23:28:09 +0000" RFC822.SIZE 549 ENVELOPE ("Fri, 28 Dec 2001 23:28:08 +0200" "Re: Jabberwocky" (("Bar" NIL "bar" "dontmailme.org")) (("Bar" NIL "bar" "dontmailme.org")) (("Bar" NIL "bar" "dontmailme.org")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200112232808.fERKR9N16790@dontmailme.org>"))
+* 3 FETCH (FLAGS (\Recent) INTERNALDATE "13-Jul-2002 00:43:18 +0000" RFC822.SIZE 1613 ENVELOPE ("Sat, 13 Jul 2002 00:43:18 +0300" "Simple MIME" (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200207122143.g6CLhIb05086@example.net>"))
+* 4 FETCH (FLAGS (\Recent) INTERNALDATE "13-Jul-2002 00:50:58 +0000" RFC822.SIZE 3485 ENVELOPE ("Sat, 13 Jul 2002 00:50:58 +0300" "Nested MIME" (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200207122150.g6CLowb05126@example.net>"))
 * 5 FETCH (FLAGS (\Recent) INTERNALDATE "13-Jul-2002 00:43:18 +0000" RFC822.SIZE 884 ENVELOPE ("Sat, 13 Jul 2002 00:43:18 +0300" "Empty MIME Parts" (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200207122143.g6CLhIb05086@example.net>"))],
 [],
 [fixup_tz])
@@ -107,8 +107,8 @@ FETCH_CHECK([ALL],[fetch-all fetch05],
 #                [MIME-IMB] headers.
 FETCH_CHECK([BODYSTRUCTURE],[fetch-bodystructure fetch06],
 [1:* BODYSTRUCTURE],
-[* 1 FETCH (BODYSTRUCTURE ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 972 35 NIL NIL NIL))
-* 2 FETCH (BODYSTRUCTURE ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 219 4 NIL NIL NIL))
+[* 1 FETCH (BODYSTRUCTURE ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 974 36 NIL NIL NIL))
+* 2 FETCH (BODYSTRUCTURE ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 221 5 NIL NIL NIL))
 * 3 FETCH (BODYSTRUCTURE (("text" "plain" ("name" "msg.1" "charset" "us-ascii") "<5082.1026510189.1@example.net>" "How doth" "7BIT" 239 9 NIL NIL NIL)("application" "octet-stream" ("name" "msg.21") "<5082.1026510189.2@example.net>" "Father William Part I" "base64" 468 NIL NIL NIL) "mixed" ("boundary" "----- =_aaaaaaaaaa0") NIL NIL))
 * 4 FETCH (BODYSTRUCTURE (("text" "plain" ("name" "msg.21" "charset" "us-ascii") "<5122.1026510654.2@example.net>" "Father William Part I" "7BIT" 351 10 NIL NIL NIL)(("application" "octet-stream" ("name" "msg.22") "<5122.1026510654.4@example.net>" "Father William Part II" "base64" 486 NIL NIL NIL)(("application" "octet-stream" ("name" "msg.23") "<5122.1026510654.6@example.net>" "Father William Part III" "base64" 490 NIL NIL NIL)("application" "octet-stream" ("name" "msg.24") "<5122.1026510654.7@example.net>" "Father William Part IV" "base64" 502 NIL NIL NIL) "mixed" ("boundary" "----- =_aaaaaaaaaa2") NIL NIL) "mixed" ("boundary" "----- =_aaaaaaaaaa1") NIL NIL) "mixed" ("boundary" "----- =_aaaaaaaaaa0") NIL NIL))
 * 5 FETCH (BODYSTRUCTURE (("text" "plain" ("name" "empty" "charset" "us-ascii") "<5082.1026510189.1@example.net>" "Empty part" "7BIT" 0 0 NIL NIL NIL)("text" "plain" ("name" "single.line" "charset" "us-ascii") "<5082.1026510189.2@example.net>" "Single line part" "7BIT" 2 1 NIL NIL NIL) "mixed" ("boundary" "----- =_aaaaaaaaaa0") NIL NIL))])
@@ -117,8 +117,8 @@ FETCH_CHECK([BODYSTRUCTURE],[fetch-bodystructure fetch06],
 #         Non-extensible form of BODYSTRUCTURE.
 FETCH_CHECK([BODY],[fetch-body fetch07],
 [1:* BODY],
-[* 1 FETCH (BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 972 35))
-* 2 FETCH (BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 219 4))
+[* 1 FETCH (BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 974 36))
+* 2 FETCH (BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 221 5))
 * 3 FETCH (BODY (("text" "plain" ("name" "msg.1" "charset" "us-ascii") "<5082.1026510189.1@example.net>" "How doth" "7BIT" 239 9)("application" "octet-stream" ("name" "msg.21") "<5082.1026510189.2@example.net>" "Father William Part I" "base64" 468) "mixed" NIL NIL NIL))
 * 4 FETCH (BODY (("text" "plain" ("name" "msg.21" "charset" "us-ascii") "<5122.1026510654.2@example.net>" "Father William Part I" "7BIT" 351 10)(("application" "octet-stream" ("name" "msg.22") "<5122.1026510654.4@example.net>" "Father William Part II" "base64" 486)(("application" "octet-stream" ("name" "msg.23") "<5122.1026510654.6@example.net>" "Father William Part III" "base64" 490)("application" "octet-stream" ("name" "msg.24") "<5122.1026510654.7@example.net>" "Father William Part IV" "base64" 502) "mixed" NIL NIL NIL) "mixed" NIL NIL NIL) "mixed" NIL NIL NIL))
 * 5 FETCH (BODY (("text" "plain" ("name" "empty" "charset" "us-ascii") "<5082.1026510189.1@example.net>" "Empty part" "7BIT" 0 0)("text" "plain" ("name" "single.line" "charset" "us-ascii") "<5082.1026510189.2@example.net>" "Single line part" "7BIT" 2 1) "mixed" NIL NIL NIL))])
@@ -185,7 +185,7 @@ Message-Id: <200112282018.fBSKI8N04906@nonexistent.net>
 # the message, omitting the [RFC-822] header.
 FETCH_CHECK([BODY[[TEXT]]],[fetch-body-text fetch11],
 [1 BODY[[TEXT]]],
-[* 1 FETCH (FLAGS (\Seen) BODY[[TEXT]] {972}
+[* 1 FETCH (FLAGS (\Seen) BODY[[TEXT]] {974}
 `Twas brillig, and the slithy toves
 Did gyre and gimble in the wabe;
 All mimsy were the borogoves,
@@ -220,6 +220,7 @@ He chortled in his joy.
 Did gyre and gimble in the wabe;
 All mimsy were the borogoves,
 And the mome raths outgrabe.
+
 
 )])
 
@@ -260,7 +261,7 @@ FETCH_CHECK([BODY[[TEXT]]<X-too-big>],[fetch-body-text-off2big fetch14],
 
 FETCH_CHECK([BODY[[TEXT]] (truncated)],[fetch-body-text-truncated fetch15],
 [1 BODY[[TEXT]]<0.4000>],
-[* 1 FETCH (FLAGS (\Seen) BODY[[TEXT]]<0> {972}
+[* 1 FETCH (FLAGS (\Seen) BODY[[TEXT]]<0> {974}
 `Twas brillig, and the slithy toves
 Did gyre and gimble in the wabe;
 All mimsy were the borogoves,
@@ -295,6 +296,7 @@ He chortled in his joy.
 Did gyre and gimble in the wabe;
 All mimsy were the borogoves,
 And the mome raths outgrabe.
+
 
 )])
 
@@ -416,7 +418,7 @@ Subject: Jabberwocky
 
 FETCH_CHECK([RFC822],[fetch-rfc822 fetch24],
 [1 RFC822],
-[* 1 FETCH (FLAGS (\Seen) RFC822 {1298}
+[* 1 FETCH (FLAGS (\Seen) RFC822 {1300}
 Received: (from foobar@nonexistent.net)
 	by nonexistent.net id fBSKI8N04906
 	for bar@dontmailme.org; Fri, 28 Dec 2001 22:18:08 +0200
@@ -461,6 +463,7 @@ Did gyre and gimble in the wabe;
 All mimsy were the borogoves,
 And the mome raths outgrabe.
 
+
 )])
 
 # RFC822.HEADER  Functionally equivalent to BODY.PEEK[HEADER],
@@ -485,18 +488,19 @@ Subject: Re: Jabberwocky
 
 FETCH_CHECK([RFC822.SIZE],[fetch-rfc822-size fetch26],
 [3 RFC822.SIZE],
-[* 3 FETCH (RFC822.SIZE 1611)])
+[* 3 FETCH (RFC822.SIZE 1613)])
 
 # RFC822.TEXT    Functionally equivalent to BODY[TEXT], differing in
 #                the syntax of the resulting untagged FETCH data
 #                (RFC822.TEXT is returned).
 FETCH_CHECK([RFC822.TEXT],[fetch-rfc822-text  fetch27],
 [2 RFC822.TEXT],
-[* 2 FETCH (FLAGS (\Seen) RFC822.TEXT {219}
+[* 2 FETCH (FLAGS (\Seen) RFC822.TEXT {221}
 It seems very pretty, but it's *rather* hard to understand!'
 Somehow it seems to fill my head with ideas -- only I don't
 exactly know what they are!  However, SOMEBODY killed SOMETHING:
 that's clear, at any rate...
+
 )])
 
 # FAST           Macro equivalent to: (FLAGS INTERNALDATE
@@ -504,7 +508,7 @@ that's clear, at any rate...
 
 FETCH_CHECK([FAST],[fetch-fast fetch28],
 [1 FAST],
-[* 1 FETCH (FLAGS (\Recent) INTERNALDATE "28-Dec-2001 22:18:09 +0000" RFC822.SIZE 1298)],
+[* 1 FETCH (FLAGS (\Recent) INTERNALDATE "28-Dec-2001 22:18:09 +0000" RFC822.SIZE 1300)],
 [],
 [fixup_tz])
 
@@ -513,7 +517,7 @@ FETCH_CHECK([FAST],[fetch-fast fetch28],
 
 FETCH_CHECK([FULL],[fetch-full fetch29],
 [4 FULL],
-[* 4 FETCH (FLAGS (\Recent) INTERNALDATE "13-Jul-2002 00:50:58 +0000" RFC822.SIZE 3483 ENVELOPE ("Sat, 13 Jul 2002 00:50:58 +0300" "Nested MIME" (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200207122150.g6CLowb05126@example.net>") BODY (("text" "plain" ("name" "msg.21" "charset" "us-ascii") "<5122.1026510654.2@example.net>" "Father William Part I" "7BIT" 351 10)(("application" "octet-stream" ("name" "msg.22") "<5122.1026510654.4@example.net>" "Father William Part II" "base64" 486)(("application" "octet-stream" ("name" "msg.23") "<5122.1026510654.6@example.net>" "Father William Part III" "base64" 490)("application" "octet-stream" ("name" "msg.24") "<5122.1026510654.7@example.net>" "Father William Part IV" "base64" 502) "mixed" NIL NIL NIL) "mixed" NIL NIL NIL) "mixed" NIL NIL NIL))],
+[* 4 FETCH (FLAGS (\Recent) INTERNALDATE "13-Jul-2002 00:50:58 +0000" RFC822.SIZE 3485 ENVELOPE ("Sat, 13 Jul 2002 00:50:58 +0300" "Nested MIME" (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Sergey Poznyakoff" NIL "gray" "example.net")) (("Foo Bar" NIL "foobar" "nonexistent.net")) NIL NIL NIL "<200207122150.g6CLowb05126@example.net>") BODY (("text" "plain" ("name" "msg.21" "charset" "us-ascii") "<5122.1026510654.2@example.net>" "Father William Part I" "7BIT" 351 10)(("application" "octet-stream" ("name" "msg.22") "<5122.1026510654.4@example.net>" "Father William Part II" "base64" 486)(("application" "octet-stream" ("name" "msg.23") "<5122.1026510654.6@example.net>" "Father William Part III" "base64" 490)("application" "octet-stream" ("name" "msg.24") "<5122.1026510654.7@example.net>" "Father William Part IV" "base64" 502) "mixed" NIL NIL NIL) "mixed" NIL NIL NIL) "mixed" NIL NIL NIL))],
 [],
 [fixup_tz])
 

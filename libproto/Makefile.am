@@ -35,7 +35,3 @@ endif
 if MU_COND_SUPPORT_DOTMAIL
   SUBDIRS += dotmail
 endif
-
-if MU_COND_SUPPORT_MBOXRB
-  SUBDIRS += mboxrb
-endif

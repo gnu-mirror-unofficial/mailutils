@@ -80,6 +80,9 @@ mboxrb_mailbox_init_stream (struct mu_mboxrb_mailbox *dmp)
   dmp->stream_flags = mailbox->flags;
   if (dmp->stream_flags & MU_STREAM_APPEND)
     dmp->stream_flags = (dmp->stream_flags & ~MU_STREAM_APPEND) | MU_STREAM_RDWR;
+  else if (dmp->stream_flags & MU_STREAM_WRITE)
+    dmp->stream_flags |= MU_STREAM_READ;
+  
   rc = mu_mapfile_stream_create (&mailbox->stream, dmp->name, dmp->stream_flags);
   if (rc)
     {
@@ -89,7 +92,7 @@ mboxrb_mailbox_init_stream (struct mu_mboxrb_mailbox *dmp)
 		 mu_strerror (rc)));
 
       /* Fallback to regular file stream */
-      rc = mu_file_stream_create (&mailbox->stream, dmp->name, mailbox->flags);
+      rc = mu_file_stream_create (&mailbox->stream, dmp->name, dmp->stream_flags);
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		("%s:%s (%s): %s",
 		 __func__, "mu_file_stream_create", dmp->name,
@@ -360,12 +363,30 @@ mboxrb_message_alloc_uid (struct mu_mboxrb_message *dmsg)
 
 /*
  * A modified version of Marc Crispin VALID macro.
+ *
+ * This function handles all existing flavors of the From_ line, most
+ * of which are antiquated and fallen out of use:
+ *
+ *              From user Wed Dec  2 05:53 1992
+ * BSD          From user Wed Dec  2 05:53:22 1992
+ * SysV         From user Wed Dec  2 05:53 PST 1992
+ * rn           From user Wed Dec  2 05:53:22 PST 1992
+ *              From user Wed Dec  2 05:53 -0700 1992
+ *              From user Wed Dec  2 05:53:22 -0700 1992
+ *              From user Wed Dec  2 05:53 1992 PST
+ *              From user Wed Dec  2 05:53:22 1992 PST
+ *              From user Wed Dec  2 05:53 1992 -0700
+ * Solaris      From user Wed Dec  2 05:53:22 1992 -0700
+ *
+ * (plus all of them followed by " remote from xxx").  Moreover, the
+ * user part is allowed to have whitespaces in it (although mailutils
+ * email address functions won't tolerate it).
+ * 
  * Input: S - line read from the mailbox (with \n terminator).
  * Output: ZP - points to the time zone information in S.
  *
  * Return value: If S is a valid From_ line, a pointer to the time
  * information in S.  Otherwise, NULL.
- *
  */
 static inline char *
 parse_from_line (char const *s, char **zp)
@@ -435,6 +456,58 @@ parse_from_line (char const *s, char **zp)
   return NULL;
 }
 
+/* Scan the mailbox starting from the given offset.
+ *
+ * Notes on the mailbox format:
+ *
+ *  1. A mailbox consists of a series of messages.
+ * 
+ *  2. Each message is preceded by a From_ line and followed by a blank line.
+ *     A From_ line is a line that begins with the five characters 'F', 'r',
+ *     'o', 'm', and ' ', followed by sender email and delivery date.  The
+ *     From_ line parser is able to handle various From_ line formats
+ *     (differing mainly in date/time format), most of which are encountered
+ *     only in ancient mailboxes.  Nevertheless, this makes escaping of the
+ *     From_ lines less crucial and ensures optimal robustness in handling
+ *     different mailbox formats (mboxo, mboxrd and mboxcl (mboxcl2) are
+ *     all handled properly.
+ *
+ *  3. The From_ lines and the blank lines bracket messages, fore and aft.
+ *     They do not comprise a message divider.  This means, in particular,
+ *     that both bracketing lines should be included in the message octet
+ *     and line counts.  However, counting the From_ line goes against
+ *     the mailutils approach of logically dividing envelope and the rest
+ *     of the message and would create useless differences compared to
+ *     another mailbox formats.  For this reason, the From_ line is not
+ *     reflected in returns from the mu_message_size and mu_message_lines
+ *     functions.  The terminating blank line, on the contrary, is assumed
+ *     to be part of the message body and is counted in body and message
+ *     size and line count computations.
+ *
+ *  4. A mailbox that contains zero messages contains no lines.
+ *
+ *  5. The first message in the mailbox is not preceded by a blank line.
+ *     The last message in the mailbox is not followed by a From_ line.
+ * 
+ *  6. If a non-empty file does not have valid From_ construct in its
+ *     first physical line, it will be rejected by the parser.
+ *
+ *  7. A message may contain blank lines.  It should not, however, contain
+ *     lines beginning with the sequence 'F', 'r', 'o', 'm', ' '.
+ *
+ *  8. When incorporating a message into the mailbox, any line in the message
+ *     body that begins with zero or more '>' characters immediately followed
+ *     by the sequence 'F', 'r', 'o', 'm', ' ', is escaped by prepending it
+ *     with a '>' character.  Thus, "From " becomes ">From ", ">From "
+ *     becomes ">>From ", and so on.  When reading the message body, a
+ *     reverse operation is performed.
+ *
+ *  9. Last message in the mailbox is allowed to end with a partial last line
+ *     (i.e. the one whose final characters are not two newlines).  The message
+ *     will be handled as usual.  When a new message is incorporated to the
+ *     mailbox, the missing newlines will be added to the end of the last
+ *     message.
+ */
 static int
 mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 {
@@ -603,7 +676,7 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 			     mu_strerror (rc)));
 		  goto err;
 		}
-	      dmsg->message_end -= n + 2;
+	      dmsg->message_end -= n + 1;
 	      if (dmsg->uid == 0)
 		force_init_uids = 1;
 	      if (force_init_uids)
@@ -967,20 +1040,40 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
   struct mu_mboxrb_mailbox *dmp = mailbox->data;
 
   if (dmp->mesg_count)
-    size = dmp->mesg[dmp->mesg_count-1]->message_end + 1;
-  else
-    size = 0;
-  rc = mu_stream_seek (mailbox->stream, size, MU_SEEK_SET, NULL);
-  if (rc)
-    return rc;
-
-  if (dmp->mesg_count)
     {
-      rc = mu_stream_write (mailbox->stream, "\n", 1, NULL);
+      char nl[2];
+      static char pad[] = { '\n', '\n' };
+      int n;
+      
+      size = dmp->mesg[dmp->mesg_count-1]->message_end - 1;
+      rc = mu_stream_seek (mailbox->stream, size, MU_SEEK_SET, NULL);
       if (rc)
 	return rc;
-      size++;
+      rc = mu_stream_read (mailbox->stream, nl, 2, NULL);
+      if (rc)
+	return rc;
+
+      if (nl[1] != '\n')
+	n = 2;
+      else if (nl[0] != '\n')
+	n = 1;
+      else
+	n = 0;
+
+      if (n)
+	{
+	  mu_stream_write (mailbox->stream, pad, n, NULL);
+	}
+      size += n + 2;
     }
+  else
+    {
+      size = 0;
+      rc = mu_stream_seek (mailbox->stream, size, MU_SEEK_SET, NULL);
+    }
+  
+  if (rc)
+    return rc;
 
   rc = mu_message_get_streamref (msg, &istr);
   if (rc)
@@ -1000,31 +1093,31 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
       if (rc == 0)
 	{
 	  rc = mu_envelope_aget_date (env, &date);
-	  if (rc == 0)
+	  if (rc)
 	    {
 	      rc = mu_message_reconstruct_envelope (msg, &env);
-	      if (rc)
-		break;
-
-	      rc = mu_envelope_aget_sender (env, &sender);
 	      if (rc == 0)
 		{
-		  rc = mu_envelope_aget_date (env, &date);
-		  if (rc)
-		    free (sender);
+		  rc = mu_envelope_aget_sender (env, &sender);
+		  if (rc == 0)
+		    {
+		      rc = mu_envelope_aget_date (env, &date);
+		    }
+
+		  mu_envelope_destroy (&env, msg);
 		}
-
-	      mu_envelope_destroy (&env, msg);
-	      if (rc)
-		break;
-
-	      rc = mu_stream_printf (mailbox->stream, "From %s %s\n",
-				     sender, date);
-	      free (sender);
-	      free (date);
 	    }
-	  else
-	    free (sender);
+	  
+	  if (rc)
+	    {
+	      free (sender);
+	      break;
+	    }
+	  
+	  rc = mu_stream_printf (mailbox->stream, "From %s %s\n",
+				 sender, date);
+	  free (sender);
+	  free (date);
 	}
 
       if (rc)
@@ -1056,10 +1149,8 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
       rc = mu_filter_create (&flt, istr, "FROMRB",
 			     MU_FILTER_ENCODE, MU_STREAM_READ);
       mu_stream_destroy (&istr);
-      rc = mu_stream_copy (mailbox->stream, flt, 0, NULL);
+      rc = mu_stream_copy_nl (mailbox->stream, flt, 0, NULL);
       mu_stream_unref (flt);
-
-      rc = mu_stream_write (mailbox->stream, "\n", 1, NULL);
     }
   while (0);
 
@@ -1207,7 +1298,7 @@ mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
   if (trk->mesg_count == 0)
     {
       for (i = 0; i < dmp->mesg_count; i++)
-	mu_mboxrb_message_free (dmp->mesg[i]);
+	mu_mboxrb_message_free (dmp->mesg[i]);      
       dmp->size = 0;
       dmp->uidvalidity_scanned = 0;
     }
@@ -1229,6 +1320,7 @@ mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
       dmp->mesg_count = trk->mesg_count;
       dmp->size = dmp->mesg[dmp->mesg_count - 1]->message_end + 1;
     }
+  dmp->mesg_count = trk->mesg_count;
   /* FIXME: Check uidvalidity values?? */
 }
 
@@ -1358,6 +1450,12 @@ mboxrb_flush_temp (struct mu_mboxrb_flush_tracker *trk,
   rc = mboxrb_mailbox_copy_unchanged (trk, start, i, tempstr);
   if (rc)
     return rc;
+  if (trk->mesg_count)
+    {
+      rc = mu_stream_truncate (tempstr,
+			       trk->dmp->mesg[trk->ref[trk->mesg_count - 1]]->message_end + 1);
+    }
+  
   return mu_stream_flush (tempstr);
 }
 
@@ -1439,10 +1537,13 @@ mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
 	   */
 	  dmp->mesg[0]->uid_modified = 1;
 
-	  for (i = 1; i < dmp->mesg_count; i++)
+	  if (mode == FLUSH_UIDVALIDITY)
 	    {
-	      struct mu_mboxrb_message *dmsg = dmp->mesg[i];
-	      dmsg->attr_flags &= ~(MU_ATTRIBUTE_MODIFIED|MU_ATTRIBUTE_DELETED);
+	      for (i = 1; i < dmp->mesg_count; i++)
+		{
+		  struct mu_mboxrb_message *dmsg = dmp->mesg[i];
+		  dmsg->attr_flags &= ~(MU_ATTRIBUTE_MODIFIED|MU_ATTRIBUTE_DELETED);
+		}
 	    }
 	}
     }
@@ -1774,7 +1875,7 @@ mboxrb_is_scheme (mu_record_t record, mu_url_t url, int flags)
 static struct _mu_record _mboxrb_record =
 {
   MU_MBOX_PRIO,
-  "mboxrb",
+  "mbox",
   MU_RECORD_LOCAL,
   MU_URL_SCHEME | MU_URL_PATH | MU_URL_PARAM,
   MU_URL_PATH,
@@ -1789,4 +1890,4 @@ static struct _mu_record _mboxrb_record =
   NULL, /* _get_mailer method.  */
   NULL  /* _get_folder method.  */
 };
-mu_record_t mu_mboxrb_record = &_mboxrb_record;
+mu_record_t mu_mbox_record = &_mboxrb_record;

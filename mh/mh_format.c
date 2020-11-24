@@ -149,12 +149,14 @@ mbsnlen (char const *str, size_t len)
 static void
 str_compress_ws (char *str)
 {
-  unsigned char *p, *q;
+  unsigned char *p;
+  char const *q;
   size_t size = strlen (str);
   mbi_iterator_t iter;
   int space = 0;
+  size_t len;
   
-  for (p = q = (unsigned char*) str,
+  for (p = (unsigned char*) str,
 	 mbi_init (iter, str, size);
        mbi_avail (iter);
        mbi_advance (iter))
@@ -169,12 +171,10 @@ str_compress_ws (char *str)
       else if (space)
 	space = 0;
 
-      if (mb_isprint (mbi_cur (iter)))
-	{
-	  size_t len = mb_len (mbi_cur (iter));
-	  memcpy (p, mb_ptr (mbi_cur (iter)), len);
-	  p += len;
-	}
+      len = mb_len (mbi_cur (iter));
+      if ((q = mb_ptr (mbi_cur (iter))) != (char*) p && mb_isprint (mbi_cur (iter)))
+	memcpy (p, q, len);
+      p += len;
     }
   *p = 0;
 }

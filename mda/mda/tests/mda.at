@@ -43,7 +43,7 @@ AT_KEYWORDS([mda mda1])
 AT_CHECK([
 date="Thu Oct  7 19:10:57 2010"
 envelope="From gulliver $date"
-echo $envelope > msg
+echo "$envelope" > msg
 cat $INPUT_MSG >> msg
 cat $INPUT_MSG > expout
 mkdir spool
@@ -53,15 +53,15 @@ dumpmail spool/root
 case $MU_DEFAULT_SCHEME in
 mbox)
     head -1 spool/root
-    echo $envelope >> expout
+    echo "$envelope" >> expout
     ;;
 mh)    
     sed -n -e '/^X-Envelope-Date: */s///p' spool/root/1
-    echo $date >> expout
+    echo "$date" >> expout
     ;;
 maildir)
     sed -n -e '/^X-Envelope-Date: */s///p' $(find spool/root/new -type f | head -n 1)
-    echo $date >> expout
+    echo "$date" >> expout
     ;;
 esac
 ],

@@ -40,16 +40,16 @@ mail_test "delete" "No applicable messages"
 # Start again using the same mailbox
 mail_start -reuse-spool "--file=%mbox1"
 mail_test "h" \
-	">U   1 Bar                Fri Dec 28 23:28  16/578   Re: Jabberwocky"\
-	" U   2 Sergey Poznyakoff  Sat Jul 13 00:43  44/1588  Simple MIME"\
-	" U   3 Sergey Poznyakoff  Sat Jul 13 00:43  29/876   Empty MIME Parts"
+   -re {>U   1 Bar                Fri Dec 28 23:28  *[0-9]+/[0-9]+  *Re: Jabberwocky}\
+   -re { U   2 Sergey Poznyakoff  Sat Jul 13 00:43  *[0-9]+/[0-9]+  *Simple MIME}\
+   -re { U   3 Sergey Poznyakoff  Sat Jul 13 00:43  *[0-9]+/[0-9]+  *Empty MIME Parts}
 
 # Send first message to mbox...
 mail_command "mbox 1"
 mail_test "h" \
-	">M   1 Bar                Fri Dec 28 23:28  16/578   Re: Jabberwocky"\
-	" U   2 Sergey Poznyakoff  Sat Jul 13 00:43  44/1588  Simple MIME"\
-	" U   3 Sergey Poznyakoff  Sat Jul 13 00:43  29/876   Empty MIME Parts"
+    -re {>M   1 Bar                Fri Dec 28 23:28  *[0-9]+/[0-9]+  *Re: Jabberwocky}\
+    -re { U   2 Sergey Poznyakoff  Sat Jul 13 00:43  *[0-9]+/[0-9]+  *Simple MIME}\
+    -re { U   3 Sergey Poznyakoff  Sat Jul 13 00:43  *[0-9]+/[0-9]+  *Empty MIME Parts}
 
 # ... and quit
 mail_test -noprompt "quit" \
@@ -59,17 +59,17 @@ mail_test -noprompt "quit" \
 # Now check the mbox contents
 mail_start -reuse-spool "--file=%mbox"
 mail_test "headers" \
-	">N   1 Sergey Poznyakoff  Tue Jul 16 12:11  12/390   MBOX"\
-	" U   2 Bar                Fri Dec 28 23:28  16/578   Re: Jabberwocky"
+    -re {>N   1 Sergey Poznyakoff  Tue Jul 16 12:11  *[0-9]+/[0-9]+  *MBOX}\
+    -re	{ U   2 Bar                Fri Dec 28 23:28  *[0-9]+/[0-9]+  *Re: Jabberwocky}
 
 # Save messages to the third mailbox
 mail_command "set folder=\"$MU_FOLDER_DIR\""
 mail_test "save 1 2 +three" \
-	"\"$MU_FOLDER_DIR/three\"  32/1067"
+	-re "\"$MU_FOLDER_DIR/three\"  *\[0-9\]+/\[0-9\]+"
 
 mail_test "headers" \
-	">*   1 Sergey Poznyakoff  Tue Jul 16 12:11  12/390   MBOX"\
-	" *   2 Bar                Fri Dec 28 23:28  16/578   Re: Jabberwocky"
+    -re {>*   1 Sergey Poznyakoff  Tue Jul 16 12:11  *[0-9]+/[0-9]+  *MBOX}\
+    -re { *   2 Bar                Fri Dec 28 23:28  *[0-9]+/[0-9]+  *Re: Jabberwocky}
 
 mail_test -noprompt "quit" \
 	  "Held 2 messages in $MU_SPOOL_DIR/mbox"
@@ -77,32 +77,32 @@ mail_test -noprompt "quit" \
 # Examine its contents
 mail_start -reuse-spool "--file=$MU_FOLDER_DIR/three"
 mail_test "headers" \
-	">N   1 Sergey Poznyakoff  Tue Jul 16 12:11  12/390   MBOX"\
-	" U   2 Bar                Fri Dec 28 23:28  16/578   Re: Jabberwocky"
+    -re {>N   1 Sergey Poznyakoff  Tue Jul 16 12:11  *[0-9]+/[0-9]+  *MBOX}\
+    -re { U   2 Bar                Fri Dec 28 23:28  *[0-9]+/[0-9]+  *Re: Jabberwocky}
 
 # Test uppercase commands (Save and Copy)
 mail_command "set outfolder=\"$MU_FOLDER_DIR\""
 mail_test "Save" \
-	"\"$MU_FOLDER_DIR/gray\"  14/438"
+	-re "\"$MU_FOLDER_DIR/gray\"  *\[0-9\]+/\[0-9\]+"
 
 mail_test "file \"$MU_FOLDER_DIR/gray\"" \
 	"Held 2 messages in $MU_FOLDER_DIR/three"
 
 mail_test "headers" \
-	">N   1 Sergey Poznyakoff  Tue Jul 16 12:11  12/390   MBOX"
+    -re {>N   1 Sergey Poznyakoff  Tue Jul 16 12:11  *[0-9]+/[0-9]+  *MBOX}
 mail_exit
 
 # Test write 
 mail_start -reuse-spool "--file=%teaparty.mbox"
 mail_command "set outfolder=\"$MU_FOLDER_DIR\""
 mail_test "write" \
-	"\"$MU_FOLDER_DIR/1\"   1/15"
+	-re "\"$MU_FOLDER_DIR/1\"  *\[0-9\]+/\[0-9\]+"
 
 mail_test "write 2 3 tmp" \
-	"\"$MU_FOLDER_DIR/tmp\"   2/37"
+	-re "\"$MU_FOLDER_DIR/tmp\"  *\[0-9\]+/\[0-9\]+"
 
 mail_test "Write 1 2 3" \
-	"\"$MU_FOLDER_DIR/hare\"   3/52"
+	-re "\"$MU_FOLDER_DIR/hare\"  *\[0-9\]+/\[0-9\]+"
 mail_exit
 
 # Now examine the created files

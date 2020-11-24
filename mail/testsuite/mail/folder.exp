@@ -29,14 +29,14 @@ mail_test "file +one" \
 mail_test "sum" \
  "\"$MU_FOLDER_DIR/one\": 1 message 1 new"
 mail_test "headers" \
- ">N   1 Foo Bar            Fri Dec 28 22:18  10/350   Mailbox 1"	
+ ">N   1 Foo Bar            Fri Dec 28 22:18  11/351   Mailbox 1"	
 
 mail_test "file +two" \
  "Held 1 message in $MU_FOLDER_DIR/one"
 mail_test "sum" \
  "\"$MU_FOLDER_DIR/two\": 1 message 1 new"
 mail_test "headers" \
- ">N   1 Foo Bar            Fri Dec 28 22:18  10/350   Mailbox 2"
+ ">N   1 Foo Bar            Fri Dec 28 22:18  11/351   Mailbox 2"
 
 mail_test "file #" \
  "Held 1 message in $MU_FOLDER_DIR/two"
@@ -53,7 +53,7 @@ mail_test "file &" \
 mail_test "sum" \
  "\"$MU_SPOOL_DIR/mbox\": 1 message 1 new"
 mail_test "headers" \
- ">N   1 Sergey Poznyakoff  Tue Jul 16 12:11  12/390   MBOX"	
+ ">N   1 Sergey Poznyakoff  Tue Jul 16 12:11  13/391   MBOX"	
 
 mail_stop
 

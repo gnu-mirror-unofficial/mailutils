@@ -16,8 +16,44 @@
 
 include $(top_srcdir)/testsuite/testsuite.am
 
-noinst_PROGRAMS = ufms
-AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES)
-LDADD = $(MU_LIB_MBOX) $(MU_LIB_MAILUTILS)
+## -------------------------- ##
+## Non-installable programs
+## -------------------------- ##
 
-TESTSUITE_AT += ufms.at
+AM_CPPFLAGS = \
+ $(MU_LIB_COMMON_INCLUDES)\
+ -I$(top_srcdir)/libmailutils/tests\
+ -DMBOP_RECORD=mu_mbox_record \
+ -DMBOP_SCHEME=\"mbox\"
+
+noinst_PROGRAMS = \
+ mbop
+LDADD = -L$(top_builddir)/libmailutils/tests -lmu_tesh $(MU_LIB_MBOX) $(MU_LIB_MAILUTILS)
+
+VPATH += $(top_srcdir)/testsuite
+nodist_mbop_SOURCES = mbop.c
+
+## ------------ ##
+## Test suite.  ##
+## ------------ ##
+
+TESTSUITE_AT += \
+  append.at\
+  attr.at\
+  autodetect.at\
+  body.at\
+  count.at\
+  delete.at\
+  env.at\
+  notify.at\
+  header.at\
+  qget.at\
+  uid.at\
+  uidnext.at\
+  uidvalidity.at
+
+#  recent.at\
+#  unseen.at
+
+
+

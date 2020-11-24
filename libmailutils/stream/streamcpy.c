@@ -154,21 +154,34 @@ mu_stream_copy (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 static void
 capture_last_char (char *buf, size_t size, void *data)
 {
-  *(char*)data = buf[size-1];
+  int *n = data;
+  if (buf[size-1] == '\n')
+    {
+      if (size == 1)
+	{
+	  ++*n;
+	}
+      else if (buf[size-2] == '\n')
+	*n = 2;
+      else
+	*n = 1;
+    }
+  else
+    *n = 0;
 }
 
 /* Same as mu_stream_copy, but also ensures that the copied data end with
-   a '\n' character. */
+   two '\n' characters. */
 int
 mu_stream_copy_nl (mu_stream_t dst, mu_stream_t src, mu_off_t size,
 		   mu_off_t *pcsz)
 {
-  char lc;
+  int lc = 0;
   int status = mu_stream_copy_wcb (dst, src, size, capture_last_char, &lc,
 				   pcsz);
-  if (status == 0 && lc != '\n')
+  if (status == 0 && lc < 2)
     {
-      status = mu_stream_write (dst, "\n", 1, NULL);
+      status = mu_stream_write (dst, "\n\n", 2 - lc, NULL);
       if (status == 0 && pcsz)
 	++ *pcsz;
     }

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-AT_SETUP([delete])
+AT_SETUP([UID])
 AT_DATA([inbox],
 [From hare@wonder.land Mon Jul 29 22:00:08 2002
 Received: (from hare@wonder.land) 
@@ -25,7 +25,7 @@ From: March Hare  <hare@wonder.land>
 Message-Id: <200207292200.3301@wonder.land>
 To: Alice  <alice@wonder.land>
 Subject: Invitation
-X-IMAPbase:                   10                    9
+X-IMAPbase:                   10                    51
 X-UID: 1
 
 Have some wine
@@ -39,7 +39,7 @@ From: Alice  <alice@wonder.land>
 Message-Id: <200207292200.3302@wonder.land>
 To: March Hare  <hare@wonder.land>
 Subject: Re: Invitation
-X-UID: 2
+X-UID: 20
 
 I don't see any wine
 
@@ -52,7 +52,7 @@ From: March Hare  <hare@wonder.land>
 Message-Id: <200207292200.3303@wonder.land>
 To: Alice  <alice@wonder.land>
 Subject: Re: Invitation
-X-UID: 3
+X-UID: 22
 
 There isn't any
 
@@ -65,7 +65,7 @@ From: Alice  <alice@wonder.land>
 Message-Id: <200207292200.3304@wonder.land>
 To: March Hare  <hare@wonder.land>
 Subject: Re: Invitation
-X-UID: 4
+X-UID: 43
 
 Then it wasn't very civil of you to offer it
 
@@ -78,37 +78,39 @@ From: March Hare  <hare@wonder.land>
 Message-Id: <200207292200.3305@wonder.land>
 To: Alice  <alice@wonder.land>
 Subject: Re: Invitation
-X-UID: 5
+X-UID: 50
 
 It wasn't very civil of you to sit down without being invited
 ])
 
 AT_DATA([commands],
-[3
-set_deleted
-expunge
-count
-# Message 4 becomes 3 after expunge. Re-select it.
+[uidvalidity
+uidnext
+1
+uid
+2
+uid
 3
 uid
-headers
+4
+uid
+5
+uid
 ])
-
 AT_CHECK([mbop -m inbox < commands],
 [0],
-[3 current message
-3 set_deleted: OK
-expunge: OK
-count: 4
+[uidvalidity: 10
+uidnext: 51
+1 current message
+1 uid: 1
+2 current message
+2 uid: 20
 3 current message
-3 uid: 4
-3 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
-Date:Mon, 29 Jul 2002 22:00:04 +0100
-From:Alice  <alice@wonder.land>
-Message-Id:<200207292200.3304@wonder.land>
-To:March Hare  <hare@wonder.land>
-Subject:Re: Invitation
-X-UID:4
-
+3 uid: 22
+4 current message
+4 uid: 43
+5 current message
+5 uid: 50
 ])
 AT_CLEANUP
+

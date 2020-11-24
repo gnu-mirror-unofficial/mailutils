@@ -44,7 +44,7 @@ MUT_TESTCASE([action fileinto],[],
 [require "fileinto";
 fileinto "+file";
 ],
-[cat file
+[sed -e '/^X-IMAPbase:/d' -e '/^X-UID:/d' file
 ],
 [0],
 [From coyote@desert.example.org Sun May  6 22:16:47 2001
@@ -79,7 +79,7 @@ $20,000 IN LESS THAN TWO MONTHS!  AND IT'S LEGAL!!!!!!!!!
 !!!!!!!!!!!!!!!!!!111111111!!!!!!!11111111111!!1  JUST
 SEND $5 IN SMALL, UNMARKED BILLS TO THE ADDRESSES BELOW!
 
-From bar@dontmailme.org  Fri Dec 28 23:28:09 2001
+From bar@dontmailme.org Fri Dec 28 23:28:09 2001
 Received: (from bar@dontmailme.org)
 	by dontmailme.org id fERKR9N16790
 	for foobar@nonexistent.net; Fri, 28 Dec 2001 22:18:08 +0200

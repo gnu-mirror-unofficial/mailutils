@@ -18,10 +18,14 @@ INPUT_MSG=$abs_top_srcdir/mda/tests/input.msg
 dumpmail() {
     case $MU_DEFAULT_SCHEME in
 	mbox)
-	    sed -e '/^From /d' -e '$d' $1
+	    sed -e '/^From /d'\
+		-e /^X-IMAPbase:/d\
+                -e /^X-UID:/d $1
 	    ;;
 	dotmail)
-	    sed -e '/^\.$/d' $1
+	    sed -e '/^\.$/d'\
+		-e /^X-IMAPbase:/d\
+                -e /^X-UID:/d $1
 	    ;;
 	mh)
 	    sed -e /^X-IMAPbase:/d\

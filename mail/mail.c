@@ -622,11 +622,21 @@ main (int argc, char **argv)
 
       if ((rc = mu_mailbox_open (mbox, MU_STREAM_RDWR|MU_STREAM_CREAT)) != 0)
 	{
-	  mu_url_t url = NULL;
-	  mu_mailbox_get_url (mbox, &url);
-	  mu_error (_("Cannot open mailbox %s: %s"),
-		      mu_url_to_string (url), mu_strerror (rc));
-	  mu_mailbox_destroy (&mbox);
+	  if (rc == EACCES)
+	    {
+	      rc = mu_mailbox_open (mbox, MU_STREAM_READ);
+	      if (rc == 0)
+		mu_diag_output (MU_DIAG_WARNING, _("mailbox opened read-only"));
+	      //FIXME: Disable 'q' and similar commands
+	    }
+	  if (rc)
+	    {
+	      mu_url_t url = NULL;
+	      mu_mailbox_get_url (mbox, &url);
+	      mu_error (_("Cannot open mailbox %s: %s"),
+			mu_url_to_string (url), mu_strerror (rc));
+	      mu_mailbox_destroy (&mbox);
+	    }
 	}
 
       if (rc)

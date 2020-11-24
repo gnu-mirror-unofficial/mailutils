@@ -24,9 +24,9 @@ AT_CHECK([mimetest -i 0 -p $abs_top_srcdir/testsuite/spool/mbox1],
 From:Foo Bar <foobar@nonexistent.net>
 Subject:Jabberwocky
 Number of parts in message:1
-Total message size:1254/44
+Total message size:1255/45
 Type of part 1: 
-Message part size:1254/44: 317/9, 937/35
+Message part size:1255/45: 317/9, 938/36
 Text Message
 Begin
 `Twas brillig, and the slithy toves
@@ -65,14 +65,15 @@ All mimsy were the borogoves,
 And the mome raths outgrabe.
 
 
+
 End
 Message:2
 From:Bar <bar@dontmailme.org>
 Subject:Re: Jabberwocky
 Number of parts in message:1
-Total message size:534/13
+Total message size:535/14
 Type of part 1: 
-Message part size:534/13: 319/9, 215/4
+Message part size:535/14: 319/9, 216/5
 Text Message
 Begin
 It seems very pretty, but it's *rather* hard to understand!'
@@ -80,12 +81,13 @@ Somehow it seems to fill my head with ideas -- only I don't
 exactly know what they are!  However, SOMEBODY killed SOMETHING:
 that's clear, at any rate...
 
+
 End
 Message:3
 From:Sergey Poznyakoff <gray@example.net>
 Subject:Simple MIME
 Number of parts in message:2
-Total message size:1569/42
+Total message size:1570/43
 Type of part 1:text/plain
 Message part size:364/13: 134/4, 230/9
 Text Message
@@ -121,7 +123,7 @@ Message:4
 From:Sergey Poznyakoff <gray@example.net>
 Subject:Nested MIME
 Number of parts in message:2
-Total message size:3399/84
+Total message size:3400/85
 Type of part 1:text/plain
 Message part size:489/14: 148/4, 341/10
 Text Message

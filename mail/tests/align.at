@@ -23,21 +23,34 @@
 AT_SETUP([header alignment])
 AT_KEYWORDS([header alignment])
 
-AT_CHECK([
-MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
-MUT_MAIL_CMD --exec='set headline=">%20d<"' --headers -f ./mbox
-MUT_MAIL_CMD --exec='set headline=">%-20d<"' --headers -f ./mbox
-MUT_MAIL_CMD --exec='set headline=">%+20d<"' --headers -f ./mbox
-MUT_MAIL_CMD --exec='set headline=">%20o<"' --headers -f ./mbox
-MUT_MAIL_CMD --exec='set headline=">%-20o<"' --headers -f ./mbox
-MUT_MAIL_CMD --exec='set headline=">%+20o<"' --headers -f ./mbox
-],
+AT_CHECK([MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
+MUT_MAIL_CMD --exec='set headline=">%20d<"' --headers -f ./mbox],
 [0],
 [>Tue Jul 16 12:11    <
->Tue Jul 16 12:11    <
->    Tue Jul 16 12:11<
->                 390<
->390                 <
->                 390<
+])
+AT_CHECK([MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
+MUT_MAIL_CMD --exec='set headline=">%-20d<"' --headers -f ./mbox],
+[0],
+[>Tue Jul 16 12:11    <
+])
+AT_CHECK([MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
+MUT_MAIL_CMD --exec='set headline=">%+20d<"' --headers -f ./mbox],
+[0],
+[>    Tue Jul 16 12:11<
+])
+AT_CHECK([MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
+MUT_MAIL_CMD --exec='set headline=">%20o<"' --headers -f ./mbox],
+[0],
+[>                 391<
+])
+AT_CHECK([MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
+MUT_MAIL_CMD --exec='set headline=">%-20o<"' --headers -f ./mbox],
+[0],
+[>391                 <
+])
+AT_CHECK([MUT_MBCOPY($abs_top_srcdir/testsuite/spool/mbox)
+MUT_MAIL_CMD --exec='set headline=">%+20o<"' --headers -f ./mbox],
+[0],
+[>                 391<
 ])
 AT_CLEANUP

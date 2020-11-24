@@ -20,12 +20,13 @@ AT_KEYWORDS([putmail])
 AT_CHECK([
 echo ENVELOPE > expout
 cat $INPUT_MSG >> expout
-echo "" >> expout
 mkdir spool
 
 putmail MDA_OPTIONS --from 'gulliver@example.net' mbox:spool/out < dnl
  $INPUT_MSG || exit $?
-sed '1s/From gulliver@example.net.*/ENVELOPE/' spool/out
+sed -e '1s/From gulliver@example.net.*/ENVELOPE/'\
+    -e '/^X-IMAPbase:/d'\
+    -e '/^X-UID:/d' spool/out
 ],
 [0],
 [expout])

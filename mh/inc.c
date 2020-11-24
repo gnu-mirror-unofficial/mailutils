@@ -176,6 +176,23 @@ incmbx (void *item, void *data)
   int f_truncate = truncate_source;
   const char *f_move_to_mailbox = move_to_mailbox, *sval;
   mu_url_t url;
+
+  if (mu_url_create (&url, input_file) == 0)
+    {
+      if (getparam (url, "truncate", &sval) == 0)
+	{
+	  if (!sval)
+	    f_truncate = 1;
+	  else
+	    f_truncate = is_true (sval);
+	}
+  
+      if (getparam (url, "nomoveto", NULL) == 0)
+	f_move_to_mailbox = NULL;
+      else
+	getparam (url, "moveto", &f_move_to_mailbox);
+      mu_url_destroy (&url);
+    }
   
   /* Select and open input mailbox */
   if (input_file == NULL)
@@ -193,8 +210,8 @@ incmbx (void *item, void *data)
 		input_file, mu_strerror (rc));
       exit (1);
     }
-  
-  if ((rc = mu_mailbox_open (input, MU_STREAM_RDWR)) != 0)
+
+  if ((rc = mu_mailbox_open (input, MU_STREAM_READ | (f_truncate ? MU_STREAM_WRITE : 0))) != 0)
     {
       mu_url_t url;
       mu_mailbox_get_url (input, &url);
@@ -216,19 +233,6 @@ incmbx (void *item, void *data)
       exit (1);
     }
 
-  if (getparam (url, "truncate", &sval) == 0)
-    {
-      if (!sval)
-	f_truncate = 1;
-      else
-	f_truncate = is_true (sval);
-    }
-  
-  if (getparam (url, "nomoveto", NULL) == 0)
-    f_move_to_mailbox = NULL;
-  else
-    getparam (url, "moveto", &f_move_to_mailbox);
-  
   /* Open audit file, if specified */
   if (audit_file)
     audit_stream = mh_audit_open (audit_file, input);

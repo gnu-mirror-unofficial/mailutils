@@ -33,13 +33,17 @@ file +mbox
 copy 1 #
 ])
 MUT_MAIL_CMD -N -E "set folder=\"$folder\"" -f $MBOX < script  | dnl
- sed 's/  *$//;s|'$NEW'|NEW|;s|'$MBOX'|MBOX|'
+ sed -e 's/  *$//' \
+     -e 's|'$NEW'|NEW|'\
+     -e '/"NEW"  *[[0-9]]/s/[[0-9]][[0-9]]*/D/g'\
+     -e 's|'$MBOX'|MBOX|'\
+     
 sed '/^X-IMAPbase:/d;/^Status:/d;/^X-UID/d' $NEW | diff - $abs_top_srcdir/testsuite/spool/mbox 
 ],
 [0],
 [Held 1 message in MBOX
 Held 0 messages in NEW
-"NEW"  17/482
+"NEW"  D/D
 
 Held 1 message in MBOX
 ])

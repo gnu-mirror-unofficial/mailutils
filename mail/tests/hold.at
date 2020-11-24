@@ -67,6 +67,7 @@ To: Alice  <alice@wonder.land>
 Subject: Invitation
 
 Have some wine
+
 Saved 1 message in ./mbox
 Held 1 message in ./inbox
 == inbox ==
@@ -104,6 +105,7 @@ To: Alice  <alice@wonder.land>
 Subject: Invitation
 
 Have some wine
+
 Held 2 messages in ./inbox
 == inbox ==
 From hare@wonder.land Mon Jul 29 22:00:08 2002

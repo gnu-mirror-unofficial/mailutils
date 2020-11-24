@@ -220,6 +220,28 @@ mbop_uid (int argc, char **argv, mu_assoc_t options, void *env)
   return 0;
 }
 
+int
+mbop_message_lines (int argc, char **argv, mu_assoc_t options, void *env)
+{
+  struct interp_env *ienv = env;
+  size_t lines;
+
+  MU_ASSERT (mu_message_lines (ienv->msg, &lines));
+  mu_printf ("%lu", (unsigned long) lines);
+  return 0;
+}
+
+int
+mbop_message_size (int argc, char **argv, mu_assoc_t options, void *env)
+{
+  struct interp_env *ienv = env;
+  size_t size;
+
+  MU_ASSERT (mu_message_size (ienv->msg, &size));
+  mu_printf ("%lu", (unsigned long) size);
+  return 0;
+}
+
 #define __cat2__(a,b) a ## b
 #define __cat3__(a,b,c) a ## b ## c
 #define __cat4__(a,b,c,d) a ## b ## c ## d
@@ -463,6 +485,8 @@ struct mu_tesh_command commands[] = {
   { "recent",         "", mbop_recent },
   { "unseen",         "", mbop_unseen },
   { "qget",           "QID", mbop_qget },
+  { "message_lines",  "", mbop_message_lines },
+  { "message_size",  "", mbop_message_size },
   { NULL }
 };
 

@@ -1137,8 +1137,12 @@ mu_stream_size (mu_stream_t stream, mu_off_t *psize)
   rc = stream->size (stream, &size);
   if (rc == 0)
     {
-      if (stream->buftype != mu_buffer_none && stream->offset == size)
-	size += stream->level;
+      if (stream->buftype != mu_buffer_none)
+	{
+	  size_t n = stream->offset + stream->level;
+	  if (n > size)
+	    size = n;
+	}
       *psize = size;
     }
   return mu_stream_seterr (stream, rc, rc != 0);

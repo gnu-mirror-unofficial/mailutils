@@ -33,7 +33,7 @@ Better yet at 04:00?
 X LOGOUT
 ])
 echo "=="
-awk 'NF==0 {print NR":"; next} {print NR":",$0}' mbox
+sed -e '/^X-/d' -e /^Status:/d mbox | awk 'NF==0 {print NR":"; next} {print NR":",$0}'
 ],
 [0],
 [* PREAUTH IMAP4rev1 Test mode

@@ -60,8 +60,8 @@ like what I get" is the same thing as "I get what I like"!
 AT_CHECK([mbop -r -m inbox 1\; body_lines\; body_size],
 [0],
 [1 current message
-1 body_lines: 2
-1 body_size: 77
+1 body_lines: 3
+1 body_size: 78
 ])
 AT_CHECK([mbop -r -m inbox 1\; body_text],
 [0],
@@ -69,13 +69,14 @@ AT_CHECK([mbop -r -m inbox 1\; body_text],
 1 body_text: I do, at least--at least I mean what
 I say--that's the same thing, you know.
 
+
 ])
 
 AT_CHECK([mbop -r -m inbox 2\; body_lines\; body_size],
 [0],
 [2 current message
-2 body_lines: 3
-2 body_size: 118
+2 body_lines: 4
+2 body_size: 119
 ])
 AT_CHECK([mbop -r -m inbox 2\; body_text],
 [0],
@@ -83,6 +84,7 @@ AT_CHECK([mbop -r -m inbox 2\; body_text],
 2 body_text: Not the same thing a bit! You might just
 as well say that "I see what I eat" is the same thing as "I eat
 what I see"!
+
 
 ])
 

@@ -38,7 +38,7 @@ cat $MAIL_DUMP
 SENDER: coyote@desert.example.org
 NRCPT: 1
 RCPT[0]: gray@gnu.org
-LENGTH: 628
+LENGTH: 629
 From: coyote@desert.example.org
 To: roadrunner@acme.example.com
 Subject: I have a present for you
@@ -56,11 +56,12 @@ for you over the years, but I know we can work this out.
 --
 Wile E. Coyote   "Super Genius"   coyote@desert.example.org
 
+
 MSGID: 0001
 SENDER: b1ff@de.res.example.com
 NRCPT: 1
 RCPT[0]: gray@gnu.org
-LENGTH: 595
+LENGTH: 596
 From: youcouldberich!@reply-by-postal-mail.invalid
 To: rube@landru.example.edu
 Subject: $$$ YOU, TOO, CAN BE A MILLIONAIRE! $$$
@@ -75,6 +76,7 @@ MONEY! MONEY! COLD HARD CASH!  YOU WILL RECEIVE OVER
 $20,000 IN LESS THAN TWO MONTHS!  AND IT'S LEGAL!!!!!!!!!
 !!!!!!!!!!!!!!!!!!111111111!!!!!!!11111111111!!1  JUST
 SEND $5 IN SMALL, UNMARKED BILLS TO THE ADDRESSES BELOW!
+
 
 MSGID: 0001
 SENDER: bar@dontmailme.org

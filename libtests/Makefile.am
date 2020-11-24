@@ -2,11 +2,9 @@ include $(top_srcdir)/testsuite/testsuite.am
 AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
 noinst_PROGRAMS = \
  fldel\
- lstuid\
  mbdel\
  mimetest
 
-lstuid_LDADD = $(MU_LIB_MBOX) $(MU_LIB_MAILUTILS)
 mimetest_LDADD = $(MU_LIB_MBOX) $(MU_LIB_MAILUTILS)
 mbdel_LDADD = \
  $(MU_LIB_MAILBOX)\
@@ -18,9 +16,6 @@ fldel_LDADD = $(mbdel_LDADD)
 
 TESTSUITE_AT += \
  fldel.at\
- lstuid00.at\
- lstuid01.at\
- lstuid02.at\
  mbdel.at\
  mime.at\
  mime01.at
