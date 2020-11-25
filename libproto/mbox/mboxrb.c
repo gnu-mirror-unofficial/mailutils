@@ -519,9 +519,10 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
   size_t n;
   enum mboxrb_scan_state
   {
-    mboxrb_scan_init,
-    mboxrb_scan_header,
-    mboxrb_scan_body
+    mboxrb_scan_init,  /* At the beginning of the file */
+    mboxrb_scan_header,/* Scanning message header */
+    mboxrb_scan_body,  /* Scanning message body */
+    mboxrb_scan_empty_line /* At the empty line within or at the end of body */
   } state = mboxrb_scan_init;
   struct mu_mboxrb_message *dmsg = NULL;
   char *zn, *ti;
@@ -664,6 +665,13 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	  break;
 
 	case mboxrb_scan_body:
+	  if (n == 1 && buf[0] == '\n')
+	    {
+	      state = mboxrb_scan_empty_line;
+	    }
+	  break;
+
+	case mboxrb_scan_empty_line:
 	  if ((ti = parse_from_line (buf, &zn)) != 0)
 	    {
 	      /* Finalize current message */
@@ -717,6 +725,10 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	      dmsg->env_sender_len -= 5;
 	      state = mboxrb_scan_header;
 	    }
+	  else if (n == 1 && buf[0] == '\n')
+	    state = mboxrb_scan_empty_line;
+	  else
+	    state = mboxrb_scan_body;
 	}
       if (++numlines % 1000 == 0)
 	mboxrb_dispatch (mailbox, MU_EVT_MAILBOX_PROGRESS, NULL);
