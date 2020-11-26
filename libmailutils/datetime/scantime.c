@@ -538,7 +538,31 @@ mu_scan_datetime (const char *input, const char *fmt,
 		  }
 	      }
 	      break;
-		      
+
+	    case 'Z':
+	      /* Time-zone in abbreviated form */
+	      {
+		char tzs[6];
+		p = mu_str_skip_class_comp (input, MU_CTYPE_SPACE);
+		n = p - input;
+		if (n > sizeof (tzs) - 1)
+		  {
+		    rc = MU_ERR_PARSE;
+		    break;
+		  }
+		memcpy (tzs, input, n);
+		tzs[n] = 0;
+		if (mu_timezone_offset (tzs, &n))
+		  {
+		    rc = MU_ERR_PARSE;
+		    break;
+		  }
+		if (tz)
+		  tz->utc_offset = n;
+		input = p;
+	      }
+	      break;
+	      
 	    case '%':
 	      if (*input == '%')
 		input++;

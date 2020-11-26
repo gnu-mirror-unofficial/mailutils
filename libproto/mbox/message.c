@@ -29,6 +29,7 @@
 #include <mailutils/attribute.h>
 #include <mailutils/envelope.h>
 #include <mailutils/io.h>
+#include <mailutils/util.h>
 
 void
 mu_mboxrb_message_free (struct mu_mboxrb_message *dmsg)
@@ -211,45 +212,20 @@ static int
 mboxrb_envelope_date (mu_envelope_t env, char *buf, size_t len,
 		      size_t *pnwrite)
 {
-  int rc = 0;
-  size_t date_len;  
   mu_message_t msg = mu_envelope_get_owner (env);
   struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
-  if (!dmsg)
-    return EINVAL;
 
-  date_len = dmsg->from_length - dmsg->env_date_start - 1;
-  
   if (!buf || len <= 1)
     {
-      len = date_len;
+      len = MU_DATETIME_FROM_LENGTH;
     }
   else
     {
-      mu_stream_t stream;
-	
-      rc = mu_streamref_create_abridged (&stream,
-					 dmsg->mbox->mailbox->stream,
-					 dmsg->message_start + dmsg->env_date_start,
-					 dmsg->message_start + dmsg->from_length);
-      if (rc)
-	return rc;
-      len--;
-      if (len > date_len)
-	len = date_len;
-      rc = mu_stream_read (stream, buf, len, &len);
-      if (rc == 0)
-	{
-	  buf[len] = 0;
-	}
-      mu_stream_destroy (&stream);
+      len = mu_cpystr (buf, dmsg->date, len);
     }
-  if (rc == 0)
-    {
-      if (pnwrite)
-	*pnwrite = len;
-    }
-  return rc;
+  if (pnwrite)
+    *pnwrite = len;
+  return 0;
 }	
 
 static int
@@ -564,7 +540,7 @@ env_to_stream (struct mu_mboxrb_message const *dmsg,
       mu_stream_seek (dst, 0, MU_SEEK_CUR, &off);
       ref->from_length = off - ref->message_start;
       ref->env_sender_len = strlen (sender);
-      ref->env_date_start = strlen (sender) + 6;
+      strncpy (ref->date, date, sizeof (ref->date));
     }
   
   return rc;

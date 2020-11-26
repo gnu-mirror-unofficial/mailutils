@@ -82,6 +82,7 @@ int mu_parse_date_dtl (const char *p, const time_t *now,
 int mu_parse_date (const char *p, time_t *rettime, const time_t *now);
 
 int mu_utc_offset (void);
+int mu_timezone_offset (const char *buf, int *off);  
 void mu_datetime_tz_local (struct mu_timezone *tz);
 void mu_datetime_tz_utc (struct mu_timezone *tz);
 time_t mu_datetime_to_utc (struct tm *timeptr, struct mu_timezone *tz);

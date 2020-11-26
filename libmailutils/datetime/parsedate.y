@@ -1209,6 +1209,20 @@ mu_parse_date (const char *p, time_t *rettime, const time_t *now)
   return mu_parse_date_dtl (p, now, rettime, NULL, NULL, NULL);
 }
 
+int
+mu_timezone_offset (const char *buf, int *off)
+{
+  SYMBOL const *tp;
+  
+  for (tp = tz_tab; tp->name; tp++)
+    if (mu_c_strcasecmp (buf, tp->name) == 0)
+      {
+	*off = - tp->value * 60;
+	return 0;
+      }
+  return -1;
+}
+
 #ifdef STANDALONE
 int
 main (int argc, char *argv[])

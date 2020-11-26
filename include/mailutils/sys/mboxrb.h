@@ -18,27 +18,21 @@
 #define _MAILUTILS_SYS_MBOX2_H
 
 # include <mailutils/types.h>
-
-enum mu_mboxrb_hdr
-  {
-    mu_mboxrb_hdr_status,
-    mu_mboxrb_hdr_x_imapbase,
-    mu_mboxrb_hdr_x_uid,
-    MU_MBOXRB_HDR_MAX
-  };
+# include <mailutils/datetime.h>
 
 struct mu_mboxrb_message
 {
   /* Offsets in the mailbox */
   mu_off_t message_start; /* Start of message */
   size_t from_length;     /* Length of the From_ line */
-  int env_sender_len;
-  int env_date_start;
+  int env_sender_len;     /* Length of the sender email in the From_ line */
   mu_off_t body_start;    /* Start of body */
   mu_off_t message_end;   /* Offset of the last byte of the message */
   /* Additional info */
   unsigned long uid;      /* IMAP-style uid.  */
 
+  char date[MU_DATETIME_FROM_LENGTH+1]; /* Envelope date in normalized form */
+  
   unsigned body_lines_scanned:1; /* True if body_lines is initialized */
   unsigned body_from_escaped:1;  /* True if body is from-escaped (valid if
 				    body_lines_scanned is true) */

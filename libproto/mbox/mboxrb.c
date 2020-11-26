@@ -383,7 +383,8 @@ mboxrb_message_alloc_uid (struct mu_mboxrb_message *dmsg)
  * email address functions won't tolerate it).
  * 
  * Input: S - line read from the mailbox (with \n terminator).
- * Output: ZP - points to the time zone information in S.
+ * Output: ZP - points to the space character preceding the time zone
+ * information in S.  If there is no TZ, points to the terminating \n.
  *
  * Return value: If S is a valid From_ line, a pointer to the time
  * information in S.  Otherwise, NULL.
@@ -454,6 +455,152 @@ parse_from_line (char const *s, char **zp)
 	}
     }
   return NULL;
+}
+
+/* Finalize current message */
+static inline int
+scan_message_finalize (struct mu_mboxrb_mailbox *dmp,
+		       struct mu_mboxrb_message *dmsg, mu_stream_t stream,
+		       size_t n, int *force_init_uids)
+{
+  int rc;
+  size_t count;
+  
+  rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_end);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("%s:%s (%s): %s",
+		 __func__, "mu_stream_seek", dmp->name,
+		 mu_strerror (rc)));
+      return -1;
+    }
+  dmsg->message_end -= n + 1;
+  if (dmsg->uid == 0)
+    *force_init_uids = 1;
+  if (*force_init_uids)
+    mboxrb_message_alloc_uid (dmsg);
+
+  /* Every 100 mesgs update the lock, it should be every minute.  */
+  if (dmp->mailbox->locker && (dmp->mesg_count % 100) == 0)
+    mu_locker_touchlock (dmp->mailbox->locker);
+
+  count = dmp->mesg_count;
+  mboxrb_dispatch (dmp->mailbox, MU_EVT_MESSAGE_ADD, &count);
+  return 0;
+}
+
+static inline struct mu_mboxrb_message *
+scan_message_begin (struct mu_mboxrb_mailbox *dmp, mu_stream_t stream,
+		    char *buf, size_t n, char *ti, char *zn)
+{
+  int rc;
+  struct mu_mboxrb_message *dmsg;
+  
+  /* Create new message */
+  rc = mboxrb_alloc_message (dmp, &dmsg);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("%s:%s (%s): %s",
+		 __func__, "mboxrb_alloc_message", dmp->name,
+		 mu_strerror (rc)));
+      return NULL;
+    }
+  rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_start);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("%s:%s (%s): %s",
+		 __func__, "mu_stream_seek", dmp->name,
+		 mu_strerror (rc)));
+      return NULL;
+    }
+  dmsg->message_start -= n;
+  dmsg->from_length = n;
+  dmsg->env_sender_len = ti - buf - 10;
+  while (dmsg->env_sender_len > 6 && buf[dmsg->env_sender_len-1] == ' ')
+    dmsg->env_sender_len--;
+  dmsg->env_sender_len -= 5;
+
+  if (zn[0] != '\n')
+    {
+      /*
+       * Ideally, From_ line should not contain time zone info.  If it does,
+       * zn points to the first space before the TZ.  The latter can be an
+       * abbreviated time zone or a numeric offset from UTC (see the comment
+       * to parse_from_line above).  Parse the date line and convert it to
+       * a normalized form (ctime(3)).
+       */
+      struct tm tm;
+      char const *fmt;
+      struct mu_timezone tz;
+      char *te;
+      time_t t;
+      
+      int numeric_zone = zn[1] == '+' || zn[1] == '-' || mu_isdigit (zn[1]);
+      if (zn[-3] == ':')
+	{
+	  if (zn[-6] == ':')
+	    {
+	      if (numeric_zone)
+		fmt = "%a %b %e %H:%M:%S %z %Y";
+	      else
+		fmt = "%a %b %e %H:%M:%S %Z %Y";
+	    }
+	  else
+	    {
+	      if (numeric_zone)
+		fmt = "%a %b %e %H:%M %z %Y";
+	      else
+		fmt = "%a %b %e %H:%M %Z %Y";
+	    }
+	}
+      else
+	{
+	  if (zn[-11] == ':')
+	    {
+	      if (numeric_zone)
+		fmt = "%a %b %e %H:%M:%S %Y %z";
+	      else
+		fmt = "%a %b %e %H:%M:%S %Y %Z";
+	    }
+	  else
+	    {
+	      if (numeric_zone)
+		fmt = "%a %b %e %H:%M %Y %z";
+	      else
+		fmt = "%a %b %e %H:%M %Y %Z";
+	    }
+	}
+	  
+      if (mu_scan_datetime (ti - 10, fmt, &tm, &tz, &te) == 0)
+	t = mu_datetime_to_utc (&tm, &tz);
+      else
+	t = time (NULL);
+      gmtime_r (&t, &tm);
+      mu_strftime (dmsg->date, sizeof (dmsg->date), MU_DATETIME_FROM, &tm);
+    }
+  else
+    {
+      /*
+       * No zone information in the timestamp.  Copy the timestamp to
+       * the date buffer.  The timestamp may or may not contain seconds.
+       * In the latter case, assume '0' seconds.
+       */
+      if (ti[6] == ':')
+	memcpy (dmsg->date, ti - 10, MU_DATETIME_FROM_LENGTH);
+      else
+	{
+	  memcpy (dmsg->date, ti - 10, 16);
+	  memcpy (dmsg->date + 16, ":00", 3);
+	  dmsg->date[19] = ' ';
+	  memcpy (dmsg->date + 20, ti + 7, 4);
+	}
+      dmsg->date[24] = 0;
+    }
+  
+  return dmsg;
 }
 
 /* Scan the mailbox starting from the given offset.
@@ -528,7 +675,6 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
   char *zn, *ti;
   int force_init_uids = 0;
   size_t numlines = 0;
-  size_t count;
   
 # define IS_HEADER(h,b,n)			\
   ((n) > sizeof (h) - 1				\
@@ -578,32 +724,8 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	      rc = MU_ERR_PARSE;
 	      goto err;
 	    }
-
-	  rc = mboxrb_alloc_message (dmp, &dmsg);
-	  if (rc)
-	    {
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("%s:%s (%s): %s",
-			 __func__, "mboxrb_alloc_message", dmp->name,
-			 mu_strerror (rc)));
-	      goto err;
-	    }
-	  rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_start);
-	  if (rc)
-	    {
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("%s:%s (%s): %s",
-			 __func__, "mu_stream_seek", dmp->name,
-			 mu_strerror (rc)));
-	      goto err;
-	    }
-	  dmsg->message_start -= n;
-	  dmsg->from_length = n;
-	  dmsg->env_date_start = ti - buf - 10;
-	  dmsg->env_sender_len = dmsg->env_date_start;
-	  while (dmsg->env_sender_len > 6 && buf[dmsg->env_sender_len-1] == ' ')
-	    dmsg->env_sender_len--;
-	  dmsg->env_sender_len -= 5;
+	  if ((dmsg = scan_message_begin (dmp, stream, buf, n, ti, zn)) == NULL)
+	    goto err;
 	  state = mboxrb_scan_header;
 	  break;
 
@@ -674,55 +796,10 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	case mboxrb_scan_empty_line:
 	  if ((ti = parse_from_line (buf, &zn)) != 0)
 	    {
-	      /* Finalize current message */
-	      rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_end);
-	      if (rc)
-		{
-		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%s (%s): %s",
-			     __func__, "mu_stream_seek", dmp->name,
-			     mu_strerror (rc)));
-		  goto err;
-		}
-	      dmsg->message_end -= n + 1;
-	      if (dmsg->uid == 0)
-		force_init_uids = 1;
-	      if (force_init_uids)
-		mboxrb_message_alloc_uid (dmsg);
-
-              /* Every 100 mesgs update the lock, it should be every minute.  */
-              if (mailbox->locker && (dmp->mesg_count % 100) == 0)
-                mu_locker_touchlock (mailbox->locker);
-
-              count = dmp->mesg_count;
-              mboxrb_dispatch (mailbox, MU_EVT_MESSAGE_ADD, &count);
-	      
-	      /* Create new message */
-	      rc = mboxrb_alloc_message (dmp, &dmsg);
-	      if (rc)
-		{
-		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%s (%s): %s",
-			     __func__, "mboxrb_alloc_message", dmp->name,
-			     mu_strerror (rc)));
-		  goto err;
-		}
-	      rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_start);
-	      if (rc)
-		{
-		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%s (%s): %s",
-			     __func__, "mu_stream_seek", dmp->name,
-			     mu_strerror (rc)));
-		  goto err;
-		}
-	      dmsg->message_start -= n;
-	      dmsg->from_length = n;
-	      dmsg->env_date_start = ti - buf - 10;
-	      dmsg->env_sender_len = dmsg->env_date_start;
-	      while (dmsg->env_sender_len > 6 && buf[dmsg->env_sender_len-1] == ' ')
-		dmsg->env_sender_len--;
-	      dmsg->env_sender_len -= 5;
+	      if (scan_message_finalize (dmp, dmsg, stream, n, &force_init_uids))
+		goto err;
+	      if ((dmsg = scan_message_begin (dmp, stream, buf, n, ti, zn)) == NULL)
+		goto err;
 	      state = mboxrb_scan_header;
 	    }
 	  else if (n == 1 && buf[0] == '\n')
@@ -736,24 +813,8 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 
   if (dmsg)
     {
-      /* Finalize the last message */
-      rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->message_end);
-      if (rc)
-	{
-	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		    ("%s:%s (%s): %s",
-		     __func__, "mu_stream_seek", dmp->name,
-		     mu_strerror (rc)));
-	  goto err;
-	}
-      dmsg->message_end--;
-      if (dmsg->uid == 0)
-	force_init_uids = 1;
-      if (force_init_uids)
-	mboxrb_message_alloc_uid (dmsg);
-
-      count = dmp->mesg_count;
-      mboxrb_dispatch (mailbox, MU_EVT_MESSAGE_ADD, &count);
+      if (scan_message_finalize (dmp, dmsg, stream, 0, &force_init_uids))
+	goto err;
     }
   
  err:
