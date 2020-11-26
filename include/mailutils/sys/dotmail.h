@@ -42,20 +42,12 @@ struct mu_dotmail_message
   unsigned attr_scanned:1;       /* True if attr_flags is initialized */
   unsigned body_lines_scanned:1; /* True if body_lines is initialized */
   unsigned uid_modified:1;/* UID|uidvalidity|uidnext has been modified */
+  unsigned mark:1;        /* Used during tracker synchronization */
   int attr_flags;         /* Packed "Status:" attribute flags */
   mu_message_t message;   /* Pointer to the message object if any */
   /* Backlink to the mailbox */
   struct mu_dotmail_mailbox *mbox; /* Mailbox */
   size_t num;             /* Number of this message in the mailbox (0-based) */
-};
-
-struct mu_dotmail_message_ref
-{
-  size_t orig_num;        /* Original message index */
-  mu_off_t message_start; /* Start of message */
-  mu_off_t body_start;    /* Start of body */
-  mu_off_t message_end;   /* End of message */
-  int rescan;
 };
 
 struct mu_dotmail_mailbox
@@ -85,6 +77,6 @@ int mu_dotmail_message_attr_load (struct mu_dotmail_message *dmsg);
 int mu_dotmail_mailbox_uid_setup (struct mu_dotmail_mailbox *dmp);
 int mu_dotmail_message_reconstruct (mu_stream_t dest,
 				    struct mu_dotmail_message *dmsg,
-				    struct mu_dotmail_message_ref *ref);
+				    struct mu_dotmail_message *ref);
 
 #endif  

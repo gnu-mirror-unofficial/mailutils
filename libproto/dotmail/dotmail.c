@@ -1094,7 +1094,7 @@ dotmail_get_atime (mu_mailbox_t mailbox, time_t *return_time)
 struct mu_dotmail_flush_tracker
 {
   struct mu_dotmail_mailbox *dmp;
-  struct mu_dotmail_message_ref *ref;
+  size_t *ref;
   size_t mesg_count;
 };
 
@@ -1116,12 +1116,11 @@ tracker_free (struct mu_dotmail_flush_tracker *trk)
   free (trk->ref);
 }
 
-static struct mu_dotmail_message_ref *
+static struct mu_dotmail_message *
 tracker_next_ref (struct mu_dotmail_flush_tracker *trk, size_t orig_num)
 {
-  struct mu_dotmail_message_ref *ref = &trk->ref[trk->mesg_count++];
-  ref->orig_num = orig_num;
-  return ref;
+  trk->ref[trk->mesg_count++] = orig_num;
+  return trk->dmp->mesg[orig_num];
 }
 
 static void
@@ -1139,25 +1138,23 @@ dotmail_tracker_sync (struct mu_dotmail_flush_tracker *trk)
     }
   else
     {
+      /* Mark */
+      for (i = 0; i < trk->mesg_count; i++)
+	dmp->mesg[trk->ref[i]]->mark = 1;
+      /* Sweep */
+      for (i = 0; i < dmp->mesg_count; i++)
+	if (!dmp->mesg[i]->mark)
+	  mu_dotmail_message_free (dmp->mesg[i]);
+      /* Reorder */
       for (i = 0; i < trk->mesg_count; i++)
 	{
-	  if (trk->ref[i].orig_num != i)
-	    {
-	      size_t j;
-	      for (j = i; j < trk->ref[i].orig_num; j++)
-		mu_dotmail_message_free (dmp->mesg[j]);
-	      dmp->mesg[i] = dmp->mesg[trk->ref[i].orig_num];
-	    }
-	  dmp->mesg[i]->message_start = trk->ref[i].message_start;
-	  dmp->mesg[i]->body_start = trk->ref[i].body_start;
-	  dmp->mesg[i]->message_end = trk->ref[i].message_end;
-	  if (trk->ref[i].rescan)
-	    dmp->mesg[i]->body_lines_scanned = 0;
+	  dmp->mesg[i] = dmp->mesg[trk->ref[i]];
+	  dmp->mesg[i]->mark = 0;
 	}
       dmp->mesg_count = trk->mesg_count;
-      dmp->size = trk->ref[trk->mesg_count - 1].message_end + 2;
+      dmp->size = dmp->mesg[dmp->mesg_count - 1]->message_end + 2;
     }
-  /* FIXME: Check uidvalidity values */
+  dmp->mesg_count = trk->mesg_count;
 }
 
 /* Write to the output stream DEST messages in the range [from,to).
@@ -1171,39 +1168,36 @@ dotmail_mailbox_copy_unchanged (struct mu_dotmail_flush_tracker *trk,
   if (to > from)
     {
       size_t i;
-      mu_off_t off;
+      mu_off_t start, stop, off;
       int rc;
       struct mu_dotmail_mailbox *dmp = trk->dmp;
+
+      start = dmp->mesg[from]->message_start;
+      if (to == dmp->mesg_count)
+	stop = dmp->mesg[to-1]->message_end + 2;
+      else
+	stop = dmp->mesg[to]->message_start;
 
       rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &off);
       if (rc)
 	return rc;
-      off -= trk->dmp->mesg[from]->message_start;
+      off -= start;
       /* Fixup offsets */
       for (i = from; i < to; i++)
 	{
-	  struct mu_dotmail_message *dmsg = trk->dmp->mesg[i];
-	  struct mu_dotmail_message_ref *ref = tracker_next_ref (trk, i);
-	  ref->message_start = dmsg->message_start + off;
-	  ref->body_start = dmsg->body_start + off;
-	  ref->message_end = dmsg->message_end + off;
-	  ref->rescan = 0;
+	  struct mu_dotmail_message *ref = tracker_next_ref (trk, i);
+	  ref->message_start += off;
+	  ref->body_start += off;
+	  ref->message_end += off;
+	  // FIXME: Used to clear body_lines_scanned here.
+	  // Not sure it is needed.
 	}
 
       /* Copy data */
-      if (to == dmp->mesg_count)
-	off = dmp->mesg[to-1]->message_end + 2;
-      else
-	off = dmp->mesg[to]->message_start;
-
-      rc = mu_stream_seek (dmp->mailbox->stream, dmp->mesg[from]->message_start,
-			   MU_SEEK_SET, NULL);
+      rc = mu_stream_seek (dmp->mailbox->stream, start, MU_SEEK_SET, NULL);
       if (rc)
 	return rc;
-      return mu_stream_copy (dest,
-			     dmp->mailbox->stream,
-			     off - dmp->mesg[from]->message_start,
-			     NULL);
+      return mu_stream_copy (dest, dmp->mailbox->stream, stop - start, NULL);
     }
   return 0;
 }

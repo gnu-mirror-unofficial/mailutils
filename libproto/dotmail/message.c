@@ -322,7 +322,7 @@ dotmail_message_uid_save (mu_stream_t dst,
 int
 dotmail_message_copy_with_uid (mu_stream_t dst,
 			       struct mu_dotmail_message const *dmsg,
-			       struct mu_dotmail_message_ref *ref)
+			       struct mu_dotmail_message *ref)
 {
   int rc;
   mu_stream_t src;
@@ -333,10 +333,6 @@ dotmail_message_copy_with_uid (mu_stream_t dst,
   };
 
   src = dmsg->mbox->mailbox->stream;
-
-  rc = mu_stream_seek (dst, 0, MU_SEEK_CUR, &ref->message_start);
-  if (rc)
-    return rc;
 
   rc = mu_stream_seek (src, dmsg->message_start, MU_SEEK_SET, NULL);
   if (rc)
@@ -414,59 +410,72 @@ msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
 int
 mu_dotmail_message_reconstruct (mu_stream_t dest,
 				struct mu_dotmail_message *dmsg,
-				struct mu_dotmail_message_ref *ref)
+				struct mu_dotmail_message *ref)
 {
   int rc;
   mu_header_t hdr;
   mu_body_t body;
   mu_stream_t str, flt;
+  struct mu_dotmail_message tmp;
+  int same_ref;
 
-  if (!dmsg->message)
-    return dotmail_message_copy_with_uid (dest, dmsg, ref);
-
+  if ((same_ref = (ref == dmsg)) != 0)
+    {
+      /* Operate on temporary copy of dmsg */
+      tmp = *ref;
+      ref = &tmp;
+    }
+  
   rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_start);
   if (rc)
     return rc;
 
-  rc = mu_message_get_header (dmsg->message, &hdr);
-  if (rc)
-    return rc;
-  rc = mu_header_get_streamref (hdr, &str);
-  if (rc)
-    return rc;
-  rc = msg_header_to_stream (dest, str, dmsg);
-  mu_stream_unref (str);
-  if (rc)
-    return rc;
-
-  rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->body_start);
-  if (rc)
-    return rc;
-
-  /* Copy body */
-  rc = mu_message_get_body (dmsg->message, &body);
-  if (rc)
-    return rc;
-  rc = mu_body_get_streamref (body, &str);
-  if (rc)
-	return rc;
-  rc = mu_filter_create (&flt, str, "DOT",
-			 MU_FILTER_ENCODE, MU_STREAM_READ);
-  mu_stream_unref (str);
-  if (rc)
-    return rc;
-
-  rc = mu_stream_copy (dest, flt, 0, NULL);
-  mu_stream_unref (flt);
-  if (rc == 0)
+  if (!dmsg->message)
+    rc = dotmail_message_copy_with_uid (dest, dmsg, ref);
+  else
     {
-      rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_end);
+      rc = mu_message_get_header (dmsg->message, &hdr);
+      if (rc)
+	return rc;
+      rc = mu_header_get_streamref (hdr, &str);
+      if (rc)
+	return rc;
+      rc = msg_header_to_stream (dest, str, dmsg);
+      mu_stream_unref (str);
       if (rc)
 	return rc;
 
-      ref->message_end -= 2;
-      ref->rescan = 1;
+      rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->body_start);
+      if (rc)
+	return rc;
+
+      /* Copy body */
+      rc = mu_message_get_body (dmsg->message, &body);
+      if (rc)
+	return rc;
+      rc = mu_body_get_streamref (body, &str);
+      if (rc)
+	return rc;
+      rc = mu_filter_create (&flt, str, "DOT",
+			     MU_FILTER_ENCODE, MU_STREAM_READ);
+      mu_stream_unref (str);
+      if (rc)
+	return rc;
+
+      rc = mu_stream_copy (dest, flt, 0, NULL);
+      mu_stream_unref (flt);
+      if (rc == 0)
+	{
+	  rc = mu_stream_seek (dest, 0, MU_SEEK_CUR, &ref->message_end);
+	  if (rc)
+	    return rc;
+
+	  ref->message_end -= 2;
+	}
     }
 
+  if (same_ref)
+    *dmsg = tmp;
+  
   return rc;
 }
