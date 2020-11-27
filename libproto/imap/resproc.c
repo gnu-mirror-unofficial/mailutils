@@ -245,8 +245,7 @@ _std_unsolicited_response (mu_imap_t imap, size_t count, mu_list_t resp)
 	  {
 	    if (!rp->action)
 	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE9,
-			("%s:%d: ignoring %s response",
-			 __FILE__, __LINE__, rp->name));
+			("ignoring %s response", rp->name));
 	    else
 	      rp->action (imap, resp, NULL);
 	    return 0;

@@ -281,8 +281,7 @@ _mu_imap_list_at (mu_list_t list, int idx)
   if (rc)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("%s:%d: cannot get list element: %s",
-		 __FILE__, __LINE__, mu_strerror (rc)));
+		("cannot get list element: %s", mu_strerror (rc)));
       return NULL;
     }
   return arg;

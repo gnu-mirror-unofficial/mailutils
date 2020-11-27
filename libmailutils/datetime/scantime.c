@@ -246,8 +246,7 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 	  if (!c)
 	    {
 	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("%s:%d: error in format: %% at the end of input",
-			 __FILE__, __LINE__));
+			("error in format: %% at the end of input"));
 	      rc = MU_ERR_FORMAT;
 	      break;
 	    }
@@ -265,8 +264,7 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 	      if (nesting_level == 0)
 		{
 		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%d: error in format: %%%c out of context",
-			     __FILE__, __LINE__, c));
+			    ("error in format: %%%c out of context", c));
 		  rc = MU_ERR_FORMAT;
 		  break;
 		}
@@ -275,8 +273,7 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 	      if (rc || st != bracket_to_state (c))
 		{
 		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%d: error in format: %%%c out of context",
-			     __FILE__, __LINE__, c));
+			    ("error in format: %%%c out of context", c));
 		  rc = MU_ERR_FORMAT;
 		  break;
 		}
@@ -313,8 +310,7 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 		{
 		  peek_state (*plist, &st, NULL);
 		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%d: error in format: missing closing %%%c",
-			     __FILE__, __LINE__,
+			    ("error in format: missing closing %%%c",
 			     state_to_closing_bracket (st)));
 		  return MU_ERR_FORMAT;		  
 		}
@@ -333,8 +329,7 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
   
   peek_state (*plist, &st, NULL);
   mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-	    ("%s:%d: error in format: missing closing %%%c",
-	     __FILE__, __LINE__,
+	    ("error in format: missing closing %%%c",
 	     state_to_closing_bracket (st)));
   return MU_ERR_FORMAT;		  
 }
@@ -388,8 +383,7 @@ mu_scan_datetime (const char *input, const char *fmt,
 	  if (!c)
 	    {
 	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("%s:%d: error in format: %% at the end of input",
-			 __FILE__, __LINE__));
+			("error in format: %% at the end of input"));
 	      rc = MU_ERR_FORMAT;
 	      break;
 	    }
@@ -631,15 +625,14 @@ mu_scan_datetime (const char *input, const char *fmt,
 	      if (pop_input (save_input_list, &st, NULL))
 		{
 		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%d: error in format: unbalanced %%%c near %s",
-			     __FILE__, __LINE__, c, fmt));
+			    ("error in format: unbalanced %%%c near %s",
+			     c, fmt));
 		  rc = MU_ERR_FORMAT;
 		}
 	      else if (st != bracket_to_state (c))
 		{
 		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%d: error in format: %%%c out of context",
-			     __FILE__, __LINE__, c));
+			    ("error in format: %%%c out of context", c));
 		  rc = MU_ERR_FORMAT;
 		}
 	      break;
@@ -659,8 +652,7 @@ mu_scan_datetime (const char *input, const char *fmt,
 	      if (!c)
 		{
 		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s:%d: error in format: %% at the end of input",
-			     __FILE__, __LINE__));
+			    ("error in format: %% at the end of input"));
 		  rc = MU_ERR_FORMAT;
 		}
 	      else if (c == *input)
@@ -675,9 +667,8 @@ mu_scan_datetime (const char *input, const char *fmt,
 	      
 	    default:
 	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("%s:%d: error in format: unrecognized conversion type"
-			 " near %s",
-			 __FILE__, __LINE__, fmt));
+			("error in format: unrecognized conversion type"
+			 " near %s", fmt));
 	      rc = MU_ERR_FORMAT;
 	      break;
 	    }
@@ -700,14 +691,12 @@ mu_scan_datetime (const char *input, const char *fmt,
   if (rc == MU_ERR_FORMAT)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("%s:%d: error in format string near %s",
-		 __FILE__, __LINE__, fmt));
+		("error in format string near %s", fmt));
     }
   else if (!mu_list_is_empty (save_input_list))
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		("%s:%d: error in format: closing bracket missing",
-		 __FILE__, __LINE__));
+		("error in format: closing bracket missing"));
       rc = MU_ERR_FORMAT;
     }
   mu_list_destroy (&save_input_list);
