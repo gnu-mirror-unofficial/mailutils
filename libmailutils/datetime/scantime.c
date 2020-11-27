@@ -161,7 +161,7 @@ peek_state (mu_list_t list, int *state, const char **input)
 
   rc = mu_list_tail (list, (void**)&inp);
   if (rc)
-    return rc;
+    return MU_ERR_FORMAT;
   *state = inp->state;
   if (input)
     *input = inp->input;
@@ -212,6 +212,20 @@ state_to_closing_bracket (int st)
   return '?';
 }
 
+/*
+ * Recovery begins with nesting_level 1
+ *
+ * Recovery stops when:
+ * 1. Nesting level falls to 0 and there's nothing on stack:
+ *     If tos was ST_OPT - success
+ *     If tos was ST_ALT - failure
+ * 2. Nesting level falls to 0 and %| is found:
+ *     Success
+ * 3. Nesting level falls to 0 and end of fmt string is encountered
+ *    See 1.
+r * 4. Nesting level falls to negative:
+ *     Failure
+ */
 static int
 scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 	       const char **endp,
@@ -219,7 +233,7 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 {
   int c, rc = 0;
   int nesting_level = 1;
-  int st;
+  int st = ST_NON;
   const char *p;
   
   while (*fmt)
@@ -248,6 +262,15 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 	      
 	    case ')':
 	    case ']':
+	      if (nesting_level == 0)
+		{
+		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			    ("%s:%d: error in format: %%%c out of context",
+			     __FILE__, __LINE__, c));
+		  rc = MU_ERR_FORMAT;
+		  break;
+		}
+	      
 	      rc = pop_input (*plist, &st, &p);
 	      if (rc || st != bracket_to_state (c))
 		{
@@ -257,29 +280,31 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 		  rc = MU_ERR_FORMAT;
 		  break;
 		}
-	      if (--nesting_level == 0)
+
+	      --nesting_level;
+	      if (nesting_level == 0)
 		{
 		  *endp = fmt;
 		  if (skip_alt)
 		    return 0;
 		  *input = p;
-		  if (st == ST_ALT)
-		    {
-		      if (*fmt == '%' && (fmt[1] == '|' || fmt[1] == ']'))
-			return 0;
-		      return MU_ERR_PARSE; /* No match found */
-		    }
-		  return 0;
+		  if (st == ST_OPT)
+		    return 0;
+		  if (mu_list_is_empty (*plist))
+		    break;
 		}
 	      break;
 
 	    case '|':
 	      if (skip_alt)
 		continue;
-	      if (nesting_level == 1)
+	      if (nesting_level <= 1)
 		{
+		  rc = peek_state (*plist, &st, input);
+		  if (rc)
+		    fmt -= 2;
 		  *endp = fmt;
-		  return peek_state (*plist, &st, input);
+		  return rc;
 		}
 	      break;
 
@@ -296,6 +321,15 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 	    }
 	}
     }
+
+  if (nesting_level == 0)
+    {
+      if (st == ST_ALT)
+	/* No match found */
+	return MU_ERR_PARSE;
+      else if (st == ST_OPT)
+	return 0;
+    }
   
   peek_state (*plist, &st, NULL);
   mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
@@ -303,6 +337,15 @@ scan_recovery (const char *fmt, mu_list_t *plist, int skip_alt,
 	     __FILE__, __LINE__,
 	     state_to_closing_bracket (st)));
   return MU_ERR_FORMAT;		  
+}
+
+static inline int
+looks_like_numeric_tz (char const *p)
+{
+  if (p[0] == '+' || p[0] == '-')
+    p++;
+  return (mu_isdigit (p[0]) && mu_isdigit (p[1]) &&
+          mu_isdigit (p[2]) && mu_isdigit (p[3]));
 }
 
 int
@@ -314,7 +357,6 @@ mu_scan_datetime (const char *input, const char *fmt,
   int n;
   int c;
   int st;
-  int recovery = 0;
   int eof_ok = 0;
   int datetime_parts = 0;
   mu_list_t save_input_list = NULL;
@@ -506,8 +548,40 @@ mu_scan_datetime (const char *input, const char *fmt,
 		}
 	      break;
 		  
+	    case 'Z':
+	      if (!looks_like_numeric_tz (input))
+		{
+		  /* Time-zone in abbreviated form */
+		  char tzs[6];
+		  p = mu_str_skip_class_comp (input, MU_CTYPE_SPACE);
+		  n = p - input;
+		  if (n > sizeof (tzs) - 1)
+		    {
+		      rc = MU_ERR_PARSE;
+		      break;
+		    }
+		  memcpy (tzs, input, n);
+		  tzs[n] = 0;
+		  if (mu_timezone_offset (tzs, &n))
+		    {
+		      rc = MU_ERR_PARSE;
+		      break;
+		    }
+		  if (tz)
+		    tz->utc_offset = n;
+		  input = p;
+		  break;
+		}
+	      /* fall through */
 	    case 'z':
-	      /* The time-zone as hour offset from GMT */
+	      /*
+	       * The time-zone as hour offset from GMT.
+	       * Notice, that unless '+' or '-' is used explicitely, the
+	       * time-zone in this form can be confused with the year.
+	       * However, no one possibly expects emails dated 13th century
+	       * and earlier, so the possibility of such confusion is
+	       * vanishingly small.
+	       */
 	      {
 		int sign = 1;
 		int hr;
@@ -539,30 +613,6 @@ mu_scan_datetime (const char *input, const char *fmt,
 	      }
 	      break;
 
-	    case 'Z':
-	      /* Time-zone in abbreviated form */
-	      {
-		char tzs[6];
-		p = mu_str_skip_class_comp (input, MU_CTYPE_SPACE);
-		n = p - input;
-		if (n > sizeof (tzs) - 1)
-		  {
-		    rc = MU_ERR_PARSE;
-		    break;
-		  }
-		memcpy (tzs, input, n);
-		tzs[n] = 0;
-		if (mu_timezone_offset (tzs, &n))
-		  {
-		    rc = MU_ERR_PARSE;
-		    break;
-		  }
-		if (tz)
-		  tz->utc_offset = n;
-		input = p;
-	      }
-	      break;
-	      
 	    case '%':
 	      if (*input == '%')
 		input++;
@@ -570,9 +620,6 @@ mu_scan_datetime (const char *input, const char *fmt,
 		rc = MU_ERR_PARSE;
 	      break;
 
-	      rc = push_input (&save_input_list, ST_ALT, (void*)input);
-	      break;
-	      
 	    case '(':
 	    case '[':
 	      rc = push_input (&save_input_list, bracket_to_state (c),
@@ -638,7 +685,7 @@ mu_scan_datetime (const char *input, const char *fmt,
 	  if (eof_ok && rc == 0 && *input == 0)
 	    break;
 	}
-      else if (!recovery && *input != *fmt)
+      else if (*input != *fmt)
 	rc = MU_ERR_PARSE;
       else
 	input++;
@@ -646,12 +693,17 @@ mu_scan_datetime (const char *input, const char *fmt,
       if (rc == MU_ERR_PARSE && !mu_list_is_empty (save_input_list))
 	{
 	  rc = scan_recovery (fmt, &save_input_list, 0, &fmt, &input);
-	  if (rc == 0)
-	    --fmt;
+	  --fmt;
 	}
     }
 
-  if (!mu_list_is_empty (save_input_list))
+  if (rc == MU_ERR_FORMAT)
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("%s:%d: error in format string near %s",
+		 __FILE__, __LINE__, fmt));
+    }
+  else if (!mu_list_is_empty (save_input_list))
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		("%s:%d: error in format: closing bracket missing",
@@ -659,9 +711,6 @@ mu_scan_datetime (const char *input, const char *fmt,
       rc = MU_ERR_FORMAT;
     }
   mu_list_destroy (&save_input_list);
-  
-  if (rc == 0 && recovery)
-    rc = MU_ERR_PARSE;
   
   if (!eof_ok && rc == 0 && *input == 0 && *fmt)
     rc = MU_ERR_PARSE;
@@ -675,9 +724,14 @@ mu_scan_datetime (const char *input, const char *fmt,
       tm->tm_yday = mu_datetime_dayofyear (tm->tm_year + 1900,
 					   tm->tm_mon + 1, tm->tm_mday) - 1;
     }
-  
+
   if (endp)
-    *endp = (char*) input;
+    {
+      if (rc == MU_ERR_FORMAT)
+	*endp = (char *) fmt;
+      else
+	*endp = (char*) input;
+    }
   
   return rc;
 }

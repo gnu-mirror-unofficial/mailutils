@@ -153,5 +153,89 @@ sec=26,min=25,hour=13,mday=3,mon=4,year=111,wday=2,yday=122,tz=7200
 scantime: 5: parse failed near ; 03 May 2011 13:25:26 +0200
 ])
 
+# This expanded scan specification takes into account all possible
+# variants of the date/time specification that ever existed in the
+# From_ line of UNIX mbox mailboxes.
+SCANTIME([MBOX From_ time],[from_],
+[[%a %b %e %H:%M%[:%S%] %(%(%z%|%Z%) %Y%|%Y %(%z%|%Z%)%|%Y%)]],
+[Wed Dec  2 05:53 1992
+Wed Dec  2 05:53:22 1992
+Wed Dec  2 05:53 PST 1992
+Wed Dec  2 05:53:22 PST 1992
+Wed Dec  2 05:53 -0700 1992
+Wed Dec  2 05:53:22 -0700 1992
+Wed Dec  2 05:53 1992 PST
+Wed Dec  2 05:53:22 1992 PST
+Wed Dec  2 05:53 1992 -0700
+Wed Dec  2 05:53:22 1992 -0700
+],
+[sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=0
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=0
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+])
+
+# This one is a simplification of the above, taking into account the
+# fact that %Z handles correctly numeric time zones as well (after
+# 2020-11-27).  Notice ordering of the alternative forms.
+SCANTIME([MBOX From_ time (alternative)],[from_],
+[[%a %b %e %H:%M%[:%S%] %(%(%Z %Y%|%Y %Z%)%|%Y%)]],
+[Wed Dec  2 05:53 1992
+Wed Dec  2 05:53:22 1992
+Wed Dec  2 05:53 PST 1992
+Wed Dec  2 05:53:22 PST 1992
+Wed Dec  2 05:53 -0700 1992
+Wed Dec  2 05:53:22 -0700 1992
+Wed Dec  2 05:53 1992 PST
+Wed Dec  2 05:53:22 1992 PST
+Wed Dec  2 05:53 1992 -0700
+Wed Dec  2 05:53:22 1992 -0700
+],
+[sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=0
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=0
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+])
+
+# This is a final version of the From_ format line.  It eliminates
+# one level of alternative specs by joining "%Y %Z" and "%Y" into
+# one spec.
+SCANTIME([MBOX From_ time (simplified)],[from_],
+[[%a %b %e %H:%M%[:%S%] %(%Z %Y%|%Y%[ %Z%]%)]],
+[Wed Dec  2 05:53 1992
+Wed Dec  2 05:53:22 1992
+Wed Dec  2 05:53 PST 1992
+Wed Dec  2 05:53:22 PST 1992
+Wed Dec  2 05:53 -0700 1992
+Wed Dec  2 05:53:22 -0700 1992
+Wed Dec  2 05:53 1992 PST
+Wed Dec  2 05:53:22 1992 PST
+Wed Dec  2 05:53 1992 -0700
+Wed Dec  2 05:53:22 1992 -0700
+],
+[sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=0
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=0
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-28800
+sec=0,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+sec=22,min=53,hour=5,mday=2,mon=11,year=92,wday=3,yday=336,tz=-25200
+])
+
 m4_popdef([SCANTIME])
 dnl ---------------------------------------------------------------------

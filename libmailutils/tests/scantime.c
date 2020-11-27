@@ -65,13 +65,25 @@ main (int argc, char **argv)
       if (!*buf)
 	continue;
       rc = mu_scan_datetime (buf, format, &tm, &tz, &endp);
-      if (rc)
+      switch (rc)
 	{
+	case 0:
+	  break;
+	  
+	case MU_ERR_PARSE:
 	  if (*endp)
 	    mu_error ("%d: parse failed near %s", line, endp);
 	  else
 	    mu_error ("%d: parse failed at end of input", line);
 	  continue;
+
+	case MU_ERR_FORMAT:
+	  mu_error ("%d: error in format string near %s", line, endp);
+	  continue;
+
+	default:
+	  mu_error ("%d: %s", line, mu_strerror (rc));
+	  exit (1);
 	}
       if (*endp)
 	mu_printf ("# %d: stopped at %s\n", line, endp);
