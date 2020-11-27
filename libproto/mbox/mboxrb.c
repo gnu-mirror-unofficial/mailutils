@@ -533,47 +533,11 @@ scan_message_begin (struct mu_mboxrb_mailbox *dmp, mu_stream_t stream,
        * a normalized form (ctime(3)).
        */
       struct tm tm;
-      char const *fmt;
+      static char const fmt[] = "%a %b %e %H:%M%[:%S%] %(%Z %Y%|%Y%[ %Z%]%)";
       struct mu_timezone tz;
       char *te;
       time_t t;
       
-      int numeric_zone = zn[1] == '+' || zn[1] == '-' || mu_isdigit (zn[1]);
-      if (zn[-3] == ':')
-	{
-	  if (zn[-6] == ':')
-	    {
-	      if (numeric_zone)
-		fmt = "%a %b %e %H:%M:%S %z %Y";
-	      else
-		fmt = "%a %b %e %H:%M:%S %Z %Y";
-	    }
-	  else
-	    {
-	      if (numeric_zone)
-		fmt = "%a %b %e %H:%M %z %Y";
-	      else
-		fmt = "%a %b %e %H:%M %Z %Y";
-	    }
-	}
-      else
-	{
-	  if (zn[-11] == ':')
-	    {
-	      if (numeric_zone)
-		fmt = "%a %b %e %H:%M:%S %Y %z";
-	      else
-		fmt = "%a %b %e %H:%M:%S %Y %Z";
-	    }
-	  else
-	    {
-	      if (numeric_zone)
-		fmt = "%a %b %e %H:%M %Y %z";
-	      else
-		fmt = "%a %b %e %H:%M %Y %Z";
-	    }
-	}
-	  
       if (mu_scan_datetime (ti - 10, fmt, &tm, &tz, &te) == 0)
 	t = mu_datetime_to_utc (&tm, &tz);
       else
