@@ -21,7 +21,7 @@ libmu_pop_la_LDFLAGS=-version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 libmu_pop_la_LIBADD = $(MU_LIB_AUTH) $(MU_LIB_MAILUTILS) $(LTLIBINTL)
 
 libmu_pop_la_SOURCES = \
- mbox.c \
+ mailbox.c \
  folder.c\
  url.c\
  \

@@ -67,5 +67,5 @@ libmu_imap_la_SOURCES = \
  unselect.c\
  unsubscribe.c\
  folder.c\
- mbox.c\
+ mailbox.c\
  url.c

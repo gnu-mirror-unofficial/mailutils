@@ -22,16 +22,12 @@ include $(top_srcdir)/testsuite/testsuite.am
 
 AM_CPPFLAGS = \
  $(MU_LIB_COMMON_INCLUDES)\
- -I$(top_srcdir)/libmailutils/tests\
- -DMBOP_RECORD=mu_mbox_record \
- -DMBOP_SCHEME=\"mbox\"
+ -I$(top_srcdir)\
+ -I$(top_srcdir)/libmailutils/tests
 
 noinst_PROGRAMS = \
  mbop
 LDADD = -L$(top_builddir)/libmailutils/tests -lmu_tesh $(MU_LIB_MBOX) $(MU_LIB_MAILUTILS)
-
-VPATH += $(top_srcdir)/testsuite
-nodist_mbop_SOURCES = mbop.c
 
 ## ------------ ##
 ## Test suite.  ##

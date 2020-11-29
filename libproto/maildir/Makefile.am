@@ -22,7 +22,7 @@ libmu_maildir_la_LIBADD = $(MU_LIB_MAILUTILS)
 libmu_maildir_la_SOURCES = \
  folder.c \
  maildir.h \
- mbox.c 
+ maildir.c 
 
 SUBDIRS = . tests
 

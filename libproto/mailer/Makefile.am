@@ -26,7 +26,7 @@ endif
 EXTRA_DIST=smtp_gsasl.c
 
 libmu_mailer_la_SOURCES = \
- mbox.c\
+ mailbox.c\
  prog.c\
  sendmail.c\
  smtp.c\
