@@ -36,6 +36,7 @@ struct _mu_observer
 struct _mu_observable
 {
   void *owner;
+  size_t types;
   mu_list_t list;
 };
 

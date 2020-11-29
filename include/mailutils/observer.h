@@ -68,6 +68,8 @@ extern int mu_observable_attach    (mu_observable_t, size_t type,
 				    mu_observer_t observer);
 extern int mu_observable_detach    (mu_observable_t, mu_observer_t observer);
 extern int mu_observable_notify    (mu_observable_t, int type, void *data);
+int mu_observable_wants (mu_observable_t observable, int type);
+
 
 #ifdef __cplusplus
 }

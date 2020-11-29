@@ -169,9 +169,11 @@ mu_observable_get_owner (mu_observable_t observable)
 }
 
 int
-mu_observable_attach (mu_observable_t observable, size_t type,  mu_observer_t observer)
+mu_observable_attach (mu_observable_t observable, size_t type,
+		      mu_observer_t observer)
 {
   event_t event;
+  int rc;
   if (observable == NULL || observer == NULL)
     return EINVAL;
   event = calloc (1, sizeof (*event));
@@ -179,7 +181,14 @@ mu_observable_attach (mu_observable_t observable, size_t type,  mu_observer_t ob
     return ENOMEM;
   event->type = type;
   event->observer = observer;
-  return mu_list_append (observable->list, event);
+  rc = mu_list_append (observable->list, event);
+  if (rc)
+    {
+      free (event);
+      return rc;
+    }
+  observable->types |= type;
+  return 0;
 }
 
 int
@@ -188,7 +197,8 @@ mu_observable_detach (mu_observable_t observable, mu_observer_t observer)
   mu_iterator_t iterator;
   int status;
   event_t event = NULL;
-
+  size_t types = 0;
+  
   if (observable == NULL || observer == NULL)
     return EINVAL;
   status = mu_list_get_iterator (observable->list, &iterator);
@@ -204,10 +214,13 @@ mu_observable_detach (mu_observable_t observable, mu_observer_t observer)
         {
           mu_iterator_ctl (iterator, mu_itrctl_delete, NULL);
 	  status = 0;
-          break;
         }
+      else
+	types |= event->type;
     }
   mu_iterator_destroy (&iterator);
+  if (status == 0)
+    observable->types = types;
   return status;
 }
 
@@ -217,21 +230,36 @@ mu_observable_notify (mu_observable_t observable, int type, void *data)
   mu_iterator_t iterator;
   event_t event = NULL;
   int status = 0;
+  
   if (observable == NULL)
     return EINVAL;
-  status = mu_list_get_iterator (observable->list, &iterator);
-  if (status != 0)
-    return status;
-  for (mu_iterator_first (iterator); !mu_iterator_is_done (iterator);
-       mu_iterator_next (iterator))
+  if (observable->types & type)
     {
-      event = NULL;
-      mu_iterator_current (iterator, (void **)&event);
-      if (event && event->type & type)
-        {
-	  status |= mu_observer_action (event->observer, type, data);
-        }
+      status = mu_list_get_iterator (observable->list, &iterator);
+      if (status != 0)
+	return status;
+      for (mu_iterator_first (iterator); !mu_iterator_is_done (iterator);
+	   mu_iterator_next (iterator))
+	{
+	  event = NULL;
+	  mu_iterator_current (iterator, (void **)&event);
+	  if (event && event->type & type)
+	    {
+	      status = mu_observer_action (event->observer, type, data);
+	      if (status)
+		break;
+	    }
+	}
+      mu_iterator_destroy (&iterator);
     }
-  mu_iterator_destroy (&iterator);
   return status;
 }
+
+int
+mu_observable_wants (mu_observable_t observable, int type)
+{
+  if (observable == NULL)
+    return 0;
+  return observable->types & type;
+}
+
