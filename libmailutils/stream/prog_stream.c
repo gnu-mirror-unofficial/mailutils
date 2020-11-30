@@ -252,8 +252,7 @@ start_program_filter (int *p, struct _mu_prog_stream *fs, int flags)
 	}
        
       /* Close unneded descripitors */
-      for (i = mu_getmaxfd (); i > 2; i--)
-	close (i);
+      mu_close_fds (3);
 
       /*FIXME: Switch to other uid/gid if desired */
       execvp (fs->progname, fs->argv);

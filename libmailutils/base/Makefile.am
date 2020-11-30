@@ -24,6 +24,7 @@ libbase_la_SOURCES = \
  argcvjoin.c\
  argcvrem.c\
  assoc.c\
+ closefds.c\
  coord.c\
  copyfile.c\
  ctparse.c\
@@ -55,6 +56,7 @@ libbase_la_SOURCES = \
  onexit.c\
  opool.c\
  permstr.c\
+ pidfile.c\
  registrar.c\
  refcount.c\
  renamefile.c\

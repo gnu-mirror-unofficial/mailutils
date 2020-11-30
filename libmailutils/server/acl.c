@@ -410,7 +410,6 @@ spawn_prog (const char *cmdline, int *pstatus, struct run_closure *rp)
   pid = fork ();
   if (pid == 0)
     {
-      int i;
       struct mu_wordsplit ws;
 
       if (mu_wordsplit (s, &ws, MU_WRDSF_DEFFLAGS))
@@ -419,9 +418,9 @@ spawn_prog (const char *cmdline, int *pstatus, struct run_closure *rp)
 		    mu_wordsplit_strerror (&ws));
 	  _exit (127);
 	}
-      
-      for (i = mu_getmaxfd (); i > 2; i--)
-	close (i);
+
+      mu_close_fds (3);
+
       execvp (ws.ws_wordv[0], ws.ws_wordv);
       _exit (127);
     }

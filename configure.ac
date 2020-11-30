@@ -329,6 +329,35 @@ AH_BOTTOM(
 # define MU_PATH_MAILDIR PATH_MAILDIR 
 #endif])
 
+################################## 
+# Select interface used to close file descriptors greater than or
+# equal to the given one.
+#
+# Variants:
+#  1. closefrom call    (FreeBSD)
+#  2. F_CLOSEM fcntl (NetBSD, AIX, IRIX)
+#  3. proc_pidinfo call (Darwin)
+#  4. /proc/self/fd filesystem   (Linux)
+#  5. Brute force
+#
+# The defines created here direct conditionalal compilation in
+# libmailutils/base/closefds.c
+
+AC_CHECK_FUNCS([closefrom])
+AC_CHECK_DECL([F_CLOSEM],
+              AC_DEFINE([HAVE_FCNTL_CLOSEM], [1],
+	                [Use F_CLOSEM fcntl for mu_close_fds]),
+	      [],
+	      [#include <limits.h>
+	       #include <fcntl.h>
+])
+
+AC_CHECK_HEADERS([libproc.h])
+AC_CHECK_FUNCS([proc_pidinfo])
+
+if test -d "/proc/self/fd" ; then
+  AC_DEFINE([HAVE_PROC_SELF_FD], [1], [Define if you have /proc/self/fd])
+fi  
 ##################################
 # DBM Support
 ##################################

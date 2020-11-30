@@ -803,9 +803,9 @@ main (int argc, char **argv)
     }
   
   /* Detach from the console if required */
-  if (background && daemon (0, 0) < 0)
+  if (background && (rc = mu_daemon ()) != 0)
     {
-      mu_error (_("cannot switch to background: %s"), mu_strerror (errno));
+      mu_error (_("cannot switch to background: %s"), mu_strerror (rc));
       return 1;
     }
 

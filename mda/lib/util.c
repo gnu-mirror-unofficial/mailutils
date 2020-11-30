@@ -18,15 +18,6 @@
 
 int exit_code;
 
-void
-mda_close_fds (void)
-{
-  int i;
-  long fdlimit = sysconf (_SC_OPEN_MAX);
-  for (i = 3; i < fdlimit; i++)
-    close (i);
-}
-
 int
 mda_switch_user_id (struct mu_auth_data *auth, int user)
 {

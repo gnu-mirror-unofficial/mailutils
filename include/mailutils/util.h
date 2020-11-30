@@ -248,6 +248,9 @@ int mu_remove_file (const char *path);
 int mu_file_name_is_safe (char const *str);
   
 int mu_getmaxfd (void);
+void mu_close_fds (int minfd);
+int mu_daemon (void);
+  
 /* Get the host name, doing a gethostbyname() if possible. */
 int mu_get_host_name (char **host);
 int mu_spawnvp (const char *prog, char *av[], int *stat);

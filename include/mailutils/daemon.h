@@ -28,8 +28,9 @@ extern "C" {
 #define MODE_INTERACTIVE 0
 #define MODE_DAEMON 1
 
-extern int  mu_daemon_create_pidfile  (const char *);
-extern void mu_daemon_remove_pidfile  (void);
+int  mu_daemon_create_pidfile  (const char *);
+void mu_daemon_remove_pidfile  (void);
+int mu_daemon (void);
 
 #ifdef __cplusplus
 }

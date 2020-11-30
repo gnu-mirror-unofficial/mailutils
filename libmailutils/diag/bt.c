@@ -36,7 +36,6 @@
 void
 mu_gdb_bt ()
 {
-  int i;
   pid_t master_pid = getpid ();
   pid_t pid;
   static char buf[1024];
@@ -58,8 +57,7 @@ mu_gdb_bt ()
       abort ();
     }
 
-  for (i = mu_getmaxfd (); i >= 0; i--)
-    close (i);
+  mu_close_fds (0);
 
   fd = open (fname, O_WRONLY|O_CREAT, 0600);
   if (fd == -1)

@@ -522,9 +522,9 @@ mu_m_server_begin (mu_m_server_t msrv)
     {
       /* Become a daemon. Take care to close inherited fds and to hold
 	 first three one, in, out, err   */
-      if (daemon (0, 0) < 0)
+      if ((rc = mu_daemon ()) != 0)
 	{
-	  mu_error (_("failed to become a daemon: %s"), mu_strerror (errno));
+	  mu_error (_("failed to become a daemon: %s"), mu_strerror (rc));
 	  exit (EXIT_FAILURE);
 	}
       mu_onexit_reset ();

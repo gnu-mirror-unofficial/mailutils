@@ -688,7 +688,6 @@ mh_whatnowproc (struct mh_whatnow_env *wh, int initial_edit, const char *prog)
   if (pid == 0)
     {
       struct mu_wordsplit ws;
-      int i;
       
       if (mu_wordsplit (prog, &ws,
 			MU_WRDSF_DEFFLAGS & ~MU_WRDSF_CESCAPES))
@@ -700,8 +699,7 @@ mh_whatnowproc (struct mh_whatnow_env *wh, int initial_edit, const char *prog)
       
       set_default_editor (wh);
       mh_whatnow_env_to_environ (wh);
-      for (i = mu_getmaxfd (); i > 2; i--)
-	close (i);
+      mu_close_fds (3);
       execvp (ws.ws_wordv[0], ws.ws_wordv);
       mu_diag_funcall (MU_DIAG_ERROR, "execvp", prog, errno);
       _exit (127);
