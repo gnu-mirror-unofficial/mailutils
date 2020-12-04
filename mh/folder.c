@@ -883,6 +883,7 @@ action_pack (void)
       if (verbose)
 	fprintf (stderr, _("Fixing private sequences\n"));
       mh_global_context_iterate (fixup_private, &fd);
+      mu_mailbox_uidvalidity_reset (mbox);
       mu_mailbox_close (mbox);
       mu_mailbox_destroy (&mbox);
       mh_global_save_state ();
