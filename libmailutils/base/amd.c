@@ -1498,10 +1498,26 @@ static int
 amd_set_uidvalidity (mu_mailbox_t mailbox, unsigned long uidvalidity)
 {
   struct _amd_data *amd = mailbox->data;
+  size_t uidnext;
   int status = amd_initial_scan (amd);
   if (status != 0)
     return status;
-  return _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY, uidvalidity);
+
+  if (amd->msg_count == 0)
+    uidnext = 1;
+  else
+    {
+      mu_message_t msg;
+      
+      if ((status = amd_get_message (mailbox, amd->msg_count - 1, &msg)) != 0 ||
+	  (status = mu_message_get_uid (msg, &uidnext)) != 0)
+	return status;
+      uidnext++;
+    }
+  status = _amd_prop_store_off (amd, _MU_AMD_PROP_UIDNEXT, uidnext);
+  if (status == 0)
+    status = _amd_prop_store_off (amd, _MU_AMD_PROP_UIDVALIDITY, uidvalidity);
+  return status;
 }
 
 static int

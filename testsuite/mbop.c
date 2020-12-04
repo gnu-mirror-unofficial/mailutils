@@ -368,6 +368,7 @@ static char const *mbox_actions[] = {
   "sync",
   "append",
   "uidvalidity",
+  "uidvalidity_reset",
   "uidnext",
   "count",
   "recent",
@@ -444,6 +445,16 @@ mbop_qget (int argc, char **argv, mu_assoc_t options, void *data)
   mu_mailbox_destroy (&mbx);
   return 0;
 }
+
+int
+mbop_uidvalidity_reset (int argc, char **argv, mu_assoc_t options, void *data)
+{
+  struct interp_env *ienv = data;
+  MU_ASSERT (mu_mailbox_uidvalidity_reset (ienv->mbx));
+  mu_printf ("OK");
+  return 0;
+}
+
 
 struct mu_tesh_command commands[] = {
   { "__ENVINIT__",    "", mbop_envinit  },
@@ -481,6 +492,7 @@ struct mu_tesh_command commands[] = {
   { "append",         "FILE", mbop_append },
   { "uidvalidity",    "", mbop_uidvalidity },
   { "uidnext",        "", mbop_uidnext },
+  { "uidvalidity_reset", "", mbop_uidvalidity_reset },
   { "count",          "", mbop_count },
   { "recent",         "", mbop_recent },
   { "unseen",         "", mbop_unseen },
