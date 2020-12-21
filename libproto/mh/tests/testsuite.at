@@ -34,6 +34,7 @@ m4_include([notify.at])
 m4_include([delete.at])
 
 m4_include([uidnext.at])
+m4_include([uidvol.at])
 
 # Local Variables:
 # mode: autotest

@@ -4,3 +4,4 @@
 
 PATH=@abs_builddir@:@abs_top_builddir@/testsuite:$PATH
 spooldir=$abs_top_srcdir/testsuite/spool/
+unset MH

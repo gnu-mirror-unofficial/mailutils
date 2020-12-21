@@ -621,7 +621,10 @@ main (int argc, char **argv)
     mbox_flags = MU_STREAM_READ;
   else
     mbox_flags = MU_STREAM_RDWR;
-  
+
+#ifdef MBOP_PRE_OPEN_HOOK
+  MBOP_PRE_OPEN_HOOK ();
+#endif
   MU_ASSERT (mu_mailbox_create_default (&env.mbx, env.mbxname));
   MU_ASSERT (mu_mailbox_open (env.mbx, mbox_flags));
 

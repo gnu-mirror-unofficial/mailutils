@@ -1,0 +1,72 @@
+# GNU Mailutils -- a suite of utilities for electronic mail -*- autotest -*-
+# Copyright (C) 2020 Free Software Foundation, Inc.
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([Volatile UIDs (traditional MH behavior)])
+
+# Create the test MH mailbox
+AT_CHECK([mbox2dir -m -p -v 10 -u inbox $spooldir/mbox1])
+
+# Check its current UID settings
+AT_CHECK([mbop -m inbox uidnext \; uidvalidity],
+[0],
+[uidnext: 6
+uidvalidity: 10
+])
+
+# Request traditional MH behavior.
+AT_DATA([mh_profile],
+[Volatile-uidnext: true
+])
+
+# Remove the penultimate message.  This should not affect uidvalidity.
+AT_CHECK([MH=mh_profile mbop -m inbox 4 \; set_deleted \; expunge],
+[0],
+[4 current message
+4 set_deleted: OK
+expunge: OK
+])
+
+# Check if uidnext and uidvalidity remain the same.
+AT_CHECK([mbop -m inbox uidnext \; uidvalidity],
+[0],
+[uidnext: 6
+uidvalidity: 10
+])
+
+# Remove the last message.  With Volatile-uidnext on, this will reset
+# uidnext to 4 (sequence number of the last message plus one) and
+# increase uidvalidity,
+AT_CHECK([MH=mh_profile mbop -m inbox 4 \; set_deleted \; expunge],
+[0],
+[4 current message
+4 set_deleted: OK
+expunge: OK
+])
+
+# Check if uidnext is computed correctly.
+AT_CHECK([MH=mh_profile mbop -m inbox uidnext],
+[0],
+[uidnext: 4
+])
+
+# Check that uidvalidity has changed.
+# FIXME: Better check that it has *increased*.
+AT_CHECK([MH=mh_profile mbop -m inbox uidvalidity | grep -v '^uid-validity:10$' | grep uid-validity || true])
+
+AT_CLEANUP
+
+
+

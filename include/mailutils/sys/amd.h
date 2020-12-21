@@ -66,7 +66,14 @@ struct _amd_message
 };
 
 /* AMD capabilities */
-#define MU_AMD_STATUS    0x01  /* format keeps status flags */
+#define MU_AMD_STATUS           0x01  /* format keeps status flags */
+#define MU_AMD_VOLATILE_UIDNEXT 0x02  /* Reset UIDNEXT and UIDVALIDITY
+  when the last message is removed.  This helps implement the traditional
+  MH behavior: sequence number for the new message is computed as that of
+  the last message incremented by one.  Normally this behavior is enabled
+  by setting the 'Volatile-uidnext' parameter in mh_profile to 'true'.
+  See _mailbox_mh_init in libproto/mh/mh.c.
+*/
 
 #define MU_AMD_F_INIT_SCAN    0x01  /* Done initial scanning */
 #define MU_AMD_F_PROP         0x02  /* prop file existed */

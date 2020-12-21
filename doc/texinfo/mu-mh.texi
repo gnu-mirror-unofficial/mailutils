@@ -26,6 +26,27 @@ distribution directory.
 @subsection Major differences between Mailutils MH and other MH implementations
 
 @enumerate 1
+@item Sequence numbers increase monotonically;
+
+Message sequence numbers are used as UIDs and thus increase
+monotonically.  This means, in particular, that if your
+inbox has messages in the range @samp{@var{X}--@var{Y}} and you
+delete all messages and then incorporate new mail, the first
+incorporated message will be assigned sequence number @samp{@var{Y} + 1}
+(other MH implementations will assign @samp{1}).  If this behavior
+bugs you, add the following setting to your @file{.mh_profile}:
+
+@example
+Volatile-uidnext: true
+@end example
+
+You can always renumber your messages starting from @samp{1} by
+running
+
+@example
+folder -pack=1
+@end example
+
 @item UUCP addresses are not supported;
 
 @item Mailutils supports a set of new format specifications

@@ -47,7 +47,8 @@ TESTSUITE_AT += \
  qget.at\
  uid.at\
  uidnext.at\
- uidvalidity.at
+ uidvalidity.at\
+ uidvol.at
 
 
 

@@ -1410,7 +1410,16 @@ amd_expunge (mu_mailbox_t mailbox)
 
   if (expcount)
     {
+      int reset_uidvalidity;
+      
       last_expunged++;
+
+      /* See the description of MU_AMD_VOLATILE_UIDNEXT in amd.h for
+	 details.
+      */
+      reset_uidvalidity = (amd->capabilities & MU_AMD_VOLATILE_UIDNEXT) 
+	                   && last_expunged == amd->msg_count;
+      
       do
 	{
 	  size_t j;
@@ -1425,6 +1434,18 @@ amd_expunge (mu_mailbox_t mailbox)
 	    ;
 	}
       while (last_expunged);
+
+      if (reset_uidvalidity)
+	{
+      	  /*
+	   * The following is equivalent to
+	   * mu_mailbox_uidvalidity_reset (amd->mailbox);
+	   */
+
+	  struct timeval tv;
+	  gettimeofday (&tv, NULL);
+	  amd_set_uidvalidity (amd->mailbox, tv.tv_sec);
+	}
     }
   
   if (updated && !amd->mailbox_size)

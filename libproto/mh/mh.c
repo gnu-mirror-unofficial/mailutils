@@ -503,7 +503,8 @@ _mailbox_mh_init (mu_mailbox_t mailbox)
 {
   int rc;
   struct _amd_data *amd;
-
+  char const *p;
+  
   rc = amd_init_mailbox (mailbox, sizeof (struct _amd_data), &amd);
   if (rc)
     return rc;
@@ -526,7 +527,16 @@ _mailbox_mh_init (mu_mailbox_t mailbox)
 
   if (mu_mhprop_get_value (mu_mh_profile, "rmmproc", NULL))
     amd->delete_msg = _mh_msg_delete;
-    
+
+  if ((p = mu_mhprop_get_value (mu_mh_profile, "volatile-uidnext", NULL)) != NULL)
+    {
+      int res;
+      if (mu_str_to_c (p, mu_c_bool, &res, NULL))
+	mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		  ("Value of Volatile-UIDNEXT is not a boolean"));
+      else if (res)
+	amd->capabilities |= MU_AMD_VOLATILE_UIDNEXT;
+    }
   
   return 0;
 }
