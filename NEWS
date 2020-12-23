@@ -1,9 +1,9 @@
-GNU mailutils NEWS -- history of user-visible changes. 2020-11-30
+GNU mailutils NEWS -- history of user-visible changes. 2020-12-23
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.10.91 (git)
+Version 3.11, 2020-12-23
 
 * Support for the traditional mbox format rewritten from scratch
 
@@ -32,6 +32,9 @@ convert all of them at once.  It is implemented as a subcommand of the
    mailutils maildir_fixup /var/spool/maildirs
 
 * Fix persistency of UIDs for all mailbox formats
+
+MH users that find this undesirable can set 'Volatile-uidnext: true'
+in their '.mh_profile' in order to keep old behavior.
 
 * Fix message ordering in maildir.
 
