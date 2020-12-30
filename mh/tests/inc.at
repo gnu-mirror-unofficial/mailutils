@@ -107,5 +107,20 @@ inc -changecur -file ./mbox1 | sed 's/ *$//'
   25  07/13 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Content-
 ])
 
+MH_CHECK([default inbox],[inc06 inc-default],[
+cat $abs_top_srcdir/testsuite/spool/mbox1 > inputmail
+mkdir Mail/inbox
+FOLDER=$(pwd)/inputmail
+export FOLDER
+inc | sed 's/ *$//'
+],
+[0],
+[   1+ 12/28 Foo Bar            Jabberwocky<<`Twas brillig, and the slithy toves
+   2  12/28 Bar                Re: Jabberwocky<<It seems very pretty, but it's
+   3  07/13 Sergey Poznyakoff  Simple MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   4  07/13 Sergey Poznyakoff  Nested MIME<<------- =_aaaaaaaaaa0 Content-Type:
+   5  07/13 Sergey Poznyakoff  Empty MIME Parts<<------- =_aaaaaaaaaa0 Content-
+])
+
 m4_popdef[MH_KEYWORDS])
 # End of inc.at

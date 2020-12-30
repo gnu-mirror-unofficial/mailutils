@@ -562,7 +562,7 @@ mu_url_create_hint (mu_url_t *purl, const char *str, int flags,
   struct mu_url_ctx ctx;
   mu_url_t url;
 
-  if (!purl)
+  if (!purl || !str)
     return EINVAL;
   url = calloc (1, sizeof (*url));
   if (url == NULL)
