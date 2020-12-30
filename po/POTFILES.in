@@ -55,7 +55,7 @@ libmu_sieve/extensions/timestamp.c
 libmu_sieve/extensions/vacation.c
 
 # libproto/imap/folder.c
-libproto/mbox/mboxrb.c
+libproto/mbox/mboxrd.c
 
 mda/mda/mda.c
 mda/lmtpd/lmtpd.c

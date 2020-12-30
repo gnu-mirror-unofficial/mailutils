@@ -40,7 +40,7 @@ sysinclude_HEADERS = \
  mailcap.h\
  mailer.h\
  mapfile_stream.h\
- mboxrb.h\
+ mboxrd.h\
  memory_stream.h\
  message_stream.h\
  message.h\

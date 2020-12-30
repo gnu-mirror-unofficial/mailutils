@@ -20,7 +20,7 @@
 # include <mailutils/types.h>
 # include <mailutils/datetime.h>
 
-struct mu_mboxrb_message
+struct mu_mboxrd_message
 {
   /* Offsets in the mailbox */
   mu_off_t message_start; /* Start of message */
@@ -47,11 +47,11 @@ struct mu_mboxrb_message
   size_t body_lines;      /* Number of lines in message body */
   mu_message_t message;   /* Pointer to the message object if any */
   /* Backlink to the mailbox */
-  struct mu_mboxrb_mailbox *mbox; /* Mailbox */
+  struct mu_mboxrd_mailbox *mbox; /* Mailbox */
   size_t num;             /* Number of this message in the mailbox (0-based) */  
 };
 
-struct mu_mboxrb_mailbox
+struct mu_mboxrd_mailbox
 {
   char *name;                /* Disk file name */
   mu_mailbox_t mailbox;      /* Associated mailbox */
@@ -66,19 +66,19 @@ struct mu_mboxrb_mailbox
   size_t x_imapbase_off;   /* Offset of the X-IMAPbase header */ 
   size_t x_imapbase_len;   /* Length if the header without trailing \n */
   
-  struct mu_mboxrb_message **mesg; /* Array of messages */
+  struct mu_mboxrd_message **mesg; /* Array of messages */
   size_t mesg_count;       /* Number of messages in mesgv */
   size_t mesg_max;         /* Actual capacity of mesg */
 };
 
-int mu_mboxrb_mailbox_init (mu_mailbox_t mailbox);
-void mu_mboxrb_message_free (struct mu_mboxrb_message *dmsg);
-int mu_mboxrb_message_get (struct mu_mboxrb_message *dmsg, mu_message_t *mptr);
-int mu_mboxrb_message_attr_load (struct mu_mboxrb_message *dmsg);
-int mu_mboxrb_mailbox_uid_setup (struct mu_mboxrb_mailbox *dmp);
-int mu_mboxrb_message_reconstruct (mu_stream_t dest,
-				   struct mu_mboxrb_message *dmsg,
-				   struct mu_mboxrb_message *ref,
+int mu_mboxrd_mailbox_init (mu_mailbox_t mailbox);
+void mu_mboxrd_message_free (struct mu_mboxrd_message *dmsg);
+int mu_mboxrd_message_get (struct mu_mboxrd_message *dmsg, mu_message_t *mptr);
+int mu_mboxrd_message_attr_load (struct mu_mboxrd_message *dmsg);
+int mu_mboxrd_mailbox_uid_setup (struct mu_mboxrd_mailbox *dmp);
+int mu_mboxrd_message_reconstruct (mu_stream_t dest,
+				   struct mu_mboxrd_message *dmsg,
+				   struct mu_mboxrd_message *ref,
 				   char const *x_imapbase);
 
 #endif  

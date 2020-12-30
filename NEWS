@@ -8,7 +8,7 @@ Version 3.11, 2020-12-23
 * Support for the traditional mbox format rewritten from scratch
 
 The new format library handles all flavors of the "mbox" format
-family.  The created mailboxes adhere to the "mboxrb" format.
+family.  The created mailboxes adhere to the "mboxrd" format.
 
 * Fix incorrect message flags in maildir
 

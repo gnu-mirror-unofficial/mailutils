@@ -22,7 +22,7 @@
 #endif
 #include <sys/stat.h>
 #include <signal.h>
-#include <mailutils/sys/mboxrb.h>
+#include <mailutils/sys/mboxrd.h>
 #include <mailutils/sys/mailbox.h>
 #include <mailutils/sys/message.h>
 #include <mailutils/diag.h>
@@ -44,10 +44,10 @@
 #include <mailutils/sys/registrar.h>
 
 static void
-mboxrb_destroy (mu_mailbox_t mailbox)
+mboxrd_destroy (mu_mailbox_t mailbox)
 {
   size_t i;
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
 
   if (!dmp)
     return;
@@ -57,7 +57,7 @@ mboxrb_destroy (mu_mailbox_t mailbox)
   mu_monitor_wrlock (mailbox->monitor);
   for (i = 0; i < dmp->mesg_count; i++)
     {
-      mu_mboxrb_message_free (dmp->mesg[i]);
+      mu_mboxrd_message_free (dmp->mesg[i]);
     }
   free (dmp->mesg);
   free (dmp->name);
@@ -67,14 +67,14 @@ mboxrb_destroy (mu_mailbox_t mailbox)
 }
 
 static int
-mboxrb_mailbox_init_stream (struct mu_mboxrb_mailbox *dmp)
+mboxrd_mailbox_init_stream (struct mu_mboxrd_mailbox *dmp)
 {
   int rc;
   mu_mailbox_t mailbox = dmp->mailbox;
 
   /*
    * Initialize stream flags.  If append mode is requested, convert it to
-   * read-write, so that mboxrb_flush_unlocked be able to update the
+   * read-write, so that mboxrd_flush_unlocked be able to update the
    * X-IMAPbase header in the first message, if necessary.
    */
   dmp->stream_flags = mailbox->flags;
@@ -107,9 +107,9 @@ mboxrb_mailbox_init_stream (struct mu_mboxrb_mailbox *dmp)
 }
 
 static int
-mboxrb_open (mu_mailbox_t mailbox, int flags)
+mboxrd_open (mu_mailbox_t mailbox, int flags)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   int rc;
 
   if (!dmp)
@@ -120,7 +120,7 @@ mboxrb_open (mu_mailbox_t mailbox, int flags)
 
   mailbox->flags = flags;
 
-  rc = mboxrb_mailbox_init_stream (dmp);
+  rc = mboxrd_mailbox_init_stream (dmp);
 
   if (rc == 0
       && mailbox->locker == NULL
@@ -144,12 +144,12 @@ enum
     FLUSH_UIDVALIDITY
   };
 
-static int mboxrb_flush (struct mu_mboxrb_mailbox *dmp, int flag);
+static int mboxrd_flush (struct mu_mboxrd_mailbox *dmp, int flag);
 
 static int
-mboxrb_close (mu_mailbox_t mailbox)
+mboxrd_close (mu_mailbox_t mailbox)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   size_t i;
 
   if (!dmp)
@@ -159,13 +159,13 @@ mboxrb_close (mu_mailbox_t mailbox)
 	    ("%s (%s)", __func__, dmp->name));
 
   if (dmp->uidvalidity_changed && (dmp->stream_flags & MU_STREAM_WRITE))
-    mboxrb_flush (dmp, FLUSH_UIDVALIDITY);
+    mboxrd_flush (dmp, FLUSH_UIDVALIDITY);
   
   mu_locker_unlock (mailbox->locker);
   mu_monitor_wrlock (mailbox->monitor);
   for (i = 0; i < dmp->mesg_count; i++)
     {
-      mu_mboxrb_message_free (dmp->mesg[i]);
+      mu_mboxrd_message_free (dmp->mesg[i]);
     }
   free (dmp->mesg);
   dmp->mesg = NULL;
@@ -179,9 +179,9 @@ mboxrb_close (mu_mailbox_t mailbox)
 }
 
 static int
-mboxrb_remove (mu_mailbox_t mailbox)
+mboxrd_remove (mu_mailbox_t mailbox)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
 
   if (!dmp)
     return EINVAL;
@@ -193,9 +193,9 @@ mboxrb_remove (mu_mailbox_t mailbox)
 }
 
 static int
-mboxrb_is_updated (mu_mailbox_t mailbox)
+mboxrd_is_updated (mu_mailbox_t mailbox)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   mu_off_t size = 0;
 
   if (!dmp)
@@ -215,7 +215,7 @@ mboxrb_is_updated (mu_mailbox_t mailbox)
 
 #ifdef WITH_PTHREAD
 void
-mboxrb_cleanup (void *arg)
+mboxrd_cleanup (void *arg)
 {
   mu_mailbox_t mailbox = arg;
   mu_monitor_unlock (mailbox->monitor);
@@ -224,10 +224,10 @@ mboxrb_cleanup (void *arg)
 #endif
 
 static int
-mboxrb_alloc_message (struct mu_mboxrb_mailbox *dmp,
-		       struct mu_mboxrb_message **dmsg_ptr)
+mboxrd_alloc_message (struct mu_mboxrd_mailbox *dmp,
+		       struct mu_mboxrd_message **dmsg_ptr)
 {
-  struct mu_mboxrb_message *dmsg;
+  struct mu_mboxrd_message *dmsg;
 
   if (dmp->mesg_count == dmp->mesg_max)
     {
@@ -259,7 +259,7 @@ mboxrb_alloc_message (struct mu_mboxrb_mailbox *dmp,
 }
 
 static int
-mboxrb_dispatch (mu_mailbox_t mailbox, int evt, void *data)
+mboxrd_dispatch (mu_mailbox_t mailbox, int evt, void *data)
 {
   if (!mailbox->observable)
     return 0;
@@ -285,7 +285,7 @@ mboxrb_dispatch (mu_mailbox_t mailbox, int evt, void *data)
 
       3a. Upon mailbox scanning, if the first message contains a
 	  valid X-IMAPbase header. In this case, the
-	  mboxrb_rescan_unlocked function initializes each
+	  mboxrd_rescan_unlocked function initializes each
 	  message's uid value from the X-UID header. The first
 	  message that lacks X-UID or with an X-UID that cannot
 	  be parsed, gets assigned new UID. The subsequent
@@ -295,13 +295,13 @@ mboxrb_dispatch (mu_mailbox_t mailbox, int evt, void *data)
 	  UIDs might have changed.
 
       3b. When any of the following functions are called for
-	  the first time: mboxrb_uidvalidity, mboxrb_uidnext,
-	  mboxrb_message_uid. This means that the caller used
+	  the first time: mboxrd_uidvalidity, mboxrd_uidnext,
+	  mboxrd_message_uid. This means that the caller used
 	  mu_mailbox_uidvalidity, mu_mailbox_uidnext, or
 	  mu_message_get_uid.
 	  In this case, each message is assigned a UID equal to
 	  its ordinal number (1-based) in the mailbox.
-	  This is done by the mu_mboxrb_mailbox_uid_setup function.
+	  This is done by the mu_mboxrd_mailbox_uid_setup function.
 
    4. When a message is appended to the mailbox, any existing
       X-IMAPbase and X-UID headers are removed from it. If the
@@ -315,16 +315,16 @@ mboxrb_dispatch (mu_mailbox_t mailbox, int evt, void *data)
    The caller must ensure that the UID subsystem is initialized.
 */
 static unsigned long
-mboxrb_alloc_next_uid (struct mu_mboxrb_mailbox *mbox)
+mboxrd_alloc_next_uid (struct mu_mboxrd_mailbox *mbox)
 {
   mbox->uidvalidity_changed = 1;
   return mbox->uidnext++;
 }
 
 static void
-mboxrb_message_alloc_uid (struct mu_mboxrb_message *dmsg)
+mboxrd_message_alloc_uid (struct mu_mboxrd_message *dmsg)
 {
-  dmsg->uid = mboxrb_alloc_next_uid (dmsg->mbox);
+  dmsg->uid = mboxrd_alloc_next_uid (dmsg->mbox);
   dmsg->uid_modified = 1;
 }
 
@@ -350,7 +350,7 @@ mboxrb_message_alloc_uid (struct mu_mboxrb_message *dmsg)
  *
  * Offset of the header in the mailbox and its length (without the
  * trailing newline) are stored in x_imapbase_off and x_imapbase_len
- * members of struct mu_mboxrb_mailbox.
+ * members of struct mu_mboxrd_mailbox.
  *
  * The X_IMAPBASE_MAX macro returns maximum size of the buffer necessary
  * for formatting the X-IMAPbase header.  In fact, it is 2 bytes wider
@@ -459,8 +459,8 @@ parse_from_line (char const *s, char **zp)
 
 /* Finalize current message */
 static inline int
-scan_message_finalize (struct mu_mboxrb_mailbox *dmp,
-		       struct mu_mboxrb_message *dmsg, mu_stream_t stream,
+scan_message_finalize (struct mu_mboxrd_mailbox *dmp,
+		       struct mu_mboxrd_message *dmsg, mu_stream_t stream,
 		       size_t n, int *force_init_uids)
 {
   int rc;
@@ -479,31 +479,31 @@ scan_message_finalize (struct mu_mboxrb_mailbox *dmp,
   if (dmsg->uid == 0)
     *force_init_uids = 1;
   if (*force_init_uids)
-    mboxrb_message_alloc_uid (dmsg);
+    mboxrd_message_alloc_uid (dmsg);
 
   /* Every 100 mesgs update the lock, it should be every minute.  */
   if (dmp->mailbox->locker && (dmp->mesg_count % 100) == 0)
     mu_locker_touchlock (dmp->mailbox->locker);
 
   count = dmp->mesg_count;
-  mboxrb_dispatch (dmp->mailbox, MU_EVT_MESSAGE_ADD, &count);
+  mboxrd_dispatch (dmp->mailbox, MU_EVT_MESSAGE_ADD, &count);
   return 0;
 }
 
-static inline struct mu_mboxrb_message *
-scan_message_begin (struct mu_mboxrb_mailbox *dmp, mu_stream_t stream,
+static inline struct mu_mboxrd_message *
+scan_message_begin (struct mu_mboxrd_mailbox *dmp, mu_stream_t stream,
 		    char *buf, size_t n, char *ti, char *zn)
 {
   int rc;
-  struct mu_mboxrb_message *dmsg;
+  struct mu_mboxrd_message *dmsg;
   
   /* Create new message */
-  rc = mboxrb_alloc_message (dmp, &dmsg);
+  rc = mboxrd_alloc_message (dmp, &dmsg);
   if (rc)
     {
       mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		("%s:%s (%s): %s",
-		 __func__, "mboxrb_alloc_message", dmp->name,
+		 __func__, "mboxrd_alloc_message", dmp->name,
 		 mu_strerror (rc)));
       return NULL;
     }
@@ -620,22 +620,22 @@ scan_message_begin (struct mu_mboxrb_mailbox *dmp, mu_stream_t stream,
  *     message.
  */
 static int
-mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
+mboxrd_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   int rc;
   mu_stream_t stream;
   char *buf = NULL;
   size_t bufsize = 0;
   size_t n;
-  enum mboxrb_scan_state
+  enum mboxrd_scan_state
   {
-    mboxrb_scan_init,  /* At the beginning of the file */
-    mboxrb_scan_header,/* Scanning message header */
-    mboxrb_scan_body,  /* Scanning message body */
-    mboxrb_scan_empty_line /* At the empty line within or at the end of body */
-  } state = mboxrb_scan_init;
-  struct mu_mboxrb_message *dmsg = NULL;
+    mboxrd_scan_init,  /* At the beginning of the file */
+    mboxrd_scan_header,/* Scanning message header */
+    mboxrd_scan_body,  /* Scanning message body */
+    mboxrd_scan_empty_line /* At the empty line within or at the end of body */
+  } state = mboxrd_scan_init;
+  struct mu_mboxrd_message *dmsg = NULL;
   char *zn, *ti;
   int force_init_uids = 0;
   size_t numlines = 0;
@@ -679,7 +679,7 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
     {
       switch (state)
 	{
-	case mboxrb_scan_init:
+	case mboxrd_scan_init:
 	  if ((ti = parse_from_line (buf, &zn)) == 0)
 	    {
 	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
@@ -690,10 +690,10 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	    }
 	  if ((dmsg = scan_message_begin (dmp, stream, buf, n, ti, zn)) == NULL)
 	    goto err;
-	  state = mboxrb_scan_header;
+	  state = mboxrd_scan_header;
 	  break;
 
-	case mboxrb_scan_header:
+	case mboxrd_scan_header:
 	  if (n == 1 && buf[0] == '\n')
 	    {
 	      rc = mu_stream_seek (stream, 0, MU_SEEK_CUR, &dmsg->body_start);
@@ -705,7 +705,7 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 			     mu_strerror (rc)));
 		  goto err;
 		}
-	      state = mboxrb_scan_body;
+	      state = mboxrd_scan_body;
 	    }
 	  else if (mu_isspace (buf[0]))
 	    continue;
@@ -750,29 +750,29 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 	    }
 	  break;
 
-	case mboxrb_scan_body:
+	case mboxrd_scan_body:
 	  if (n == 1 && buf[0] == '\n')
 	    {
-	      state = mboxrb_scan_empty_line;
+	      state = mboxrd_scan_empty_line;
 	    }
 	  break;
 
-	case mboxrb_scan_empty_line:
+	case mboxrd_scan_empty_line:
 	  if ((ti = parse_from_line (buf, &zn)) != 0)
 	    {
 	      if (scan_message_finalize (dmp, dmsg, stream, n, &force_init_uids))
 		goto err;
 	      if ((dmsg = scan_message_begin (dmp, stream, buf, n, ti, zn)) == NULL)
 		goto err;
-	      state = mboxrb_scan_header;
+	      state = mboxrd_scan_header;
 	    }
 	  else if (n == 1 && buf[0] == '\n')
-	    state = mboxrb_scan_empty_line;
+	    state = mboxrd_scan_empty_line;
 	  else
-	    state = mboxrb_scan_body;
+	    state = mboxrd_scan_body;
 	}
       if (++numlines % 1000 == 0)
-	mboxrb_dispatch (mailbox, MU_EVT_MAILBOX_PROGRESS, NULL);
+	mboxrd_dispatch (mailbox, MU_EVT_MAILBOX_PROGRESS, NULL);
     }
 
   if (dmsg)
@@ -803,9 +803,9 @@ mboxrb_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 
 /* Scan the mailbox starting from the given offset */
 static int
-mboxrb_rescan (mu_mailbox_t mailbox, mu_off_t offset)
+mboxrd_rescan (mu_mailbox_t mailbox, mu_off_t offset)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   int rc;
 
   if (!dmp)
@@ -816,7 +816,7 @@ mboxrb_rescan (mu_mailbox_t mailbox, mu_off_t offset)
       
   mu_monitor_wrlock (mailbox->monitor);
 #ifdef WITH_PTHREAD
-  pthread_cleanup_push (mboxrb_cleanup, (void *)mailbox);
+  pthread_cleanup_push (mboxrd_cleanup, (void *)mailbox);
 #endif
 
   if (mailbox->locker && (rc = mu_locker_lock (mailbox->locker)))
@@ -825,7 +825,7 @@ mboxrb_rescan (mu_mailbox_t mailbox, mu_off_t offset)
       return rc;
     }
 
-  rc = mboxrb_rescan_unlocked (mailbox, offset);
+  rc = mboxrd_rescan_unlocked (mailbox, offset);
 
   if (mailbox->locker)
     mu_locker_unlock (mailbox->locker);
@@ -839,22 +839,22 @@ mboxrb_rescan (mu_mailbox_t mailbox, mu_off_t offset)
 }
 
 static int
-mboxrb_refresh (mu_mailbox_t mailbox)
+mboxrd_refresh (mu_mailbox_t mailbox)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
 
-  if (mboxrb_is_updated (mailbox))
+  if (mboxrd_is_updated (mailbox))
     return 0;
-  return mboxrb_rescan (mailbox,
+  return mboxrd_rescan (mailbox,
 			 dmp->mesg_count == 0
 			   ? 0
 			   : dmp->mesg[dmp->mesg_count - 1]->message_end + 1);
 }
 
 static int
-mboxrb_scan (mu_mailbox_t mailbox, size_t i, size_t *pcount)
+mboxrd_scan (mu_mailbox_t mailbox, size_t i, size_t *pcount)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
 
   if (!dmp)
     return EINVAL;
@@ -865,14 +865,14 @@ mboxrb_scan (mu_mailbox_t mailbox, size_t i, size_t *pcount)
   if (i == 0 || (dmp->mesg_count && i > dmp->mesg_count))
     return EINVAL;
 
-  if (!mboxrb_is_updated (mailbox))
+  if (!mboxrd_is_updated (mailbox))
     {
       int rc;
 
       while (i < dmp->mesg_count)
-	mu_mboxrb_message_free (dmp->mesg[dmp->mesg_count--]);
+	mu_mboxrd_message_free (dmp->mesg[dmp->mesg_count--]);
 
-      rc = mboxrb_refresh (mailbox);
+      rc = mboxrd_refresh (mailbox);
       if (rc)
 	return rc;
     }
@@ -896,13 +896,13 @@ mboxrb_scan (mu_mailbox_t mailbox, size_t i, size_t *pcount)
 }
 
 static int
-mboxrb_messages_recent (mu_mailbox_t mailbox, size_t *pcount)
+mboxrd_messages_recent (mu_mailbox_t mailbox, size_t *pcount)
 {
   size_t i;
   size_t count = 0;
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
 
-  int rc = mboxrb_refresh (mailbox);
+  int rc = mboxrd_refresh (mailbox);
   if (rc)
     return rc;
 
@@ -918,12 +918,12 @@ mboxrb_messages_recent (mu_mailbox_t mailbox, size_t *pcount)
 }
 
 static int
-mboxrb_message_unseen (mu_mailbox_t mailbox, size_t *pmsgno)
+mboxrd_message_unseen (mu_mailbox_t mailbox, size_t *pmsgno)
 {
   size_t i;
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
 
-  int rc = mboxrb_refresh (mailbox);
+  int rc = mboxrd_refresh (mailbox);
   if (rc)
     return rc;
 
@@ -941,12 +941,12 @@ mboxrb_message_unseen (mu_mailbox_t mailbox, size_t *pmsgno)
 
 /* Initialize the mailbox UID subsystem. See the Notes above. */
 int
-mu_mboxrb_mailbox_uid_setup (struct mu_mboxrb_mailbox *dmp)
+mu_mboxrd_mailbox_uid_setup (struct mu_mboxrd_mailbox *dmp)
 {
   if (!dmp->uidvalidity_scanned)
     {
       size_t i;
-      int rc = mboxrb_refresh (dmp->mailbox);
+      int rc = mboxrd_refresh (dmp->mailbox);
       if (rc || dmp->uidvalidity_scanned)
 	return rc;
 
@@ -956,45 +956,45 @@ mu_mboxrb_mailbox_uid_setup (struct mu_mboxrb_mailbox *dmp)
       dmp->uidvalidity_changed = 1;
       
       for (i = 0; i < dmp->mesg_count; i++)
-	mboxrb_message_alloc_uid (dmp->mesg[i]);
+	mboxrd_message_alloc_uid (dmp->mesg[i]);
     }
   return 0;
 }
 
 static int
-mboxrb_get_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
+mboxrd_get_uidvalidity (mu_mailbox_t mailbox, unsigned long *puidvalidity)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
-  int rc = mu_mboxrb_mailbox_uid_setup (dmp);
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
+  int rc = mu_mboxrd_mailbox_uid_setup (dmp);
   if (rc == 0)
     *puidvalidity = dmp->uidvalidity;
   return rc;
 }
 
 static int
-mboxrb_set_uidvalidity (mu_mailbox_t mailbox, unsigned long uidvalidity)
+mboxrd_set_uidvalidity (mu_mailbox_t mailbox, unsigned long uidvalidity)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
-  int rc = mu_mboxrb_mailbox_uid_setup (dmp);
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
+  int rc = mu_mboxrd_mailbox_uid_setup (dmp);
   if (rc == 0)
     dmp->uidvalidity = uidvalidity;
   return rc;
 }
 
 static int
-mboxrb_uidnext (mu_mailbox_t mailbox, size_t *puidnext)
+mboxrd_uidnext (mu_mailbox_t mailbox, size_t *puidnext)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
-  int rc = mu_mboxrb_mailbox_uid_setup (dmp);
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
+  int rc = mu_mboxrd_mailbox_uid_setup (dmp);
   if (rc == 0)
     *puidnext = dmp->uidnext;
   return rc;
 }
 
 static int
-mboxrb_get_message (mu_mailbox_t mailbox, size_t msgno, mu_message_t *pmsg)
+mboxrd_get_message (mu_mailbox_t mailbox, size_t msgno, mu_message_t *pmsg)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   int rc;
 
   if (!dmp || msgno < 1)
@@ -1004,7 +1004,7 @@ mboxrb_get_message (mu_mailbox_t mailbox, size_t msgno, mu_message_t *pmsg)
 
   if (dmp->mesg_count == 0)
     {
-      rc = mboxrb_scan (mailbox, 1, NULL);
+      rc = mboxrd_scan (mailbox, 1, NULL);
       if (rc)
 	return rc;
     }
@@ -1012,7 +1012,7 @@ mboxrb_get_message (mu_mailbox_t mailbox, size_t msgno, mu_message_t *pmsg)
   if (msgno > dmp->mesg_count)
     return MU_ERR_NOENT;
 
-  return mu_mboxrb_message_get (dmp->mesg[msgno-1], pmsg);
+  return mu_mboxrd_message_get (dmp->mesg[msgno-1], pmsg);
 }
 
 static int
@@ -1030,12 +1030,12 @@ qid2off (mu_message_qid_t qid, mu_off_t *pret)
 }
 
 static int
-mboxrb_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
+mboxrd_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
 			   mu_message_t *pmsg)
 {
   int rc;
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
-  struct mu_mboxrb_message *dmsg;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_message *dmsg;
   mu_off_t offset;
 
   if (mailbox == NULL || qid2off (qid, &offset)
@@ -1044,7 +1044,7 @@ mboxrb_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
 
   if (dmp->mesg_count == 0)
     {
-      rc = mboxrb_rescan (mailbox, offset);
+      rc = mboxrd_rescan (mailbox, offset);
       if (rc)
 	return rc;
       if (dmp->mesg_count == 0)
@@ -1060,7 +1060,7 @@ mboxrb_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
 	*pmsg = dmsg->message;
       return 0;
     }
-  return mu_mboxrb_message_get (dmsg, pmsg);
+  return mu_mboxrd_message_get (dmsg, pmsg);
 }
 
 static int
@@ -1074,7 +1074,7 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     MU_HEADER_X_UID,
     NULL
   };
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
 
   if (dmp->mesg_count)
     {
@@ -1176,7 +1176,7 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 			      dmp->uidnext);
 	  mu_stream_printf (mailbox->stream, "%s: %lu\n",
 			    MU_HEADER_X_UID,
-			    mboxrb_alloc_next_uid (dmp));
+			    mboxrd_alloc_next_uid (dmp));
 	}
 
       rc = mu_stream_write (mailbox->stream, "\n", 1, NULL);
@@ -1202,7 +1202,7 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     }
 
   /* Rescan the message */
-  rc = mboxrb_rescan_unlocked (mailbox, size);
+  rc = mboxrd_rescan_unlocked (mailbox, size);
   if (rc)
     return rc;
 
@@ -1219,12 +1219,12 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 }
 
 static int
-mboxrb_append_message (mu_mailbox_t mailbox, mu_message_t msg)
+mboxrd_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   int rc;
 
-  rc = mboxrb_refresh (mailbox);
+  rc = mboxrd_refresh (mailbox);
   if (rc)
     return rc;
   
@@ -1248,15 +1248,15 @@ mboxrb_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 }
 
 static int
-mboxrb_messages_count (mu_mailbox_t mailbox, size_t *pcount)
+mboxrd_messages_count (mu_mailbox_t mailbox, size_t *pcount)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   int rc;
 
   if (!dmp)
     return EINVAL;
 
-  rc = mboxrb_refresh (mailbox);
+  rc = mboxrd_refresh (mailbox);
   if (rc)
     return rc;
 
@@ -1267,7 +1267,7 @@ mboxrb_messages_count (mu_mailbox_t mailbox, size_t *pcount)
 }
 
 static int
-mboxrb_get_size (mu_mailbox_t mailbox, mu_off_t *psize)
+mboxrd_get_size (mu_mailbox_t mailbox, mu_off_t *psize)
 {
   mu_off_t size;
   int rc;
@@ -1281,9 +1281,9 @@ mboxrb_get_size (mu_mailbox_t mailbox, mu_off_t *psize)
 }
 
 static int
-mboxrb_get_atime (mu_mailbox_t mailbox, time_t *return_time)
+mboxrd_get_atime (mu_mailbox_t mailbox, time_t *return_time)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
   struct stat st;
 
   if (dmp == NULL)
@@ -1294,16 +1294,16 @@ mboxrb_get_atime (mu_mailbox_t mailbox, time_t *return_time)
   return 0;
 }
 
-struct mu_mboxrb_flush_tracker
+struct mu_mboxrd_flush_tracker
 {
-  struct mu_mboxrb_mailbox *dmp;
+  struct mu_mboxrd_mailbox *dmp;
   size_t *ref;
   size_t mesg_count;
 };
 
 static int
-tracker_init (struct mu_mboxrb_flush_tracker *trk,
-	      struct mu_mboxrb_mailbox *dmp)
+tracker_init (struct mu_mboxrd_flush_tracker *trk,
+	      struct mu_mboxrd_mailbox *dmp)
 {
   trk->ref = calloc (dmp->mesg_count, sizeof (trk->ref[0]));
   if (!trk->ref)
@@ -1314,28 +1314,28 @@ tracker_init (struct mu_mboxrb_flush_tracker *trk,
 }
 
 static void
-tracker_free (struct mu_mboxrb_flush_tracker *trk)
+tracker_free (struct mu_mboxrd_flush_tracker *trk)
 {
   free (trk->ref);
 }
 
-static struct mu_mboxrb_message *
-tracker_next_ref (struct mu_mboxrb_flush_tracker *trk, size_t orig_num)
+static struct mu_mboxrd_message *
+tracker_next_ref (struct mu_mboxrd_flush_tracker *trk, size_t orig_num)
 {
   trk->ref[trk->mesg_count++] = orig_num;
   return trk->dmp->mesg[orig_num];
 }
 
 static void
-mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
+mboxrd_tracker_sync (struct mu_mboxrd_flush_tracker *trk)
 {
-  struct mu_mboxrb_mailbox *dmp = trk->dmp;
+  struct mu_mboxrd_mailbox *dmp = trk->dmp;
   size_t i;
 
   if (trk->mesg_count == 0)
     {
       for (i = 0; i < dmp->mesg_count; i++)
-	mu_mboxrb_message_free (dmp->mesg[i]);      
+	mu_mboxrd_message_free (dmp->mesg[i]);      
       dmp->size = 0;
       dmp->uidvalidity_scanned = 0;
     }
@@ -1347,7 +1347,7 @@ mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
       /* Sweep */
       for (i = 0; i < dmp->mesg_count; i++)
 	if (!dmp->mesg[i]->mark)
-	  mu_mboxrb_message_free (dmp->mesg[i]);
+	  mu_mboxrd_message_free (dmp->mesg[i]);
       /* Reorder */
       for (i = 0; i < trk->mesg_count; i++)
 	{
@@ -1365,13 +1365,13 @@ mboxrb_tracker_sync (struct mu_mboxrb_flush_tracker *trk)
    Update TRK accordingly.
 */
 static int
-mboxrb_mailbox_copy_unchanged (struct mu_mboxrb_flush_tracker *trk,
+mboxrd_mailbox_copy_unchanged (struct mu_mboxrd_flush_tracker *trk,
 				size_t from, size_t to,
 				mu_stream_t dest)
 {
   if (to > from)
     {
-      struct mu_mboxrb_mailbox *dmp = trk->dmp;
+      struct mu_mboxrd_mailbox *dmp = trk->dmp;
       mu_off_t start;
       mu_off_t stop;
       size_t i;
@@ -1391,7 +1391,7 @@ mboxrb_mailbox_copy_unchanged (struct mu_mboxrb_flush_tracker *trk,
       /* Fixup offsets */
       for (i = from; i < to; i++)
 	{
-	  struct mu_mboxrb_message *ref = tracker_next_ref (trk, i);
+	  struct mu_mboxrd_message *ref = tracker_next_ref (trk, i);
 	  ref->message_start += off;
 	  ref->body_start += off;
 	  ref->message_end += off;
@@ -1411,11 +1411,11 @@ mboxrb_mailbox_copy_unchanged (struct mu_mboxrb_flush_tracker *trk,
    MU_ATTRIBUTE_DELETED attribute is to be honored.
 */
 static int
-mboxrb_flush_temp (struct mu_mboxrb_flush_tracker *trk,
+mboxrd_flush_temp (struct mu_mboxrd_flush_tracker *trk,
 		    size_t i,
 		    mu_stream_t tempstr, int expunge)
 {
-  struct mu_mboxrb_mailbox *dmp = trk->dmp;
+  struct mu_mboxrd_mailbox *dmp = trk->dmp;
   size_t start = 0;
   size_t save_imapbase = 0;
   size_t expcount = 0;
@@ -1426,13 +1426,13 @@ mboxrb_flush_temp (struct mu_mboxrb_flush_tracker *trk,
     return rc;
   while (i < dmp->mesg_count)
     {
-      struct mu_mboxrb_message *dmsg = dmp->mesg[i];
+      struct mu_mboxrd_message *dmsg = dmp->mesg[i];
 
       if (expunge && (dmsg->attr_flags & MU_ATTRIBUTE_DELETED))
 	{
 	  size_t expevt[2] = { i + 1, expcount };
 
-	  rc = mboxrb_mailbox_copy_unchanged (trk, start, i, tempstr);
+	  rc = mboxrd_mailbox_copy_unchanged (trk, start, i, tempstr);
 	  if (rc)
 	    return rc;
 	  mu_observable_notify (dmp->mailbox->observable,
@@ -1460,7 +1460,7 @@ mboxrb_flush_temp (struct mu_mboxrb_flush_tracker *trk,
 	{
 	  char *x_imapbase = NULL;
 	  
-	  rc = mboxrb_mailbox_copy_unchanged (trk, start, i, tempstr);
+	  rc = mboxrd_mailbox_copy_unchanged (trk, start, i, tempstr);
 	  if (rc)
 	    return rc;
 	  if (save_imapbase == i)
@@ -1471,7 +1471,7 @@ mboxrb_flush_temp (struct mu_mboxrb_flush_tracker *trk,
 			   UINT_STRWIDTH (dmp->uidnext),
 			   dmp->uidnext);
 	    }
-	  rc = mu_mboxrb_message_reconstruct (tempstr, dmsg,
+	  rc = mu_mboxrd_message_reconstruct (tempstr, dmsg,
 					      tracker_next_ref (trk, i),
 					      x_imapbase);
 	  free (x_imapbase);
@@ -1484,7 +1484,7 @@ mboxrb_flush_temp (struct mu_mboxrb_flush_tracker *trk,
 
       i++;
     }
-  rc = mboxrb_mailbox_copy_unchanged (trk, start, i, tempstr);
+  rc = mboxrd_mailbox_copy_unchanged (trk, start, i, tempstr);
   if (rc)
     return rc;
   if (trk->mesg_count)
@@ -1501,9 +1501,9 @@ mboxrb_flush_temp (struct mu_mboxrb_flush_tracker *trk,
    Assumes that simultaneous access to the mailbox has been blocked.
 */
 static int
-mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
+mboxrd_flush_unlocked (struct mu_mboxrd_flush_tracker *trk, int mode)
 {
-  struct mu_mboxrb_mailbox *dmp = trk->dmp;
+  struct mu_mboxrd_mailbox *dmp = trk->dmp;
   int rc;
   size_t dirty;
   mu_stream_t tempstr;
@@ -1519,7 +1519,7 @@ mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
   if (mode == FLUSH_UIDVALIDITY && !dmp->uidvalidity_changed)
     return 0;
   
-  rc = mboxrb_refresh (dmp->mailbox);
+  rc = mboxrd_refresh (dmp->mailbox);
   if (rc)
     return rc;
 
@@ -1578,7 +1578,7 @@ mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
 	    {
 	      for (i = 1; i < dmp->mesg_count; i++)
 		{
-		  struct mu_mboxrb_message *dmsg = dmp->mesg[i];
+		  struct mu_mboxrd_message *dmsg = dmp->mesg[i];
 		  dmsg->attr_flags &= ~(MU_ATTRIBUTE_MODIFIED|MU_ATTRIBUTE_DELETED);
 		}
 	    }
@@ -1587,7 +1587,7 @@ mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
 
   for (dirty = 0; dirty < dmp->mesg_count; dirty++)
     {
-      struct mu_mboxrb_message *dmsg = dmp->mesg[dirty];
+      struct mu_mboxrd_message *dmsg = dmp->mesg[dirty];
       if (dmsg->uid_modified)
 	break;
       if ((dmsg->attr_flags & MU_ATTRIBUTE_MODIFIED)
@@ -1631,7 +1631,7 @@ mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
 	  return rc;
 	}
       
-      rc = mboxrb_flush_temp (trk, dirty, tempstr, mode == FLUSH_EXPUNGE);
+      rc = mboxrd_flush_temp (trk, dirty, tempstr, mode == FLUSH_EXPUNGE);
       mu_stream_unref (tempstr);
       if (rc == 0)
 	{
@@ -1652,9 +1652,9 @@ mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
 	      if (rc == 0)
 		{
 		  /* Success. Synchronize internal data with the counter. */
-		  mboxrb_tracker_sync (trk);
+		  mboxrd_tracker_sync (trk);
 		  mu_stream_destroy (&dmp->mailbox->stream);
-		  rc = mboxrb_mailbox_init_stream (dmp);
+		  rc = mboxrd_mailbox_init_stream (dmp);
 		}
 	      else
 		{
@@ -1702,14 +1702,14 @@ mboxrb_flush_unlocked (struct mu_mboxrb_flush_tracker *trk, int mode)
    the original mailbox remains unchanged.
 */
 static int
-mboxrb_flush (struct mu_mboxrb_mailbox *dmp, int mode)
+mboxrd_flush (struct mu_mboxrd_mailbox *dmp, int mode)
 {
   int rc;
   sigset_t signalset;
 #ifdef WITH_PTHREAD
   int state;
 #endif
-  struct mu_mboxrb_flush_tracker trk;
+  struct mu_mboxrd_flush_tracker trk;
 
   /* Lock the mailbox */
   if (dmp->mailbox->locker
@@ -1730,7 +1730,7 @@ mboxrb_flush (struct mu_mboxrb_mailbox *dmp, int mode)
   rc = tracker_init (&trk, dmp);
   if (rc == 0)
     {
-      rc = mboxrb_flush_unlocked (&trk, mode);
+      rc = mboxrd_flush_unlocked (&trk, mode);
       tracker_free (&trk);
     }
 
@@ -1745,24 +1745,24 @@ mboxrb_flush (struct mu_mboxrb_mailbox *dmp, int mode)
 }
 
 static int
-mboxrb_expunge (mu_mailbox_t mailbox)
+mboxrd_expunge (mu_mailbox_t mailbox)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
-  return mboxrb_flush (dmp, FLUSH_EXPUNGE);
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
+  return mboxrd_flush (dmp, FLUSH_EXPUNGE);
 }
 
 static int
-mboxrb_sync (mu_mailbox_t mailbox)
+mboxrd_sync (mu_mailbox_t mailbox)
 {
-  struct mu_mboxrb_mailbox *dmp = mailbox->data;
-  return mboxrb_flush (dmp, FLUSH_SYNC);
+  struct mu_mboxrd_mailbox *dmp = mailbox->data;
+  return mboxrd_flush (dmp, FLUSH_SYNC);
 }
 
 int
-mu_mboxrb_mailbox_init (mu_mailbox_t mailbox)
+mu_mboxrd_mailbox_init (mu_mailbox_t mailbox)
 {
   int status;
-  struct mu_mboxrb_mailbox *dmp;
+  struct mu_mboxrd_mailbox *dmp;
   mu_property_t property = NULL;
 
   if (mailbox == NULL)
@@ -1787,29 +1787,29 @@ mu_mboxrb_mailbox_init (mu_mailbox_t mailbox)
   mailbox->data = dmp;
 
   /* Overloading the defaults.  */
-  mailbox->_destroy = mboxrb_destroy;
-  mailbox->_open = mboxrb_open;
-  mailbox->_close = mboxrb_close;
-  mailbox->_remove = mboxrb_remove;
-  mailbox->_scan = mboxrb_scan;
-  mailbox->_is_updated = mboxrb_is_updated;
+  mailbox->_destroy = mboxrd_destroy;
+  mailbox->_open = mboxrd_open;
+  mailbox->_close = mboxrd_close;
+  mailbox->_remove = mboxrd_remove;
+  mailbox->_scan = mboxrd_scan;
+  mailbox->_is_updated = mboxrd_is_updated;
 
-  mailbox->_get_message = mboxrb_get_message;
-  mailbox->_quick_get_message = mboxrb_quick_get_message;
-  mailbox->_messages_count = mboxrb_messages_count;
-  mailbox->_messages_recent = mboxrb_messages_recent;
-  mailbox->_message_unseen = mboxrb_message_unseen;
+  mailbox->_get_message = mboxrd_get_message;
+  mailbox->_quick_get_message = mboxrd_quick_get_message;
+  mailbox->_messages_count = mboxrd_messages_count;
+  mailbox->_messages_recent = mboxrd_messages_recent;
+  mailbox->_message_unseen = mboxrd_message_unseen;
 
-  mailbox->_append_message = mboxrb_append_message;
+  mailbox->_append_message = mboxrd_append_message;
 
-  mailbox->_expunge = mboxrb_expunge;
-  mailbox->_sync = mboxrb_sync;
+  mailbox->_expunge = mboxrd_expunge;
+  mailbox->_sync = mboxrd_sync;
 
-  mailbox->_get_uidvalidity = mboxrb_get_uidvalidity;
-  mailbox->_set_uidvalidity = mboxrb_set_uidvalidity;
-  mailbox->_uidnext = mboxrb_uidnext;
-  mailbox->_get_size = mboxrb_get_size;
-  mailbox->_get_atime = mboxrb_get_atime;
+  mailbox->_get_uidvalidity = mboxrd_get_uidvalidity;
+  mailbox->_set_uidvalidity = mboxrd_set_uidvalidity;
+  mailbox->_uidnext = mboxrd_uidnext;
+  mailbox->_get_size = mboxrd_get_size;
+  mailbox->_get_atime = mboxrd_get_atime;
 
   mu_mailbox_get_property (mailbox, &property);
   mu_property_set_value (property, "TYPE", "MBOX", 1);
@@ -1821,7 +1821,7 @@ mu_mboxrb_mailbox_init (mu_mailbox_t mailbox)
 
 /* Folder support */
 
-/* Return MU_FOLDER_ATTRIBUTE_FILE if NAME looks like a mboxrb
+/* Return MU_FOLDER_ATTRIBUTE_FILE if NAME looks like a mboxrd
    mailbox.
 
    If MU_AUTODETECT_ACCURACY is 0 (i.e. autodetection is disabled),
@@ -1829,14 +1829,14 @@ mu_mboxrb_mailbox_init (mu_mailbox_t mailbox)
    
    Otherwise, the function analyzes first 128 bytes from file. If they
    look like a message header start, i.e. match "^[A-Za-z_][A-Za-z0-9_-]*:",
-   then the file is considered a mboxrb mailbox.
+   then the file is considered a mboxrd mailbox.
 
    Additionally, if MU_AUTODETECT_ACCURACY is greater than 1, the last
-   3 characters of the file are considered. For valid mboxrb they must
+   3 characters of the file are considered. For valid mboxrd they must
    be "\n.\n".
 */
 static int
-mboxrb_detect (char const *name)
+mboxrd_detect (char const *name)
 {
   int res = 0;
   
@@ -1870,7 +1870,7 @@ mboxrb_detect (char const *name)
 }
 
 static int
-mboxrb_is_scheme (mu_record_t record, mu_url_t url, int flags)
+mboxrd_is_scheme (mu_record_t record, mu_url_t url, int flags)
 {
   int rc = 0;
   int scheme_matched = mu_url_is_scheme (url, record->scheme);
@@ -1898,7 +1898,7 @@ mboxrb_is_scheme (mu_record_t record, mu_url_t url, int flags)
 	    }
 	  else if (flags & MU_FOLDER_ATTRIBUTE_FILE)
 	    {
-	      rc |= mboxrb_detect (path);
+	      rc |= mboxrd_detect (path);
 	    }
 	}
 
@@ -1909,7 +1909,7 @@ mboxrb_is_scheme (mu_record_t record, mu_url_t url, int flags)
   return rc;
 }
 
-static struct _mu_record _mboxrb_record =
+static struct _mu_record _mboxrd_record =
 {
   MU_MBOX_PRIO,
   "mbox",
@@ -1917,14 +1917,14 @@ static struct _mu_record _mboxrb_record =
   MU_URL_SCHEME | MU_URL_PATH | MU_URL_PARAM,
   MU_URL_PATH,
   mu_url_expand_path, /* URL init. */
-  mu_mboxrb_mailbox_init, /* Mailbox init.  */
+  mu_mboxrd_mailbox_init, /* Mailbox init.  */
   NULL, /* Mailer init.  */
   _mu_fsfolder_init, /* Folder init.  */
   NULL, /* No need for back pointer.  */
-  mboxrb_is_scheme, /* _is_scheme method.  */
+  mboxrd_is_scheme, /* _is_scheme method.  */
   NULL, /* _get_url method.  */
   NULL, /* _get_mailbox method.  */
   NULL, /* _get_mailer method.  */
   NULL  /* _get_folder method.  */
 };
-mu_record_t mu_mbox_record = &_mboxrb_record;
+mu_record_t mu_mbox_record = &_mboxrd_record;

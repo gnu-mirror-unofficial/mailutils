@@ -16,7 +16,7 @@
 
 #include <config.h>
 #include <stdlib.h>
-#include <mailutils/sys/mboxrb.h>
+#include <mailutils/sys/mboxrd.h>
 #include <mailutils/sys/mailbox.h>
 #include <mailutils/sys/message.h>
 #include <mailutils/diag.h>
@@ -32,7 +32,7 @@
 #include <mailutils/util.h>
 
 void
-mu_mboxrb_message_free (struct mu_mboxrb_message *dmsg)
+mu_mboxrd_message_free (struct mu_mboxrd_message *dmsg)
 {
   if (dmsg)
     {
@@ -42,7 +42,7 @@ mu_mboxrb_message_free (struct mu_mboxrb_message *dmsg)
 }
 
 static int
-_msg_stream_setup (mu_message_t msg, struct mu_mboxrb_message *dmsg)
+_msg_stream_setup (mu_message_t msg, struct mu_mboxrd_message *dmsg)
 {
   mu_stream_t stream;
   int rc;
@@ -90,7 +90,7 @@ static short transitions[][256] = {
 #define STATE_ESC 7
 
 static int
-mboxrb_message_body_scan (struct mu_mboxrb_message *dmsg)
+mboxrd_message_body_scan (struct mu_mboxrd_message *dmsg)
 {
   int rc;
   mu_stream_t stream;
@@ -137,14 +137,14 @@ mboxrb_message_body_scan (struct mu_mboxrb_message *dmsg)
 }
 
 static int
-mboxrb_body_size (mu_body_t body, size_t *psize)
+mboxrd_body_size (mu_body_t body, size_t *psize)
 {
   int rc;
   mu_message_t msg = mu_body_get_owner (body);
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
   if (!dmsg)
     return EINVAL;
-  if ((rc = mboxrb_message_body_scan (dmsg)) != 0)
+  if ((rc = mboxrd_message_body_scan (dmsg)) != 0)
     return rc;
   if (psize)
     *psize = dmsg->body_size;
@@ -152,14 +152,14 @@ mboxrb_body_size (mu_body_t body, size_t *psize)
 }
 
 static int
-mboxrb_body_lines (mu_body_t body, size_t *plines)
+mboxrd_body_lines (mu_body_t body, size_t *plines)
 {
   int rc;
   mu_message_t msg = mu_body_get_owner (body);
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
   if (!dmsg)
     return EINVAL;
-  if ((rc = mboxrb_message_body_scan (dmsg)) != 0)
+  if ((rc = mboxrd_message_body_scan (dmsg)) != 0)
     return rc;
   if (plines)
     *plines = dmsg->body_lines;
@@ -167,12 +167,12 @@ mboxrb_body_lines (mu_body_t body, size_t *plines)
 }
 
 static int
-mboxrb_envelope_sender (mu_envelope_t env, char *buf, size_t len,
+mboxrd_envelope_sender (mu_envelope_t env, char *buf, size_t len,
 			size_t *pnwrite)
 {
   int rc = 0;
   mu_message_t msg = mu_envelope_get_owner (env);
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
   if (!dmsg)
     return EINVAL;
 
@@ -209,11 +209,11 @@ mboxrb_envelope_sender (mu_envelope_t env, char *buf, size_t len,
 }	
 
 static int
-mboxrb_envelope_date (mu_envelope_t env, char *buf, size_t len,
+mboxrd_envelope_date (mu_envelope_t env, char *buf, size_t len,
 		      size_t *pnwrite)
 {
   mu_message_t msg = mu_envelope_get_owner (env);
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
 
   if (!buf || len <= 1)
     {
@@ -229,13 +229,13 @@ mboxrb_envelope_date (mu_envelope_t env, char *buf, size_t len,
 }	
 
 static int
-_msg_body_setup (mu_message_t msg, struct mu_mboxrb_message *dmsg)
+_msg_body_setup (mu_message_t msg, struct mu_mboxrd_message *dmsg)
 {
   mu_body_t body;
   mu_stream_t stream, flt;
   int rc;
 
-  if ((rc = mboxrb_message_body_scan (dmsg)) != 0)
+  if ((rc = mboxrd_message_body_scan (dmsg)) != 0)
     return rc;
 
   rc = mu_streamref_create_abridged (&stream,
@@ -265,8 +265,8 @@ _msg_body_setup (mu_message_t msg, struct mu_mboxrb_message *dmsg)
   if (rc == 0)
     {
       mu_body_set_stream (body, stream, msg);
-      mu_body_set_size (body, mboxrb_body_size, msg);
-      mu_body_set_lines (body, mboxrb_body_lines, msg);
+      mu_body_set_size (body, mboxrd_body_size, msg);
+      mu_body_set_lines (body, mboxrd_body_lines, msg);
       mu_body_clear_modified (body);
       mu_message_set_body (msg, body, dmsg);
     }
@@ -274,10 +274,10 @@ _msg_body_setup (mu_message_t msg, struct mu_mboxrb_message *dmsg)
 }
 
 static int
-mboxrb_get_attr_flags (mu_attribute_t attr, int *pflags)
+mboxrd_get_attr_flags (mu_attribute_t attr, int *pflags)
 {
   mu_message_t msg = mu_attribute_get_owner (attr);
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
 
   if (dmsg == NULL)
     return EINVAL;
@@ -287,68 +287,68 @@ mboxrb_get_attr_flags (mu_attribute_t attr, int *pflags)
 }
 
 static int
-mboxrb_set_attr_flags (mu_attribute_t attr, int flags)
+mboxrd_set_attr_flags (mu_attribute_t attr, int flags)
 {
   mu_message_t msg = mu_attribute_get_owner (attr);
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
 
   dmsg->attr_flags |= flags;
   return 0;
 }
 
 static int
-mboxrb_unset_attr_flags (mu_attribute_t attr, int flags)
+mboxrd_unset_attr_flags (mu_attribute_t attr, int flags)
 {
   mu_message_t msg = mu_attribute_get_owner (attr);
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
   dmsg->attr_flags &= ~flags;
   return 0;
 }
 
 static int
-_msg_attribute_setup (mu_message_t msg, struct mu_mboxrb_message *dmsg)
+_msg_attribute_setup (mu_message_t msg, struct mu_mboxrd_message *dmsg)
 {
   mu_attribute_t attribute;
   int rc = mu_attribute_create (&attribute, msg);
   if (rc)
     return rc;
 
-  mu_attribute_set_get_flags (attribute, mboxrb_get_attr_flags, msg);
-  mu_attribute_set_set_flags (attribute, mboxrb_set_attr_flags, msg);
-  mu_attribute_set_unset_flags (attribute, mboxrb_unset_attr_flags, msg);
+  mu_attribute_set_get_flags (attribute, mboxrd_get_attr_flags, msg);
+  mu_attribute_set_set_flags (attribute, mboxrd_set_attr_flags, msg);
+  mu_attribute_set_unset_flags (attribute, mboxrd_unset_attr_flags, msg);
   mu_message_set_attribute (msg, attribute, dmsg);
 
   return 0;
 }
 
 static int
-mboxrb_message_uid (mu_message_t msg, size_t *puid)
+mboxrd_message_uid (mu_message_t msg, size_t *puid)
 {
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
-  int rc = mu_mboxrb_mailbox_uid_setup (dmsg->mbox);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
+  int rc = mu_mboxrd_mailbox_uid_setup (dmsg->mbox);
   if (rc == 0)
     *puid = dmsg->uid;
   return rc;
 }
 
 static int
-mboxrb_message_qid (mu_message_t msg, mu_message_qid_t *pqid)
+mboxrd_message_qid (mu_message_t msg, mu_message_qid_t *pqid)
 {
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
   return mu_asprintf (pqid, "%lu", (unsigned long) dmsg->message_start);
 }
 
 static void
-mboxrb_message_detach (mu_message_t msg)
+mboxrd_message_detach (mu_message_t msg)
 {
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
   dmsg->message = NULL;
 }  
 
 static int
-mboxrb_message_setup (mu_message_t msg)
+mboxrd_message_setup (mu_message_t msg)
 {
-  struct mu_mboxrb_message *dmsg = mu_message_get_owner (msg);
+  struct mu_mboxrd_message *dmsg = mu_message_get_owner (msg);
   int rc;
 
   rc = _msg_stream_setup (msg, dmsg);
@@ -367,7 +367,7 @@ mboxrb_message_setup (mu_message_t msg)
 }
 
 int
-mu_mboxrb_message_get (struct mu_mboxrb_message *dmsg, mu_message_t *mptr)
+mu_mboxrd_message_get (struct mu_mboxrd_message *dmsg, mu_message_t *mptr)
 {
   if (!dmsg->message)
     {
@@ -378,13 +378,13 @@ mu_mboxrb_message_get (struct mu_mboxrb_message *dmsg, mu_message_t *mptr)
       if (rc)
 	return rc;
 
-      rc = mboxrb_message_setup (msg);
+      rc = mboxrd_message_setup (msg);
       if (rc)
 	{
 	  mu_message_destroy (&msg, dmsg);
 	  return rc;
 	}
-      msg->_detach = mboxrb_message_detach;
+      msg->_detach = mboxrd_message_detach;
 
       rc = mu_envelope_create (&env, msg);
       if (rc)
@@ -392,13 +392,13 @@ mu_mboxrb_message_get (struct mu_mboxrb_message *dmsg, mu_message_t *mptr)
 	  mu_message_destroy (&msg, dmsg);
 	  return rc;
 	}
-      mu_envelope_set_sender (env, mboxrb_envelope_sender, msg);
-      mu_envelope_set_date (env, mboxrb_envelope_date, msg);
+      mu_envelope_set_sender (env, mboxrd_envelope_sender, msg);
+      mu_envelope_set_date (env, mboxrd_envelope_date, msg);
       mu_message_set_envelope (msg, env, dmsg);      
       
       /* Set the UID.  */
-      mu_message_set_uid (msg, mboxrb_message_uid, dmsg);
-      mu_message_set_qid (msg, mboxrb_message_qid, dmsg);
+      mu_message_set_uid (msg, mboxrd_message_uid, dmsg);
+      mu_message_set_qid (msg, mboxrd_message_qid, dmsg);
 
       /* Attach the message to the mailbox mbox data.  */
       dmsg->message = msg;
@@ -413,11 +413,11 @@ mu_mboxrb_message_get (struct mu_mboxrb_message *dmsg, mu_message_t *mptr)
 }
 
 static int
-mboxrb_message_uid_save (mu_stream_t dst,
-			 struct mu_mboxrb_message const *dmsg,
+mboxrd_message_uid_save (mu_stream_t dst,
+			 struct mu_mboxrd_message const *dmsg,
 			 char const *x_imapbase)
 {
-  struct mu_mboxrb_mailbox *dmp = dmsg->mbox;
+  struct mu_mboxrd_mailbox *dmp = dmsg->mbox;
   if (dmp->uidvalidity_scanned)
     {
       if (x_imapbase)
@@ -436,9 +436,9 @@ mboxrb_message_uid_save (mu_stream_t dst,
    The message is unchanged otherwise.
 */
 int
-mboxrb_message_copy_with_uid (mu_stream_t dst,
-			      struct mu_mboxrb_message const *dmsg,
-			      struct mu_mboxrb_message *ref,
+mboxrd_message_copy_with_uid (mu_stream_t dst,
+			      struct mu_mboxrd_message const *dmsg,
+			      struct mu_mboxrd_message *ref,
 			      char const *x_imapbase)
 {
   int rc;
@@ -463,7 +463,7 @@ mboxrb_message_copy_with_uid (mu_stream_t dst,
   if (rc)
     return rc;
 
-  rc = mboxrb_message_uid_save (dst, dmsg, x_imapbase);
+  rc = mboxrd_message_uid_save (dst, dmsg, x_imapbase);
   if (rc)
     return rc;
 
@@ -489,7 +489,7 @@ mboxrb_message_copy_with_uid (mu_stream_t dst,
 
 static int
 msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
-		      struct mu_mboxrb_message const *dmsg,
+		      struct mu_mboxrd_message const *dmsg,
 		      char const *x_imapbase)
 {
   static char *exclude_headers[] = {
@@ -506,7 +506,7 @@ msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
   if (rc)
     return rc;
 
-  rc = mboxrb_message_uid_save (dst, dmsg, x_imapbase);
+  rc = mboxrd_message_uid_save (dst, dmsg, x_imapbase);
   if (rc)
     return rc;
 
@@ -525,8 +525,8 @@ msg_header_to_stream (mu_stream_t dst, mu_stream_t src,
 }
 
 static int
-env_to_stream (struct mu_mboxrb_message const *dmsg,
-	       struct mu_mboxrb_message *ref,
+env_to_stream (struct mu_mboxrd_message const *dmsg,
+	       struct mu_mboxrd_message *ref,
 	       mu_envelope_t env, mu_stream_t dst)
 {
   char const *sender, *date;
@@ -550,9 +550,9 @@ env_to_stream (struct mu_mboxrb_message const *dmsg,
    the tracking reference REF.
 */
 int
-mu_mboxrb_message_reconstruct (mu_stream_t dest,
-			       struct mu_mboxrb_message *dmsg,
-			       struct mu_mboxrb_message *ref,
+mu_mboxrd_message_reconstruct (mu_stream_t dest,
+			       struct mu_mboxrd_message *dmsg,
+			       struct mu_mboxrd_message *ref,
 			       char const *x_imapbase)
 {
   int rc;
@@ -560,7 +560,7 @@ mu_mboxrb_message_reconstruct (mu_stream_t dest,
   mu_header_t hdr;
   mu_body_t body;
   mu_stream_t str, flt;
-  struct mu_mboxrb_message tmp;
+  struct mu_mboxrd_message tmp;
   int same_ref;
   
   if ((same_ref = (ref == dmsg)) != 0)
@@ -574,7 +574,7 @@ mu_mboxrb_message_reconstruct (mu_stream_t dest,
     return rc;
 
   if (!dmsg->message)
-    rc = mboxrb_message_copy_with_uid (dest, dmsg, ref, x_imapbase);
+    rc = mboxrd_message_copy_with_uid (dest, dmsg, ref, x_imapbase);
   else
     {
       rc = mu_message_get_envelope (dmsg->message, &env);
@@ -624,7 +624,7 @@ mu_mboxrb_message_reconstruct (mu_stream_t dest,
     }
   
   if (same_ref)
-    *(struct mu_mboxrb_message *)dmsg = tmp;
+    *(struct mu_mboxrd_message *)dmsg = tmp;
   
   return rc;
 }
