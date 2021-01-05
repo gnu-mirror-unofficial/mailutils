@@ -513,6 +513,8 @@ new_folder (mu_folder_t *pfolder, mu_url_t url, int type)
     {
       if (type == local_folder)
 	{
+	  /* TRANSLATORS: The subject of this sentence ("folder") is the
+	     name of the variable. Don't translate it. */
 	  mu_error ("%s", _("folder must be set to a local folder"));
 	  mu_folder_destroy (&folder);
 	  return -1;

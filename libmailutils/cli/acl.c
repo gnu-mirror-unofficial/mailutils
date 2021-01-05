@@ -209,6 +209,7 @@ cb_ifexec (void *data, mu_config_value_t *val)
 
 static struct mu_cfg_param acl_param[] = {
   { "allow", mu_cfg_callback, NULL, 0, cb_allow,
+    /* TRANSLATORS: Don't translate `from'. */
     N_("Allow connections from this IP address. Optional word `from' is "
        "allowed between it and its argument. The same holds true for other "
        "actions below."),

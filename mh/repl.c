@@ -157,6 +157,7 @@ static struct mu_option options[] = {
   { "whatnowproc", 0, N_("PROG"), MU_OPTION_DEFAULT,
     N_("set the replacement for whatnow program"),
     mu_c_string, NULL, set_whatnowproc },
+  /* TRANSLATORS: "whatnowproc" is the variable name */
   { "nowhatnowproc", 0, NULL, MU_OPTION_DEFAULT,
     N_("don't run whatnowproc"),
     mu_c_int, &wh_env.nowhatnowproc, NULL, "1" },

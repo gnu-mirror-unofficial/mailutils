@@ -640,6 +640,7 @@ add_attachments (compose_env_t *env, mu_message_t *pmsg)
 	      mu_error (_("%s: not setting header"), name);
 	      continue;
 	    }
+
 	  else
 	    mu_header_set_value (outhdr, name, value, 1);
 	}

@@ -62,9 +62,11 @@ struct mailvar_symbol mailvar_tab[] =
        Never used, always true. */
     { { mailvar_name_append, },
       MAILVAR_TYPEMASK (mailvar_type_boolean) | MAILVAR_RDONLY,
+      /* TRANSLATORS: "mbox" is the name of a command. Don't translate it. */
       N_("messages saved in mbox are appended to the end rather than prepended") },
     { { mailvar_name_appenddeadletter, },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
+      /* TRANSLATORS: Don't translate "dead.letter". */
       N_("append the contents of canceled letter to dead.letter file") },
     { { mailvar_name_askbcc, },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
@@ -81,6 +83,7 @@ struct mailvar_symbol mailvar_tab[] =
       N_("automatically incorporate newly arrived messages")},
     { { mailvar_name_autoprint, },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
+      /* TRANSLATORS: "delete" and "dp" are command names. */
       N_("delete command behaves like dp") },
     { { mailvar_name_byname },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
@@ -95,6 +98,7 @@ struct mailvar_symbol mailvar_tab[] =
       N_("output character set for decoded header fields") },
     { { mailvar_name_cmd, },
       MAILVAR_TYPEMASK (mailvar_type_string),
+      /* TRANSLATORS: "pipe" is the command name. */
       N_("default shell command for pipe") },
     { { mailvar_name_columns, },
       MAILVAR_TYPEMASK (mailvar_type_number),

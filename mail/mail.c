@@ -262,9 +262,11 @@ static struct mu_option mail_options[] = {
     mu_c_string, &default_content_type },
 
   { "content-name", 0, N_("NAME"), MU_OPTION_DEFAULT,
+    /* TRANSLATORS: Don't translate "Content-Type" and "name"! */
     N_("set the Content-Type name parameter for the next --attach option"),
     mu_c_string, &content_name },
   { "content-filename", 0, N_("NAME"), MU_OPTION_DEFAULT,
+    /* TRANSLATORS: Don't translate "Content-Disposition" and "filename"! */
     N_("set the Content-Disposition filename parameter for the next --attach option"),
     mu_c_string, &content_filename },
 
@@ -293,6 +295,7 @@ static const char *alt_args[] = {
 static struct mu_cli_setup cli = {
   options,
   NULL,
+  /* TRANSLATORS: "mail" is the name of the program. Don't translate it. */
   N_("GNU mail -- process mail messages.\n"
      "If -f or --file is given, mail operates on the mailbox named "
      "by the first argument, or the user's mbox, if no argument given."),

@@ -31,7 +31,7 @@ char *progname;
 
 static struct mu_option query_options[] = {
   { "file", 'f', N_("FILE"), MU_OPTION_DEFAULT,
-    N_("query configuration values from FILE (default mailutils.rc)"),
+    N_("query configuration values from FILE (default mailutils.conf)"),
     mu_c_string, &file_name },
   { "value", 0, NULL, MU_OPTION_DEFAULT,
     N_("display parameter values only"),
