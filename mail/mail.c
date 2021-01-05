@@ -738,25 +738,6 @@ mail_mainloop (char *(*input) (void *, int),
 int
 mail_warranty (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED)
 {
-  mu_printf (
-	 _("GNU Mailutils -- a suite of utilities for electronic mail\n"
-	   "Copyright (C) 1999-2019 Free Software Foundation, Inc.\n\n"));
-  mu_printf (
-  _("   GNU Mailutils is free software; you can redistribute it and/or modify\n"
-    "   it under the terms of the GNU General Public License as published by\n"
-    "   the Free Software Foundation; either version 3 of the License, or\n"
-    "   (at your option) any later version.\n"
-    "\n"
-    "   GNU Mailutils is distributed in the hope that it will be useful,\n"
-    "   but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-    "   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-    "   GNU General Public License for more details.\n"
-    "\n"
-    "   You should have received a copy of the GNU General Public License along\n"
-    "   with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.\n"
-    "\n"
-    "\n"
-));
-
+  mu_version_print (mu_strout);
   return 0;
 }

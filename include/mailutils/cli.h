@@ -58,7 +58,9 @@ struct mu_cli_setup
 
 extern const char mu_version_copyright[];
 extern const char mu_general_help_text[];
+extern int mu_copyright_year;
 
+void mu_version_print (mu_stream_t stream);
 void mu_version_hook (struct mu_parseopt *po, mu_stream_t stream);
 void mu_cli (int argc, char **argv, struct mu_cli_setup *setup,
 	     char **capa, void *data,

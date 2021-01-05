@@ -55,10 +55,11 @@ const char mu_version_copyright[] =
   /* Do *not* mark this string for translation.  %s is a copyright
      symbol suitable for this locale, and %d is the copyright
      year.  */
-  "Copyright %s 2007-2019 Free Software Foundation, inc.";
+  "Copyright %s 2007-%d Free Software Foundation, inc.";
+int mu_copyright_year = 2021;
 
 void
-mu_version_hook (struct mu_parseopt *po, mu_stream_t stream)
+mu_version_print (mu_stream_t stream)
 {
 #if MU_GIT_COMMIT_DISTANCE > 0  
   mu_stream_printf (stream, "%s (%s) %s-%d [%s]\n",
@@ -72,13 +73,19 @@ mu_version_hook (struct mu_parseopt *po, mu_stream_t stream)
   /* TRANSLATORS: Translate "(C)" to the copyright symbol
      (C-in-a-circle), if this symbol is available in the user's
      locale.  Otherwise, do not translate "(C)"; leave it as-is.  */
-  mu_stream_printf (stream, mu_version_copyright, _("(C)"));
+  mu_stream_printf (stream, mu_version_copyright, _("(C)"), mu_copyright_year);
   mu_stream_printf (stream, _("\
 \n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 \n\
 "));
+}
+
+void
+mu_version_hook (struct mu_parseopt *po, mu_stream_t stream)
+{
+  mu_version_print (stream);
 }
 
 const char mu_general_help_text[] =
