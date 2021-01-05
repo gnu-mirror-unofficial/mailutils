@@ -1,7 +1,13 @@
-GNU mailutils NEWS -- history of user-visible changes. 2020-12-23
+GNU mailutils NEWS -- history of user-visible changes. 2021-01-05
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+Version 3.11.1, 2021-01-05
+
+This maintenance release fixes a bug in the library function
+mu_url_create_hint that caused MH inc to coredump when called
+without explicit -file option.
 
 Version 3.11, 2020-12-23
 
