@@ -70,7 +70,7 @@
     
   LICENSE
     This program is part of GNU Mailutils testsuite.
-    Copyright (C) 2020 Free Software Foundation, Inc.
+    Copyright (C) 2020-2021 Free Software Foundation, Inc.
 
     Mbox2dir is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

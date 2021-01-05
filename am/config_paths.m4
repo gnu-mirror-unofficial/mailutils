@@ -1,5 +1,5 @@
 #serial 1
-dnl Copyright (C) 1996-2020 Free Software Foundation, Inc.
+dnl Copyright (C) 1996-2021 Free Software Foundation, Inc.
 dnl
 dnl Written by Miles Bader <miles@gnu.ai.mit.edu> and
 dnl Sergey Poznyakoff <gray@gnu.org>

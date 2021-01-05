@@ -1,6 +1,6 @@
 /* Functions for formatting RFC-2231-compliant mail headers fields.
    GNU Mailutils -- a suite of utilities for electronic mail
-   Copyright (C) 1999-2020 Free Software Foundation, Inc.
+   Copyright (C) 1999-2021 Free Software Foundation, Inc.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
