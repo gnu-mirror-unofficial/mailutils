@@ -7,6 +7,10 @@ DESCRIPTION
   input functions and sends them to mu_strout or mu_strerr using the
   mu_stream_write function.
 
+  The program takes at most 30 seconds to run.  If no input is arrived
+  or if EOF is not reached within that interval, the program exits with
+  code 3.
+  
   Both mu_strout and mu_strerr spring into existence the first time they
   are used by any function of the stream family.  Therefore, care is
   taken not to call any mailutils I/O function either directly or
@@ -19,7 +23,13 @@ OPTIONS
   -reset
       Call mu_stdstream_setup with the appropriate MU_STDSTREAM_RESET_
       flag explicitly.
-      
+
+EXIT CODES
+  0   Success
+  1   Usage error
+  2   I/O error
+  3   Timeout
+
 LICENSE
   GNU Mailutils -- a suite of utilities for electronic mail
   Copyright (C) 2011-2021 Free Software Foundation, Inc.
@@ -44,10 +54,27 @@ LICENSE
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <signal.h>
 #include <mailutils/stream.h>
 #include <mailutils/stdstream.h>
 #include <mailutils/diag.h>
 #include <mailutils/errno.h>
+
+enum
+  {
+    EX_STROUT_OK,
+    EX_STROUT_USAGE,
+    EX_STROUT_FAIL,
+    EX_STROUT_TIMEOUT
+  };
+
+void
+sigalrm (int sig)
+{
+  fprintf (stderr, "time out\n");
+  _exit (EX_STROUT_TIMEOUT);
+}
 
 int
 main (int argc, char **argv)
@@ -55,7 +82,7 @@ main (int argc, char **argv)
   mu_stream_t str = mu_strout;
   int i;
   char c;
-  
+
   for (i = 1; i < argc; i++)
     {
       char *arg = argv[i];
@@ -81,11 +108,13 @@ main (int argc, char **argv)
 	  else
 	    {
 	      fprintf (stderr, "%s: unrecognized option %s\n", argv[0], arg);
-	      return 1;
+	      return EX_STROUT_USAGE;
 	    }
 	}
     }
 
+  signal(SIGALRM, sigalrm);
+  alarm (30);
   while ((c = getchar ()) != EOF)
     {
       size_t n;
@@ -93,14 +122,14 @@ main (int argc, char **argv)
       if (rc)
 	{
 	  fprintf (stderr, "mu_stream_write: %s", mu_strerror (rc));
-	  return 1;
+	  return EX_STROUT_FAIL;
 	}
       if (n != 1)
 	{
 	  fprintf (stderr, "wrote %zu bytes?\n", n);
-	  return 1;
+	  return EX_STROUT_FAIL;
 	}
     }
   
-  return 0;
+  return EX_STROUT_OK;
 }
