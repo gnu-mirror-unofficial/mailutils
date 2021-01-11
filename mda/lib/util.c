@@ -156,12 +156,14 @@ mda_error (const char *fmt, ...)
   va_end (ap);
 }
 
+#ifndef USE_MAILBOX_QUOTAS
+# define mda_mailquota_cfg NULL
+#endif
+
 static struct mu_cli_capa mda_cli_capa[] = {
   { "forward", NULL, mda_forward_cfg },
   { "deliver", mda_deliver_options, mda_deliver_cfg },
-#ifdef USE_MAILBOX_QUOTAS
   { "quota", NULL, mda_mailquota_cfg },
-#endif
   { "script", mda_script_options, mda_script_cfg },
   { NULL }
 };
