@@ -81,7 +81,7 @@ main (int argc, char **argv)
 {
   mu_stream_t str = mu_strout;
   int i;
-  char c;
+  signed char c;
 
   for (i = 1; i < argc; i++)
     {
