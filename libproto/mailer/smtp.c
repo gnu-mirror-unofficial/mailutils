@@ -233,7 +233,7 @@ smtp_open (mu_mailer_t mailer, int flags)
   
   memset (&hints, 0, sizeof (hints));
   hints.flags = MU_AH_DETECT_FAMILY;
-  hints.port = smtp_mailer->tls ? MU_SMTPS_PORT : MU_SMTP_PORT;
+  hints.port = smtp_mailer->tls == MAILER_TLS_ALWAYS ? MU_SMTPS_PORT : MU_SMTP_PORT;
   hints.protocol = IPPROTO_TCP;
   hints.socktype = SOCK_STREAM;
   rc = mu_sockaddr_from_url (&sa, mailer->url, &hints);
