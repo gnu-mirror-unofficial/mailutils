@@ -4,3 +4,6 @@
 
 PATH=@abs_builddir@:@abs_top_builddir@/testsuite:$PATH
 spooldir=$abs_top_srcdir/testsuite/spool/
+x_imapbase_normalize() {
+	sed -e '/^X-IMAPbase:/s/  */ /g'
+}

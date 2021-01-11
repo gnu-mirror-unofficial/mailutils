@@ -994,7 +994,7 @@ fi
 
 
 # Mailbox quota support
-AM_CONDITIONAL([MU_COND_MAILBOX_QUOTA],[test -n "$status_dbm$status_mysql"])
+AM_CONDITIONAL([MU_COND_MAILBOX_QUOTA],[test "$status_dbm$status_mysql" != "nono"])
 
 
 # Virtual domain support

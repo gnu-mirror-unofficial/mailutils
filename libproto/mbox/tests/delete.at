@@ -150,7 +150,7 @@ uid
 headers
 ])
 
-AT_CHECK([mbop -m inbox1 < commands1],
+AT_CHECK([mbop -m inbox1 < commands1|x_imapbase_normalize],
 [0],
 [1 current message
 1 set_deleted: OK
@@ -168,7 +168,7 @@ From:March Hare  <hare@wonder.land>
 Message-Id:<200207292200.3303@wonder.land>
 To:Alice  <alice@wonder.land>
 Subject:Re: Invitation
-X-IMAPbase:10                    9
+X-IMAPbase:10 9
 X-UID:3
 
 2 current message
@@ -207,7 +207,7 @@ uid
 headers
 ])
 
-AT_CHECK([mbop -m inbox1 < commands1a],
+AT_CHECK([mbop -m inbox1 < commands1a|x_imapbase_normalize],
 [0],
 [count: 3
 1 current message
@@ -218,7 +218,7 @@ From:March Hare  <hare@wonder.land>
 Message-Id:<200207292200.3303@wonder.land>
 To:Alice  <alice@wonder.land>
 Subject:Re: Invitation
-X-IMAPbase:10                    9
+X-IMAPbase:10 9
 X-UID:3
 
 2 current message
@@ -264,7 +264,7 @@ uid
 headers
 ])
 
-AT_CHECK([mbop -m inbox2 < commands2],
+AT_CHECK([mbop -m inbox2 < commands2|x_imapbase_normalize],
 [0],
 [1 current message
 1 set_deleted: OK
@@ -282,7 +282,7 @@ From:Alice  <alice@wonder.land>
 Message-Id:<200207292200.3302@wonder.land>
 To:March Hare  <hare@wonder.land>
 Subject:Re: Invitation
-X-IMAPbase:10                    9
+X-IMAPbase:10 9
 X-UID:2
 
 2 current message
@@ -320,7 +320,7 @@ uid
 headers
 ])
 
-AT_CHECK([mbop -m inbox2 < commands2a],
+AT_CHECK([mbop -m inbox2 < commands2a|x_imapbase_normalize],
 [0],
 [count: 3
 1 current message
@@ -331,7 +331,7 @@ From:Alice  <alice@wonder.land>
 Message-Id:<200207292200.3302@wonder.land>
 To:March Hare  <hare@wonder.land>
 Subject:Re: Invitation
-X-IMAPbase:10                    9
+X-IMAPbase:10 9
 X-UID:2
 
 2 current message
