@@ -6,6 +6,16 @@
 
 AT_SETUP([mu-mailbox-append-message])
 AT_KEYWORDS([mailbox])
+
+dnl Initial mailbox is modified after append (uidvalidity and uid values
+dnl added).  Since the exact number of bytes added to each message cannot
+dnl be reliably predicted, we remove the line and byte count from comparison.
+dnl Additionally, the newly added X-UID header is also removed.
+m4_pushdef([MU_GUILE_OUTPUT_FILTER],
+[sed -e '/#<message/s/ [0-9][0-9]* [0-9][0-9]*>/>/' \
+     -e /^X-UID:/d
+])
+
 WITH_MAILBOX([spool/mbox1],
  [MU_GUILE_CHECK([
 (use-modules ((ice-9 binary-ports)))
@@ -22,12 +32,12 @@ WITH_MAILBOX([spool/mbox1],
       (put-u8 (current-output-port) c))
     (close port)))],
 0,
-[#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 44 1254>
-#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 13 534>
-#<message "gray@example.net" "Sat Jul 13 00:43" 42 1569>
-#<message "gray@example.net" "Sat Jul 13 00:50" 84 3399>
-#<message "gray@example.net" "Sat Jul 13 00:43" 27 857>
-#<message "user@example.org" "Fri Jun  8 14:30" 10 539>
+[#<message "foobar@nonexistent.net" "Fri Dec 28 22:18">
+#<message "bar@dontmailme.org" "Fri Dec 28 23:28">
+#<message "gray@example.net" "Sat Jul 13 00:43">
+#<message "gray@example.net" "Sat Jul 13 00:50">
+#<message "gray@example.net" "Sat Jul 13 00:43">
+#<message "user@example.org" "Fri Jun  8 14:30">
 From: user@example.org
 To: someone@example.com
 Subject: De omnibus rebus et quibusdam aliis
@@ -38,9 +48,11 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
 consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
 cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat
 non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
 ])])
 AT_CLEANUP
 
+m4_popdef([MU_GUILE_OUTPUT_FILTER])
 dnl depends on:
 dnl message-print.at
 dnl message-port-read-2.at

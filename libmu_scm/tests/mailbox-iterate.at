@@ -13,10 +13,10 @@ WITH_MAILBOX([spool/mbox1],
       ((not (mu-mailbox-more-messages? mbox)))
     (display msg)(newline)))], 
  0,
-[#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 44 1254>
-#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 13 534>
-#<message "gray@example.net" "Sat Jul 13 00:43" 42 1569>
-#<message "gray@example.net" "Sat Jul 13 00:50" 84 3399>
+[#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 45 1255>
+#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 14 535>
+#<message "gray@example.net" "Sat Jul 13 00:43" 43 1570>
+#<message "gray@example.net" "Sat Jul 13 00:50" 85 3400>
 #<message "gray@example.net" "Sat Jul 13 00:43" 27 857>
 ])])
 AT_CLEANUP

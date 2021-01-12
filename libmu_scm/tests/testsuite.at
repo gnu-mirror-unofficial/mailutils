@@ -7,6 +7,7 @@
 m4_include([testsuite.inc])
 
 m4_pushdef([MU_TEST_MAILBOX])
+m4_pushdef([MU_GUILE_OUTPUT_FILTER])
 
 # MU_GUILE_CHECK([CODE],
 #                     [STATUS=0],[STDOUT],[STDERR],[RUN-IF-FAIL],[RUN-IF-PASS])
@@ -18,7 +19,7 @@ m4_define([MU_GUILE_CHECK],
 [$1]
 ])
 m4_if(MU_TEST_MAILBOX,,,[MUT_MBCOPY($abs_top_srcdir/testsuite/MU_TEST_MAILBOX,mbox)])
-AT_CHECK([TZ=0 guile -q --no-auto-compile -L $LIBMU_SCM_ROOT -L $LIBMU_SCM_SRCDIR -s input.scm 2>err
+AT_CHECK([TZ=0 guile -q --no-auto-compile -L $LIBMU_SCM_ROOT -L $LIBMU_SCM_SRCDIR -s input.scm 2>err m4_if(MU_GUILE_OUTPUT_FILTER,,,[|MU_GUILE_OUTPUT_FILTER])
 rc=$?
 grep -v '^;;;' err>&2
 exit $rc],m4_shift($@))])
@@ -89,3 +90,4 @@ m4_include([mime-add-part.at])
 
 #
 m4_popdef([MU_TEST_MAILBOX])
+m4_popdef([MU_GUILE_OUTPUT_FILTER])

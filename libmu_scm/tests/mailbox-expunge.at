@@ -22,15 +22,15 @@ WITH_MAILBOX([spool/mbox2],
   (display "; Revisited\n")
   (mailbox-list mbox))],
 0,
-[#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 47 1297>
-#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 15 552>
-#<message "gray@example.net" "Sat Jul 13 00:50" 86 3417>
-#<message "gray@example.net" "Sat Jul 13 00:43" 29 875>
+[#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 48 1298>
+#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 16 553>
+#<message "gray@example.net" "Sat Jul 13 00:50" 87 3418>
+#<message "gray@example.net" "Sat Jul 13 00:43" 30 876>
 ; Revisited
-#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 47 1297>
-#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 15 552>
-#<message "gray@example.net" "Sat Jul 13 00:50" 86 3417>
-#<message "gray@example.net" "Sat Jul 13 00:43" 29 875>
+#<message "foobar@nonexistent.net" "Fri Dec 28 22:18" 48 1298>
+#<message "bar@dontmailme.org" "Fri Dec 28 23:28" 16 553>
+#<message "gray@example.net" "Sat Jul 13 00:50" 87 3418>
+#<message "gray@example.net" "Sat Jul 13 00:43" 30 876>
 ])])
 AT_CLEANUP
 
