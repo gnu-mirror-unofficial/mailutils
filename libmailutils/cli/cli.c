@@ -35,8 +35,6 @@
 #include <mailutils/mu_auth.h>
 #include <mailutils/gitinfo.h>
 
-#define MU_LEGACY_CONFIG_FILE SYSCONFDIR "/mailutils.rc"
-
 #ifndef MU_SITE_CONFIG_FILE
 # define MU_SITE_CONFIG_FILE SYSCONFDIR "/mailutils.conf"
 #endif
@@ -673,29 +671,6 @@ mu_cli_ext (int argc, char **argv,
   else if (argc)
     mu_parseopt_error (&po, "%s", _("unexpected arguments"));
 
-#if defined(MU_LEGACY_CONFIG_FILE)
-  if ((hints.flags & MU_CFHINT_SITE_FILE)
-      && strcmp (hints.site_file, MU_SITE_CONFIG_FILE) == 0)
-    {
-      if (access (MU_LEGACY_CONFIG_FILE, F_OK) == 0)
-	{
-	  if (access (hints.site_file, F_OK) == 0)
-	    {
-	      mu_diag_output (MU_DIAG_WARNING,
-			      _("legacy configuration file %s ignored"),
-			      MU_LEGACY_CONFIG_FILE);
-	    }
-	  else
-	    {
-	      mu_diag_output (MU_DIAG_WARNING,
-			      _("using legacy configuration file %s: please rename it to %s"),
-		              MU_LEGACY_CONFIG_FILE, MU_SITE_CONFIG_FILE);
-	      hints.site_file = MU_LEGACY_CONFIG_FILE;
-	    }
-	}
-    }  
-#endif
-  
   if (mu_cfg_parse_config (&parse_tree, &hints))
     exit (setup->ex_config);
 
