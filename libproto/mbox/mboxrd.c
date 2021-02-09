@@ -1281,17 +1281,62 @@ mboxrd_get_size (mu_mailbox_t mailbox, mu_off_t *psize)
 }
 
 static int
+mboxrd_stat (mu_mailbox_t mailbox, struct stat *st)
+{
+  int rc;
+  mu_transport_t trans[2];
+  
+  rc = mu_stream_ioctl (mailbox->stream, MU_IOCTL_TRANSPORT,
+			MU_IOCTL_OP_GET, trans);
+  if (rc == 0)
+    {
+      if (fstat ((int) (intptr_t) trans[0], st))
+	rc = errno;
+    }
+  return rc;
+}
+
+static int
+mboxrd_set_priv (struct mu_mboxrd_mailbox *dmp, struct stat *st)
+{
+  int rc;
+  mu_transport_t trans[2];
+  
+  rc = mu_stream_ioctl (dmp->mailbox->stream, MU_IOCTL_TRANSPORT,
+			MU_IOCTL_OP_GET, trans);
+  if (rc == 0)
+    {
+      int fd = (intptr_t) trans[0];
+      if (fchmod (fd, st->st_mode))
+	{
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("%s:%s: chmod failed: %s",
+		     __func__, dmp->name, strerror (errno)));
+	  rc = errno;
+	}
+      else if (fchown (fd, st->st_uid, st->st_gid))
+	{
+	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		    ("%s:%s: chown failed: %s",
+		     __func__, dmp->name, strerror (errno)));
+	  rc = errno;
+	}
+    }
+  return rc;
+}
+
+static int
 mboxrd_get_atime (mu_mailbox_t mailbox, time_t *return_time)
 {
   struct mu_mboxrd_mailbox *dmp = mailbox->data;
   struct stat st;
-
+  int rc;
+  
   if (dmp == NULL)
     return EINVAL;
-  if (stat (dmp->name, &st))
-    return errno;
-  *return_time = st.st_atime;
-  return 0;
+  if ((rc = mboxrd_stat (mailbox, &st)) == 0)
+    *return_time = st.st_atime;
+  return rc;
 }
 
 struct mu_mboxrd_flush_tracker
@@ -1702,20 +1747,19 @@ mboxrd_flush_unlocked (struct mu_mboxrd_flush_tracker *trk, int mode)
 	      char *backup;
 	      struct stat st;
 
-	      if (stat (dmp->name, &st))
+	      if ((rc = mboxrd_stat (dmp->mailbox, &st)) != 0)
 		{
 		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 			    ("%s:%s: stat failed: %s",
 			     __func__, dmp->name, strerror (errno)));
-		  rc = errno;
 		}
 	      else
 		{
 		  mu_stream_flush (tempstr);
 		  backup = mu_tempname (hints.tmpdir);
-		  rc = rename (dmp->name, backup);
-		  if (rc)
+		  if (rename (dmp->name, backup))
 		    {
+		      rc = errno;
 		      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 				("%s:%s: failed to rename to backup file %s: %s",
 				 __func__, dmp->name, tempname,
@@ -1733,18 +1777,7 @@ mboxrd_flush_unlocked (struct mu_mboxrd_flush_tracker *trk, int mode)
 			  mu_stream_destroy (&dmp->mailbox->stream);
 			  rc = mboxrd_mailbox_init_stream (dmp);
 			  if (rc == 0)
-			    {
-			      if (chmod (dmp->name, st.st_mode))
-				mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-					  ("%s:%s: chmod failed: %s",
-					   __func__, dmp->name,
-					   strerror (errno)));
-			      if (chown (dmp->name, st.st_uid, st.st_gid))
-				mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-					  ("%s:%s: chown failed: %s",
-					   __func__, dmp->name,
-					   strerror (errno)));
-			    }
+			    mboxrd_set_priv (dmp, &st);
 			}
 		      else
 			{

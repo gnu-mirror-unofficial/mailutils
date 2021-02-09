@@ -17,8 +17,7 @@
 AT_SETUP([read-only spool directory])
 
 # Basically, this testcase is a copy of delete.at that is run over mailboxes
-# located in a directory
-not writable to the current user.
+# located in a directory not writable to the current user.
 #
 # Obviously, it is useless when run with root privileges.
 
