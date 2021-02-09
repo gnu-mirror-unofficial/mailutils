@@ -49,8 +49,9 @@ TESTSUITE_AT += \
  append.at\
  delete.at\
  setattr.at\
- notify.at
+ notify.at\
+ rospool.at
 
-
+		
 
 
