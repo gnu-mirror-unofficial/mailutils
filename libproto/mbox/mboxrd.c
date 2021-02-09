@@ -1496,6 +1496,54 @@ mboxrd_flush_temp (struct mu_mboxrd_flush_tracker *trk,
   return mu_stream_flush (tempstr);
 }
 
+/*
+ * Copy the temporary mailbox stream TEMPSTR to the mailbox referred to by
+ * the tracker TRK.
+ */
+static inline int
+mboxrd_copyback (struct mu_mboxrd_flush_tracker *trk, mu_stream_t tempstr)
+{
+  int rc;
+  mu_stream_t mbx_stream = trk->dmp->mailbox->stream;
+  mu_off_t size;
+  
+  rc = mu_stream_seek (tempstr, 0, MU_SEEK_SET, NULL);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("%s: can't rewind temporary file: %s",
+		 __func__, mu_strerror (rc)));
+      return rc;
+    }
+
+  rc = mu_stream_seek (mbx_stream, 0, MU_SEEK_SET, NULL);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("%s: can't rewind mailbox %s: %s",
+		 __func__, trk->dmp->name, mu_strerror (rc)));
+      return rc;
+    }
+
+  rc = mu_stream_copy (mbx_stream, tempstr, 0, &size);
+  if (rc)
+    {
+      mu_error (_("copying back to mailbox %s failed: %s"),
+		trk->dmp->name, mu_strerror (rc));
+      return rc;
+    }
+  rc = mu_stream_truncate (mbx_stream, size);
+  if (rc)
+    {
+      mu_error (_("cannot truncate mailbox stream: %s"),
+		mu_stream_strerror (mbx_stream, rc));
+      return rc;
+    }
+  
+  mboxrd_tracker_sync (trk);
+  return 0;
+}
+
 /* Flush the mailbox described by the tracker TRK to the stream TEMPSTR.
    EXPUNGE is 1 if the MU_ATTRIBUTE_DELETED attribute is to be honored.
    Assumes that simultaneous access to the mailbox has been blocked.
@@ -1616,13 +1664,26 @@ mboxrd_flush_unlocked (struct mu_mboxrd_flush_tracker *trk, int mode)
 	    return ENOMEM;
 	}
       rc = mu_tempfile (&hints, MU_TEMPFILE_TMPDIR, &tempfd, &tempname);
-      if (rc)
+      if (rc == 0)
 	{
-	  free (hints.tmpdir);
-	  return rc;
+	  rc = mu_fd_stream_create (&tempstr, tempname, tempfd,
+				    MU_STREAM_RDWR|MU_STREAM_SEEK);
 	}
-      rc = mu_fd_stream_create (&tempstr, tempname, tempfd,
-				MU_STREAM_RDWR|MU_STREAM_SEEK);
+      else if (rc == EACCES)
+	{
+	  /*
+	   * Mail spool directory is not writable for the user. Fall
+	   * back to using temporary stream located elsewhere. When
+	   * ready, it will be copied back to the mailbox.
+	   *
+	   * Reset the tempname to NULL to instruct the code below
+	   * which approach to take.
+	   */
+	  tempname = NULL;
+
+	  rc = mu_temp_file_stream_create (&tempstr, NULL, 0);
+	}
+
       if (rc)
 	{
 	  free (hints.tmpdir);
@@ -1632,58 +1693,95 @@ mboxrd_flush_unlocked (struct mu_mboxrd_flush_tracker *trk, int mode)
 	}
       
       rc = mboxrd_flush_temp (trk, dirty, tempstr, mode == FLUSH_EXPUNGE);
-      mu_stream_unref (tempstr);
       if (rc == 0)
 	{
-	  /* Rename mailbox to temporary copy */
-	  char *backup = mu_tempname (hints.tmpdir);
-	  rc = rename (dmp->name, backup);
-	  if (rc)
+	  if (tempname)
 	    {
-	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			("%s:%s: failed to rename to backup file %s: %s",
-			 __func__, dmp->name, tempname,
-			 mu_strerror (rc)));
-	      unlink (backup);
-	    }
-	  else
-	    {
-	      rc = rename (tempname, dmp->name);
-	      if (rc == 0)
+	      /* Mail spool is writable. Rename the temporary copy back
+		 to mailbox */
+	      char *backup;
+	      struct stat st;
+
+	      if (stat (dmp->name, &st))
 		{
-		  /* Success. Synchronize internal data with the counter. */
-		  mboxrd_tracker_sync (trk);
-		  mu_stream_destroy (&dmp->mailbox->stream);
-		  rc = mboxrd_mailbox_init_stream (dmp);
+		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			    ("%s:%s: stat failed: %s",
+			     __func__, dmp->name, strerror (errno)));
+		  rc = errno;
 		}
 	      else
 		{
-		  int rc1;
-		  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-			    ("%s: failed to rename temporary file %s %s: %s",
-			     __func__, tempname, dmp->name,
-			     mu_strerror (rc)));
-		  rc1 = rename (backup, dmp->name);
-		  if (rc1)
+		  mu_stream_flush (tempstr);
+		  backup = mu_tempname (hints.tmpdir);
+		  rc = rename (dmp->name, backup);
+		  if (rc)
 		    {
-		      mu_error (_("failed to restore %s from backup %s: %s"),
-				dmp->name, backup, mu_strerror (rc1));
-		      mu_error (_("backup left in %s"), backup);
-		      free (backup);
-		      backup = NULL;
+		      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+				("%s:%s: failed to rename to backup file %s: %s",
+				 __func__, dmp->name, tempname,
+				 mu_strerror (rc)));
+		      unlink (backup);
 		    }
+		  else
+		    {
+		      rc = rename (tempname, dmp->name);
+		      if (rc == 0)
+			{
+			  /* Success. Synchronize internal data with the
+			     counter. */
+			  mboxrd_tracker_sync (trk);
+			  mu_stream_destroy (&dmp->mailbox->stream);
+			  rc = mboxrd_mailbox_init_stream (dmp);
+			  if (rc == 0)
+			    {
+			      if (chmod (dmp->name, st.st_mode))
+				mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+					  ("%s:%s: chmod failed: %s",
+					   __func__, dmp->name,
+					   strerror (errno)));
+			      if (chown (dmp->name, st.st_uid, st.st_gid))
+				mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+					  ("%s:%s: chown failed: %s",
+					   __func__, dmp->name,
+					   strerror (errno)));
+			    }
+			}
+		      else
+			{
+			  int rc1;
+			  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+				    ("%s: failed to rename temporary file %s %s: %s",
+				     __func__, tempname, dmp->name,
+				     mu_strerror (rc)));
+			  rc1 = rename (backup, dmp->name);
+			  if (rc1)
+			    {
+			      mu_error (_("failed to restore %s from backup %s: %s"),
+					dmp->name, backup, mu_strerror (rc1));
+			      mu_error (_("backup left in %s"), backup);
+			      free (backup);
+			      backup = NULL;
+			    }
+			}
+		    }
+	  
+		  if (backup)
+		    {
+		      unlink (backup);
+		      free (backup);
+		    }
+		  unlink (tempname);
 		}
 	    }
-	  
-	  if (backup)
+	  else
 	    {
-	      unlink (backup);
-	      free (backup);
+	      /* Mail spool not writable.  Copy the tempstr back to mailbox. */
+	      rc = mboxrd_copyback (trk, tempstr);
 	    }
 	}
-      unlink (tempname);
       free (tempname);
       free (hints.tmpdir);
+      mu_stream_unref (tempstr);
     }
   
   dmp->uidvalidity_changed = 0;  
