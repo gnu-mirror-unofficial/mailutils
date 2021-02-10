@@ -444,7 +444,7 @@ main (int argc, char **argv)
     {
       mu_msgset_t unseen;
 
-      mu_msgset_create (&unseen, NULL, MU_MSGSET_NUM);
+      mu_msgset_create (&unseen, incdat.output, MU_MSGSET_UID);
       mu_msgset_add_range (unseen, lastseen, incdat.lastmsg, MU_MSGSET_NUM);
       mh_seq_add (incdat.output, unseen_seq, unseen, 0);
       mu_msgset_free (unseen);
