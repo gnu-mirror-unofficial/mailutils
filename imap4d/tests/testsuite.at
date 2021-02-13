@@ -33,7 +33,9 @@ m4_define([IMAP4D_OPTIONS],[IMAP4D_PREAUTH_OPTIONS])
 
 m4_define([IMAP4D_CONFIG],[make_config IMAP4D_HOMEDIR])
 
-m4_define([IMAP4D_RUN],[IMAP4D_CONFIG
+m4_define([IMAP4D_RUN],
+[test -d $HOME || AT_SKIP_TEST
+IMAP4D_CONFIG
 m4_if([$2],[expand],
 [cat > input <<EOT
 $1
