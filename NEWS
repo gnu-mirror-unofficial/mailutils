@@ -1,7 +1,22 @@
-GNU mailutils NEWS -- history of user-visible changes. 2021-01-05
+GNU mailutils NEWS -- history of user-visible changes. 2021-02-13
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+Version 3.12, 2021-02-13
+
+* Fix expunging of mailboxes in mbox and dotmail format in a read-only directory
+
+The bug was reported at https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=980042
+
+* inc: when updating the "unseen" sequence, translate message numbers to uids
+
+* Fix default port selection in SMTP mailer
+
+* Fix building the mda utilities with mailbox quotas off
+
+* Fix bugs in the testsuite
+
 
 Version 3.11.1, 2021-01-05
 
