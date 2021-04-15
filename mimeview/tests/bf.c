@@ -68,7 +68,7 @@ write_string (FILE *fp, char *arg)
 int
 write_byte (FILE *fp, char *arg)
 {
-  int c;
+  char c;
   if (strlen (arg) == 3
       && (arg[0] == '\'' || arg[0] == '"'))
     c = arg[1];
