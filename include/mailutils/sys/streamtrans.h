@@ -25,3 +25,5 @@ struct _mu_streamtrans
   struct _mu_stream base;      /* Superclass */
   mu_stream_t transport;       /* Transport stream */
 };
+
+#endif
