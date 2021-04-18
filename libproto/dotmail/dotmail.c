@@ -807,7 +807,8 @@ dotmail_message_unseen (mu_mailbox_t mailbox, size_t *pmsgno)
 	}
     }
 
-  return MU_ERR_NOENT;
+  *pmsgno = 0;
+  return 0;
 }
 
 /* Initialize the mailbox UID subsystem. See the Notes above. */
