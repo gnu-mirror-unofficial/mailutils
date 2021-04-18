@@ -152,6 +152,9 @@ static struct mu_cfg_param mu_sql_param[] = {
        "gecos, dir, shell, mailbox, quota, and <column> is the name of "
        "the corresponding SQL column."),
     N_("map: definition") },
+  { "param", mu_c_string, &mu_sql_module_config.param, 0, NULL,
+    N_("Extra parameters for connection (backend-specific)"),
+    N_("arg") },
   { NULL }
 };
 
@@ -376,7 +379,8 @@ mu_auth_sql_by_name (struct mu_auth_data **return_data,
 				   mu_sql_module_config.port,
 				   mu_sql_module_config.user,
 				   mu_sql_module_config.passwd,
-				   mu_sql_module_config.db);
+				   mu_sql_module_config.db,
+				   mu_sql_module_config.param);
 
   if (status)
     {
@@ -470,7 +474,8 @@ mu_auth_sql_by_uid (struct mu_auth_data **return_data,
 				   mu_sql_module_config.port,
 				   mu_sql_module_config.user,
 				   mu_sql_module_config.passwd,
-				   mu_sql_module_config.db);
+				   mu_sql_module_config.db,
+				   mu_sql_module_config.param);
 
   if (status)
     {
@@ -556,7 +561,8 @@ mu_sql_getpass (const char *username, char **passwd)
 				   mu_sql_module_config.port,
 				   mu_sql_module_config.user,
 				   mu_sql_module_config.passwd,
-				   mu_sql_module_config.db);
+				   mu_sql_module_config.db,
+				   mu_sql_module_config.param);
 
   if (status)
     {

@@ -78,7 +78,20 @@ mu_mysql_destroy (mu_sql_connection_t conn)
   conn->data = NULL;
   return 0;
 }
-  
+
+enum
+  {
+    PARAM_DEFAULTS_FILE,
+    PARAM_GROUP,
+    PARAM_CA
+  };
+
+static struct mu_kwd param_kwd[] = {
+  { "defaults_file", PARAM_DEFAULTS_FILE },
+  { "group", PARAM_GROUP },
+  { "ca", PARAM_CA },
+  { NULL }
+};
 
 static int
 mu_mysql_connect (mu_sql_connection_t conn)
@@ -92,6 +105,60 @@ mu_mysql_connect (mu_sql_connection_t conn)
   
   mysql_init (mp->mysql);
 
+  if (conn->param) {
+    struct mu_wordsplit ws;
+    
+    ws.ws_delim = ";";
+    if (mu_wordsplit (conn->param, &ws,
+		      WRDSF_NOVAR | WRDSF_NOCMD | WRDSF_QUOTE | WRDSF_DELIM |
+		      WRDSF_WS))
+      {
+	mu_error (_("can't parse MySQL parameter line %s: %s"),
+		  conn->param, mu_wordsplit_strerror (&ws));
+      }
+    else
+      {
+	size_t i;
+	for (i = 0; i < ws.ws_wordc; i++)
+	  {
+	    int tok;
+	    size_t len = strcspn (ws.ws_wordv[i], "=");
+
+	    if (ws.ws_wordv[i][len] == 0)
+	      {
+		mu_error (_("malformed MySQL parameter keyword (missing '='): %s"),
+			  ws.ws_wordv[i]);
+		continue;
+	      }
+	    if (mu_kwd_xlat_name_len (param_kwd, ws.ws_wordv[i], len, &tok))
+	      {
+		mu_error (_("unrecognized MySQL parameter: %s"),
+			  ws.ws_wordv[i]);
+		continue;
+	      }
+	    
+	    switch (tok)
+	      {
+	      case PARAM_DEFAULTS_FILE:
+		mysql_options (mp->mysql, MYSQL_READ_DEFAULT_FILE,
+			       ws.ws_wordv[i] + len + 1);
+		break;
+		
+	      case PARAM_GROUP:
+		mysql_options (mp->mysql, MYSQL_READ_DEFAULT_GROUP,
+			       ws.ws_wordv[i] + len + 1);
+		break;
+		
+	      case PARAM_CA:
+		mysql_ssl_set (mp->mysql, NULL, NULL, ws.ws_wordv[i] + len + 1,
+			       NULL, NULL);
+		break;
+	      }
+	  }
+	mu_wordsplit_free (&ws);
+      }
+  }
+  
   if (conn->server && conn->server[0] == '/')
     {
       host = "localhost";

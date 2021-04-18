@@ -111,7 +111,7 @@ get_sql_entry (int type)
 int
 mu_sql_connection_init (mu_sql_connection_t *pconn, int interface,
 			char *server, int  port, char *login,
-			char *password, char *dbname)
+			char *password, char *dbname, char *param)
 {
   static mu_sql_dispatch_t *tab;
   mu_sql_connection_t conn;
@@ -130,6 +130,7 @@ mu_sql_connection_init (mu_sql_connection_t *pconn, int interface,
   conn->login = login;
   conn->password = password;
   conn->dbname = dbname;
+  conn->param = param;
   if (tab->init)
     {
       int rc = tab->init (conn);

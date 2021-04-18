@@ -39,6 +39,7 @@ struct mu_sql_module_config
   int port;
   enum mu_sql_password_encryption password_encryption;
   mu_assoc_t field_map;
+  char *param;
 };
 
 extern struct mu_sql_module_config mu_sql_module_config;
@@ -77,6 +78,7 @@ struct mu_sql_connection
   char *login;
   char *password;
   char *dbname;
+  char *param;
   void *data;
   enum mu_sql_connection_state state;
 };
@@ -115,7 +117,7 @@ int mu_sql_interface_index (char const *name);
 
 int mu_sql_connection_init (mu_sql_connection_t *conn, int interface,
 			    char *server, int  port, char *login,
-			    char *password, char *dbname);
+			    char *password, char *dbname, char *param);
 int mu_sql_connection_destroy (mu_sql_connection_t *conn);
 
 int mu_sql_connect (mu_sql_connection_t conn);

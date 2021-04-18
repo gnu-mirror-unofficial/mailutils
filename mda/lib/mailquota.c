@@ -206,7 +206,8 @@ sql_retrieve_quota (char *name, mu_off_t *quota)
 				   mu_sql_module_config.port,
 				   mu_sql_module_config.user,
 				   mu_sql_module_config.passwd,
-				   mu_sql_module_config.db);
+				   mu_sql_module_config.db,
+				   mu_sql_module_config.param);
   
   if (status)
     {
