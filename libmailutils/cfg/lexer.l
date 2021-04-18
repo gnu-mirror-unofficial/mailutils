@@ -129,7 +129,7 @@ P [1-9][0-9]*
                         _mu_line_begin ();
 		        _mu_line_add_unescape_last (yytext + 1, yyleng - 1); }
 <STR>[^\\"\n]*\\. |
-<STR>\"[^\\"\n]*\\\n  { _mu_line_add_unescape_last (yytext, yyleng); }
+<STR>[^\\"\n]*\\\n    { _mu_line_add_unescape_last (yytext, yyleng); }
 <STR>[^\\"\n]*\"      { BEGIN (INITIAL);
                         if (yyleng > 1) 
                           _mu_line_add (yytext, yyleng - 1); 
