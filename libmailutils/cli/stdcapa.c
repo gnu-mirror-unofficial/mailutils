@@ -407,7 +407,7 @@ cb_locker_expire_timeout (void *data, mu_config_value_t *val)
   else
     {
       mu_locker_set_default_expire_timeout (t);
-      mu_locker_set_default_flags (MU_LOCKER_EXTERNAL, mu_locker_set_bit);
+      mu_locker_set_default_flags (MU_LOCKER_TIME, mu_locker_set_bit);
     }
   return 0;
 }
@@ -418,7 +418,7 @@ cb_locker_external (void *data, mu_config_value_t *val)
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
   mu_locker_set_default_external_program (val->v.string);
-  mu_locker_set_default_flags (MU_LOCKER_TIME, mu_locker_set_bit);
+  mu_locker_set_default_flags (MU_LOCKER_EXTERNAL, mu_locker_set_bit);
   return 0;
 }
 
