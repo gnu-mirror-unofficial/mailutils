@@ -332,11 +332,12 @@ mu_option_describe_options (mu_stream_t str, struct mu_parseopt *po)
 
   for (i = 0; i < po->po_optc; )
     i = print_option (str, po, i, &argsused);
+
+  set_margin (str, 0);
   mu_stream_printf (str, "\n");
 
   if (argsused && !(po->po_flags & MU_PARSEOPT_SINGLE_DASH) && dup_args_note)
     {
-      set_margin (str, 0);
       mu_stream_printf (str, "%s\n\n",
 			_("Mandatory or optional arguments to long options are also mandatory or optional for any corresponding short options."));
     }
@@ -454,7 +455,9 @@ option_summary (struct mu_parseopt *po, mu_stream_t str)
     {
       /* Print a list of short options without arguments. */
       for (i = nidx = 0; i < optcnt; i++)
-	if (MU_OPTION_IS_VALID_SHORT_OPTION (optbuf[i]) && !optbuf[i]->opt_arg)
+	if (MU_OPTION_IS_VALID_SHORT_OPTION (optbuf[i]) &&
+	    !(optbuf[i]->opt_flags & MU_OPTION_HIDDEN) &&
+	    !optbuf[i]->opt_arg)
 	  idxbuf[nidx++] = i;
       
       if (nidx)
@@ -471,7 +474,9 @@ option_summary (struct mu_parseopt *po, mu_stream_t str)
       /* Print a list of short options with arguments. */
       for (i = nidx = 0; i < optcnt; i++)
 	{
-	  if (MU_OPTION_IS_VALID_SHORT_OPTION (optbuf[i]) && optbuf[i]->opt_arg)
+	  if (MU_OPTION_IS_VALID_SHORT_OPTION (optbuf[i]) &&
+	      !(optbuf[i]->opt_flags & MU_OPTION_HIDDEN) &&
+	      optbuf[i]->opt_arg)
 	    idxbuf[nidx++] = i;
 	}
 
@@ -494,7 +499,8 @@ option_summary (struct mu_parseopt *po, mu_stream_t str)
   /* Print a list of long options */
   for (i = nidx = 0; i < optcnt; i++)
     {
-      if (MU_OPTION_IS_VALID_LONG_OPTION (optbuf[i]))
+      if (MU_OPTION_IS_VALID_LONG_OPTION (optbuf[i]) &&
+	  !(optbuf[i]->opt_flags & MU_OPTION_HIDDEN))
 	idxbuf[nidx++] = i;
     }
 
