@@ -235,7 +235,7 @@ attlist_attach_file (mu_list_t *attlist_ptr,
   mu_stream_t stream = NULL;
   char *id = NULL;
   mu_list_t attlist;
-  
+
   if (fd >= 0)
     {
       rc = mu_fd_stream_create (&stream, NULL, fd, MU_STREAM_READ);
@@ -272,14 +272,17 @@ attlist_attach_file (mu_list_t *attlist_ptr,
 	      return 1;
 	    }
 	}
-      
-      if (!S_ISREG (st.st_mode))
+
+      if (S_ISREG (st.st_mode))
+	rc = mu_mapfile_stream_create (&stream, realname, MU_STREAM_READ);
+      else if (S_ISFIFO (st.st_mode))
+	rc = mu_file_stream_create (&stream, realname, MU_STREAM_READ);
+      else
 	{
-	  mu_error (_("%s: not a regular file"), realname);
+	  mu_error (_("%s: not a regular file or FIFO"), realname);
 	  return 1;
 	}
 
-      rc = mu_mapfile_stream_create (&stream, realname, MU_STREAM_READ);
       if (rc)
 	{
 	  mu_error (_("can't open file %s: %s"),
