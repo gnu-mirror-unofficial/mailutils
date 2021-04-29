@@ -37,7 +37,22 @@ static void
 mh_extra_help_hook (struct mu_parseopt *po, mu_stream_t stream)
 {
   struct getopt_data *data = po->po_data;
-  mu_stream_printf (stream, "%s\n", _(data->extra_doc));
+  char const *extra_doc = gettext (data->extra_doc);
+  while (*extra_doc)
+    {
+      size_t len = strcspn (extra_doc, "\n");
+      unsigned margin = strspn (extra_doc, " \t");
+
+      mu_stream_ioctl (stream, MU_IOCTL_WORDWRAPSTREAM,
+		       MU_IOCTL_WORDWRAP_SET_MARGIN, &margin);
+      extra_doc += margin;
+      len -= margin;
+      mu_stream_write (stream, extra_doc, len, NULL);
+      mu_stream_write (stream, "\n", 1, NULL);
+      extra_doc += len;
+      if (*extra_doc)
+	extra_doc++;
+    }
 }
 
 static void
