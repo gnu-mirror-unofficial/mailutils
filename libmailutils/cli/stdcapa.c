@@ -30,6 +30,7 @@
 #include <mailutils/locker.h>
 #include <mailutils/mu_auth.h>
 #include <mailutils/url.h>
+#include <mailutils/kwd.h>
 
 /* *************************************************************************
  * Logging section
@@ -308,35 +309,44 @@ cb_locker_flags (void *data, mu_config_value_t *val)
 {
   int flags = 0;
   char const *s;
-
+  static struct mu_kwd flag_tab[] = {
+    { "external-locker", 'E' },
+    { "retry-count",     'R' },
+    { "expire-timeout",  'T' },
+    { "pid-check",       'P' },
+    { NULL }
+  };
+      
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
 
   for (s = val->v.string; *s; s++)
     {
-      switch (*s)
+      char const *kw;
+      if (mu_kwd_xlat_tok (flag_tab, *s, &kw))
 	{
-	case 'E':
-	  flags |= MU_LOCKER_EXTERNAL;
-	  break;
-
-	case 'R':
-	  flags |= MU_LOCKER_RETRY;
-	  break;
-
-	case 'T':
-	  flags |= MU_LOCKER_TIME;
-	  break;
-
-	case 'P':
-	  flags |= MU_LOCKER_PID;
-	  break;
-
-	default:
 	  mu_error (_("invalid lock flag `%c'"), *s);
 	}
+      else if (*s == 'P')
+	{
+	  /* TRANSLATORS: %c is replaced with the flag letter, and %s - with
+	     the corresponding keyword. */
+	  mu_diag_output (MU_DIAG_WARNING,
+			  _("applying legacy flag %c, use %s instead"),
+			  *s, kw);
+	  flags |= MU_LOCKER_PID;
+	}
+      else
+	{
+	  /* TRANSLATORS: %c is replaced with the flag letter, and %s - with
+	     the corresponding keyword. */
+	  mu_diag_output (MU_DIAG_WARNING,
+			  _("ignoring legacy flag %c, use %s instead"),
+			  *s, kw);
+	}
     }
-  mu_locker_set_default_flags (flags, mu_locker_assign);
+  if (flags)
+    mu_locker_set_default_flags (flags, mu_locker_assign);
   return 0;
 }
 
@@ -356,6 +366,8 @@ cb_locker_retry_timeout (void *data, mu_config_value_t *val)
 		mu_strerror (rc));
       free (errmsg);
     }
+  else if (t == 0)
+    mu_locker_set_default_flags (MU_LOCKER_RETRY, mu_locker_clear_bit);
   else
     {
       mu_locker_set_default_retry_timeout (t);
@@ -380,6 +392,8 @@ cb_locker_retry_count (void *data, mu_config_value_t *val)
 		mu_strerror (rc));
       free (errmsg);
     }
+  else if (n == 0)
+    mu_locker_set_default_flags (MU_LOCKER_RETRY, mu_locker_clear_bit);
   else
     {
       mu_locker_set_default_retry_count (n);
@@ -404,6 +418,8 @@ cb_locker_expire_timeout (void *data, mu_config_value_t *val)
 		mu_strerror (rc));
       free (errmsg);
     }
+  else if (t == 0)
+    mu_locker_set_default_flags (MU_LOCKER_TIME, mu_locker_clear_bit);
   else
     {
       mu_locker_set_default_expire_timeout (t);
@@ -415,13 +431,39 @@ cb_locker_expire_timeout (void *data, mu_config_value_t *val)
 static int
 cb_locker_external (void *data, mu_config_value_t *val)
 {
+  int t;
+  
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
-  mu_locker_set_default_external_program (val->v.string);
-  mu_locker_set_default_flags (MU_LOCKER_EXTERNAL, mu_locker_set_bit);
+  if (mu_str_to_c (val->v.string, mu_c_bool, &t, NULL) == 0 && t == 0)
+    {
+      mu_locker_set_default_flags (MU_LOCKER_EXTERNAL, mu_locker_clear_bit);
+    }
+  else
+    {
+      mu_locker_set_default_external_program (val->v.string);
+      mu_locker_set_default_flags (MU_LOCKER_EXTERNAL, mu_locker_set_bit);
+    }
   return 0;
 }
 
+static int
+cb_locker_pid_check (void *data, mu_config_value_t *val)
+{
+  int t;
+  
+  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
+    return 1;
+  if (mu_str_to_c (val->v.string, mu_c_bool, &t, NULL))
+    {
+      mu_error ("%s", _("not a boolean"));
+      return 1;
+    }
+  mu_locker_set_default_flags (MU_LOCKER_PID,
+			       t ? mu_locker_set_bit : mu_locker_clear_bit);
+  return 0;
+}
+  
 static struct mu_cfg_param locking_cfg[] = {
   /* FIXME: Flags are superfluous. */
   { "flags", mu_cfg_callback, NULL, 0, cb_locker_flags,
@@ -439,6 +481,9 @@ static struct mu_cfg_param locking_cfg[] = {
   { "external-locker", mu_cfg_callback, NULL, 0, cb_locker_external,
     N_("Use external locker program."),
     N_("prog: string") },
+  { "pid-check", mu_cfg_callback, NULL, 0, cb_locker_pid_check,
+    N_("Check if PID of the lock owner is active."),
+    N_("arg: bool") },
   { NULL, }
 };
 

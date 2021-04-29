@@ -29,9 +29,11 @@
 static const char *file;
 static int unlock;
 static int flags;
-static int retries;
+static unsigned retries;
 static unsigned force;
 static int debug;
+static unsigned retry_sleep = 0;
+static int pid_check;
 
 static void
 cli_force (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -66,10 +68,18 @@ static struct mu_option dotlock_options[] = {
     N_("forcibly break an existing lock older than a certain time"),
     mu_c_uint, &force, cli_force },
  
-  { "retry",  'r', N_("RETRIES"), MU_OPTION_ARG_OPTIONAL,
+  { "retry",  'r', N_("RETRIES"), MU_OPTION_DEFAULT,
     N_("retry the lock a few times"),
-    mu_c_int, &retries },
+    mu_c_uint, &retries },
 
+  { "delay",  't', N_("SECONDS"), MU_OPTION_DEFAULT,
+    N_("delay between two successive locking attempts (in seconds)"),
+    mu_c_uint, &retry_sleep },
+
+  { "pid-check", 'p', NULL, MU_OPTION_DEFAULT,
+    N_("check if the PID of lock owner is still active"),
+    mu_c_bool, &pid_check },
+  
   { "debug",  'd', NULL, MU_OPTION_DEFAULT,
     N_("print details of failure reasons to stderr"), 
     mu_c_bool, &debug },
@@ -80,8 +90,6 @@ static struct mu_option dotlock_options[] = {
 struct mu_cfg_param dotlock_cfg_param[] = {
   { "force", mu_c_time, &force, 0, NULL,
     N_("Forcibly break an existing lock older than the specified time.") },
-  { "retry", mu_c_int, &retries, 0, NULL,
-    N_("Number of times to retry acquiring the lock.") },
   { "debug", mu_c_bool, &debug, 0, NULL,
     N_("Print details of failure reasons to stderr.") },
   { NULL }
@@ -103,6 +111,7 @@ static struct mu_cli_setup cli = {
 
 char *capa[] = {
   "debug",
+  "locking",
   NULL
 };
 
@@ -144,9 +153,12 @@ main (int argc, char *argv[])
       flags |= MU_LOCKER_TIME;
     }
 
-  if (retries != 0)
+  if (retries || retry_sleep)
     flags |= MU_LOCKER_RETRY;
-  
+
+  if (pid_check)
+    flags |= MU_LOCKER_PID;
+
   if ((err = mu_locker_create (&locker, file, flags)))
     {
       if (debug)
@@ -157,8 +169,10 @@ main (int argc, char *argv[])
   if (force != 0)
     mu_locker_set_expire_time (locker, force);
 
-  if (retries != 0)
+  if (retries)
     mu_locker_set_retries (locker, retries);
+  if (retry_sleep)
+    mu_locker_set_retry_sleep (locker, retry_sleep);
 
   if (setegid (mailgid) < 0)
     return MU_DL_EX_ERROR;
@@ -168,7 +182,7 @@ main (int argc, char *argv[])
   else
     err = mu_locker_lock (locker);
 
-  setegid(usergid);
+  setegid (usergid);
 
   mu_locker_destroy (&locker);
 

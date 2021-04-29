@@ -19,7 +19,6 @@
 # include <config.h>
 #endif
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -40,6 +39,7 @@
 #include <mailutils/errno.h>
 #include <mailutils/locker.h>
 #include <mailutils/util.h>
+#include <mailutils/io.h>
 
 #define LOCKFILE_ATTR           0644
 
@@ -57,17 +57,21 @@ struct _mu_locker
   int retries;
   int retry_sleep;
 
-  union lock_data {
-    struct {
+  union lock_data
+  {
+    struct
+    {
       char *dotlock;
       char *nfslock;
     } dot;
     
-    struct {
+    struct
+    {
       char *name;
     } external;
     
-    struct {
+    struct
+    {
       int fd;
     } kernel;
   } data;
@@ -581,19 +585,19 @@ mu_locker_lock_mode (mu_locker_t lock, enum mu_locker_mode mode)
 	{
 	  rc = locker_tab[type].lock (lock, mode);
 	  if (rc == EAGAIN && retries)
-	    {
-	      sleep (lock->retry_sleep);
-	      continue;
-	    }
-
-	  if (rc == 0)
-	    lock->refcnt++;
-
-	  break;
+	    sleep (lock->retry_sleep);
+	  else
+	    break;
 	}
+
+      if (rc == EAGAIN)
+	rc = MU_ERR_LOCK_CONFLICT;
     }
   else
     rc = 0;
+
+  if (rc == 0)
+    lock->refcnt++;
   
   return rc;
 }
@@ -746,9 +750,7 @@ lock_dotlock (mu_locker_t locker, enum mu_locker_mode mode)
 {
   int rc;
   char *host = NULL;
-  char pid[11];		/* 10 is strlen(2^32 = 4294967296) */
-  char now[11];
-  size_t sz = 0;
+  time_t now;
   int err = 0;
   int fd;
     
@@ -766,29 +768,15 @@ lock_dotlock (mu_locker_t locker, enum mu_locker_mode mode)
   rc = mu_get_host_name (&host);
   if (rc)
     return rc;
-
-  snprintf (now, sizeof (now), "%lu", (unsigned long) time (0));
-  now[sizeof (now) - 1] = 0;
-
-  snprintf (pid, sizeof (pid), "%lu", (unsigned long) getpid ());
-  pid[sizeof (pid) - 1] = 0;
-		  
-  sz = strlen (locker->file) + 1 /* "." */
-    + strlen (pid) + 1 /* "." */
-    + strlen (now) + 1 /* "." */
-    + strlen (host) + 1;
-  
-  locker->data.dot.nfslock = malloc (sz);
-  
-  if (!locker->data.dot.nfslock)
-    {
-      free (host);
-      return ENOMEM;
-    }
-
-  snprintf (locker->data.dot.nfslock, sz, "%s.%s.%s.%s",
-	    locker->file, pid, now, host);
+  time (&now);
+  rc = mu_asprintf (&locker->data.dot.nfslock,
+		    "%s.%lu.%lu.%s",
+		    locker->file,
+		    (unsigned long) getpid (),
+		    (unsigned long) now, host);
   free (host);
+  if (rc)
+    return rc;
   
   fd = open (locker->data.dot.nfslock,
 	     O_WRONLY | O_CREAT | O_EXCL, LOCKFILE_ATTR);
@@ -806,7 +794,7 @@ lock_dotlock (mu_locker_t locker, enum mu_locker_mode mode)
     {
       unlink (locker->data.dot.nfslock);
       if (errno == EEXIST)
-	return MU_ERR_LOCK_CONFLICT;
+	return EAGAIN;
       return errno;
     }
 
@@ -826,9 +814,6 @@ lock_dotlock (mu_locker_t locker, enum mu_locker_mode mode)
     }
 
   unlink (locker->data.dot.nfslock);
-
-  /* FIXME: If no errors, we have the lock. */
-  assert (locker->refcnt == 0);
 
   if (locker->flags & MU_LOCKER_PID)
     {
@@ -913,8 +898,8 @@ lock_kernel (mu_locker_t locker, enum mu_locker_mode mode)
   fl.l_len = 0; /* Lock entire file */
   if (fcntl (fd, F_SETLK, &fl))
     {
-#ifdef EACCESS      
-      if (errno == EACCESS)
+#ifdef EACCES      
+      if (errno == EACCES)
 	return EAGAIN;
 #endif
       if (errno == EAGAIN)
@@ -977,12 +962,6 @@ external_locker (mu_locker_t l, int lock)
   char aforce[3 + DEC_DIGS_PER_INT + 1];
   char aretry[3 + DEC_DIGS_PER_INT + 1];
   int status = 0;
-
-  assert (l);
-  assert (l->flags & MU_LOCKER_EXTERNAL);
-  /* FIXME */
-  assert (lock == !l->refcnt);
-  /* lock is true, refcnt is 0 or lock is false and refcnt is 1 */
 
   av[ac++] = l->data.external.name ?
                    l->data.external.name : MU_LOCKER_EXTERNAL_PROGRAM;

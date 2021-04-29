@@ -43,6 +43,7 @@ noinst_PROGRAMS = \
  globtest\
  hdrcpy\
  imapio\
+ lck\
  listop\
  listsort\
  linetrack\
@@ -120,6 +121,7 @@ TESTSUITE_AT += \
  linecon.at\
  list.at\
  linetrack.at\
+ lock.at\
  logstr.at\
  mailcap.at\
  mimehdr.at\
