@@ -41,8 +41,6 @@
 #include <mailutils/util.h>
 #include <mailutils/io.h>
 
-#define LOCKFILE_ATTR           0644
-
 /* First draft by Brian Edmond. */
 /* For subsequent modifications, see the GNU mailutils ChangeLog. */
 
@@ -51,10 +49,11 @@ struct _mu_locker
   unsigned refcnt;             /* Number of times mu_locker_lock was called */
   enum mu_locker_mode mode;    /* Current locking mode (if refcnt > 0) */
 
+  int type;
   char *file;
   int flags;
   int expire_time;
-  int retries;
+  int retry_count;
   int retry_sleep;
 
   union lock_data
@@ -63,62 +62,16 @@ struct _mu_locker
     {
       char *dotlock;
       char *nfslock;
-    } dot;
+    } dot;             /* MU_LOCKER_TYPE_DOTLOCK */
     
     struct
     {
       char *name;
-    } external;
+    } external;        /* MU_LOCKER_TYPE_EXTERNAL */   
     
-    struct
-    {
-      int fd;
-    } kernel;
+    int fd;            /* MU_LOCKER_TYPE_KERNEL */
   } data;
 };
-
-#define MU_LOCKER_TYPE(l) MU_LOCKER_FLAG_TO_TYPE((l)->flags)
-
-struct locker_tab
-{
-  int (*init) (mu_locker_t);
-  void (*destroy) (mu_locker_t);
-  int (*prelock) (mu_locker_t); 
-  int (*lock) (mu_locker_t, enum mu_locker_mode);
-  int (*unlock) (mu_locker_t);
-};
-
-static int init_dotlock (mu_locker_t);
-static void destroy_dotlock (mu_locker_t);
-static int lock_dotlock (mu_locker_t, enum mu_locker_mode);
-static int unlock_dotlock (mu_locker_t);
-
-static int init_external (mu_locker_t);
-static void destroy_external (mu_locker_t);
-static int lock_external (mu_locker_t, enum mu_locker_mode);
-static int unlock_external (mu_locker_t);
-
-static int init_kernel (mu_locker_t);
-static int lock_kernel (mu_locker_t, enum mu_locker_mode);
-static int unlock_kernel (mu_locker_t);
-
-static int prelock_common (mu_locker_t);
-
-static struct locker_tab locker_tab[] = {
-  /* MU_LOCKER_TYPE_DOTLOCK */
-  { init_dotlock, destroy_dotlock, prelock_common,
-    lock_dotlock, unlock_dotlock },
-  /* MU_LOCKER_TYPE_EXTERNAL */
-  { init_external, destroy_external, prelock_common,
-    lock_external, unlock_external },
-  /* MU_LOCKER_TYPE_KERNEL */
-  { init_kernel, NULL, NULL, lock_kernel, unlock_kernel },
-  /* MU_LOCKER_TYPE_NULL */
-  { NULL, NULL, NULL, NULL, NULL }
-};
-
-#define MU_LOCKER_NTYPES (sizeof (locker_tab) / sizeof (locker_tab[0]))
-
 
 static int
 stat_check (const char *file, int fd, int links)
@@ -145,20 +98,17 @@ stat_check (const char *file, int fd, int links)
     {
       /* If the link and stat don't report the same info, or the
          file is a symlink, fail the locking. */
-#define CHK(X) if(X) err = EINVAL
-
-      CHK (!S_ISREG (fn_stat.st_mode));
-      CHK (!S_ISREG (fd_stat.st_mode));
-      CHK (fn_stat.st_nlink != links);
-      CHK (fn_stat.st_dev != fd_stat.st_dev);
-      CHK (fn_stat.st_ino != fd_stat.st_ino);
-      CHK (fn_stat.st_mode != fd_stat.st_mode);
-      CHK (fn_stat.st_nlink != fd_stat.st_nlink);
-      CHK (fn_stat.st_uid != fd_stat.st_uid);
-      CHK (fn_stat.st_gid != fd_stat.st_gid);
-      CHK (fn_stat.st_rdev != fd_stat.st_rdev);
-
-#undef CHK
+      if (!S_ISREG (fn_stat.st_mode)
+	  || !S_ISREG (fd_stat.st_mode)
+	  || fn_stat.st_nlink != links
+	  || fn_stat.st_dev != fd_stat.st_dev
+	  || fn_stat.st_ino != fd_stat.st_ino
+	  || fn_stat.st_mode != fd_stat.st_mode
+	  || fn_stat.st_nlink != fd_stat.st_nlink
+	  || fn_stat.st_uid != fd_stat.st_uid
+	  || fn_stat.st_gid != fd_stat.st_gid
+	  || fn_stat.st_rdev != fd_stat.st_rdev)
+	err = EINVAL;
     }
   if (localfd != -1)
     close (localfd);
@@ -195,258 +145,431 @@ prelock_common (mu_locker_t locker)
      of 1, that we have permission to read, etc., or don't lock it. */
   return check_file_permissions (locker->file);
 }
-
 
-static int mu_locker_default_flags = MU_LOCKER_DEFAULT;
-static time_t mu_locker_retry_timeout = MU_LOCKER_RETRY_SLEEP;
-static size_t mu_locker_retry_count = MU_LOCKER_RETRIES;
-static time_t mu_locker_expire_timeout = MU_LOCKER_EXPIRE_TIME;
-static char *mu_locker_external_program = NULL;
+/* Dotlock type */
+#define DOTLOCK_SUFFIX ".lock"
 
-int
-mu_locker_set_default_flags (int flags, enum mu_locker_set_mode mode)
+/* expire a stale lock (if MU_LOCKER_FLAG_CHECK_PID or
+   MU_LOCKER_FLAG_EXPIRE_TIME) */
+static void
+expire_stale_lock (mu_locker_t lock)
 {
-  switch (mode)
-    {
-    case mu_locker_assign:
-      mu_locker_default_flags = flags;
-      break;
-
-    case mu_locker_set_bit:
-      mu_locker_default_flags |= flags;
-      break;
-
-    case mu_locker_clear_bit:
-      mu_locker_default_flags &= ~flags;
-      break;
-
-    default:
-      return EINVAL;
-    }
-  return 0;
-}
-
-void
-mu_locker_set_default_retry_timeout (time_t to)
-{
-  mu_locker_retry_timeout = to;
-}
-
-void
-mu_locker_set_default_retry_count (size_t n)
-{
-  mu_locker_retry_count = n;
-}
-
-void
-mu_locker_set_default_expire_timeout (time_t t)
-{
-  mu_locker_expire_timeout = t;
-}
-
-int
-mu_locker_set_default_external_program (char const *path)
-{
-  char *p = strdup (path);
-  if (!p)
-    return ENOMEM;
-  free (mu_locker_external_program);
-  mu_locker_external_program = p;
-  return 0;
-}
-
-int
-mu_locker_mod_flags (mu_locker_t locker, int flags,
-		     enum mu_locker_set_mode mode)
-{
-  unsigned otype, ntype;
-  int new_flags;
+  int stale = 0;
+  int fd = open (lock->data.dot.dotlock, O_RDONLY);
   
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
+  if (fd == -1)
+    return;
 
-  switch (mode)
+  /* Check to see if this process is still running.  */
+  if (lock->flags & MU_LOCKER_FLAG_CHECK_PID)
     {
-    case mu_locker_assign:
-      new_flags = flags;
-      break;
-
-    case mu_locker_set_bit:
-      new_flags = locker->flags | flags;
-      break;
-
-    case mu_locker_clear_bit:
-      new_flags = locker->flags & ~flags;
-      break;
-
-    default:
-      return EINVAL;
-    }
-
-  otype = MU_LOCKER_TYPE (locker);
-  if (otype >= MU_LOCKER_NTYPES)
-    return EINVAL;
-  ntype = MU_LOCKER_FLAG_TO_TYPE (new_flags);
-  if (ntype >= MU_LOCKER_NTYPES)
-    return EINVAL;
-
-  if (ntype != otype)
-    {
-      int rc;
-      
-      if (locker_tab[otype].destroy)
-	locker_tab[otype].destroy (locker);
-      locker->flags = new_flags;
-      if (locker_tab[ntype].init)
+      char buf[16];
+      pid_t pid;
+      int nread = read (fd, buf, sizeof (buf) - 1);
+      if (nread > 0)
 	{
-	  rc = locker_tab[ntype].init (locker);
-	  if (rc)
-	    locker->flags = MU_LOCKER_NULL;
-	  return rc;
+	  buf[nread] = '\0';
+	  pid = strtol (buf, NULL, 10);
+	  if (pid > 0)
+	    {
+	      /* Process is gone so we try to remove the lock. */
+	      if (kill (pid, 0) == -1)
+		stale = 1;
+	    }
+	  else
+	    stale = 1;		/* Corrupted file, remove the lock. */
 	}
     }
-  else
-    locker->flags = new_flags;
-
-  return 0;
-}
-
-int
-mu_locker_set_flags (mu_locker_t locker, int flags)
-{
-  return mu_locker_mod_flags (locker, flags, mu_locker_assign);
-}
-
-int
-mu_locker_set_expire_time (mu_locker_t locker, int etime)
-{
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
-
-  if (etime <= 0)
-    return EINVAL;
-
-  locker->expire_time = etime;
-
-  return 0;
-}
-
-int
-mu_locker_set_retries (mu_locker_t locker, int retries)
-{
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
-
-  if (retries <= 0)
-    return EINVAL;
-
-  locker->retries = retries;
-
-  return 0;
-}
-
-int
-mu_locker_set_retry_sleep (mu_locker_t locker, int retry_sleep)
-{
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
-
-  if (retry_sleep <= 0)
-    return EINVAL;
-
-  locker->retry_sleep = retry_sleep;
-
-  return 0;
-}
-
-int
-mu_locker_set_external (mu_locker_t locker, const char* program)
-{
-  char* p = NULL;
-
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
-  if (MU_LOCKER_TYPE (locker) != MU_LOCKER_TYPE_EXTERNAL)
-    return EINVAL;
-    
-  /* program can be NULL */
-  if (program != 0)
+  
+  /* Check to see if the lock expired.  */
+  if (lock->flags & MU_LOCKER_FLAG_EXPIRE_TIME)
     {
-      p = strdup (program);
-      if (!p)
+      struct stat stbuf;
+
+      fstat (fd, &stbuf);
+      /* The lock has expired. */
+      if ((time (NULL) - stbuf.st_mtime) > lock->expire_time)
+	stale = 1;
+    }
+
+  close (fd);
+  if (stale)
+    unlink (lock->data.dot.dotlock);
+}
+
+static int
+init_dotlock (mu_locker_t lck, mu_locker_hints_t *hints)
+{
+  char *tmp, *p;
+
+  /* Make sure the spool directory is writable */
+  tmp = strdup (lck->file);
+  if (!tmp)
+    return ENOMEM;
+
+  strcpy (tmp, lck->file);
+  p = strrchr (tmp, '/');
+  if (!p)
+    {
+      free (tmp);
+      tmp = strdup (".");
+      if (!tmp)
 	return ENOMEM;
-  }
+    }
+  else
+    *p = 0; 
 
-  free (locker->data.external.name);
-  locker->data.external.name = p;
+  if (access (tmp, W_OK))
+    {
+      /* Fallback to kernel locking */
+      mu_locker_hints_t hints = {
+	.flags = MU_LOCKER_FLAG_TYPE,
+	.type  = MU_LOCKER_TYPE_KERNEL
+      };
+      free (tmp);
+      return mu_locker_modify (lck, &hints);
+    }
+  
+  free (tmp);
 
-  return 0;
-}
-
-int
-mu_locker_get_flags (mu_locker_t locker, int *flags)
-{
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
-
-  if (!flags)
-    return EINVAL;
-
-  *flags = locker->flags;
-
-  return 0;
-}
-
-int
-mu_locker_get_expire_time (mu_locker_t locker, int *ptime)
-{
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
-
-  if (!ptime)
-    return EINVAL;
-
-  *ptime = locker->expire_time;
+  lck->data.dot.dotlock = malloc (strlen (lck->file)
+				  + sizeof (DOTLOCK_SUFFIX));
+  
+  if (!lck->data.dot.dotlock)
+    return ENOMEM;
+  strcpy (lck->data.dot.dotlock, lck->file);
+  strcat (lck->data.dot.dotlock, DOTLOCK_SUFFIX);
 
   return 0;
 }
 
-int
-mu_locker_get_retries (mu_locker_t locker, int *retries)
+static void
+destroy_dotlock (mu_locker_t lck)
 {
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
+  free (lck->data.dot.dotlock);
+  free (lck->data.dot.nfslock);
+}
 
-  if (!retries)
-    return EINVAL;
+static int
+lock_dotlock (mu_locker_t lck, enum mu_locker_mode mode)
+{
+  int rc;
+  char *host = NULL;
+  time_t now;
+  int err = 0;
+  int fd;
+    
+  if (lck->data.dot.nfslock)
+    {
+      unlink (lck->data.dot.nfslock);
+      free (lck->data.dot.nfslock);
+      lck->data.dot.nfslock = NULL;
+    }
 
-  *retries = locker->retries;
+  expire_stale_lock (lck);
 
+  /* build the NFS hitching-post to the lock file */
+
+  rc = mu_get_host_name (&host);
+  if (rc)
+    return rc;
+  time (&now);
+  rc = mu_asprintf (&lck->data.dot.nfslock,
+		    "%s.%lu.%lu.%s",
+		    lck->file,
+		    (unsigned long) getpid (),
+		    (unsigned long) now, host);
+  free (host);
+  if (rc)
+    return rc;
+  
+  fd = open (lck->data.dot.nfslock,
+	     O_WRONLY | O_CREAT | O_EXCL, MU_LOCKFILE_MODE);
+  if (fd == -1)
+    {
+      if (errno == EEXIST)
+	return EAGAIN;
+      else
+	return errno;
+    }
+  close (fd);
+  
+  /* Try to link to the lockfile. */
+  if (link (lck->data.dot.nfslock, lck->data.dot.dotlock) == -1)
+    {
+      unlink (lck->data.dot.nfslock);
+      if (errno == EEXIST)
+	return EAGAIN;
+      return errno;
+    }
+
+  if ((fd = open (lck->data.dot.dotlock, O_RDWR)) == -1)
+    {
+      unlink (lck->data.dot.nfslock);
+      return errno;
+    }
+  
+  err = stat_check (lck->data.dot.nfslock, fd, 2);
+  if (err)
+    {
+      unlink (lck->data.dot.nfslock);
+      if (err == EINVAL)
+	return MU_ERR_LOCK_BAD_LOCK;
+      return errno;
+    }
+
+  unlink (lck->data.dot.nfslock);
+
+  if (lck->flags & MU_LOCKER_FLAG_CHECK_PID)
+    {
+      char buf[16];
+      sprintf (buf, "%ld", (long) getpid ());
+      write (fd, buf, strlen (buf));
+    }
+  close (fd);
   return 0;
 }
 
-int
-mu_locker_get_retry_sleep (mu_locker_t locker, int *retry_sleep)
+static int
+unlock_dotlock (mu_locker_t lck)
 {
-  if (!locker)
-    return MU_ERR_LOCKER_NULL;
+  if (unlink (lck->data.dot.dotlock) == -1)
+    {
+      int err = errno;
+      if (err == ENOENT)
+	{
+	  lck->refcnt = 0; /*FIXME?*/
+	  err = MU_ERR_LOCK_NOT_HELD;
+	  return err;
+	}
+      return err;
+    }
+  return 0;
+}
+
+/* Kernel locking */
+static int
+lock_kernel (mu_locker_t lck, enum mu_locker_mode mode)
+{
+  int fd;
+  struct flock fl;
 
-  if (!retry_sleep)
-    return EINVAL;
+  switch (mode)
+    {
+    case mu_lck_shr:
+    case mu_lck_opt:
+      mode = O_RDONLY;
+      fl.l_type = F_RDLCK;
+      break;
 
-  *retry_sleep = locker->retry_sleep;
+    case mu_lck_exc:
+      mode = O_RDWR;
+      fl.l_type = F_WRLCK;
+      break;
 
+    default:
+      return EINVAL;
+    }
+  
+  fd = open (lck->file, O_RDWR);
+  if (fd == -1)
+    return errno;
+  lck->data.fd = fd;
+  
+  fl.l_whence = SEEK_SET;
+  fl.l_start = 0;
+  fl.l_len = 0; /* Lock entire file */
+  if (fcntl (fd, F_SETLK, &fl))
+    {
+#ifdef EACCES      
+      if (errno == EACCES)
+	return EAGAIN;
+#endif
+      if (errno == EAGAIN)
+	return EAGAIN;
+      return errno;
+    }
   return 0;
 }
 
-int
-mu_locker_create (mu_locker_t *plocker, const char *fname, int flags)
+static int
+unlock_kernel (mu_locker_t lck)
 {
-  unsigned type;
-  mu_locker_t l;
+  struct flock fl;
+
+  fl.l_type = F_UNLCK;
+  fl.l_whence = SEEK_SET;
+  fl.l_start = 0;
+  fl.l_len = 0; /* Unlock entire file */
+  if (fcntl (lck->data.fd, F_SETLK, &fl))
+    {
+#ifdef EACCESS
+      if (errno == EACCESS)
+	return EAGAIN;
+#endif
+      if (errno == EAGAIN)
+	return EAGAIN;
+      return errno;
+    }
+  close (lck->data.fd);
+  lck->data.fd = -1;
+  return 0;
+}
+
+/* External locking */
+static int
+init_external (mu_locker_t lck, mu_locker_hints_t *hints)
+{
+  char const *ext_locker = hints->flags & MU_LOCKER_FLAG_EXT_LOCKER
+                              ? hints->ext_locker
+                              : MU_LOCKER_DEFAULT_EXT_LOCKER;
+  if (!(lck->data.external.name = strdup (ext_locker)))
+    return ENOMEM;
+  return 0;
+}
+
+static void
+destroy_external (mu_locker_t lck)
+{
+  free (lck->data.external.name);
+}
+
+/*
+  Estimate 1 decimal digit per 3 bits, + 1 for round off.
+*/
+#define DEC_DIGS_PER_INT (sizeof(int) * 8 / 3 + 1)
+
+static int
+external_locker (mu_locker_t lck, int lock)
+{
+  int err = 0;
+  char *av[6];
+  int ac = 0;
+  char aforce[3 + DEC_DIGS_PER_INT + 1];
+  char aretry[3 + DEC_DIGS_PER_INT + 1];
+  int status;
+
+  av[ac++] = lck->data.external.name;
+
+  if (lck->flags & MU_LOCKER_FLAG_EXPIRE_TIME)
+    {
+      snprintf (aforce, sizeof (aforce), "-f%d", lck->expire_time);
+      aforce[sizeof (aforce) - 1] = 0;
+      av[ac++] = aforce;
+    }
+  
+  if (lck->flags & MU_LOCKER_FLAG_RETRY)
+    {
+      snprintf (aretry, sizeof (aretry), "-r%d", lck->retry_count);
+      aretry[sizeof (aretry) - 1] = 0;
+      av[ac++] = aretry;
+    }
+
+  if (!lock)
+    av[ac++] = "-u";
+
+  av[ac++] = lck->file;
+
+  av[ac++] = NULL;
+
+  if ((err = mu_spawnvp (av[0], av, &status)))
+    {
+      perror ("mu_spawnvp");
+      fprintf (stderr, "errcode %d\n", err);
+      return err;
+    }
+  
+  if (!WIFEXITED (status))
+    {
+      err = MU_ERR_LOCK_EXT_KILLED;
+    }
+  else
+    {
+      switch (WEXITSTATUS (status))
+	{
+	case 127:
+	  err = MU_ERR_LOCK_EXT_FAIL;
+	  break;
+	  
+	case MU_DL_EX_OK:
+	  err = 0;
+	  lck->refcnt = lock;
+	  break;
+	  
+	case MU_DL_EX_NEXIST:
+	  err = MU_ERR_LOCK_NOT_HELD;
+	  break;
+	  
+	case MU_DL_EX_EXIST:
+	  err = MU_ERR_LOCK_CONFLICT;
+	  break;
+	  
+	case MU_DL_EX_PERM:
+	  err = EPERM;
+	  break;
+	  
+	default:
+	case MU_DL_EX_ERROR:
+	  err = MU_ERR_LOCK_EXT_ERR;
+	  break;
+	}
+    }
+
+  return err;
+}
+
+static int
+lock_external (mu_locker_t lck, enum mu_locker_mode mode)
+{
+  return external_locker (lck, 1);
+}
+
+static int
+unlock_external (mu_locker_t lck)
+{
+  return external_locker (lck, 0);
+}
+
+mu_locker_hints_t mu_locker_defaults = {
+  .flags = MU_LOCKER_FLAG_TYPE | MU_LOCKER_FLAG_RETRY,
+  .type  = MU_LOCKER_TYPE_DEFAULT,
+  .retry_count = MU_LOCKER_DEFAULT_RETRY_COUNT,
+  .retry_sleep = MU_LOCKER_DEFAULT_RETRY_SLEEP
+};
+
+struct locker_tab
+{
+  int (*init) (mu_locker_t, mu_locker_hints_t *);
+  void (*destroy) (mu_locker_t);
+  int (*prelock) (mu_locker_t); 
+  int (*lock) (mu_locker_t, enum mu_locker_mode);
+  int (*unlock) (mu_locker_t);
+};
+
+static struct locker_tab locker_tab[] = {
+  /* MU_LOCKER_TYPE_DOTLOCK */
+  { init_dotlock, destroy_dotlock, prelock_common,
+    lock_dotlock, unlock_dotlock },
+  /* MU_LOCKER_TYPE_EXTERNAL */
+  { init_external, destroy_external, prelock_common,
+    lock_external, unlock_external },
+  /* MU_LOCKER_TYPE_KERNEL */
+  { NULL, NULL, NULL, lock_kernel, unlock_kernel },
+  /* MU_LOCKER_TYPE_NULL */
+  { NULL, NULL, NULL, NULL, NULL }
+};
+
+#define MU_LOCKER_NTYPES (sizeof (locker_tab) / sizeof (locker_tab[0]))
+
+int
+mu_locker_create_ext (mu_locker_t *plocker, const char *fname,
+		  mu_locker_hints_t *user_hints)
+{
+  mu_locker_t lck;
   char *filename;
   int err = 0;
-
+  mu_locker_hints_t hints;
+  
   if (plocker == NULL)
     return MU_ERR_OUT_PTR_NULL;
 
@@ -488,50 +611,88 @@ mu_locker_create (mu_locker_t *plocker, const char *fname, int flags)
 	return err;
     }
 
-  l = calloc (1, sizeof (*l));
+  lck = calloc (1, sizeof (*lck));
 
-  if (l == NULL)
+  if (lck == NULL)
     {
       free (filename);
       return ENOMEM;
     }
   
-  l->file = filename;
-  
-  if (l->file == NULL)
+  lck->file = filename;
+
+  hints = user_hints ? *user_hints : mu_locker_defaults;
+  if ((hints.flags & MU_LOCKER_FLAG_TYPE) == 0)
     {
-      free (l);
-      return ENOMEM;
+      hints.flags |= MU_LOCKER_FLAG_TYPE;
+      hints.type = MU_LOCKER_TYPE_DEFAULT;
     }
-
-  if (strcmp (filename, "/dev/null") == 0)
-    l->flags = MU_LOCKER_NULL;
-  else if (flags)
-    l->flags = flags;
-  else
-    l->flags = mu_locker_default_flags;
-
-  l->expire_time = mu_locker_expire_timeout;
-  l->retries = mu_locker_retry_count;
-  l->retry_sleep = mu_locker_retry_timeout;
-
-  type = MU_LOCKER_TYPE (l);
-
-  if (type >= MU_LOCKER_NTYPES)
-    {
-      free (l->file);
-      return EINVAL;
-    }
-
-  /* Initialize locker-type-specific data */
-  err = locker_tab[type].init ? locker_tab[type].init (l) : 0;
+  err = mu_locker_modify (lck, &hints);
   if (err)
+    mu_locker_destroy (&lck);
+  else
+    *plocker = lck;
+
+  return err;
+}
+
+int
+mu_locker_modify (mu_locker_t lck, mu_locker_hints_t *hints)
+{
+  if (!lck || !hints)
+    return EINVAL;
+  
+  if (hints->flags & MU_LOCKER_FLAG_TYPE)
     {
-      mu_locker_destroy (&l);
-      return err;
+      struct _mu_locker new_lck;
+      int type;
+      
+      if (hints->type < 0 || hints->type >= MU_LOCKER_NTYPES)
+	return EINVAL;
+
+      if (lck->flags == 0 || hints->type != lck->type)
+	{
+	  if (strcmp (lck->file, "/dev/null") == 0)
+	    type = MU_LOCKER_TYPE_NULL;
+	  else
+	    type = hints->type;
+	  
+	  memset (&new_lck, 0, sizeof (new_lck));
+	  new_lck.type = type;
+	  new_lck.file = lck->file;
+	  if (locker_tab[type].init)
+	    {
+	      int rc = locker_tab[type].init (&new_lck, hints);
+	      if (rc)
+		{
+		  if (locker_tab[type].destroy)
+		    locker_tab[type].destroy (&new_lck);
+		  return rc;
+		}
+	    }
+	  
+	  if (lck->flags != 0 && locker_tab[lck->type].destroy)
+	    locker_tab[lck->type].destroy (lck);
+	  
+	  *lck = new_lck;
+	}
     }
 
-  *plocker = l;
+  if (hints->flags & MU_LOCKER_FLAG_RETRY)
+    {
+      lck->retry_count = hints->retry_count > 0
+	                     ? hints->retry_count
+	                     : MU_LOCKER_DEFAULT_RETRY_COUNT;
+      lck->retry_sleep = hints->retry_sleep > 0
+	                     ? hints->retry_sleep
+	                     : MU_LOCKER_DEFAULT_RETRY_SLEEP;
+    }
+
+  if (hints->flags & MU_LOCKER_FLAG_EXPIRE_TIME)
+    lck->expire_time = hints->expire_time > 0 ? hints->expire_time
+                                              : MU_LOCKER_DEFAULT_EXPIRE_TIME;
+
+  lck->flags = hints->flags;
 
   return 0;
 }
@@ -541,51 +702,47 @@ mu_locker_destroy (mu_locker_t *plocker)
 {
   if (plocker && *plocker)
     {
-      unsigned type = MU_LOCKER_TYPE (*plocker);
-      if (type < MU_LOCKER_NTYPES)
-	{
-	  if (locker_tab[type].destroy)
-	    locker_tab[type].destroy (*plocker);
-	  free ((*plocker)->file);
-	  free (*plocker);
-	  *plocker = NULL;
-	}
+      mu_locker_t lck = *plocker;
+      if (locker_tab[lck->type].destroy)
+	locker_tab[lck->type].destroy (lck);
+      free (lck->file);
+      free (lck);
+      *plocker = NULL;
     }
 }
 
 int
-mu_locker_lock_mode (mu_locker_t lock, enum mu_locker_mode mode)
+mu_locker_lock_mode (mu_locker_t lck, enum mu_locker_mode mode)
 {
   int rc;
-  unsigned type;
   unsigned retries = 1;
   
-  if (lock == NULL || (type = MU_LOCKER_TYPE (lock)) >= MU_LOCKER_NTYPES)
+  if (!lck || lck->type < 0 || lck->type >= MU_LOCKER_NTYPES)
     return EINVAL;
 
-  if (locker_tab[type].prelock && (rc = locker_tab[type].prelock (lock)))
+  if (locker_tab[lck->type].prelock && (rc = locker_tab[lck->type].prelock (lck)))
     return rc;
   
   /* Is the lock already applied? */
-  if (lock->refcnt > 0)
+  if (lck->refcnt > 0)
     {
-      lock->refcnt++;
-      if (mode == lock->mode)
+      lck->refcnt++;
+      if (mode == lck->mode)
 	return 0;
     }
 
-  lock->mode = mode;
+  lck->mode = mode;
 
-  if (lock->flags & MU_LOCKER_RETRY)
-    retries = lock->retries;
+  if (lck->flags & MU_LOCKER_FLAG_RETRY)
+    retries = lck->retry_count;
 
-  if (locker_tab[type].lock)
+  if (locker_tab[lck->type].lock)
     {
       while (retries--)
 	{
-	  rc = locker_tab[type].lock (lock, mode);
+	  rc = locker_tab[lck->type].lock (lck, mode);
 	  if (rc == EAGAIN && retries)
-	    sleep (lock->retry_sleep);
+	    sleep (lck->retry_sleep);
 	  else
 	    break;
 	}
@@ -597,38 +754,36 @@ mu_locker_lock_mode (mu_locker_t lock, enum mu_locker_mode mode)
     rc = 0;
 
   if (rc == 0)
-    lock->refcnt++;
+    lck->refcnt++;
   
   return rc;
 }
 
 int
-mu_locker_lock (mu_locker_t lock)
+mu_locker_lock (mu_locker_t lck)
 {
-  return mu_locker_lock_mode (lock, mu_lck_exc);
+  return mu_locker_lock_mode (lck, mu_lck_exc);
 }
 
 int
-mu_locker_unlock (mu_locker_t lock)
+mu_locker_unlock (mu_locker_t lck)
 {
   int rc = 0;
-  unsigned type;
   
-  if (!lock)
+  if (!lck)
     return MU_ERR_LOCKER_NULL;
 
-  if (lock->refcnt == 0)
+  if (lck->refcnt == 0)
     return MU_ERR_LOCK_NOT_HELD;
 
-  if ((rc = check_file_permissions (lock->file)))
+  if ((rc = check_file_permissions (lck->file)))
     return rc;
 
-  if (--lock->refcnt > 0)
+  if (--lck->refcnt > 0)
     return 0;
 
-  type = MU_LOCKER_TYPE (lock);
-  if (locker_tab[type].unlock)
-    rc = locker_tab[type].unlock (lock);
+  if (locker_tab[lck->type].unlock)
+    rc = locker_tab[lck->type].unlock (lck);
   else
     rc = 0;
   
@@ -636,408 +791,319 @@ mu_locker_unlock (mu_locker_t lock)
 }
 
 int
-mu_locker_remove_lock (mu_locker_t lock)
+mu_locker_remove_lock (mu_locker_t lck)
 {
-  if (!lock)
+  if (!lck)
     return MU_ERR_LOCKER_NULL;
 
   /* Force the reference count to 1 to unlock the file. */
-  lock->refcnt = 1;
-  return mu_locker_unlock (lock);
+  lck->refcnt = 1;
+  return mu_locker_unlock (lck);
 }
-
 
-#define DOTLOCK_SUFFIX ".lock"
-
-/* expire a stale lock (if MU_LOCKER_PID or MU_LOCKER_TIME) */
-static void
-expire_stale_lock (mu_locker_t lock)
+int
+mu_locker_touchlock (mu_locker_t lck)
 {
-  int stale = 0;
-  int fd = open (lock->data.dot.dotlock, O_RDONLY);
-  if (fd == -1)
-    return;
+  if (!lck)
+    return MU_ERR_LOCKER_NULL;
 
-  /* Check to see if this process is still running.  */
-  if (lock->flags & MU_LOCKER_PID)
-    {
-      char buf[16];
-      pid_t pid;
-      int nread = read (fd, buf, sizeof (buf) - 1);
-      if (nread > 0)
-	{
-	  buf[nread] = '\0';
-	  pid = strtol (buf, NULL, 10);
-	  if (pid > 0)
-	    {
-	      /* Process is gone so we try to remove the lock. */
-	      if (kill (pid, 0) == -1)
-		stale = 1;
-	    }
-	  else
-	    stale = 1;		/* Corrupted file, remove the lock. */
-	}
-    }
+  if (lck->type != MU_LOCKER_TYPE_DOTLOCK)
+    return 0;
   
-  /* Check to see if the lock expired.  */
-  if (lock->flags & MU_LOCKER_TIME)
-    {
-      struct stat stbuf;
+  if (lck->refcnt > 0)
+    return utime (lck->data.dot.dotlock, NULL);
 
-      fstat (fd, &stbuf);
-      /* The lock has expired. */
-      if ((time (NULL) - stbuf.st_mtime) > lock->expire_time)
-	stale = 1;
-    }
-
-  close (fd);
-  if (stale)
-    unlink (lock->data.dot.dotlock);
+  return MU_ERR_LOCK_NOT_HELD;
 }
-
-static int
-init_dotlock (mu_locker_t locker)
+
+int
+mu_locker_get_hints (mu_locker_t lck, mu_locker_hints_t *hints)
 {
-  char *tmp, *p;
+  if (!lck || !hints)
+    return EINVAL;
 
-  /* Make sure the spool directory is writable */
-  tmp = strdup (locker->file);
-  if (!tmp)
-    return ENOMEM;
+  if (hints->flags & MU_LOCKER_FLAG_TYPE)
+    hints->type = lck->type;
 
-  strcpy (tmp, locker->file);
-  p = strrchr (tmp, '/');
-  if (!p)
+  hints->flags &= ~(lck->flags & hints->flags);
+    
+  if (hints->flags & MU_LOCKER_FLAG_RETRY)
     {
-      free (tmp);
-      tmp = strdup (".");
-      if (!tmp)
-	return ENOMEM;
+      hints->retry_count = lck->retry_count;
+      hints->retry_sleep = lck->retry_sleep;
     }
-  else
-    *p = 0; 
-
-  if (access (tmp, W_OK))
+  if (hints->flags & MU_LOCKER_FLAG_EXPIRE_TIME)
+    hints->expire_time = lck->expire_time;
+  if (hints->flags & MU_LOCKER_FLAG_EXT_LOCKER)
     {
-      /* Fallback to kernel locking */
-      free (tmp);
-      return mu_locker_set_flags (locker,
-			   MU_LOCKER_KERNEL|MU_LOCKER_OPTIONS(locker->flags));
+      if (lck->type == MU_LOCKER_TYPE_EXTERNAL)
+	{
+	  if ((hints->ext_locker = strdup (lck->data.external.name)) == NULL)
+	    return errno;
+	}
+      else
+	hints->ext_locker = NULL;
     }
-  
-  free (tmp);
-  
-  locker->data.dot.dotlock = malloc (strlen (locker->file)
-				     + sizeof (DOTLOCK_SUFFIX));
-  
-  if (!locker->data.dot.dotlock)
-    return ENOMEM;
-  strcpy (locker->data.dot.dotlock, locker->file);
-  strcat (locker->data.dot.dotlock, DOTLOCK_SUFFIX);
 
   return 0;
 }
+
+/* Deprecated interfaces */
 
-static void
-destroy_dotlock (mu_locker_t locker)
+int
+mu_locker_create (mu_locker_t *lck, const char *filename, int flags)
 {
-  free (locker->data.dot.dotlock);
-  free (locker->data.dot.nfslock);
+  mu_locker_hints_t hints, *hp;
+
+  if (flags == 0)
+    hp = NULL;
+  else
+    {
+      hints.type  = MU_LOCKER_FLAG_TO_TYPE(flags);
+      hints.flags = flags & MU_LOCKER_OPTION_MASK;
+      hp = &hints;
+    }
+  return mu_locker_create_ext (lck, filename, hp);
+}
+
+int
+mu_locker_set_default_flags (int flags, enum mu_locker_set_mode mode)
+{
+  int type = MU_LOCKER_FLAG_TO_TYPE (flags);
+  flags &= MU_LOCKER_OPTION_MASK;
+  switch (mode)
+    {
+    case mu_locker_assign:
+      mu_locker_defaults.flags = flags;
+      mu_locker_defaults.type = type;
+      break;
+      
+    case mu_locker_set_bit:
+      mu_locker_defaults.flags |= flags;
+      mu_locker_defaults.type = type;
+      break;
+      
+    case mu_locker_clear_bit:
+      mu_locker_defaults.flags &= flags;
+      if (type != MU_LOCKER_TYPE_DOTLOCK)
+	mu_locker_defaults.type = MU_LOCKER_TYPE_DOTLOCK;	
+      break;
+    }
+  mu_locker_defaults.flags |= MU_LOCKER_FLAG_TYPE;
+  return 0;
+}
+
+void
+mu_locker_set_default_retry_timeout (time_t to)
+{
+  mu_locker_defaults.retry_sleep = to;
+}
+
+void
+mu_locker_set_default_retry_count (size_t n)
+{
+  mu_locker_defaults.retry_count = n;
+}
+
+void
+mu_locker_set_default_expire_timeout (time_t t)
+{
+  mu_locker_defaults.expire_time = t;
+}
+
+int
+mu_locker_set_default_external_program (char const *path)
+{
+  char *p = strdup (path);
+  if (!p)
+    return errno;
+  free (mu_locker_defaults.ext_locker);
+  mu_locker_defaults.ext_locker = p;
+  return 0;
 }
 
 static int
-lock_dotlock (mu_locker_t locker, enum mu_locker_mode mode)
+legacy_locker_mod_flags (mu_locker_t lck, int flags,
+			 enum mu_locker_set_mode mode)
+{
+  mu_locker_hints_t hints;
+  int type = MU_LOCKER_FLAG_TO_TYPE (flags);
+  
+  flags &= MU_LOCKER_OPTION_MASK;
+  
+  switch (mode)
+    {
+    case mu_locker_assign:
+      hints.flags = flags | MU_LOCKER_FLAG_TYPE;
+      hints.type = type;
+      break;
+      
+    case mu_locker_set_bit:
+      hints.flags = lck->flags | flags | MU_LOCKER_FLAG_TYPE;
+      hints.type = type;      
+      break;
+      
+    case mu_locker_clear_bit:
+      hints.flags = lck->flags & ~flags;
+      if (type != MU_LOCKER_TYPE_DOTLOCK)
+	{
+	  hints.flags |= MU_LOCKER_FLAG_TYPE;
+	  hints.type = MU_LOCKER_TYPE_DOTLOCK;	
+	}
+      break;
+    }
+  return mu_locker_modify (lck, &hints);
+}
+
+int
+mu_locker_set_flags (mu_locker_t lck, int flags)
+{
+  return legacy_locker_mod_flags (lck, flags, mu_locker_assign);
+}
+
+int
+mu_locker_mod_flags (mu_locker_t lck, int flags,
+		     enum mu_locker_set_mode mode)
+{
+  return legacy_locker_mod_flags (lck, flags, mode);
+}
+
+int
+mu_locker_set_expire_time (mu_locker_t lck, int v)
+{
+  mu_locker_hints_t hints;
+
+  if (v < 0)
+    return EINVAL;
+  hints.flags = MU_LOCKER_FLAG_EXPIRE_TIME;
+  hints.expire_time = v;
+  return mu_locker_modify (lck, &hints);
+}
+
+int
+mu_locker_set_retries (mu_locker_t lck, int v)
+{
+  mu_locker_hints_t hints;
+
+  if (v < 0)
+    return EINVAL;
+  hints.flags = MU_LOCKER_FLAG_RETRY;
+  hints.retry_count = v;
+  return mu_locker_modify (lck, &hints);
+}
+
+int
+mu_locker_set_retry_sleep (mu_locker_t lck, int v)
+{
+  mu_locker_hints_t hints;
+
+  if (v < 0)
+    return EINVAL;
+  hints.flags = MU_LOCKER_FLAG_RETRY;
+  hints.retry_sleep = v;
+  return mu_locker_modify (lck, &hints);
+}
+  
+int
+mu_locker_set_external (mu_locker_t lck, const char *program)
+{
+  mu_locker_hints_t hints;
+
+  if (lck->type != MU_LOCKER_TYPE_EXTERNAL)
+    return EINVAL;
+  
+  if (!program)
+    program = MU_LOCKER_DEFAULT_EXT_LOCKER;
+
+  hints.flags = MU_LOCKER_FLAG_EXT_LOCKER;
+  hints.ext_locker = (char*) program;
+  return mu_locker_modify (lck, &hints);
+}
+
+int
+mu_locker_get_flags (mu_locker_t lck, int *flags)
+{
+  mu_locker_hints_t hints;
+  int rc;
+
+  if (!flags)
+    return EINVAL;
+  
+  hints.flags = MU_LOCKER_FLAGS_ALL;
+  if ((rc = mu_locker_get_hints (lck, &hints)) != 0)
+    return rc;
+  *flags = hints.flags | MU_LOCKER_TYPE_TO_FLAG (hints.type);
+  return 0;
+}
+  
+int
+mu_locker_get_expire_time (mu_locker_t lck, int *pv)
 {
   int rc;
-  char *host = NULL;
-  time_t now;
-  int err = 0;
-  int fd;
-    
-  if (locker->data.dot.nfslock)
-    {
-      unlink (locker->data.dot.nfslock);
-      free (locker->data.dot.nfslock);
-      locker->data.dot.nfslock = NULL;
-    }
+  mu_locker_hints_t hints;
 
-  expire_stale_lock (locker);
+  if (!pv)
+    return EINVAL;
 
-  /* build the NFS hitching-post to the lock file */
-
-  rc = mu_get_host_name (&host);
-  if (rc)
+  hints.flags = MU_LOCKER_FLAG_EXPIRE_TIME;
+  if ((rc = mu_locker_get_hints (lck, &hints)) != 0)
     return rc;
-  time (&now);
-  rc = mu_asprintf (&locker->data.dot.nfslock,
-		    "%s.%lu.%lu.%s",
-		    locker->file,
-		    (unsigned long) getpid (),
-		    (unsigned long) now, host);
-  free (host);
-  if (rc)
-    return rc;
-  
-  fd = open (locker->data.dot.nfslock,
-	     O_WRONLY | O_CREAT | O_EXCL, LOCKFILE_ATTR);
-  if (fd == -1)
+  if ((hints.flags & MU_LOCKER_FLAG_EXPIRE_TIME) == 0)
+    *pv = 0;
+  else
     {
-      if (errno == EEXIST)
-	return EAGAIN;
-      else
-	return errno;
-    }
-  close (fd);
-  
-  /* Try to link to the lockfile. */
-  if (link (locker->data.dot.nfslock, locker->data.dot.dotlock) == -1)
-    {
-      unlink (locker->data.dot.nfslock);
-      if (errno == EEXIST)
-	return EAGAIN;
-      return errno;
-    }
-
-  if ((fd = open (locker->data.dot.dotlock, O_RDWR)) == -1)
-    {
-      unlink (locker->data.dot.nfslock);
-      return errno;
-    }
-  
-  err = stat_check (locker->data.dot.nfslock, fd, 2);
-  if (err)
-    {
-      unlink (locker->data.dot.nfslock);
-      if (err == EINVAL)
-	return MU_ERR_LOCK_BAD_LOCK;
-      return errno;
-    }
-
-  unlink (locker->data.dot.nfslock);
-
-  if (locker->flags & MU_LOCKER_PID)
-    {
-      char buf[16];
-      sprintf (buf, "%ld", (long) getpid ());
-      write (fd, buf, strlen (buf));
-    }
-  close (fd);
-  return 0;
-}
-
-static int
-unlock_dotlock (mu_locker_t locker)
-{
-  if (unlink (locker->data.dot.dotlock) == -1)
-    {
-      int err = errno;
-      if (err == ENOENT)
-	{
-	  locker->refcnt = 0; /*FIXME?*/
-	  err = MU_ERR_LOCK_NOT_HELD;
-	  return err;
-	}
-      return err;
+      if (hints.expire_time > INT_MAX)
+	return ERANGE;
+      *pv = hints.expire_time;
     }
   return 0;
 }
 
 int
-mu_locker_touchlock (mu_locker_t lock)
+mu_locker_get_retries (mu_locker_t lck, int *pv)
 {
-  if (!lock)
-    return MU_ERR_LOCKER_NULL;
+  int rc;
+  mu_locker_hints_t hints;
 
-  if (MU_LOCKER_TYPE (lock) != MU_LOCKER_TYPE_DOTLOCK)
-    return 0;
-  
-  if (lock->refcnt > 0)
-    return utime (lock->data.dot.dotlock, NULL);
+  if (!pv)
+    return EINVAL;
 
-  return MU_ERR_LOCK_NOT_HELD;
-}
-
-
-/* Kernel locking */
-static int
-init_kernel (mu_locker_t locker)
-{
-  return 0;
-}
-
-static int
-lock_kernel (mu_locker_t locker, enum mu_locker_mode mode)
-{
-  int fd;
-  struct flock fl;
-
-  switch (mode)
-    {
-    case mu_lck_shr:
-    case mu_lck_opt:
-      mode = O_RDONLY;
-      fl.l_type = F_RDLCK;
-      break;
-
-    case mu_lck_exc:
-      mode = O_RDWR;
-      fl.l_type = F_WRLCK;
-      break;
-
-    default:
-      return EINVAL;
-    }
-  
-  fd = open (locker->file, O_RDWR);
-  if (fd == -1)
-    return errno;
-  locker->data.kernel.fd = fd;
-  
-  fl.l_whence = SEEK_SET;
-  fl.l_start = 0;
-  fl.l_len = 0; /* Lock entire file */
-  if (fcntl (fd, F_SETLK, &fl))
-    {
-#ifdef EACCES      
-      if (errno == EACCES)
-	return EAGAIN;
-#endif
-      if (errno == EAGAIN)
-	return EAGAIN;
-      return errno;
-    }
-  return 0;
-}
-
-static int
-unlock_kernel (mu_locker_t locker)
-{
-  struct flock fl;
-
-  fl.l_type = F_UNLCK;
-  fl.l_whence = SEEK_SET;
-  fl.l_start = 0;
-  fl.l_len = 0; /* Unlock entire file */
-  if (fcntl (locker->data.kernel.fd, F_SETLK, &fl))
-    {
-#ifdef EACCESS
-      if (errno == EACCESS)
-	return EAGAIN;
-#endif
-      if (errno == EAGAIN)
-	return EAGAIN;
-      return errno;
-    }
-  close (locker->data.kernel.fd);
-  return 0;
-}
-
-static int
-init_external (mu_locker_t locker)
-{
-  if (!(locker->data.external.name = strdup (mu_locker_external_program ?
-					     mu_locker_external_program :
-					     MU_LOCKER_EXTERNAL_PROGRAM)))
-    return ENOMEM;
-  return 0;
-}
-
-static void
-destroy_external (mu_locker_t locker)
-{
-  free (locker->data.external.name);
-}
-
-/*
-  Estimate 1 decimal digit per 3 bits, + 1 for round off.
-*/
-#define DEC_DIGS_PER_INT (sizeof(int) * 8 / 3 + 1)
-
-static int
-external_locker (mu_locker_t l, int lock)
-{
-  int err = 0;
-  char *av[6];
-  int ac = 0;
-  char aforce[3 + DEC_DIGS_PER_INT + 1];
-  char aretry[3 + DEC_DIGS_PER_INT + 1];
-  int status = 0;
-
-  av[ac++] = l->data.external.name ?
-                   l->data.external.name : MU_LOCKER_EXTERNAL_PROGRAM;
-
-  if (l->flags & MU_LOCKER_TIME)
-    {
-      snprintf (aforce, sizeof (aforce), "-f%d", l->expire_time);
-      aforce[sizeof (aforce) - 1] = 0;
-      av[ac++] = aforce;
-    }
-  
-  if (l->flags & MU_LOCKER_RETRY)
-    {
-      snprintf (aretry, sizeof (aretry), "-r%d", l->retries);
-      aretry[sizeof (aretry) - 1] = 0;
-      av[ac++] = aretry;
-    }
-
-  if (!lock)
-    av[ac++] = "-u";
-
-  av[ac++] = l->file;
-
-  av[ac++] = NULL;
-
-  if ((err = mu_spawnvp (av[0], av, &status)))
-    return err;
-
-  if (!WIFEXITED (status))
-    {
-      err = MU_ERR_LOCK_EXT_KILLED;
-    }
+  hints.flags = MU_LOCKER_FLAG_RETRY;
+  if ((rc = mu_locker_get_hints (lck, &hints)) != 0)
+    return rc;
+  if ((hints.flags & MU_LOCKER_FLAG_RETRY) == 0)
+    *pv = 0;
   else
     {
-      switch (WEXITSTATUS (status))
-	{
-	case 127:
-	  err = MU_ERR_LOCK_EXT_FAIL;
-	  break;
-	  
-	case MU_DL_EX_OK:
-	  err = 0;
-	  l->refcnt = lock;
-	  break;
-	  
-	case MU_DL_EX_NEXIST:
-	  err = MU_ERR_LOCK_NOT_HELD;
-	  break;
-	  
-	case MU_DL_EX_EXIST:
-	  err = MU_ERR_LOCK_CONFLICT;
-	  break;
-	  
-	case MU_DL_EX_PERM:
-	  err = EPERM;
-	  break;
-	  
-	default:
-	case MU_DL_EX_ERROR:
-	  err = MU_ERR_LOCK_EXT_ERR;
-	  break;
-	}
+      if (hints.expire_time > INT_MAX)
+	return ERANGE;
+      *pv = hints.retry_count;
     }
-
-  return err;
+  return 0;
 }
 
-static int
-lock_external (mu_locker_t locker, enum mu_locker_mode mode)
+int
+mu_locker_get_retry_sleep (mu_locker_t lck, int *pv)
 {
-  return external_locker (locker, 1);
+  int rc;
+  mu_locker_hints_t hints;
+
+  if (!pv)
+    return EINVAL;
+
+  hints.flags = MU_LOCKER_FLAG_RETRY;
+  if ((rc = mu_locker_get_hints (lck, &hints)) != 0)
+    return rc;
+  if ((hints.flags & MU_LOCKER_FLAG_RETRY) == 0)
+    *pv = 0;
+  else
+    {
+      if (hints.expire_time > INT_MAX)
+	return ERANGE;
+      *pv = hints.retry_sleep;
+    }
+  return 0;
 }
 
-static int
-unlock_external (mu_locker_t locker)
-{
-  return external_locker (locker, 0);
-}
-
+/* mu_locker_get_external was never implemented */  
+  

@@ -307,10 +307,9 @@ static struct mu_cfg_param mailbox_cfg[] = {
 static int
 cb_locker_flags (void *data, mu_config_value_t *val)
 {
-  int flags = 0;
   char const *s;
   static struct mu_kwd flag_tab[] = {
-    { "external-locker", 'E' },
+    { "type external",   'E' },
     { "retry-count",     'R' },
     { "expire-timeout",  'T' },
     { "pid-check",       'P' },
@@ -334,7 +333,7 @@ cb_locker_flags (void *data, mu_config_value_t *val)
 	  mu_diag_output (MU_DIAG_WARNING,
 			  _("applying legacy flag %c, use %s instead"),
 			  *s, kw);
-	  flags |= MU_LOCKER_PID;
+	  mu_locker_defaults.flags |= MU_LOCKER_FLAG_CHECK_PID;
 	}
       else
 	{
@@ -345,13 +344,11 @@ cb_locker_flags (void *data, mu_config_value_t *val)
 			  *s, kw);
 	}
     }
-  if (flags)
-    mu_locker_set_default_flags (flags, mu_locker_assign);
   return 0;
 }
 
 static int
-cb_locker_retry_timeout (void *data, mu_config_value_t *val)
+cb_locker_retry_sleep (void *data, mu_config_value_t *val)
 {
   int rc;
   time_t t;
@@ -366,14 +363,21 @@ cb_locker_retry_timeout (void *data, mu_config_value_t *val)
 		mu_strerror (rc));
       free (errmsg);
     }
-  else if (t == 0)
-    mu_locker_set_default_flags (MU_LOCKER_RETRY, mu_locker_clear_bit);
   else
     {
-      mu_locker_set_default_retry_timeout (t);
-      mu_locker_set_default_flags (MU_LOCKER_RETRY, mu_locker_set_bit);
+      mu_locker_defaults.flags |= MU_LOCKER_FLAG_RETRY;
+      mu_locker_defaults.retry_sleep = t;
     }
   return 0;
+}
+
+static int
+cb_locker_retry_timeout (void *data, mu_config_value_t *val)
+{
+  mu_diag_output (MU_DIAG_WARNING,
+		  _("%s is deprecated, please use %s instead"),
+		  "retry-timeout", "retry-sleep");
+  return cb_locker_retry_sleep (data, val);
 }
 
 static int
@@ -393,11 +397,11 @@ cb_locker_retry_count (void *data, mu_config_value_t *val)
       free (errmsg);
     }
   else if (n == 0)
-    mu_locker_set_default_flags (MU_LOCKER_RETRY, mu_locker_clear_bit);
+    mu_locker_defaults.flags &= ~MU_LOCKER_FLAG_RETRY;
   else
     {
-      mu_locker_set_default_retry_count (n);
-      mu_locker_set_default_flags (MU_LOCKER_RETRY, mu_locker_set_bit);
+      mu_locker_defaults.flags |= MU_LOCKER_FLAG_RETRY;
+      mu_locker_defaults.retry_count = n;
     }
   return 0;
 }
@@ -419,12 +423,43 @@ cb_locker_expire_timeout (void *data, mu_config_value_t *val)
       free (errmsg);
     }
   else if (t == 0)
-    mu_locker_set_default_flags (MU_LOCKER_TIME, mu_locker_clear_bit);
+    mu_locker_defaults.flags &= ~MU_LOCKER_FLAG_EXPIRE_TIME;
   else
     {
-      mu_locker_set_default_expire_timeout (t);
-      mu_locker_set_default_flags (MU_LOCKER_TIME, mu_locker_set_bit);
+      mu_locker_defaults.flags |= MU_LOCKER_FLAG_EXPIRE_TIME;
+      mu_locker_defaults.expire_time = t;
     }
+  return 0;
+}
+
+static int
+cb_locker_type (void *data, mu_config_value_t *val)
+{
+  int t;
+  static struct mu_kwd ltab[] = {
+    { "dotlock",  MU_LOCKER_TYPE_DOTLOCK },
+    { "default",  MU_LOCKER_TYPE_DEFAULT },
+    { "external", MU_LOCKER_TYPE_EXTERNAL },
+    { "kernel",   MU_LOCKER_TYPE_KERNEL },
+    { "null",     MU_LOCKER_TYPE_NULL },
+    { NULL }
+  };
+
+  if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
+    return 1;
+
+  if (mu_kwd_xlat_name (ltab, val->v.string, &t))
+    {
+      mu_error (_("unrecognized locker type: %s"), val->v.string);
+      return 1;
+    }
+
+  free (mu_locker_defaults.ext_locker);
+  mu_locker_defaults.ext_locker = NULL;
+
+  mu_locker_defaults.type = t;
+  mu_locker_defaults.flags |= MU_LOCKER_FLAG_TYPE;
+      
   return 0;
 }
 
@@ -435,15 +470,11 @@ cb_locker_external (void *data, mu_config_value_t *val)
   
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
-  if (mu_str_to_c (val->v.string, mu_c_bool, &t, NULL) == 0 && t == 0)
-    {
-      mu_locker_set_default_flags (MU_LOCKER_EXTERNAL, mu_locker_clear_bit);
-    }
-  else
-    {
-      mu_locker_set_default_external_program (val->v.string);
-      mu_locker_set_default_flags (MU_LOCKER_EXTERNAL, mu_locker_set_bit);
-    }
+
+  free (mu_locker_defaults.ext_locker);
+  mu_locker_defaults.flags |= MU_LOCKER_FLAG_EXT_LOCKER;
+  mu_locker_defaults.ext_locker = strdup (val->v.string);
+
   return 0;
 }
 
@@ -459,22 +490,26 @@ cb_locker_pid_check (void *data, mu_config_value_t *val)
       mu_error ("%s", _("not a boolean"));
       return 1;
     }
-  mu_locker_set_default_flags (MU_LOCKER_PID,
-			       t ? mu_locker_set_bit : mu_locker_clear_bit);
+  if (t)
+    mu_locker_defaults.flags |= MU_LOCKER_FLAG_CHECK_PID;
+  else
+    mu_locker_defaults.flags &= ~MU_LOCKER_FLAG_CHECK_PID;
   return 0;
 }
   
 static struct mu_cfg_param locking_cfg[] = {
-  /* FIXME: Flags are superfluous. */
-  { "flags", mu_cfg_callback, NULL, 0, cb_locker_flags,
-    N_("Default locker flags (E=external, R=retry, T=time, P=pid)."),
-    N_("arg: string") },
-  { "retry-timeout", mu_cfg_callback, NULL, 0, cb_locker_retry_timeout,
-    N_("Set timeout for acquiring the lock."),
-    N_("arg: interval")},
+  { "type", mu_cfg_callback, NULL, 0, cb_locker_type,
+    N_("Set locker type."),
+    N_("type: default | dotlock | external | kernel | null") },
   { "retry-count", mu_cfg_callback, NULL, 0, cb_locker_retry_count,
     N_("Set the maximum number of times to retry acquiring the lock."),
     N_("arg: integer") },
+  { "retry-sleep", mu_cfg_callback, NULL, 0, cb_locker_retry_sleep,
+    N_("Set the delay between two successive locking attempts."),
+    N_("arg: interval")},
+  { "retry-timeout", mu_cfg_callback, NULL, 0, cb_locker_retry_timeout,
+    N_("Deprecated alias of retry-sleep.  Retained for backward compatibility."),
+    N_("arg: interval")},
   { "expire-timeout", mu_cfg_callback, NULL, 0, cb_locker_expire_timeout,
     N_("Expire locks older than this amount of time."),
     N_("arg: interval")},
@@ -484,6 +519,9 @@ static struct mu_cfg_param locking_cfg[] = {
   { "pid-check", mu_cfg_callback, NULL, 0, cb_locker_pid_check,
     N_("Check if PID of the lock owner is active."),
     N_("arg: bool") },
+  { "flags", mu_cfg_callback, NULL, 0, cb_locker_flags,
+    N_("Deprecated.  Retained for backward compatibility."),
+    N_("arg: string") },
   { NULL, }
 };
 

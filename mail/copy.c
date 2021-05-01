@@ -97,6 +97,10 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
   mu_stream_t ostr, mstr;
   mu_message_t msg;
   mu_locker_t locker;
+  mu_locker_hints_t hints = {
+    .flags = MU_LOCKER_FLAG_TYPE | MU_LOCKER_FLAG_RETRY,
+    .type = MU_LOCKER_TYPE_KERNEL
+  };
   mu_stream_stat_buffer stat;
 
   status = mu_file_stream_create (&ostr, filename,
@@ -108,8 +112,7 @@ append_to_file (char const *filename, msgset_t *msglist, int mark,
       return 1;
     }
 
-  status = mu_locker_create (&locker, filename,
-			     MU_LOCKER_KERNEL|MU_LOCKER_RETRY);
+  status = mu_locker_create_ext (&locker, filename, &hints);
   if (status)
     {
       mu_error (_("Cannot create locker %s: %s"),

@@ -28,7 +28,6 @@
 
 static const char *file;
 static int unlock;
-static int flags;
 static unsigned retries;
 static unsigned force;
 static int debug;
@@ -119,6 +118,7 @@ int
 main (int argc, char *argv[])
 {
   mu_locker_t locker = 0;
+  mu_locker_hints_t hints = { .flags = 0 };
   int err = 0;
   pid_t usergid = getgid ();
   pid_t mailgid = getegid ();
@@ -149,30 +149,26 @@ main (int argc, char *argv[])
   
   if (force)
     {
-      force *= 60;
-      flags |= MU_LOCKER_TIME;
+      hints.flags |= MU_LOCKER_FLAG_EXPIRE_TIME;
+      hints.expire_time = force * 60;
     }
-
-  if (retries || retry_sleep)
-    flags |= MU_LOCKER_RETRY;
-
-  if (pid_check)
-    flags |= MU_LOCKER_PID;
-
-  if ((err = mu_locker_create (&locker, file, flags)))
-    {
-      if (debug)
-	mu_diag_funcall (MU_DIAG_ERROR, "mu_locker_create", NULL, err);
-      return MU_DL_EX_ERROR;
-    }
-
-  if (force != 0)
-    mu_locker_set_expire_time (locker, force);
 
   if (retries)
-    mu_locker_set_retries (locker, retries);
-  if (retry_sleep)
-    mu_locker_set_retry_sleep (locker, retry_sleep);
+    {
+      hints.flags |= MU_LOCKER_FLAG_RETRY;
+      hints.retry_count = retries;
+      hints.retry_sleep = retry_sleep;
+    }
+
+  if (pid_check)
+    hints.flags |= MU_LOCKER_FLAG_CHECK_PID;
+
+  if ((err = mu_locker_create_ext (&locker, file, hints.flags != 0 ? &hints : NULL)))
+    {
+      if (debug)
+	mu_diag_funcall (MU_DIAG_ERROR, "mu_locker_create_ext", NULL, err);
+      return MU_DL_EX_ERROR;
+    }
 
   if (setegid (mailgid) < 0)
     return MU_DL_EX_ERROR;

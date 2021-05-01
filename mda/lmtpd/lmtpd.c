@@ -183,10 +183,9 @@ main (int argc, char **argv)
   MU_APP_INIT_NLS ();
 
   /* Default locker settings */
-  mu_locker_set_default_flags (MU_LOCKER_PID|MU_LOCKER_RETRY,
-			       mu_locker_assign);
-  mu_locker_set_default_retry_timeout (1);
-  mu_locker_set_default_retry_count (300);
+  mu_locker_defaults.flags = MU_LOCKER_FLAG_CHECK_PID | MU_LOCKER_FLAG_RETRY;
+  mu_locker_defaults.retry_sleep = 1;
+  mu_locker_defaults.retry_count = 300;
 
   /* Register needed modules */
   MU_AUTH_REGISTER_ALL_MODULES ();

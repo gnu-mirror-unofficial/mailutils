@@ -69,8 +69,9 @@ static int
 do_bdb_open (mu_dbm_file_t mdb, int flags, int mode)
 {  
   struct bdb_file *bdb_file = mdb->db_descr;
-  int f, rc, locker_flags;
+  int f, rc;
   enum mu_locker_mode locker_mode;
+  mu_locker_hints_t hints = { .flags = MU_LOCKER_FLAG_RETRY };
   int tfd = -1;
   
   switch (flags)
@@ -96,12 +97,10 @@ do_bdb_open (mu_dbm_file_t mdb, int flags, int mode)
 
 #ifdef DB_FCNTL_LOCKING
   f |= DB_FCNTL_LOCKING;
-  locker_flags = MU_LOCKER_KERNEL;
-#else
-  locker_flags = 0;
+  hints.flags |= MU_LOCKER_FLAG_TYPE;
+  hints.type = MU_LOCKER_TYPE_KERNEL;
 #endif
-  rc = mu_locker_create (&bdb_file->locker, mdb->db_name,
-			 locker_flags|MU_LOCKER_RETRY);
+  rc = mu_locker_create_ext (&bdb_file->locker, mdb->db_name, &hints);
   if (rc)
     return rc;
 

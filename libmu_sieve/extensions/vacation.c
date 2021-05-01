@@ -365,7 +365,7 @@ check_db (mu_sieve_machine_t mach, char *from)
       mu_sieve_abort (mach);
     }
 
-  rc = mu_locker_create (&locker, file, 0);
+  rc = mu_locker_create_ext (&locker, file, NULL);
   if (rc)
     {
       mu_sieve_error (mach, _("%lu: cannot lock %s: %s"),

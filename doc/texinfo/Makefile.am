@@ -44,7 +44,8 @@ programs_TEXINFOS = \
  programs/pop3d.texi\
  programs/imap4d.texi\
  programs/comsatd.texi\
- programs/mailutils.texi
+ programs/mailutils.texi\
+ programs/dotlock.texi
 
 clean-local:
 	rm -rf manual

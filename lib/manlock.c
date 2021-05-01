@@ -128,14 +128,17 @@ mailbox_open_and_lock (mu_mailbox_t mbox, int flags)
 
   if (lock)
     {
-      status = mu_locker_get_flags (lock, &flags);
+      mu_locker_hints_t hints;
+
+      hints.flags = MU_LOCKER_FLAG_TYPE;
+      status = mu_locker_get_hints (lock, &hints);
       if (status)
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_locker_get_flags", urlstr,
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_locker_get_hints", urlstr,
 			   status);
 	  return MU_ERR_FAILURE;
 	}
-      if (flags & MU_LOCKER_NULL)
+      if (hints.type == MU_LOCKER_TYPE_NULL)
 	lock = NULL;
     }
   
@@ -157,10 +160,10 @@ mailbox_open_and_lock (mu_mailbox_t mbox, int flags)
       if (!fname)
 	return MU_ERR_FAILURE;
 	  
-      status = mu_locker_create (&lock, fname, 0);
+      status = mu_locker_create_ext (&lock, fname, NULL);
       if (status)
 	{
-	  mu_diag_funcall (MU_DIAG_ERROR, "mu_locker_create", fname, status);
+	  mu_diag_funcall (MU_DIAG_ERROR, "mu_locker_create_ext", fname, status);
 	  free (fname);
 	  return MU_ERR_FAILURE;
 	}
@@ -245,13 +248,14 @@ manlock_lock (mu_mailbox_t mbox)
   mu_locker_t lock = NULL;
   const char *name;
   int status;
-
+  mu_locker_hints_t hints = { .flags = MU_LOCKER_FLAG_CHECK_PID };
+  
   if (!manlock_mandatory_locking)
     return 0;
   mu_mailbox_get_url (mbox, &url);
   name = mu_url_to_string (url);
-  mu_mailbox_get_locker (mbox, &lock);  
-  mu_locker_mod_flags (lock, MU_LOCKER_PID, mu_locker_set_bit);
+  mu_mailbox_get_locker (mbox, &lock);
+  mu_locker_modify (lock, &hints);
   if ((status = mu_locker_lock (lock)))
     {
       mu_diag_output (MU_DIAG_NOTICE, _("locking mailbox `%s' failed: %s"),

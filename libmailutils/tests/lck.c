@@ -3,11 +3,11 @@
      lck - mailutils locking test
      
    SYNOPSIS
-     lck [-akpu?] [-e COMMAND] [-H SECONDS] [-r N] [-t SECONDS] [-x SECONDS]
+     lck [-akpuv?] [-eCOMMAND] [-f SECONDS] [-H SECONDS] [-r N] [-t SECONDS]
          [--abandon] [--delay=SECONDS] [--expire=SECONDS]
-         [--external=COMMAND] [--help] [--hold=SECONDS] [--kernel]
+         [--external[=COMMAND]] [--help] [--hold=SECONDS] [--kernel]
          [--pid-check] [--retry=N] [--show-config-options] [--unlock]
-         [--usage] FILE
+         [--usage] [--verbose] FILE
 
    DESCRIPTION
      Tests the mailutils locking mechanism.  Unless --hold (-H) or --abandon
@@ -24,13 +24,21 @@
      
      The master waits for child to successfully lock the file and attempts to
      obtain the lock.  If successful, it exits with the 0 status.  On errors,
-     the termination status is 0.
+     the termination status is:
+
+     1    An error other than described below occurred.  This includes
+          usage errors.
+     2    Unlock requested, but file is not locked.
+     3    Lock requested, but file is already locked by another program.
+     4    Insufficient permissions.
 
    OPTIONS
       Locking type (default: dotlock):
 
-      -e, --external=COMMAND
-          Use the external locker command.
+      -e, --external[=COMMAND]
+          Use the external locker command.  If COMMAND is omitted,
+	  the compiled-in default will be used (see
+	  MU_LOCKER_DEFAULT_EXT_LOCKER in mailutils/locker.h.
 	  
       -k, --kernel
           Use kernel locking (fnctl).
@@ -46,7 +54,7 @@
       -t, --delay=SECONDS
           Delay between two successive locking attempts.
 	  
-      -x, --expire=SECONDS
+      -f, --expire=SECONDS
           Expire the lock after that many seconds.
 
       Child operation modifiers
@@ -62,6 +70,11 @@
       -u, --unlock
           Release the existing lock.
 
+      -v, --verbose
+          If the lock (or unlock) operation fails, print the error
+	  message on the stderr in addition to exiting with the error
+	  status.
+	  
       Informational options
 
       --show-config-options
@@ -99,15 +112,12 @@
 #include <signal.h>
 #include <mailutils/mailutils.h>
 
-static int flags = 0;
+static mu_locker_hints_t hints = { .flags = 0 };
 static int unlock;
-static unsigned retry_count;
-static unsigned retry_sleep = 0;
 static int pid_check;
-static unsigned expire;
-static char const *extlocker;
 static unsigned hold_time;
 static int abandon_lock;
+static int verbose;
 
 static void
 cli_type (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
@@ -115,12 +125,18 @@ cli_type (struct mu_parseopt *po, struct mu_option *opt, char const *arg)
   switch (opt->opt_short)
     {
     case 'k':
-      flags = MU_LOCKER_OPTIONS (flags) | MU_LOCKER_KERNEL;
+      hints.flags |= MU_LOCKER_FLAG_TYPE;
+      hints.type  = MU_LOCKER_TYPE_KERNEL;
       break;
 
     case 'e':
-      flags = MU_LOCKER_OPTIONS (flags) | MU_LOCKER_EXTERNAL;
-      extlocker = arg;
+      hints.flags |= MU_LOCKER_FLAG_TYPE;
+      hints.type  = MU_LOCKER_TYPE_EXTERNAL;
+      if (arg)
+	{
+	  hints.flags |= MU_LOCKER_FLAG_EXT_LOCKER;
+	  hints.ext_locker = strdup (arg);
+	}
       break;
 
     default:
@@ -133,22 +149,22 @@ struct mu_option options[] = {
 
   { "kernel", 'k', NULL, MU_OPTION_DEFAULT,
     "use kernel locking", mu_c_void, NULL, cli_type },
-  { "external", 'e', "COMMAND", MU_OPTION_DEFAULT,
+  { "external", 'e', "COMMAND", MU_OPTION_ARG_OPTIONAL,
     "use external locker command", mu_c_void, NULL, cli_type },
   
   MU_OPTION_GROUP ("Locking parameters"),
   { "retry",  'r', "N", MU_OPTION_DEFAULT,
     "retry the lock N times",
-    mu_c_uint, &retry_count },
+    mu_c_uint, &hints.retry_count },
   { "delay",  't', "SECONDS", MU_OPTION_DEFAULT,
     "delay between two successive locking attempts (in seconds)",
-    mu_c_uint, &retry_sleep },
+    mu_c_uint, &hints.retry_sleep },
   { "pid-check", 'p', NULL, MU_OPTION_DEFAULT,
     "check if the PID of lock owner is still active",
     mu_c_bool, &pid_check },
-  { "expire", 'x', "SECONDS", MU_OPTION_DEFAULT,
+  { "expire", 'f', "SECONDS", MU_OPTION_DEFAULT,
     "expire the lock after that many seconds",
-    mu_c_uint, &expire },
+    mu_c_uint, &hints.expire_time },
   
   MU_OPTION_GROUP ("Child operation modifiers"),
   { "hold",   'H', "SECONDS", MU_OPTION_DEFAULT,
@@ -161,6 +177,9 @@ struct mu_option options[] = {
   MU_OPTION_GROUP ("Operation modifiers"),
   { "unlock", 'u', NULL, MU_OPTION_DEFAULT,
     "unlock", mu_c_bool, &unlock },
+  
+  { "verbose", 'v', NULL, MU_OPTION_DEFAULT,
+    "verbosely list errors", mu_c_bool, &verbose },
   MU_OPTION_END
 };
 
@@ -184,6 +203,29 @@ sighan (int sig)
     }
 }
 
+static void
+errcheck (int rc)
+{
+  switch (rc)
+    {
+    case 0:
+      break;
+      
+    case MU_ERR_LOCK_CONFLICT:
+      exit (MU_DL_EX_EXIST);
+
+    case MU_ERR_LOCK_NOT_HELD:
+      exit (MU_DL_EX_NEXIST);
+      
+    case EPERM:
+    case EACCES:
+      exit (MU_DL_EX_PERM);
+      
+    default:
+      exit (MU_DL_EX_ERROR);
+    }
+}
+
 int
 main (int argc, char **argv)
 {
@@ -202,26 +244,18 @@ main (int argc, char **argv)
   if (argc != 1)
     {
       mu_error ("bad arguments; try %s --help for more info", mu_program_name);
-      return 1;
+      return MU_DL_EX_ERROR;
     }
   file = argv[0];
   
-  if (expire)
-    flags |= MU_LOCKER_TIME;
-  if (retry_count || retry_sleep)
-    flags |= MU_LOCKER_RETRY;
+  if (hints.expire_time)
+    hints.flags |= MU_LOCKER_FLAG_EXPIRE_TIME;
+  if (hints.retry_count || hints.retry_sleep)
+    hints.flags |= MU_LOCKER_FLAG_RETRY;
   if (pid_check)
-    flags |= MU_LOCKER_PID;
+    hints.flags |= MU_LOCKER_FLAG_CHECK_PID;
     
-  MU_ASSERT (mu_locker_create (&lck, file, flags));
-  if (expire)
-    mu_locker_set_expire_time (lck, expire);
-  if (retry_count)
-    mu_locker_set_retries (lck, retry_count);
-  if (retry_sleep)
-    mu_locker_set_retry_sleep (lck, retry_sleep);
-  if (extlocker)
-    mu_locker_set_external (lck, extlocker);
+  MU_ASSERT (mu_locker_create_ext (&lck, file, hints.flags > 0 ? &hints : NULL));
 
   if (hold_time || abandon_lock)
     {
@@ -232,14 +266,14 @@ main (int argc, char **argv)
       if (pipe (p))
 	{
 	  mu_diag_funcall (MU_DIAG_CRIT, "pipe", NULL, errno);
-	  return 1;
+	  return MU_DL_EX_ERROR;
 	}
       
       child_pid = fork ();
       if (child_pid == -1)
 	{
 	  mu_diag_funcall (MU_DIAG_CRIT, "fork", NULL, errno);
-	  return 1;
+	  return MU_DL_EX_ERROR;
 	}
       
       if (child_pid == 0)
@@ -253,8 +287,7 @@ main (int argc, char **argv)
 	  rc = mu_locker_lock (lck);
 	  fprintf (fp, "L%d\n", rc);
 	  fclose (fp);
-	  if (rc)
-	    abort ();
+	  errcheck (rc);
 	  if (hold_time)
 	    sleep (hold_time);
 	  if (abandon_lock)
@@ -295,11 +328,13 @@ main (int argc, char **argv)
     rc = mu_locker_remove_lock (lck);
   else
     rc = mu_locker_lock (lck);
-  if (rc)
+  if (rc && verbose)
     mu_diag_funcall (MU_DIAG_ERROR,
 		     unlock ? "mu_locker_remove_lock" : "mu_locker_lock",
 		     NULL, rc);
 
+  mu_locker_destroy (&lck);
+  
   if (child_pid > 0)
     {
       if (waitpid (child_pid, &child_status, WNOHANG) != child_pid)
@@ -317,19 +352,20 @@ main (int argc, char **argv)
       if (status != 0)
 	{
 	  mu_error ("child terminated with status %d", status);
-	  return 1;
+	  return MU_DL_EX_ERROR;
 	}
     }
   else if (WIFSIGNALED (child_status))
     {
       mu_error ("child terminated on signal %d", WTERMSIG (child_status));
-      return 1;
+      return MU_DL_EX_ERROR;
     }
   else
     {
       mu_error ("child terminated with unhandled status %d", child_status);
-      return 1;
+      return MU_DL_EX_ERROR;
     }
-  
-  return rc != 0;
+
+  errcheck (rc);
+  return 0;
 }

@@ -33,15 +33,11 @@ LCK_TEST([retries], [--hold=4 --retry=10 --delay=1])
 # Child holds lock for 4 seconds, master does two retries with one
 # second interval and finishes before being able to acquire it.
 LCK_TEST([conflict with previous locker], [--hold=4 --retry=2 --delay=1],
-         [1],[],
-	 [lck: mu_locker_lock() failed: Conflict with previous locker
-])
+         [3])
 
 # Child abandons the lock; master is not able to acquire it.
 LCK_TEST([abandoned lock], [--abandon --retry=4 --delay=1],
-         [1],[],
-	 [lck: mu_locker_lock() failed: Conflict with previous locker
-])
+         [3])
 
 # Child abandons the lock; master asserts that its pid is not active and
 # acquires it.
@@ -55,5 +51,89 @@ LCK_TEST([lock expiration],
 
 # Default settings correspond to --retry=10 --delay=1 --expire=600
 LCK_TEST([default settings], [--hold=2])
+
+AT_SETUP([external locker])
+AT_KEYWORDS([lock])
+
+AT_DATA([extlocker],
+[#!/bin/sh
+echo "$@" > extlocker.args
+])
+CWD=$(pwd)
+
+m4_pushdef([COND_SKIP],[test -f .skiptest && AT_SKIP_TEST])
+
+AT_CHECK([
+if chmod +x extlocker; then :; else touch .skiptest; fi >/dev/null 2>&1
+COND_SKIP
+],
+[ignore])
+
+AT_CHECK([COND_SKIP
+lck -e$CWD/extlocker file
+cat extlocker.args
+],
+[0],
+[file
+])
+
+AT_CHECK([COND_SKIP
+lck -e$CWD/extlocker --retry=4 --expire=35 file
+cat extlocker.args
+],
+[0],
+[-f35 -r4 file
+])
+
+AT_CHECK([COND_SKIP
+touch file
+lck -elck file
+])
+
+AT_CHECK([COND_SKIP
+lck -elck file
+],
+[3])
+
+AT_CHECK([COND_SKIP
+lck -elck -u file
+],
+[0])
+
+AT_CHECK([COND_SKIP
+lck -elck -u file
+],
+[2])
+
+# Child holds lock for 4 seconds, master acquires it when child has
+# released it.
+AT_CHECK([COND_SKIP
+lck -elck --hold=4 --retry=10 --delay=1 file
+])
+
+AT_CHECK([COND_SKIP
+lck -elck -u file
+])
+
+AT_CHECK([COND_SKIP
+# Child holds lock for 4 seconds, master does two retries with one
+# second interval and finishes before being able to acquire it.
+lck -elck --hold=4 --retry=2 --delay=1 file
+],
+[3])
+
+AT_CHECK([COND_SKIP
+# Master is not able to acquire abandoned lock.
+lck -elck --retry=4 --delay=1 file
+],
+[3])
+
+AT_CHECK([COND_SKIP
+# Master waits until lock has expired and acquires it.
+lck -elck --abandon --expire=3 --retry=10 --delay=1 file
+])
+
+m4_popdef([COND_SKIP])
+AT_CLEANUP
 
 m4_popdef([LCK_TEST])

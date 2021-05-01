@@ -25,105 +25,56 @@ extern "C" {
 #endif
 
 /* lock expiry time */
-#define MU_LOCKER_EXPIRE_TIME        (10 * 60)
-#define MU_LOCKER_RETRIES            (10)
-#define MU_LOCKER_RETRY_SLEEP        (1)
-#define MU_LOCKER_EXTERNAL_PROGRAM   "dotlock"
+#define MU_LOCKER_DEFAULT_EXPIRE_TIME   (10 * 60)
+#define MU_LOCKER_DEFAULT_RETRY_COUNT   10
+#define MU_LOCKER_DEFAULT_RETRY_SLEEP   1
+#define MU_LOCKER_DEFAULT_EXT_LOCKER    "dotlock"
 
 /* return codes for the external locker */
-#define MU_DL_EX_PERM    4 /* insufficient permissions */
-#define MU_DL_EX_EXIST   3 /* lock requested, but file is already locked */
-#define MU_DL_EX_NEXIST  2 /* unlock requested, but file is not locked */
-#define MU_DL_EX_ERROR   1 /* failed due to some other error */
-#define MU_DL_EX_OK      0 /* success */
-
-enum mu_locker_set_mode
+enum
   {
-    mu_locker_assign,
-    mu_locker_set_bit,
-    mu_locker_clear_bit
+    MU_DL_EX_OK     = 0, /* success */
+    MU_DL_EX_ERROR  = 1, /* failed due to some other error */
+    MU_DL_EX_NEXIST = 2, /* unlock requested, but file is not locked */
+    MU_DL_EX_EXIST  = 3, /* lock requested, but file is already locked */
+    MU_DL_EX_PERM   = 4, /* insufficient permissions */
   };
-    
-/* mu_locker_create() flags */
 
 /* Locker types */
+enum
+  {
+    MU_LOCKER_TYPE_DOTLOCK  = 0, /* Dotlock-style locking.  The default. */
+    MU_LOCKER_TYPE_EXTERNAL = 1, /* Use external program to lock the file. */
+    MU_LOCKER_TYPE_KERNEL   = 2, /* Use kernel locking (flock,lockf,ioctl) */ 
+    MU_LOCKER_TYPE_NULL     = 3, /* No locking at all. */
+  };
 
-#define MU_LOCKER_TYPE_DOTLOCK  0
-#define MU_LOCKER_TYPE_EXTERNAL 1 
-  /* Use an external program to lock the file. This is necessary
-     for programs having permission to access a file, but do not
-     have write permission on the directory that contains that file. */
-#define MU_LOCKER_TYPE_KERNEL   2
-  /* Use kernel locking (flock, lockf or ioctl) */
-#define MU_LOCKER_TYPE_NULL     3
-  /* Special locker type: means no lock. This is to be used with
-     temporary mailboxes stored in memory. */
+#define MU_LOCKER_TYPE_DEFAULT MU_LOCKER_TYPE_DOTLOCK  
 
-#define MU_LOCKER_TYPE_TO_FLAG(t) ((t) << 8)
-#define MU_LOCKER_FLAG_TO_TYPE(f) ((f) >> 8)
-#define MU_LOCKER_IS_TYPE(f,t) (MU_LOCKER_FLAG_TO_TYPE(f) == (t))
-#define MU_LOCKER_SET_TYPE(f,t) ((f) = MU_LOCKER_TYPE_TO_FLAG(t) | MU_LOCKER_OPTIONS(f))
-#define MU_LOCKER_TYPE_MASK 0xff00
-#define MU_LOCKER_OPTION_MASK 0x00ff  
-#define MU_LOCKER_OPTIONS(f) ((f) & MU_LOCKER_OPTION_MASK)
+typedef struct
+{
+  int flags;
+  int type;
+  unsigned retry_count;
+  unsigned retry_sleep;
+  unsigned expire_time;
+  char *ext_locker;
+} mu_locker_hints_t;
 
-#define MU_LOCKER_NULL          MU_LOCKER_TYPE_TO_FLAG(MU_LOCKER_TYPE_NULL)
-#define MU_LOCKER_DOTLOCK       MU_LOCKER_TYPE_TO_FLAG(MU_LOCKER_TYPE_DOTLOCK)
-#define MU_LOCKER_EXTERNAL      MU_LOCKER_TYPE_TO_FLAG(MU_LOCKER_TYPE_EXTERNAL)
-#define MU_LOCKER_KERNEL        MU_LOCKER_TYPE_TO_FLAG(MU_LOCKER_TYPE_KERNEL)
+/* Locker hint flags */
+#define MU_LOCKER_FLAG_RETRY       0x0001 /* retry_count and retry_sleep are set */
+#define MU_LOCKER_FLAG_EXPIRE_TIME 0x0002 /* expire_time is set */
+#define MU_LOCKER_FLAG_CHECK_PID   0x0004 /* check if lock owner PID is active */
+#define MU_LOCKER_FLAG_EXT_LOCKER  0x0008 /* ext_locker is set */
+#define MU_LOCKER_FLAG_TYPE        0x0010 /* type is set */   
+
+#define MU_LOCKER_FLAGS_ALL (\
+  MU_LOCKER_FLAG_TYPE | \
+  MU_LOCKER_FLAG_RETRY | \
+  MU_LOCKER_FLAG_EXPIRE_TIME | \
+  MU_LOCKER_FLAG_EXT_LOCKER | \
+  MU_LOCKER_FLAG_CHECK_PID )
   
-/* Options */
-  
-#define MU_LOCKER_SIMPLE   0x0000
-  /* Just try and dotlock the file, not the default because its usually
-     better to retry. */
-#define MU_LOCKER_RETRY    0x0001
-  /* This requests that we loop retries times, sleeping retry_sleep
-     seconds in between trying to obtain the lock before failing with
-     MU_LOCK_CONFLICT. */
-#define MU_LOCKER_TIME     0x0002
-  /* This mode checks the last update time of the lock, then removes
-     it if older than MU_LOCKER_EXPIRE_TIME. If a client uses this,
-     then the servers better periodically update the lock on the
-     file... do they? */
-#define MU_LOCKER_PID      0x0004
-  /* PID locking is only useful for programs that aren't using
-     an external dotlocker, non-setgid programs will use a dotlocker,
-     which locks and exits imediately. This is a protection against
-     a server crashing, it's not generally useful. */
-  
-#define MU_LOCKER_DEFAULT  (MU_LOCKER_DOTLOCK | MU_LOCKER_RETRY)
-
-/* Use these flags for as the default locker flags (the default defaults
- * to MU_LOCKER_DEFAULT). A flags of 0 resets the flags back to the
- * the default.
- */
-extern int mu_locker_set_default_flags (int flags, enum mu_locker_set_mode mode);
-extern void mu_locker_set_default_retry_timeout (time_t to);
-extern void mu_locker_set_default_retry_count (size_t n);
-extern void mu_locker_set_default_expire_timeout (time_t t);
-extern int mu_locker_set_default_external_program (char const *path);
-
-/* A flags of 0 means that the default will be used. */
-extern int mu_locker_create (mu_locker_t *, const char *filename, int flags);
-extern void mu_locker_destroy (mu_locker_t *);
-
-/* Time is measured in seconds. */
-
-extern int mu_locker_set_flags (mu_locker_t, int);
-extern int mu_locker_mod_flags (mu_locker_t locker, int flags,
-				enum mu_locker_set_mode mode);
-extern int mu_locker_set_expire_time (mu_locker_t, int);
-extern int mu_locker_set_retries (mu_locker_t, int);
-extern int mu_locker_set_retry_sleep (mu_locker_t, int);
-extern int mu_locker_set_external (mu_locker_t, const char* program);
-
-extern int mu_locker_get_flags (mu_locker_t, int*);
-extern int mu_locker_get_expire_time (mu_locker_t, int*);
-extern int mu_locker_get_retries (mu_locker_t, int*);
-extern int mu_locker_get_retry_sleep (mu_locker_t, int*);
-extern int mu_locker_get_external (mu_locker_t, char**);
-
 enum mu_locker_mode
 {
    mu_lck_shr,   /* Shared (advisory) lock */
@@ -132,11 +83,78 @@ enum mu_locker_mode
                     locking otherwise */
 }; 
 
+#define MU_LOCKFILE_MODE 0644
+  
+extern int mu_locker_create_ext (mu_locker_t *, const char *, mu_locker_hints_t *);
+extern int mu_locker_modify (mu_locker_t, mu_locker_hints_t *);  
+extern void mu_locker_destroy (mu_locker_t *);
+
 extern int mu_locker_lock_mode (mu_locker_t, enum mu_locker_mode);
 extern int mu_locker_lock          (mu_locker_t);
 extern int mu_locker_touchlock     (mu_locker_t);
 extern int mu_locker_unlock        (mu_locker_t);
 extern int mu_locker_remove_lock   (mu_locker_t);
+
+extern int mu_locker_get_hints (mu_locker_t lck, mu_locker_hints_t *hints);
+  
+extern mu_locker_hints_t mu_locker_defaults;
+
+/*
+ * Deprecated defines and interfaces.
+ */
+ 
+/* Legacy definitions for locker defaults */
+#define MU_LOCKER_EXPIRE_TIME        MU_LOCKER_DEFAULT_EXPIRE_TIME
+#define MU_LOCKER_RETRIES            MU_LOCKER_DEFAULT_RETRY_COUNT
+#define MU_LOCKER_RETRY_SLEEP        MU_LOCKER_DEFAULT_RETRY_SLEEP
+#define MU_LOCKER_EXTERNAL_PROGRAM   MU_LOCKER_DEFAULT_EXT_LOCKER
+
+/* Legacy definitions of locker types */
+#define MU_LOCKER_DOTLOCK       (MU_LOCKER_TYPE_DOTLOCK << 8)
+#define MU_LOCKER_EXTERNAL      (MU_LOCKER_TYPE_EXTERNAL << 8)
+#define MU_LOCKER_KERNEL        (MU_LOCKER_TYPE_KERNEL << 8)
+#define MU_LOCKER_NULL          (MU_LOCKER_TYPE_NULL << 8)
+
+/* Legacy definitions of locker flags (a.k.a. options). */
+#define MU_LOCKER_SIMPLE   0x0000
+#define MU_LOCKER_RETRY    MU_LOCKER_FLAG_RETRY
+#define MU_LOCKER_TIME     MU_LOCKER_FLAG_EXPIRE_TIME
+#define MU_LOCKER_PID      MU_LOCKER_FLAG_CHECK_PID
+
+#define MU_LOCKER_DEFAULT  (MU_LOCKER_DOTLOCK | MU_LOCKER_RETRY)
+
+/* The following was used to pack/unpack flags and locker type: */  
+#define MU_LOCKER_TYPE_TO_FLAG(t) ((t) << 8)
+#define MU_LOCKER_FLAG_TO_TYPE(f) ((f) >> 8)
+#define MU_LOCKER_TYPE_MASK 0xff00
+#define MU_LOCKER_OPTION_MASK 0x00ff
+  
+enum mu_locker_set_mode
+  {
+    mu_locker_assign,
+    mu_locker_set_bit,
+    mu_locker_clear_bit
+  };
+
+extern int mu_locker_create (mu_locker_t *, const char *, int) MU_DEPRECATED;
+  
+extern int mu_locker_set_default_flags (int, enum mu_locker_set_mode) MU_DEPRECATED;
+extern void mu_locker_set_default_retry_timeout (time_t) MU_DEPRECATED;
+extern void mu_locker_set_default_retry_count (size_t) MU_DEPRECATED;
+extern void mu_locker_set_default_expire_timeout (time_t) MU_DEPRECATED;
+extern int mu_locker_set_default_external_program (char const *) MU_DEPRECATED;
+
+extern int mu_locker_set_flags (mu_locker_t, int) MU_DEPRECATED;
+extern int mu_locker_mod_flags (mu_locker_t, int, enum mu_locker_set_mode) MU_DEPRECATED;
+extern int mu_locker_set_expire_time (mu_locker_t, int) MU_DEPRECATED;
+extern int mu_locker_set_retries (mu_locker_t, int) MU_DEPRECATED;
+extern int mu_locker_set_retry_sleep (mu_locker_t, int) MU_DEPRECATED;
+extern int mu_locker_set_external (mu_locker_t, const char *) MU_DEPRECATED; 
+
+extern int mu_locker_get_flags (mu_locker_t, int *) MU_DEPRECATED;
+extern int mu_locker_get_expire_time (mu_locker_t, int *) MU_DEPRECATED;
+extern int mu_locker_get_retries (mu_locker_t, int *) MU_DEPRECATED;
+extern int mu_locker_get_retry_sleep (mu_locker_t, int *) MU_DEPRECATED;
 
 #ifdef __cplusplus
 }

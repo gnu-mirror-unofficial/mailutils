@@ -46,6 +46,7 @@ syntax.
 * mh::                The MH Message Handling System.
 
 * mailutils::         The Mailutils Multi-Purpose Tool.
+* dotlock::           The External Locker Utility. 
 @end menu
 
 @node command line
@@ -1281,74 +1282,128 @@ pattern list, which contains:
 @example
 locking @{
   # @r{Default locker flags.}
-  flags @var{arg};
-  
-  # @r{Set timeout for acquiring the lock.}
-  retry-timeout @var{arg};
+  type @code{default} | @code{dotlock} | @code{external} | @code{kernel} | @code{null};
   
   # @r{Set the maximum number of times to retry acquiring the lock.}
   retry-count @var{number};
   
+  # @r{Set the delay between two successive locking attempts.}
+  retry-sleep @var{arg};
+  
   # @r{Expire locks older than this amount of time.}
   expire-timeout @var{number};
-  
+
+  # @r{Check if PID of the lock owner is active, steal the lock if it not.} 
+  pid-check @var{bool};
+
   # @r{Use @var{prog} as external locker program.}
   external-locker @var{prog};
 @}
 @end example
 
 @subheading Description
-This block statement configures various parameters used when locking
+This compound statement configures various parameters used when locking
 UNIX mailboxes in order to prevent simultaneous writes.
 
-It is important to note, that locking applies only to traditional
-UNIX mailboxes (@pxref{mbox}).  All other
-mailbox types don't require locking.
+It is important to note, that locking applies only to monolithic
+mailboxes, i.e. mailboxes of @samp{mbox} and @samp{dotmail} types
+(@pxref{mbox}).  Other mailbox types don't require locking.
 
-@deffn {Configuration} flags @var{string}
-Set locking flags.  Argument is a string consisting of one or more of
-the following letters:
+@deffn {Configuration} type @var{string}
+Set locking type.  Allowed arguments are:
 
-@table @asis
-@item E
-Use an external program to manage locks.  The program is given by the
-@code{external-locker} statement (see below).
+@table @code
+@item default
+Default locking type.  As of @command{mailutils} version
+@value{VERSION}, this is equivalent to @code{dotlock}.
 
-@item R
-If the locking attempt failed, retry it.  This is the default.  The
-number of retries, and time interval between the two successive
-attempts is given by @code{retry-count} and @code{retry-timeout}
-statements, correspondingly.
+@item dotlock
+@anchor{dotlock locking type}
+A @samp{dotlock}-style locking.  To lock a mailbox named @var{X}
+a @dfn{lock file} named @file{@var{X}.lock} is created.  If 
+@code{pid-check yes} is set, this file will contain the PID of the
+locking process, so that another process wishing to acquire the lock
+could verify if the lock is still in use.
 
-@item T
-If a lock file exists, check its modification time and, if it is
-older than a predefined amount of time, remove the lock.  The amount
-of time is specified by @code{expire-timeout} statement.
+@item external
+@anchor{external locking type}
+Run external program to perform locking/unlocking operations.  The
+name of the program is given by the @code{external-locker} statement
+(see below).  If it is not given, the built-in default @samp{dotlock}
+is used.
 
-@item P
-Store the PID of the locking process in a lock file.
+The locker program is invoked as follows:
+
+@example
+# To lock @var{mbox}:
+@var{locker} -f@var{expire_timeout} -r@var{retry_count} @var{mbox}
+# To unlock it:
+@var{locker} -u -f@var{expire_timeout} -r@var{retry_count} @var{mbox}
+@end example
+
+@noindent
+Here, @var{expire_timeout} is the value supplied with the
+@code{expire-timeout} configuration statement, and @var{retry_count}
+is the value supplied with the @code{retry-count} statement (see below).
+
+To properly interact with @command{mailutils}, the external locker
+program must use the following exit codes:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Exit code @tab Meaning
+@item 0 @tab Success.
+@item 1 @tab Failed due to an error.
+@item 2 @tab Unlock requested (@option{-u}), but file is not locked.
+@item 3 @tab Lock requested, but file is already locked.
+@item 4 @tab Insufficient permissions.
+@end multitable
+
+@xref{dotlock}, for the description of the default external locker,
+shipped with mailutils.
+
+@item kernel
+Use kernel locking mechanism (@code{fcntl}(2)).
+
+@item null
+No locking at all.  The statements below are silently ignored.
 @end table
 @end deffn
 
 @deffn {Configuration} retry-count @var{number}
-Number of locking attempts.  The @samp{P} flag must be set for this to
-take effect.
+Number of locking attempts.  The default is 10.
 @end deffn
 
-@deffn {Configuration} retry-timeout @var{seconds}
-Time interval, in seconds, between the two successive locking
-attempts.  The @samp{P} flag must be set for this to take effect.
+@deffn {Configuration} retry-sleep @var{seconds}
+@deffnx {Configuration} retry-timeout @var{seconds}
+Time interval, in seconds, between two successive locking
+attempts.  The default is 1 second.  The @code{retry-timeout}
+statement is deprecated because of its misleading name.
 @end deffn
 
 @deffn {Configuration} expire-timeout @var{seconds}
-Remove existing lock file, if it is created more than this number of
-seconds ago.  The @samp{T} flag must be set for this to take effect.
+Sets the expiration timeout.  The existing lock file will be removed,
+if it was created more than this number of seconds ago.  The default
+is 600.
+@end deffn
+
+@deffn {Configuration} pid-check @var{bool}
+This statement can be used if locking type is set to @code{dotlock}.
+If set to @code{true}, it instructs the locking algorithm to check
+if the PID of the lock owner is still running by the time when it
+tries to acquire the lock.  This works as follows.  When the lock file
+is created, the PID of the creating process is written to it.  If
+another process tries to acquire the lock and sees that the lock file
+already exists, it reads the PID from the file and checks if a process
+with that PID still exists in the process table.  If it does not, the
+process considers the lock file to be stale, removes it and locks the
+mailbox.
 @end deffn
 
 @deffn {Configuration} external-locker @var{string}
-Determines the external locker program to use.  The @var{string}
-argument is the valid command line, starting with the full program
-name.  The @samp{E} flag must be set for this to take effect. 
+Sets the name of the external locker program to use, instead of the
+default @samp{dotlock}.
+
+This statement is in effect only when used together with @code{type external}.
 @end deffn
 
 @node mailer statement
@@ -2990,3 +3045,8 @@ Show payload information
 @node mailutils
 @section mailutils
 @include programs/mailutils.texi
+
+@page
+@node dotlock
+@section dotlock
+@include programs/dotlock.texi

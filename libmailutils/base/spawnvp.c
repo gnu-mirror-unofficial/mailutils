@@ -39,70 +39,89 @@ mu_spawnvp (const char *prog, char *av[], int *stat)
   int err = 0;
   int progstat;
   struct sigaction ignore;
-  struct sigaction saveintr;
-  struct sigaction savequit;
+  
+  struct sigsave {
+    int signo;
+    void *handler;
+    int saved;
+    struct sigaction act;
+  };
+
+  static struct sigsave sigsave[] = {
+    { SIGINT,  SIG_IGN, 0 },
+    { SIGQUIT, SIG_IGN, 0 },
+    { SIGCHLD, SIG_DFL, 0 }
+  };
+  static int nsigsave = sizeof (sigsave) / sizeof (sigsave[0]);
+
+  int i;
+  
   sigset_t chldmask;
   sigset_t savemask;
 
   if (!prog || !av)
     return EINVAL;
 
-  ignore.sa_handler = SIG_IGN;	/* ignore SIGINT and SIGQUIT */
   ignore.sa_flags = 0;
   sigemptyset (&ignore.sa_mask);
-
-  if (sigaction (SIGINT, &ignore, &saveintr) < 0)
-    return errno;
-  if (sigaction (SIGQUIT, &ignore, &savequit) < 0)
+  for (i = 0; i < nsigsave; i++)
     {
-      sigaction (SIGINT, &saveintr, NULL);
-      return errno;
+      ignore.sa_handler = sigsave[i].handler;
+      if (sigaction (sigsave[i].signo, &ignore, &sigsave[i].act) < 0)
+	{
+	  err = errno;
+	  break;
+	}
+      sigsave[i].saved = 1;
     }
 
-  sigemptyset (&chldmask);	/* now block SIGCHLD */
-  sigaddset (&chldmask, SIGCHLD);
-
-  if (sigprocmask (SIG_BLOCK, &chldmask, &savemask) < 0)
+  if (err == 0)
     {
-      sigaction (SIGINT, &saveintr, NULL);
-      sigaction (SIGQUIT, &savequit, NULL);
-      return errno;
-    }
+      sigemptyset (&chldmask);	/* now block SIGCHLD */
+      sigaddset (&chldmask, SIGCHLD);
 
-  pid = fork ();
+      if (sigprocmask (SIG_BLOCK, &chldmask, &savemask) < 0)
+	err = errno;
+      else  
+	{
+	  pid = fork ();
 
-  if (pid < 0)
-    {
-      err = errno;
-    }
-  else if (pid == 0)
-    {				/* child */
-      /* restore previous signal actions & reset signal mask */
-      sigaction (SIGINT, &saveintr, NULL);
-      sigaction (SIGQUIT, &savequit, NULL);
-      sigprocmask (SIG_SETMASK, &savemask, NULL);
+	  if (pid < 0)
+	    {
+	      err = errno;
+	    }
+	  else if (pid == 0)
+	    {				/* child */
+	      for (i = 0; i < nsigsave; i++)
+		{
+		  sigaction (sigsave[i].signo, &sigsave[i].act, NULL);
+		}
+	      sigprocmask (SIG_SETMASK, &savemask, NULL);
 
-      execvp (prog, av);
-      _exit (127);		/* exec error */
+	      execvp (prog, av);
+	      _exit (127);		/* exec error */
+	    }
+	  else
+	    {				/* parent */
+	      while (waitpid (pid, &progstat, 0) < 0)
+		if (errno != EINTR)
+		  {
+		    err = errno; /* error other than EINTR from waitpid() */
+		    break;
+		  }
+	      if (err == 0 && stat)
+		*stat = progstat;
+	    }
+	}
     }
-  else
-    {				/* parent */
-      while (waitpid (pid, &progstat, 0) < 0)
-	if (errno != EINTR)
-	  {
-	    err = errno;	/* error other than EINTR from waitpid() */
-	    break;
-	  }
-      if (err == 0 && stat)
-	*stat = progstat;
-    }
-
   /* restore previous signal actions & reset signal mask */
-  /* preserve first error number, but still try and reset the signals */
-  if (sigaction (SIGINT, &saveintr, NULL) < 0)
-    err = err ? err : errno;
-  if (sigaction (SIGQUIT, &savequit, NULL) < 0)
-    err = err ? err : errno;
+  for (i = 0; i < nsigsave; i++)
+    {
+      if (!sigsave[i].saved)
+	break;
+      if (sigaction (sigsave[i].signo, &sigsave[i].act, NULL) < 0)
+	err = err ? err : errno;
+    }
   if (sigprocmask (SIG_SETMASK, &savemask, NULL) < 0)
     err = err ? err : errno;
 

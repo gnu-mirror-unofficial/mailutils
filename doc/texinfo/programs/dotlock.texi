@@ -1,0 +1,62 @@
+@pindex dotlock
+
+A stand-alone mailbox-locking utility.  It is the default program used
+by @command{mailutils} if the @code{locking.type} configuration
+statement is set to @code{external} (@pxref{external locking type}).
+
+The program usage syntax is:
+
+@example
+@group
+# To lock @var{mbox}:
+dotlock @var{options} @var{mbox}
+# To unlock it:
+dotlock -u @var{options} @var{mbox}
+@end group
+@end example
+
+By default the program implements the @samp{dotlock} locking
+(@pxref{dotlock locking type}).  This can be changed either in the
+configuration file, or via the command line options.
+
+The following common configuration statements affect the behavior of
+@command{dotlock}:
+
+@multitable @columnfractions 0.3 0.6
+@headitem Statement @tab Reference
+@item debug         @tab @xref{Debug Statement}.
+@item locking       @tab @xref{Locking Statement}.
+@end multitable
+
+The program understands the following command line options:
+
+@table @option
+@item -d
+@itemx --debug
+Print details of failure reasons to stderr.
+
+@item -f[@var{n}]
+@itemx --force[=@var{n}]
+If a lock file exists and is more than @var{n} minutes old, forcibly
+remove it and re-lock the mailbox.  Default @var{n} is 10 minutes.
+
+@item -p
+@itemx --pid-check
+Check if the PID of lock owner is still active.  If not, break the
+lock.
+
+@item -r @var{n}
+@item --retry=@var{n}
+Number of times to retry acquiring the lock, if it is held by another
+process.  The default is 10 times.
+
+@item -t @var{n}
+@itemx --delay=@var{n}
+Sets delay in seconds between two successive locking attempts.
+The default is 1 second.
+
+@item -u
+@itemx --unlock
+Unlock the mailbox.
+@end table
+

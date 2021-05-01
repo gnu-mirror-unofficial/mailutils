@@ -1,7 +1,36 @@
-GNU mailutils NEWS -- history of user-visible changes. 2021-02-13
+GNU mailutils NEWS -- history of user-visible changes. 2021-05-01
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+Version 3.12.90 (git)
+
+* Improved mailbox locking
+
+This fixes several bugs.
+
+* Changes in the 'locking' configuration statement.
+
+New statement 'type' configures the type of locking to use.  Possible
+values are: 'default', 'dotlock', 'external', 'kernel', and 'null'.
+
+New statement 'pid-check' instructs mailutils to check if the PID of
+the process owning the lock still exists in the process table.  If it
+doesn't the lock is considered stale and is removed.
+
+The 'flags' statement is deprecated.  If used, an error message is
+issued along with a suggestion on what statement to use instead:
+
+   Flag     Statement to use
+  --------+-------------------
+    E       type external     
+    R       retry-count N
+    T       expire-timeout N
+    P       pid-check true
+
+The 'retry-timeout' statement is a misnomer and is therefore
+deprecated.  Use 'retry-sleep' instead.
+
 
 Version 3.12, 2021-02-13
 

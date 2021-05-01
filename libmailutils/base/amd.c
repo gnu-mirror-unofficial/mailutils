@@ -500,7 +500,7 @@ amd_open (mu_mailbox_t mailbox, int flags)
   _amd_prop_create (amd);
   
   if (mailbox->locker == NULL)
-    mu_locker_create (&mailbox->locker, "/dev/null", 0);
+    mu_locker_create_ext (&mailbox->locker, "/dev/null", NULL);
   
   return 0;
 }

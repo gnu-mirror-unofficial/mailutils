@@ -126,11 +126,11 @@ mboxrd_open (mu_mailbox_t mailbox, int flags)
       && mailbox->locker == NULL
       && (flags & (MU_STREAM_WRITE | MU_STREAM_APPEND | MU_STREAM_CREAT)))
     {
-      rc = mu_locker_create (&mailbox->locker, dmp->name, 0);
+      rc = mu_locker_create_ext (&mailbox->locker, dmp->name, NULL);
       if (rc)
 	mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
 		  ("%s:%s (%s): %s",
-		   __func__, "mu_locker_create", dmp->name,
+		   __func__, "mu_locker_create_ext", dmp->name,
 		   mu_strerror (rc)));
     }
 
