@@ -38,5 +38,6 @@ mu_list_clear (mu_list_t list)
       free (previous);
     }
   list->head.next = list->head.prev = &list->head;
+  list->count = 0;
   mu_monitor_unlock (list->monitor);
 }
