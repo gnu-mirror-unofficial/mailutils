@@ -261,14 +261,93 @@ _enumerate_helper (void *item, void *data)
   return clos->fun (clos->folder, rp, clos->data);
 }
 
+static int
+_mu_imap_folder_separator (mu_folder_t folder, int *sep)
+{
+  mu_imap_t imap = folder->data;
+
+  if (imap->separator == 0)
+    {
+      struct mu_list_response *resp;
+      char const *path;
+      int rc;
+      mu_list_t list;
+      
+      if (mu_url_sget_path (folder->url, &path) || strcmp (path, "INBOX") == 0)
+	path = "";
+
+      rc = mu_imap_list_new (imap, path, "%", &list);
+      if (rc)
+	return rc;
+      if (mu_list_head (list, (void**)&resp))
+	return ENOENT; /* FIXME: Better return code? */
+      imap->separator = resp->separator;
+      imap->prefix_len = strlen (path) + 1;
+      mu_list_destroy (&list);
+    }
+
+  if (sep)
+    *sep = imap->separator;
+
+  return 0;
+}
+
+static int
+_mu_imap_folder_pathname (mu_folder_t folder, char const *name, char **retname)
+{
+  char const *folder_path;
+  char *pathname;
+  
+  if (mu_url_sget_path (folder->url, &folder_path) ||
+      strcmp (folder_path, "INBOX") == 0)
+    {
+      pathname = strdup (name);
+    }
+  else
+    {
+      int sep;
+      size_t len;
+      int rc;
+	
+      rc = _mu_imap_folder_separator (folder, &sep);
+      if (rc)
+	return rc;
+      
+      len = strlen (folder_path) + (name ? strlen (name) : 0) + 2;
+      pathname = malloc (len);
+      if (pathname)
+	{
+	  char *p = mu_stpcpy (pathname, folder_path);
+	  *p++ = sep;
+	  if (name)
+	    mu_stpcpy (p, name);
+	}
+    }
+
+  if (!pathname)
+    return errno;
+
+  *retname = pathname;
+  
+  return 0;
+}
+
 /* NOTE: scn->records is ignored */
 static int
 _mu_imap_folder_list (mu_folder_t folder, struct mu_folder_scanner *scn)
 {
   mu_imap_t imap = folder->data;
   mu_list_t list;
-  int rc = mu_imap_list_new (imap, scn->refname, scn->pattern, &list);
+  int rc;
+  char *refname;
+      
+  rc = _mu_imap_folder_pathname (folder, scn->refname, &refname);
+  if (rc)
+    return rc;
 
+  rc = mu_imap_list_new (imap, refname, scn->pattern, &list);
+  free (refname);
+      
   if (rc)
     return rc;
 
@@ -322,7 +401,15 @@ _mu_imap_folder_lsub (mu_folder_t folder, const char *ref, const char *name,
 		      mu_list_t flist)
 {
   mu_imap_t imap = folder->data;
-  return mu_imap_lsub (imap, ref, name, flist);
+  char *refpath;
+  int rc;
+  
+  if ((rc = _mu_imap_folder_pathname (folder, ref, &refpath)) == 0)
+    {
+      rc = mu_imap_lsub (imap, refpath, name, flist);
+      free (refpath);
+    }
+  return rc;
 }
 
 /* Subscribe to the named mailbox. */
@@ -330,14 +417,30 @@ static int
 _mu_imap_folder_subscribe (mu_folder_t folder, const char *name)
 {
   mu_imap_t imap = folder->data;
-  return mu_imap_subscribe (imap, name);
+  char *path;
+  int rc;
+  
+  if ((rc = _mu_imap_folder_pathname (folder, name, &path)) == 0)
+    {
+      rc = mu_imap_subscribe (imap, path);
+      free (path);
+    }
+  return rc;
 }
 /* Unsubscribe from the mailbox. */
 static int
 _mu_imap_folder_unsubscribe (mu_folder_t folder, const char *name)
 {
   mu_imap_t imap = folder->data;
-  return mu_imap_unsubscribe (imap, name);
+  char *path;
+  int rc;
+  
+  if ((rc = _mu_imap_folder_pathname (folder, name, &path)) == 0)
+    {
+      rc = mu_imap_unsubscribe (imap, path);
+      free (path);
+    }
+  return rc;
 }
 
 /* Remove a mailbox.  */
@@ -345,16 +448,36 @@ static int
 _mu_imap_folder_delete (mu_folder_t folder, const char *name)
 {
   mu_imap_t imap = folder->data;
-  return mu_imap_delete (imap, name);
+  char *path;
+  int rc;
+  
+  if ((rc = _mu_imap_folder_pathname (folder, name, &path)) == 0)
+    {
+      rc = mu_imap_delete (imap, path);
+      free (path);
+    }
+  return rc;
 }
 
-/* Rename OLDPATH to NEWPATH */
+/* Rename OLDNAME to NEWNAME */
 static int
-_mu_imap_folder_rename (mu_folder_t folder, const char *oldpath,
-			const char *newpath)
+_mu_imap_folder_rename (mu_folder_t folder, const char *oldname,
+			const char *newname)
 {
   mu_imap_t imap = folder->data;
-  return mu_imap_rename (imap, oldpath, newpath);
+  char *oldpath, *newpath;
+  int rc;
+
+  if ((rc = _mu_imap_folder_pathname (folder, oldname, &oldpath)) == 0)
+    {
+      if ((rc = _mu_imap_folder_pathname (folder, newname, &newpath)) == 0)
+	{
+	  rc = mu_imap_rename (imap, oldpath, newpath);
+	  free (newpath);
+	}
+      free (oldpath);
+    }
+  return rc;
 }
 
 typedef int (*auth_method_t) (mu_authority_t);

@@ -37,7 +37,6 @@
 #include "tesh.h"
 
 int sort_option;
-int prefix_len;
 
 static int
 compare_response (void const *a, void const *b)
@@ -81,7 +80,7 @@ com_list (int argc, char **argv, mu_assoc_t options, void *env)
     {
       if (sort_option)
 	mu_list_sort (list, compare_response);
-      mu_list_foreach (list, _print_list_entry, &prefix_len);
+      mu_list_foreach (list, _print_list_entry, NULL);
       mu_list_destroy (&list);
     }
   return 0;
@@ -211,7 +210,7 @@ com_scan (int argc, char **argv, mu_assoc_t options, void *env)
     {
       if (sort_option)
 	mu_list_sort (scn.result, compare_response);
-      mu_list_foreach (scn.result, _print_list_entry, &prefix_len);
+      mu_list_foreach (scn.result, _print_list_entry, NULL);
       mu_list_destroy (&scn.result);
     }
   mu_list_destroy (&scn.records);
@@ -347,9 +346,6 @@ main (int argc, char **argv)
   if (fname[0] != '/')
     {
       char *cwd = mu_getcwd ();
-      prefix_len = strlen (cwd);
-      if (cwd[prefix_len-1] != '/')
-	prefix_len++;
       fname = mu_make_file_name (cwd, fname);
       free (cwd);
     }

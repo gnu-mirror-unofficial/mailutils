@@ -299,7 +299,7 @@ plus_expand (const char *file, char **buf)
   else
     {
       file++;
-  
+
       if (folder_dir[0] == '/' || mu_is_proto (folder_dir))
 	{
 	  char *p = mu_make_file_name (folder_dir, file);

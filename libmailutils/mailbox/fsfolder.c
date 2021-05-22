@@ -146,7 +146,7 @@ _fsfolder_close (mu_folder_t folder MU_ARG_UNUSED)
 
 static int
 _fsfolder_rename (mu_folder_t folder, const char *oldpath,
-		    const char *newpath)
+		  const char *newpath)
 {
   struct _mu_fsfolder *fsfolder = folder->data;
   if (oldpath && newpath)
@@ -188,6 +188,7 @@ struct folder_scan_data
   mu_folder_t folder;
   char *dirname;
   size_t dirlen;
+  size_t prefix_len;
   size_t errcnt;
 };
 
@@ -376,7 +377,7 @@ list_helper (struct mu_folder_scanner *scn,
 		    }
 		  else
 		    {
-		      resp->name = fname;
+		      resp->name = strdup (fname + data->prefix_len + 1);
 		      resp->depth = depth;
 		      resp->separator = '/';
 		      resp->type = type;
@@ -458,6 +459,9 @@ _fsfolder_list (mu_folder_t folder, struct mu_folder_scanner *scn)
   sdata.folder = folder;
   sdata.dirname = get_pathname (fsfolder->dirname, scn->refname);
   sdata.dirlen = strlen (sdata.dirname);
+  sdata.prefix_len = strlen (fsfolder->dirname);
+  if (sdata.prefix_len > 0 && fsfolder->dirname[sdata.prefix_len-1] == '/')
+    sdata.prefix_len--;
   sdata.errcnt = 0;
   list_helper (scn, &sdata, &iroot, sdata.dirname, 0);
   free (sdata.dirname);

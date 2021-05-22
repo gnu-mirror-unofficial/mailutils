@@ -32,13 +32,13 @@ fsfolder -name=dir -sort scan -maxdepth=2
 ],
 [0],
 [maxdepth=1
-d- /    0 dir/a
-d- /    0 dir/b
+d- /    0 a
+d- /    0 b
 maxdepth=2
-d- /    0 dir/a
-d- /    0 dir/b
-d- /    1 dir/a/b
-d- /    1 dir/b/b
-d- /    1 dir/b/c
+d- /    0 a
+d- /    0 b
+d- /    1 a/b
+d- /    1 b/b
+d- /    1 b/c
 ])
 AT_CLEANUP

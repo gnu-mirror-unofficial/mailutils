@@ -29,13 +29,13 @@ fsfolder -name=dir -sort scan -type=reg
 ],
 [0],
 [type=any
--f /    0 dir/1
-d- /    0 dir/a
-d- /    0 dir/b
--f /    1 dir/a/2
+-f /    0 1
+d- /    0 a
+d- /    0 b
+-f /    1 a/2
 type=reg
--f /    0 dir/1
--f /    1 dir/a/2
+-f /    0 1
+-f /    1 a/2
 ])
 
 AT_CLEANUP

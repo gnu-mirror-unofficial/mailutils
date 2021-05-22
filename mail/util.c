@@ -17,6 +17,8 @@
 #include "mail.h"
 #include <mailutils/util.h>
 #include <mailutils/mime.h>
+#include <mailutils/folder.h>
+#include <mailutils/auth.h>
 #include <pwd.h>
 #ifdef HAVE_TERMIOS_H
 # include <termios.h>
@@ -1204,3 +1206,60 @@ open_pager (size_t lines)
     }
   return str;
 }
+
+int
+util_get_folder (mu_folder_t *pfolder, mu_url_t url, int type)
+{
+  mu_folder_t folder;
+  int rc;
+
+  rc = mu_folder_create_from_record (&folder, url, NULL);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_create",
+		       mu_url_to_string (url), rc);
+      return -1;
+    }
+
+  if (!mu_folder_is_local (folder))
+    {
+      if (type == local_folder)
+	{
+	  /* TRANSLATORS: The subject of this sentence ("folder") is the
+	     name of the variable. Don't translate it. */
+	  mu_error ("%s", _("folder must be set to a local folder"));
+	  mu_folder_destroy (&folder);
+	  return -1;
+	}
+
+      /* Set ticket for a remote folder */
+      rc = mu_folder_attach_ticket (folder);
+      if (rc)
+	{
+	  mu_authority_t auth = NULL;
+
+	  if (mu_folder_get_authority (folder, &auth) == 0 && auth)
+	    {
+	      mu_ticket_t tct;
+	      mu_noauth_ticket_create (&tct);
+	      rc = mu_authority_set_ticket (auth, tct);
+	      if (rc)
+		mu_diag_funcall (MU_DIAG_ERROR, "mu_authority_set_ticket",
+				 NULL, rc);
+	    }
+	}
+    }
+
+  rc = mu_folder_open (folder, MU_STREAM_READ);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_open",
+		       mu_url_to_string (url), rc);
+      mu_folder_destroy (&folder);
+      return -1;
+    }
+
+  *pfolder = folder;
+  return 0;
+}
+

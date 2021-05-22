@@ -192,7 +192,7 @@ main (int argc, char **argv)
 
   if (!fname)
     {
-      mu_error ("URL not specified");
+      usage ();
       exit (1);
     }
       

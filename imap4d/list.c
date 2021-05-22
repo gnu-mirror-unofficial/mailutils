@@ -23,7 +23,8 @@ struct refinfo
   char const *refptr;   /* Original reference */
   size_t reflen;        /* Length of the original reference */
   struct namespace_prefix const *pfx;
-  size_t dirlen;        /* Length of the current directory prefix */
+  int delim;            /* If not 0, this character will be inserted between
+			   the original reference and mailbox name */
   char *buf;
   size_t bufsize;
 };
@@ -36,7 +37,7 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   size_t size;
   char *p;
 
-  name = resp->name + refinfo->dirlen;
+  name = resp->name;
 
   /* There can be only one INBOX */
   if (refinfo->reflen == 0 &&  mu_c_strcasecmp (name, "INBOX") == 0)
@@ -77,12 +78,14 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
     {
       memcpy (refinfo->buf, refinfo->refptr, refinfo->reflen);
       p = refinfo->buf + refinfo->reflen;
+      if (refinfo->delim)
+	*p++ = refinfo->delim;
     }
   else
     p = refinfo->buf;
   if (*name)
     translate_delim (p, name, refinfo->pfx->delim, resp->separator);
-
+  
   name = refinfo->buf;
   
   if (strpbrk (name, "\"{}"))
@@ -119,8 +122,6 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
   int rc;
   struct refinfo refinfo;
   mu_folder_t folder;
-  char const *dir;
-  mu_url_t url;
   struct mu_folder_scanner scn = MU_FOLDER_SCANNER_INITIALIZER;
 
   if (!wcard[0])
@@ -168,14 +169,10 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
   refinfo.refptr = ref;
   refinfo.reflen = strlen (ref);
 
-  mu_folder_get_url (folder, &url);
-  mu_url_sget_path (url, &dir);
-  refinfo.dirlen = strlen (dir);
-
-  if (refinfo.refptr[refinfo.reflen-1] == pfx->delim)
-    refinfo.reflen--;
-  else if (strcmp (ref, pfx->prefix) == 0)
-    refinfo.dirlen++;
+  /* Insert delimiter after the reference prefix, unless the latter already
+     ends with a delimiter or is the same as the namespace prefix. */
+  if (ref[refinfo.reflen-1] != pfx->delim && strcmp (ref, pfx->prefix))
+    refinfo.delim = pfx->delim;
   
   /* The special name INBOX is included in the output from LIST, if
      INBOX is supported by this server for this user and if the

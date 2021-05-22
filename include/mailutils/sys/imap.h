@@ -110,6 +110,10 @@ struct _mu_imap
     int mbox_writable:1; /* Is it open read/write? */
     struct mu_imap_stat mbox_stat;  /* Stats obtained from it */
 
+    /* Folder data */
+    int separator;     /* Separator character */
+    size_t prefix_len; /* Path prefix length */
+
     /* Callbacks */
     struct
     {

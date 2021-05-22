@@ -95,7 +95,7 @@ list_untagged_handler (mu_imap_t imap, mu_list_t resp, void *data)
       elt = _mu_imap_list_at (resp, 3);
       if (!(elt && elt->type == imap_eltype_string))
 	return;
-      rp->name = strdup (elt->v.string);
+      rp->name = strdup (elt->v.string + imap->prefix_len);
       if (!rp->name)
 	{
 	  free (rp);

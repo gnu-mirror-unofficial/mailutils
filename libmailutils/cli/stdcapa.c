@@ -466,8 +466,6 @@ cb_locker_type (void *data, mu_config_value_t *val)
 static int
 cb_locker_external (void *data, mu_config_value_t *val)
 {
-  int t;
-  
   if (mu_cfg_assert_value_type (val, MU_CFG_STRING))
     return 1;
 

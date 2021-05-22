@@ -546,6 +546,15 @@ const char *alias_iterate_next (alias_iterator_t itr);
 const char *alias_iterate_first (const char *p, alias_iterator_t *itr);
 void alias_iterate_end (alias_iterator_t *itr);
 
+/* Auxiliary functions for accessing folders */
+enum
+  {
+    any_folder,
+    local_folder
+  };
+
+int util_get_folder (mu_folder_t *pfolder, mu_url_t url, int type);
+
 int mail_sender    (int argc, char **argv);
 int mail_nosender  (int argc, char **argv);
 mu_address_t get_sender_address (mu_message_t msg);

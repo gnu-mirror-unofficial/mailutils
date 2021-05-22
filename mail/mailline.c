@@ -18,7 +18,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <mailutils/folder.h>
-#include <mailutils/auth.h>
 
 #ifdef WITH_READLINE
 static char **ml_command_completion (char *cmd, int start, int end);
@@ -476,7 +475,6 @@ struct filegen
   mu_iterator_t itr;  /* Iterator over this list */
   size_t prefix_len;  /* Length of initial prefix */
   char repl;          /* Character to replace initial prefix with */ 
-  size_t path_len;    /* Length of pathname part */
   int flags;
 };
 
@@ -487,69 +485,7 @@ filegen_free (struct filegen *fg)
   mu_list_destroy (&fg->list);
 }
 
-enum
-  {
-    any_folder,
-    local_folder
-  };
-
-#define PREFIX_AUTO ((size_t)-1)
-
-static int
-new_folder (mu_folder_t *pfolder, mu_url_t url, int type)
-{
-  mu_folder_t folder;
-  int rc;
-
-  rc = mu_folder_create_from_record (&folder, url, NULL);
-  if (rc)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_create",
-		       mu_url_to_string (url), rc);
-      return -1;
-    }
-
-  if (!mu_folder_is_local (folder))
-    {
-      if (type == local_folder)
-	{
-	  /* TRANSLATORS: The subject of this sentence ("folder") is the
-	     name of the variable. Don't translate it. */
-	  mu_error ("%s", _("folder must be set to a local folder"));
-	  mu_folder_destroy (&folder);
-	  return -1;
-	}
-
-      /* Set ticket for a remote folder */
-      rc = mu_folder_attach_ticket (folder);
-      if (rc)
-	{
-	  mu_authority_t auth = NULL;
-
-	  if (mu_folder_get_authority (folder, &auth) == 0 && auth)
-	    {
-	      mu_ticket_t tct;
-	      mu_noauth_ticket_create (&tct);
-	      rc = mu_authority_set_ticket (auth, tct);
-	      if (rc)
-		mu_diag_funcall (MU_DIAG_ERROR, "mu_authority_set_ticket",
-				 NULL, rc);
-	    }
-	}
-    }
-
-  rc = mu_folder_open (folder, MU_STREAM_READ);
-  if (rc)
-    {
-      mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_open",
-		       mu_url_to_string (url), rc);
-      mu_folder_destroy (&folder);
-      return -1;
-    }
-
-  *pfolder = folder;
-  return 0;
-}
+#define PREFIX_AUTO 0
 
 static int
 folder_match_url (mu_folder_t folder, mu_url_t url)
@@ -583,7 +519,6 @@ filegen_init (struct filegen *fg,
   mu_url_t url;
   int rc;
   int free_folder;
-  char const *urlpath;
 
   rc = mu_url_create (&url, folder_path);
   if (rc)
@@ -605,7 +540,7 @@ filegen_init (struct filegen *fg,
 
   if (!folder)
     {
-      if (new_folder (&folder, url, type))
+      if (util_get_folder (&folder, url, type))
 	return -1;
       free_folder = 1;
     }
@@ -620,14 +555,7 @@ filegen_init (struct filegen *fg,
   strcat (wcard, "%");
   pathref[i] = 0;
 
-  mu_url_sget_path (url, &urlpath);
-  fg->path_len = strlen (urlpath);
-  if (fg->path_len > 0 && urlpath[fg->path_len - 1] != '/')
-    fg->path_len++;
-  if (prefix_len == PREFIX_AUTO)
-    fg->prefix_len = fg->path_len;
-  else
-    fg->prefix_len = prefix_len;
+  fg->prefix_len = prefix_len;
 
   mu_folder_list (folder, pathref, wcard, 1, &fg->list);
   free (wcard);
@@ -648,7 +576,7 @@ filegen_init (struct filegen *fg,
 	  struct mu_list_response *resp;
 	  mu_list_head (fg->list, (void**)&resp);
 	  if ((resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY)
-	      && strcmp (resp->name + fg->path_len, text) == 0)
+	      && strcmp (resp->name, text) == 0)
 	    ml_set_completion_append_character (resp->separator);
 	}
     }
