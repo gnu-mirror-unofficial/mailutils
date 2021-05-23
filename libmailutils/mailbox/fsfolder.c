@@ -387,8 +387,7 @@ list_helper (struct mu_folder_scanner *scn,
 			{
 			  if (scn->enumfun (data->folder, resp, scn->enumdata))
 			    {
-			      free (resp->name);
-			      free (resp);
+			      mu_list_response_free (resp);
 			      stop = 1;
 			      break;
 			    }
@@ -410,7 +409,7 @@ list_helper (struct mu_folder_scanner *scn,
 			  fname = NULL;
 			}
 		      else
-			free (resp);
+			mu_list_response_free (resp);
 		    }
 		  
 		  if ((type & MU_FOLDER_ATTRIBUTE_DIRECTORY)

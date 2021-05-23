@@ -392,6 +392,7 @@ mu_folder_enumerate (mu_folder_t folder, const char *name,
 	  status = mu_list_create (&scn.result);
 	  if (status)
 	    return status;
+	  mu_list_set_destroy_item (scn.result, mu_list_response_free);
 	}
       status = mu_folder_scan (folder, &scn);
       if (status == 0)
