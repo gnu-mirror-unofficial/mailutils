@@ -78,7 +78,8 @@ list_untagged_handler (mu_imap_t imap, mu_list_t resp, void *data)
       _mu_imap_list_nth_element_is_string (resp, 0, clos->command))
     {
       struct mu_list_response *rp;
-
+      char const *name;
+      
       rp = calloc (1, sizeof (*rp));
       if (!rp)
 	{
@@ -95,7 +96,31 @@ list_untagged_handler (mu_imap_t imap, mu_list_t resp, void *data)
       elt = _mu_imap_list_at (resp, 3);
       if (!(elt && elt->type == imap_eltype_string))
 	return;
-      rp->name = strdup (elt->v.string + imap->prefix_len);
+
+      name = elt->v.string;
+      /*
+       * Skip first imap->prefix_len characters of the returned name.  This
+       * is the length of the path part in the folder URL.  Note, however,
+       * that there is a case when an IMAP server can return a name shorter
+       * than that: namely, when given an empty mailbox (wref) name.  As per
+       * RFC 3501:
+       *
+       *   An empty ("" string) mailbox name argument is a special request to
+       *   return the hierarchy delimiter and the root name of the name given
+       *   in the reference.
+       *
+       * The following conditional takes this into account.  It is based on
+       * a reasonable assumption that the root name is always shorter than
+       * the reference name.
+       *
+       * FIXME: Perhaps it would be safer to compare with the pathname prefix
+       * instead.  To do so, mu_imap_t should include the prefix (or a pointer
+       * to mu_folder_t).
+       */
+      if (strlen (name) > imap->prefix_len)
+	name += imap->prefix_len;
+      
+      rp->name = strdup (name);
       if (!rp->name)
 	{
 	  free (rp);

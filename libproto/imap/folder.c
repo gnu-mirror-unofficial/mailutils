@@ -276,7 +276,7 @@ _mu_imap_folder_separator (mu_folder_t folder, int *sep)
       if (mu_url_sget_path (folder->url, &path) || strcmp (path, "INBOX") == 0)
 	path = "";
 
-      rc = mu_imap_list_new (imap, path, "%", &list);
+      rc = mu_imap_list_new (imap, path, "", &list);
       if (rc)
 	return rc;
       if (mu_list_head (list, (void**)&resp))
