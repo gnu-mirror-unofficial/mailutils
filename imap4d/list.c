@@ -18,6 +18,43 @@
 #include <dirent.h>
 #include <pwd.h>
 
+/*
+ * IMPORTANT NOTE:
+ *
+ * The LIST command takes two arguments: 'reference' and 'mailbox',
+ * which in the code below is referred to as 'wcard'.  Now, RFC 3501
+ * states, that:
+ *
+ *  If the reference argument is not a level of mailbox
+ *  hierarchy (that is, it is a \NoInferiors name), and/or
+ *  the reference argument does not end with the hierarchy
+ *  delimiter, it is implementation-dependent how this is
+ *  interpreted.  For example, a reference of "foo/bar" and
+ *  mailbox name of "rag/baz" could be interpreted as
+ *  "foo/bar/rag/baz", "foo/barrag/baz", or "foo/rag/baz".
+ *  A client SHOULD NOT use such a reference argument except
+ *  at the explicit request of the user.  A hierarchical
+ *  browser MUST NOT make any assumptions about server
+ *  interpretation of the reference unless the reference is
+ *  a level of mailbox hierarchy AND ends with the hierarchy
+ *  delimiter.
+ *
+ * Mailutils' approach is basically to concatenate the two
+ * arguments with a hierarchy separator (as per RFC 2342) in
+ * between.  In detail:
+ *
+ *  1. Given two arguments, 'reference' and 'wcard', the reference is
+ *     used to look up the matching namespace (first approximation).
+ *  2. If wcard contains non-wildcard directory prefix, that prefix
+ *     is removed and appended to the reference, separated by the
+ *     namespace delimiter.
+ *  3. The updated reference is used to look up the final namespace.
+ *  4. If the namespace prefix ends with a delimiter, wcard is appended
+ *     to it.
+ *  5. Otherwise, the name to look up is formed by concatenating the
+ *     namespace prefix, namespace delimiter, and wcard.
+ */
+
 struct refinfo
 {
   char const *refptr;   /* Original reference */
@@ -100,6 +137,7 @@ list_fun (mu_folder_t folder, struct mu_list_response *resp, void *data)
   return 0;
 }
 
+/* Return 1 if the string REF matches exactly the prefix in PFX. */
 static int
 match_pfx (struct namespace_prefix const *pfx, char const *ref)
 {
@@ -107,7 +145,9 @@ match_pfx (struct namespace_prefix const *pfx, char const *ref)
 
   for (; *q; p++, q++)
     {
-      if (*p == 0 || *p != *q)
+      if (*p == 0)
+	return *q == pfx->delim && q[1] == 0;
+      if (*p != *q)
 	return 0;
     }
   if (*p == pfx->delim)

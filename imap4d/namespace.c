@@ -160,16 +160,8 @@ prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 		       size_t namelen)
 {
   size_t pfxlen = strlen (pfx->prefix);
-  int delim = 0;
   
-  if (pfxlen && pfx->prefix[pfxlen-1] == pfx->delim)
-    {
-      pfxlen--;
-      delim = pfx->delim;
-    }
-  
-  if ((pfxlen <= namelen && memcmp (pfx->prefix, name, pfxlen) == 0)
-      && (delim == 0 || (name[pfxlen] == delim || name[pfxlen] == 0)))
+  if (pfxlen <= namelen && memcmp (pfx->prefix, name, pfxlen) == 0)
     {
       char *tmpl, *p;
 
