@@ -21,7 +21,7 @@ include $(top_srcdir)/testsuite/testsuite.am
 ## -------------------------- ##
 
 AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) 
-noinst_PROGRAMS = ckiconv
+noinst_PROGRAMS = ckiconv testclient
 LDADD = $(MU_LIB_MAILUTILS)
 
 TESTSUITE_AT += \
@@ -29,6 +29,7 @@ TESTSUITE_AT += \
  append00.at\
  append01.at\
  close-expunge.at\
+ clt_list.at\
  create01.at\
  create02.at\
  examine.at\

@@ -1,0 +1,107 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2021 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+m4_pushdef([IMAP4D_HOMEDIR],[spool])
+
+AT_SETUP([list])
+AT_KEYWORDS([imap list folder])
+AT_CHECK([
+# Prepare namespaces
+mkdir spool spool/A spool/B
+
+mkdir archive archive/c archive/d archive/d/e
+
+mkdir other other/foo other/foo/a other/foo/b other/bar other/bar/qux
+
+touch spool/sent spool/outgoing spool/A/backup spool/A/cancelled
+touch archive/01 archive/02 archive/03
+touch archive/d/01 archive/d/02 archive/d/e/03 archive/d/e/04
+
+touch other/foo/draft other/bar/draft other/bar/X
+
+make_config spool
+])
+
+AT_CHECK([
+m4_changecom([//])
+testclient imap4d.conf 'imapfolder url=$URL dnl
+            list "" "" dnl
+            list "" % dnl
+	    list "" \* dnl
+	    list A/ % dnl
+	    list "#archive:" % dnl
+	    list "#archive:" \* dnl
+	    list "#archive:" "d.e" dnl
+	    list "#archive:d." "e" dnl
+	    list "#archive:d." "e.%" dnl
+	    list "#archive:d." \*'
+m4_changecom([#])	 
+],
+[0],
+[# LIST "" ""
+d- /    0 ""
+# LIST "" "%"
+d- /    0 "A"
+d- /    0 "B"
+-f      0 "INBOX"
+-f /    0 "outgoing"
+-f /    0 "sent"
+# LIST "" "*"
+d- /    0 "A"
+-f /    1 "A/backup"
+-f /    1 "A/cancelled"
+d- /    0 "B"
+-f      0 "INBOX"
+-f /    0 "outgoing"
+-f /    0 "sent"
+# LIST "A/" "%"
+-f /    1 "A/backup"
+-f /    1 "A/cancelled"
+# LIST "#archive:" "%"
+-f .    0 "#archive:01"
+-f .    0 "#archive:02"
+-f .    0 "#archive:03"
+d- .    0 "#archive:c"
+d- .    0 "#archive:d"
+# LIST "#archive:" "*"
+-f .    0 "#archive:01"
+-f .    0 "#archive:02"
+-f .    0 "#archive:03"
+d- .    0 "#archive:c"
+d- .    0 "#archive:d"
+-f .    1 "#archive:d.01"
+-f .    1 "#archive:d.02"
+d- .    1 "#archive:d.e"
+-f .    2 "#archive:d.e.03"
+-f .    2 "#archive:d.e.04"
+# LIST "#archive:" "d.e"
+d- .    1 "#archive:d.e"
+# LIST "#archive:d." "e"
+d- .    1 "#archive:d.e"
+# LIST "#archive:d." "e.%"
+-f .    2 "#archive:d.e.03"
+-f .    2 "#archive:d.e.04"
+# LIST "#archive:d." "*"
+-f .    1 "#archive:d.01"
+-f .    1 "#archive:d.02"
+d- .    1 "#archive:d.e"
+-f .    2 "#archive:d.e.03"
+-f .    2 "#archive:d.e.04"
+])
+
+
+
+AT_CLEANUP

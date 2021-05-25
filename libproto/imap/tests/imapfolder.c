@@ -33,7 +33,7 @@ static int
 _print_list_entry (void *item, void *data)
 {
   struct mu_list_response *resp = item;
-  mu_printf ("%c%c %c %4d %s\n",
+  mu_printf ("%c%c %c %4d \"%s\"\n",
 	     (resp->type & MU_FOLDER_ATTRIBUTE_DIRECTORY) ? 'd' : '-',
 	     (resp->type & MU_FOLDER_ATTRIBUTE_FILE) ? 'f' : '-',
 	     resp->separator ? resp->separator : ' ',
@@ -42,18 +42,35 @@ _print_list_entry (void *item, void *data)
   return 0;
 }
 
+static int
+_comp_list_entry (const void *a, const void *b)
+{
+  struct mu_list_response const *ra = a;
+  struct mu_list_response const *rb = b;
+  int i = strcmp (ra->name, rb->name);
+
+  if (i != 0)
+    return i;
+  if (ra->depth < rb->depth)
+    return -1;
+  if (ra->depth > rb->depth)
+    return 1;
+  return 0;
+}
+  
 static void
 com_list (mu_folder_t folder, char **argv)
 {
   int rc;
   mu_list_t list;
   
-  mu_printf ("listing %s %s\n", argv[0], argv[1]);
+  mu_printf ("# LIST \"%s\" \"%s\"\n", argv[0], argv[1]);
   rc = mu_folder_list (folder, argv[0], argv[1], 0, &list);
   if (rc)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_list", argv[0], rc);
   else
     {
+      mu_list_sort (list, _comp_list_entry);
       mu_list_foreach (list, _print_list_entry, NULL);
       mu_list_destroy (&list);
     }
@@ -71,6 +88,7 @@ com_lsub (mu_folder_t folder, char **argv)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_folder_lsub", argv[0], rc);
   else
     {
+      mu_list_sort (list, _comp_list_entry);
       mu_list_foreach (list, _print_list_entry, NULL);
       mu_list_destroy (&list);
     }

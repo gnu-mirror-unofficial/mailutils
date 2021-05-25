@@ -421,6 +421,10 @@ char *namespace_translate_name (char const *name,
 				struct namespace_prefix const **pfx);
 char *namespace_get_name (char const *name, mu_record_t *rec, int *mode);
 
+char *namespace_decode_delim (struct namespace_prefix const *pfx,
+			      char const *src);
+char *namespace_encode_delim (struct namespace_prefix const *pfx,
+			      char const *src);
 void translate_delim (char *dst, char const *src, int dst_delim, int src_delim);
 
 

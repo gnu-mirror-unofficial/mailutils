@@ -55,14 +55,6 @@ cmplen (const char *aname, const void *adata,
   return strlen (bname) - strlen (aname);
 }
 
-void
-translate_delim (char *dst, char const *src, int dst_delim, int src_delim)
-{
-  do
-    *dst++ = *src == src_delim ? dst_delim : *src;
-  while (*src++);
-}  
-
 static void
 trim_delim (char *str, int delim)
 {
@@ -155,6 +147,14 @@ namespace_init (void)
   mu_assoc_sort_r (prefixes, cmplen, NULL);
 }
       
+void
+translate_delim (char *dst, char const *src, int dst_delim, int src_delim)
+{
+  do
+    *dst++ = *src == src_delim ? dst_delim : *src;
+  while (*src++);
+}  
+
 static char *
 prefix_translate_name (struct namespace_prefix const *pfx, char const *name,
 		       size_t namelen)
@@ -362,6 +362,23 @@ namespace_get_name (char const *name, mu_record_t *rec, int *mode)
     *mode = namespace[pfx->ns].mode;
   return path;
 }
+
+char *
+namespace_decode_delim (struct namespace_prefix const *pfx, char const *src)
+{
+  char *dst = mu_alloc (strlen (src) + 1);
+  translate_delim (dst, src, '/', pfx->delim);
+  return dst;
+}
+
+char *
+namespace_encode_delim (struct namespace_prefix const *pfx, char const *src)
+{
+  char *dst = mu_alloc (strlen (src) + 1);
+  translate_delim (dst, src, pfx->delim, '/');
+  return dst;
+}
+
 
 static int
 prefix_printer(void *item, void *data)

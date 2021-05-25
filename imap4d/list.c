@@ -226,7 +226,7 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
       mu_imap_wildmatch_ci (wcard, "INBOX", MU_HIERARCHY_DELIMITER) == 0)
     io_untagged_response (RESP_NONE, "LIST (\\NoInferiors) NIL INBOX");
 
-  scn.pattern = (void*) wcard;
+  scn.pattern = namespace_decode_delim (pfx, wcard);
   scn.enumfun = list_fun;
   scn.enumdata = &refinfo;
   if (refinfo.pfx->record)
@@ -236,6 +236,7 @@ list_ref (char const *ref, char const *wcard, char const *cwd,
     }
   
   mu_folder_scan (folder, &scn);
+  free (scn.pattern);
   mu_list_destroy (&scn.records);
   mu_folder_destroy (&folder);
   free (refinfo.buf);

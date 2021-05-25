@@ -102,3 +102,6 @@ m4_include([fetch.at])
 AT_BANNER([IDEF Checks])
 m4_include([IDEF0955.at])
 m4_include([IDEF0956.at])
+
+AT_BANNER([Client library])
+m4_include([clt_list.at])

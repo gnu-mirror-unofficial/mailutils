@@ -2,6 +2,7 @@ ckiconv
 atconfig
 atlocal
 package.m4
+testclient
 testsuite
 testsuite.dir
 testsuite.log

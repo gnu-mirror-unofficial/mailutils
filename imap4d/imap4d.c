@@ -442,8 +442,7 @@ prefix_section_parser (enum mu_cfg_section_stage stage,
 	}
       else if (!pfx->prefix)
 	{
-	  pfx->prefix = mu_alloc (strlen (pfx->dir) + 1);
-	  translate_delim (pfx->prefix, pfx->dir, pfx->delim, '/');
+	  pfx->prefix = namespace_encode_delim (pfx, pfx->dir);
 	}
     }
   return 0;

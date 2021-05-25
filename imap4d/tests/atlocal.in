@@ -2,7 +2,7 @@
 # Configurable variable values for Mailutils test suite.
 # Copyright (C) 2011-2021 Free Software Foundation, Inc.
 
-PATH=@abs_builddir@:@abs_top_builddir@/imap4d:$top_srcdir:$srcdir:$PATH
+PATH=@abs_builddir@:@abs_top_builddir@/imap4d:$top_srcdir:@abs_top_builddir@/libproto/imap/tests:$PATH
 MU_ULONG_MAX_1=@MU_ULONG_MAX_1@
 
 make_config() {

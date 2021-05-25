@@ -130,6 +130,7 @@ cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
 cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
 ])
 
+LIST_CHECK([],[],
 ["#archive:" "%"],
 [* LIST (\NoInferiors) "." #archive:mbox
 * LIST (\NoSelect) "." #archive:old
@@ -138,6 +139,21 @@ cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
 cp $abs_top_srcdir/testsuite/spool/mbox archive
 cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old
 cp $abs_top_srcdir/testsuite/spool/mbox1 archive/old/very/saved
+])
+
+LIST_CHECK([],[],
+["#archive:" "a.b"],
+[* LIST (\NoSelect) "." #archive:a.b
+],
+[mkdir archive archive/a archive/a/b
+])
+
+LIST_CHECK([],[],
+["#archive:" "a.b.c"],
+[* LIST (\NoInferiors) "." #archive:a.b.c
+],
+[mkdir archive archive/a archive/a/b
+cp $abs_top_srcdir/testsuite/spool/mbox archive/a/b/c
 ])
 
 LIST_CHECK([],[],
