@@ -63,6 +63,9 @@ struct mu_address
   struct mu_address *next;
 };
 
+#define MU_ADDRESS_HINT_INITIALIZER \
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+  
 extern int mu_address_create_null (mu_address_t *);
   
 extern int mu_address_create_hint (mu_address_t *, const char *,

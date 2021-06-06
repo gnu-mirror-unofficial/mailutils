@@ -19,6 +19,7 @@
 # include <config.h>
 #endif
 #include <stdlib.h>
+#include <string.h> 
 #include <mailutils/address.h>
 #include <mailutils/stream.h>
 
@@ -37,23 +38,34 @@ mu_stream_format_address (mu_stream_t str, mu_address_t addr)
 	  if (comma)
 	    mu_stream_write (str, ",", 1, NULL);
 
-	  if (addr->personal)
+	  if (!addr->personal &&
+	      !addr->comments &&
+	      !addr->domain &&
+	      !addr->route)
 	    {
-	      mu_stream_printf (str, "\"%s\"", addr->personal);
-	      space++;
+	      /* Local user name: print as is */
+	      mu_stream_write (str, addr->email, strlen (addr->email), NULL);
 	    }
-
-	  if (addr->comments)
+	  else
 	    {
+	      if (addr->personal)
+		{
+		  mu_stream_printf (str, "\"%s\"", addr->personal);
+		  space++;
+		}
+	      
+	      if (addr->comments)
+		{
+		  if (space)
+		    mu_stream_write (str, " ", 1, NULL);
+		  mu_stream_printf (str, "(%s)", addr->comments);
+		  space++;
+		}
+
 	      if (space)
 		mu_stream_write (str, " ", 1, NULL);
-	      mu_stream_printf (str, "(%s)", addr->comments);
-	      space++;
+	      mu_stream_printf (str, "<%s>", addr->email);
 	    }
-
-	  if (space)
-	    mu_stream_write (str, " ", 1, NULL);
-	  mu_stream_printf (str, "<%s>", addr->email);
 	  comma++;
 	}
     }

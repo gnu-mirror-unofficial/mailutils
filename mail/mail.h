@@ -506,7 +506,8 @@ void util_msgset_iterate (msgset_t *msgset,
 void util_get_content_type (mu_header_t hdr, char **value, char **args);
 void util_get_hdr_value (mu_header_t hdr, const char *name, char **value);
 int util_merge_addresses (char **addr_str, const char *value);
-int util_header_expand (mu_header_t *hdr);
+void util_address_expand_aliases (mu_address_t *paddr);
+int util_header_expand_aliases (mu_header_t *hdr);
 int util_get_message (mu_mailbox_t mbox, size_t msgno, mu_message_t *msg);
 int util_get_message_part (mu_mailbox_t mbox, msgset_t *msgset,
 			   mu_message_t *ret_msg);

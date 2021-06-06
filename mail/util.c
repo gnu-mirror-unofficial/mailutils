@@ -888,13 +888,56 @@ is_address_field (const char *name)
   return 0;
 }
 
+void
+util_address_expand_aliases (mu_address_t *paddr)
+{
+  struct mu_address hint;
+  mu_address_t addr = *paddr;
+  mu_address_t new_addr = NULL;
+  int rc;
+  
+  memset (&hint, 0, sizeof (hint));
+  while (addr)
+    {
+      struct mu_address *next = addr->next;
+      addr->next = NULL;
+
+      if (addr->domain == NULL)
+	{
+	  char *exp = alias_expand (addr->local_part);
+	  if (exp)
+	    {
+	      mu_address_destroy (&addr);
+	      rc = mu_address_create_hint (&addr, exp, &hint, 0);
+	      if (rc)
+		{
+		  mu_error (_("Cannot parse address `%s': %s"),
+			    exp, mu_strerror (rc));
+		  free (exp);
+		  continue;
+		}
+	      free (exp);
+	    }
+	}
+      mu_address_union (&new_addr, addr);
+      mu_address_destroy (&addr);
+
+      addr = next;
+    }
+  *paddr = new_addr;
+}
+
 int
-util_header_expand (mu_header_t *phdr)
+util_header_expand_aliases (mu_header_t *phdr)
 {
   size_t i, nfields = 0;
   mu_header_t hdr;
   int errcnt = 0, rc;
 
+  if (mailvar_is_true (mailvar_name_inplacealiases))
+    /* If inplacealiases was set, aliases have been already expanded */
+    return 0;
+  
   rc = mu_header_create (&hdr, "", 0);
   if (rc)
     {
@@ -905,84 +948,54 @@ util_header_expand (mu_header_t *phdr)
   mu_header_get_field_count (*phdr, &nfields);
   for (i = 1; i <= nfields; i++)
     {
-      const char *name, *value;
+      const char *name;
+      char *value;
 
       if (mu_header_sget_field_name (*phdr, i, &name))
 	continue;
 
-      if (mu_header_sget_field_value (*phdr, i, &value))
+      if (mu_header_aget_field_value (*phdr, i, &value))
 	continue;
 
       if (is_address_field (name))
 	{
+	  struct mu_address hint;
 	  const char *s;
-	  mu_address_t addr = NULL;
-	  struct mu_wordsplit ws;
-	  size_t j;
+	  mu_address_t a = NULL;
 
-	  if (mu_header_sget_value (hdr, name, &s) == 0)
-	    mu_address_create (&addr, s);
+	  mu_string_unfold (value, NULL);
 
-	  ws.ws_delim = ",";
-	  if (mu_wordsplit (value, &ws,
-			    MU_WRDSF_DELIM|MU_WRDSF_SQUEEZE_DELIMS|
-			    MU_WRDSF_WS|
-			    MU_WRDSF_NOVAR|MU_WRDSF_NOCMD))
+	  memset (&hint, 0, sizeof (hint));
+	  rc = mu_address_create_hint (&a, value, &hint, 0);
+	  if (rc == 0)
 	    {
-	      errcnt++;
-	      mu_error (_("cannot split line `%s': %s"), value,
-			mu_wordsplit_strerror (&ws));
+	      mu_address_t ha = NULL;
+	      util_address_expand_aliases (&a);
+	      if (mu_header_sget_value (hdr, name, &s) == 0)
+		mu_address_create_hint (&ha, s, &hint, 0);
+	      mu_address_union (&ha, a);
+	      mu_address_destroy (&a);
+	      a = ha;
 	    }
 	  else
 	    {
-	      for (j = 0; j < ws.ws_wordc; j++)
-		{
-		  char *exp_mem = NULL;
-		  mu_address_t new_addr;
-		  char *p = ws.ws_wordv[j];
-		  char *exp;
-	      
-		  if (mailvar_is_true (mailvar_name_inplacealiases))
-		    /* If inplacealiases was set, the value was a
-		       lready expanded */
-		    exp = p;
-		  else
-		    {
-		      exp_mem = alias_expand (p);
-		      exp = exp_mem ? exp_mem : p;
-		    }
-		  rc = mu_address_create (&new_addr, exp);
-		  if (rc)
-		    {
-		      errcnt++;
-		      if (exp_mem)
-			mu_error (_("Cannot parse address `%s'"
-				    " (while expanding `%s'): %s"),
-				  exp, p, mu_strerror (rc));
-		      else
-			mu_error (_("Cannot parse address `%s': %s"),
-				  p, mu_strerror (rc));
-		    }
-		  
-		  mu_address_union (&addr, new_addr);
-		  mu_address_destroy (&new_addr);
-		  free (exp_mem);
-		}
-
-	      if (addr)
-		{
-		  const char *newvalue;
-		  
-		  rc = mu_address_sget_printable (addr, &newvalue);
-		  if (rc == 0 && newvalue)
-		    mu_header_set_value (hdr, name, newvalue, 1);
-		  mu_address_destroy (&addr);
-		}
+	      mu_error (_("Cannot parse address `%s': %s"),
+			value, mu_strerror (rc));
 	    }
-	  mu_wordsplit_free (&ws);
+
+	  if (a)
+	    {
+	      const char *newvalue;
+		  
+	      rc = mu_address_sget_printable (a, &newvalue);
+	      if (rc == 0 && newvalue)
+		mu_header_set_value (hdr, name, newvalue, 1);
+	      mu_address_destroy (&a);
+	    }
 	}
       else
 	mu_header_append (hdr, name, value);
+      free (value);
     }
 
   if (errcnt == 0)
