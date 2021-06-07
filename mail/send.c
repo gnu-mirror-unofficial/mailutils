@@ -1208,6 +1208,33 @@ send_message (mu_message_t msg)
   return status;
 }
 
+#define MU_DATETIME_RFC822_LENGTH 31
+  
+static void
+message_add_date (mu_message_t msg)
+{
+  mu_header_t hdr;
+  char buf[MU_DATETIME_RFC822_LENGTH+1];
+  struct tm ltm;
+  time_t t;
+  int rc;
+  
+  rc = mu_message_get_header (msg, &hdr);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_message_get_header", NULL, rc);
+      return;
+    }
+
+  t = time (NULL);
+  localtime_r (&t, &ltm);
+  
+  mu_strftime (buf, sizeof (buf), MU_DATETIME_FORM_RFC822, &ltm);
+  rc = mu_header_set_value (hdr, MU_HEADER_DATE, buf, 1);
+  if (rc)
+    mu_diag_funcall (MU_DIAG_ERROR, "mu_header_set_value", MU_HEADER_DATE, rc);
+}
+
 /* mail_send0(): shared between mail_send() and mail_reply();
 
    If the variable "record" is set, the outgoing message is
@@ -1433,6 +1460,7 @@ mail_send0 (compose_env_t *env, int save_to)
 	  /* Do we need to Send the message on the wire?  */
 	  if (status == 0 && sendit)
 	    {
+	      message_add_date (msg);
 	      status = send_message (msg);
 	      if (status)
 		{
