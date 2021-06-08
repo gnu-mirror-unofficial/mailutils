@@ -73,7 +73,6 @@ mail/decode.c
 mail/escape.c
 mail/file.c
 mail/folders.c
-mail/followup.c
 mail/if.c
 mail/inc.c
 mail/mail.c

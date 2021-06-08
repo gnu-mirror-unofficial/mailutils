@@ -28,43 +28,44 @@ mail_write (int argc, char **argv)
   int rc;
   mu_stream_t output;
   char *filename = NULL;
+  char *namebuf = NULL;
   msgset_t *msglist = NULL, *mp;
-  int sender = 0;
   size_t total_size = 0, total_lines = 0;
 
   if (mu_isupper (argv[0][0]))
-    sender = 1;
-  else if (argc >= 2)
-    filename = util_outfolder_name (argv[--argc]);
+    {
+      if (msgset_parse (argc, argv, MSG_NODELETED|MSG_SILENT, &msglist))
+	return 1;
+      filename = namebuf = util_get_sender (msgset_msgno (msglist), 1);
+    }
   else
     {
-      size_t n = get_cursor ();
-      char *p = NULL;
-      if (n == 0)
-        {
-          mu_error (_("No applicable message"));
-          return 1;
-        }
-      mu_asprintf (&p, "%lu", (unsigned long) n);
-      filename = util_outfolder_name (p);
-      free (p);
-    }
-		
-  if (msgset_parse (argc, argv, MSG_NODELETED|MSG_SILENT, &msglist))
-    {
-      if (filename)
-	free (filename);
-      return 1;
-    }
-
-  if (sender)
-    {
-      filename = util_outfolder_name (util_get_sender (msgset_msgno (msglist), 1));
-      if (!filename)
+      if (argc >= 2)
 	{
-	  msgset_free (msglist);
-	  return 1;
+	  filename = argv[--argc];
 	}
+      else
+	{
+	  size_t n = get_cursor ();
+	  if (n == 0)
+	    {
+	      mu_error (_("No applicable message"));
+	      return 1;
+	    }
+	  mu_asprintf (&namebuf, "%lu", (unsigned long) n);
+	  filename = namebuf;
+	}
+      if (msgset_parse (argc, argv, MSG_NODELETED|MSG_SILENT, &msglist))
+	return 1;
+    }
+  
+  rc = mu_mailbox_expand_name (filename, &filename);
+  free (namebuf);
+  if (rc)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_expand_name", NULL, rc);
+      msgset_free (msglist);
+      return 1;
     }
 
   rc = mu_file_stream_create (&output, filename,

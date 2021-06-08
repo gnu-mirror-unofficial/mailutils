@@ -51,7 +51,6 @@ mail_SOURCES = \
  exit.c\
  file.c\
  folders.c\
- followup.c\
  from.c\
  headers.c\
  help.c\

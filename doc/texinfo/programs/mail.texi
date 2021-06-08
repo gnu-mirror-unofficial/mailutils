@@ -107,8 +107,7 @@ Sets content transfer encoding for use by the subsequent
 @itemx --byname
 Record outgoing messages in a file named after the first recipient.
 The name is the login-name portion of the address found first on the
-@samp{To:} line in the mail header.  This option sets the @samp{byname}
-variable, which see (@pxref{byname}).
+@samp{To:} line in the mail header.
 
 @item -f
 @itemx --file
@@ -872,7 +871,8 @@ command, unless the variable @code{keepsave} is set.
 @deffn {Mail command} Save [@var{msglist}]
 @deffnx {Mail command} S [@var{msglist}]
 Like @code{save}, but the file to append messages to is named after the
-sender of the first message in @var{msglist}.  For example:
+sender of the first message in @var{msglist}.  The file name is
+selected as described in @ref{Mail}.  For example:
 
 @example
 @cartouche
@@ -921,14 +921,14 @@ states}).
 
 @deffn {Mail command} copy [[@var{msglist}] @var{file}]
 @deffnx {Mail command} c [[@var{msglist}] @var{file}]
-Similar to @code{save}, except that saved messages are not marked for
-deletion.
+Similar to @code{save}, except that saved messages are not marked as
+saved.
 @end deffn
 
 @deffn {Mail command} Copy [@var{msglist}]
 @deffnx {Mail command} C [@var{msglist}]
-Similar to @code{Save}, except that saved messages are not marked for
-deletion.
+Similar to @code{Save}, except that saved messages are not marked as
+saved.
 @end deffn
 
 @node Editing Messages
@@ -985,40 +985,61 @@ alternate names is displayed.
 
 @deffn {Mail command} mail [@var{address}...]
 @deffnx {Mail command} m [@var{address}...]
-Switches to compose mode.  After composing the message, sends messages to
+Switches to compose mode.  After composing the message, sends it to
 the specified addresses.
+
+If the @code{record} variable is set, the composed message will be
+saved in the folder named by it.
 @end deffn
 
-@deffn {Mail command} reply [@var{msglist}]
-@deffnx {Mail command} respond [@var{msglist}]
-@deffnx {Mail command} r [@var{msglist}]
-For each message in @var{msglist}, switches to compose mode and sends
-the composed message to the sender and all recipients of the message.
+@anchor{Mail}
+@deffn {Mail command} Mail [@var{address}...]
+@deffnx {Mail command} M [@var{address}...]
+Same as @code{mail}, but the name of the file to save the composed
+message is determined as follows:
+
+If the @code{outfolder} variable is set, and has a string value,
+the filename is @file{@code{outfolder}/@var{recipient}}.  If if
+has a boolean value @samp{true}, the filename is
+@file{@code{folder}/@var{recipient}}.  Otherwise, the message will not
+be saved.
+@end deffn
+
+@deffn {Mail command} reply [@var{message}]
+@deffnx {Mail command} respond [@var{message}]
+@deffnx {Mail command} r [@var{message}]
+Mail a reply message to all recipients included in the header of the
+@var{message}.  The subject header is formed by concatenating the
+value of the @code{replyprefix} variable and the subject from the
+message.  If @code{record} is set to a filename, the response is
+saved at the end of that file. 
 @end deffn
 
 @deffn {Mail command} Reply [@var{msglist}]
 @deffnx {Mail command} Respond [@var{msglist}]
 @deffnx {Mail command} R [@var{msglist}]
-Like @code{reply}, except that the composed message is sent only to
-originators of the specified messages.
+Mail a reply message to the sender of each message in the @var{msglist}.
+The subject header is formed by concatenating the value of the
+@code{replyprefix} variable and the subject header of from the 
+first message in @var{msglist}.  If @code{record} is set to a
+filename, the response is saved at the end of that file. 
 
 Notice, that setting mail variable @code{flipr} (@pxref{Mail
-Variables}) swaps the meanings of the two above commands,
-so that @code{reply} sends the message to the sender and all
-recipients of the message, whereas @code{Reply} sends it to
-originators only.
+Variables}) swaps the meanings of the two above commands
 @end deffn
 
-@deffn {Mail command} followup [@var{msglist}]
-@deffnx {Mail command} fo [@var{msglist}]
-Switches to compose mode.  After composing, sends the message to the
-originators and recipients of all messages in @var{msglist}.
+@deffn {Mail command} followup [@var{message}]
+@deffnx {Mail command} fo [@var{message}]
+Respond to @var{message}, recording the response in a file whose name
+is derived from the author of the message.  @xref{Mail}, for a
+detailed discussion of how the file name is selected.
 @end deffn
 
 @deffn {Mail command} Followup [@var{msglist}]
 @deffnx {Mail command} F [@var{msglist}]
-Similar to @code{followup}, but reply message is sent only to
-originators of messages in @var{msglist}.
+Same as @code{Reply}, but the response is saved in a file whose name
+is derived from the author of the first message.  @xref{Mail}, for a
+detailed discussion of how the file name is selected.
 @end deffn
 
 To determine the sender of the message @command{mail} uses the
@@ -1999,20 +2020,6 @@ message, the next one will be typed automatically.
 When set, every occurrence of @code{!} in arguments to @code{!}
 command is replaced with the last executed command.
 
-@anchor{byname}
-@kwindex byname
-@item byname
-@*Type: Boolean
-@*Default: Unset
-@vrindex byname, mail variable
-
-Record outgoing messages in a file named after the first recipient.
-The name is the login-name portion of the address found first on the
-@samp{To:} line in the mail header.  This variable overrides the
-@samp{record} variable.
-
-It is set by the @option{--byname} (@option{-F}) command line option.
-
 @anchor{datefield}
 @kwindex datefield
 @item datefield
@@ -2600,13 +2607,18 @@ This variable is not used.  It exists for compatibility with other
 
 @kwindex outfolder
 @item outfolder
-@*Type: String.
+@*Type: Boolean or String.
 @*Default: Unset.
 @vrindex outfolder, mail variable
 
-Contains the directory in which files created by @code{save},
-@code{write}, etc. commands will be stored.  When unset, current
-directory is assumed.
+When set as boolean, causes the files used to record outgoing messages
+to be located in the directory specified by the @code{folder} variable
+(unless the pathname is absolute).
+
+If string, its value names the directory where to store these files.
+
+This variable affects the following commands: @code{Copy},
+@code{Save}, @code{Mail}, @code{Reply}, and @code{Followup}.
 
 @kwindex PID
 @item PID

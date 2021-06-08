@@ -84,6 +84,8 @@ static const struct mail_command_entry mail_command_table[] = {
     mail_list, no_compl },
   { "m",	"mail",		"m[ail] [address...]",		EF_SEND,
     mail_send, alias_compl },
+  { "M",        "Mail",         "M[ail] [address...]",		EF_SEND,
+    mail_send, alias_compl },
   { "mb",	"mbox",		"mb[ox] [msglist]",		0,
     mail_mbox, msglist_compl },
   { "n",	"next",		"n[ext] [message]",		0,

@@ -3,7 +3,7 @@
     mockmail - mock Sendmail binary for use in test suites
 
   SYNOPSIS
-    mockmta [-bm] [-f EMAIL] [-t] [-oi] [EMAIL ...]
+    mockmail [-bm] [-f EMAIL] [-itv] [-oi] [EMAIL ...]
 
   DESCRIPTION
     Mimicks the behavior of "sendmail -bm".  Instead of delivering
@@ -23,9 +23,11 @@
   OPTIONS
     -bm       Ignored for compatibility with Sendmail.
     -f EMAIL  Sets sender email address.
+    -i        Same as -oi.
     -t        Read recipients from the message.
     -oi       Don't expect the incoming message to be terminated with
               a dot.  This also turns off dot unstuffing.
+    -v        Ignored for compatibility with Sendmail.
 
   ENVIRONMENT
   
@@ -290,7 +292,7 @@ main (int argc, char **argv)
   
   progname = argv[0];
   
-  while ((c = getopt (argc, argv, "b:f:to:")) != EOF)
+  while ((c = getopt (argc, argv, "b:f:ito:v")) != EOF)
     {
       switch (c)
 	{
@@ -306,6 +308,10 @@ main (int argc, char **argv)
 	  from_person = optarg;
 	  break;
 
+	case 'i':
+	  dot = 0;
+	  break;
+	  
 	case 't':
 	  read_recipients = 1;
 	  break;
@@ -322,6 +328,9 @@ main (int argc, char **argv)
 	    }
 	  break;
 
+	case 'v':
+	  break;
+	  
 	default:
 	  exit (EX_USAGE);
 	}

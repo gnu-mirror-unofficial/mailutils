@@ -38,100 +38,242 @@ make_references (compose_env_t *env, mu_message_t msg)
 }
   
 /*
- * r[eply] [msglist] -- GNU extension
- * r[espond] [msglist] -- GNU extension
+ * r[eply] [message]
+ * r[espond] [message]
+ *   Reply to all recipients of the message.  Save to record.
+ *   reply_all = 1, send_to = 0
  * R[eply] [msglist]
  * R[espond] [msglist]
+ *   Reply to the sender of each message in msglist.  Save to record.
+ *   reply_all = 0, send_to = 0
+ * fo[llowup] message
+ *   Reply to all recipients of the message.  Save by name.
+ *   reply_all = 1, send_to = 1 
+ * F[ollowup] msglist
+ *   Reply to the sender of each message in msglist.  Save by name.
+ *   reply_all = 0, send_to = 1
  */
 
-int
-reply0 (msgset_t *mspec, mu_message_t msg, void *data)
+static void
+compose_set_address (compose_env_t *env, char const *hname, char const *input)
 {
+  struct mu_address hint = MU_ADDRESS_HINT_INITIALIZER;
+  mu_address_t iaddr, oaddr = NULL, ap;
+  char *result = NULL;
+  
+  if (mu_address_create_hint (&iaddr, input, &hint, 0))
+    result = mu_strdup (input);
+  else
+    {
+      for (ap = iaddr; ap; ap = ap->next)
+	{
+	  const char *email;
+	  if (mu_address_sget_email (ap, 1, &email) || email == NULL)
+	    continue;
+	  if (!(mailvar_is_true (mailvar_name_metoo) &&
+		mail_is_my_name (email)))
+	    mu_address_union (&oaddr, ap);
+	}
+      mu_address_destroy (&iaddr);
+      mu_address_aget_printable (oaddr, &result);
+      mu_address_destroy (&oaddr);
+    }
+  if (result && result[0])
+    {
+      compose_header_set (env, hname, result, COMPOSE_SINGLE_LINE);
+      free (result);
+    }
+}
+
+/*
+ * r[eply] [message]
+ * r[espond] [message]
+ * fo[llowup] message
+ *
+ * Reply to all recipients of a single message
+ */
+int
+respond_all (int argc, char **argv, int record_sender)
+{
+  int status;
+  compose_env_t env;
+  mu_message_t msg;
+  mu_header_t hdr;
+  char const *str;
+  char *p;
+
+  msgset_t *msgset = NULL;
+
+  if (msgset_parse (argc, argv, MSG_NODELETED, &msgset))
+    return 1;
+  
+  if (msgset->next)
+    {
+      mu_error (_("Can't reply to multiple messages at once"));
+      status = 1;
+    }
+  else if (util_get_message (mbox, msgset_msgno (msgset), &msg))
+    {
+      status = 1;
+    }
+  else
+    {
+      set_cursor (msgset_msgno (msgset));
+      
+      mu_message_get_header (msg, &hdr);
+  
+      compose_init (&env);
+
+      p = util_message_sender (msg, 0);
+      if (p)
+	{
+	  compose_set_address (&env, MU_HEADER_TO, p);
+	  free (p);
+	}
+      
+      /* Add the rest of recipients */
+      if (mu_header_sget_value (hdr, MU_HEADER_TO, &str) == 0)
+	{
+	  compose_set_address (&env, MU_HEADER_TO, str);
+	}
+      
+      if (mu_header_sget_value (hdr, MU_HEADER_CC, &str) == 0)
+	{
+	  compose_set_address (&env, MU_HEADER_CC, str);
+	}
+      
+      /* Add header line */
+      //FIXME: decode
+      if (mu_header_aget_value (hdr, MU_HEADER_SUBJECT, &p) == 0)
+	{
+	  char *subj = NULL;
+	  
+	  if (mu_unre_subject (p, NULL))
+	    util_strcat (&subj, util_reply_prefix ());
+	  util_strcat (&subj, p);
+	  free (p);
+	  compose_header_set (&env, MU_HEADER_SUBJECT, subj, COMPOSE_REPLACE);
+	  free (subj);
+	}
+      else
+	compose_header_set (&env, MU_HEADER_SUBJECT, "", COMPOSE_REPLACE);
+
+      mu_printf ("To: %s\n", compose_header_get (&env, MU_HEADER_TO, ""));
+      str = compose_header_get (&env, MU_HEADER_CC, NULL);
+      if (str)
+	mu_printf ("Cc: %s\n", str);
+      mu_printf ("Subject: %s\n\n",
+		 compose_header_get (&env, MU_HEADER_SUBJECT, ""));
+      
+      make_in_reply_to (&env, msg);
+      make_references (&env, msg);
+      status = mail_compose_send (&env, record_sender);
+      compose_destroy (&env);
+      util_mark_read (msg);
+    }
+  msgset_free (msgset);
+
+  return status;
+}
+
+/*
+ * R[eply] [msglist]
+ * R[espond] [msglist]
+ * F[ollowup] msglist
+ *
+ * Reply to the sender of each message in msglist.
+ */
+int
+respond_msg (int argc, char **argv, int record_sender)
+{
+  mu_message_t msg;
   mu_header_t hdr;
   compose_env_t env;
   int status;
-  char *str;
-  char const *rcpt;
+  char *p;
+  char const *str;
 
-  set_cursor (msgset_msgno (mspec));
+  msgset_t *msgset = NULL, *mp;
+
+  if (msgset_parse (argc, argv, MSG_NODELETED, &msgset))
+    return 1;
   
-  compose_init (&env);
-
-  mu_message_get_header (msg, &hdr);
-
-  compose_header_set (&env, MU_HEADER_TO,
-		      util_get_sender (msgset_msgno (mspec), 0),
-		      COMPOSE_SINGLE_LINE);
-
-  if (*(int*) data) /* reply starts with a lowercase */
+  if (util_get_message (mbox, msgset_msgno (msgset), &msg))
     {
-      /* Add all recepients of the originate letter */
-
-      mu_address_t addr = NULL;
-      size_t i, count = 0;
-
-      if (mu_header_aget_value (hdr, MU_HEADER_TO, &str) == 0)
-	{
-	  mu_address_create (&addr, str);
-	  free (str);
-	  mu_address_get_count (addr, &count);
-	}
-
-      /* Make sure we do not include our alternate names */
-      for (i = 1; i <= count; i++)
-	{
-	  const char *email;
-	  if (mu_address_sget_email (addr, i, &email) || email == NULL)
-	    continue;
-	  if (mailvar_is_true (mailvar_name_metoo) || !mail_is_my_name (email))
-	    compose_header_set (&env, MU_HEADER_TO,
-				email,
-				COMPOSE_SINGLE_LINE);
-	}
-      
-      mu_address_destroy (&addr);
-
-      /* Finally, add any Ccs */
-      if (mu_header_aget_value (hdr, MU_HEADER_CC, &str) == 0)
-	compose_header_set (&env, MU_HEADER_TO, str, COMPOSE_SINGLE_LINE);
-    }
-
-  if (mu_header_aget_value (hdr, MU_HEADER_SUBJECT, &str) == 0)
-    {
-      char *p = NULL;
-      
-      if (mu_unre_subject (str, NULL))
-	util_strcat (&p, util_reply_prefix ());
-      util_strcat (&p, str);
-      free (str);
-      compose_header_set (&env, MU_HEADER_SUBJECT, p, COMPOSE_REPLACE);
-      free (p);
+      status = 1;
     }
   else
-    compose_header_set (&env, MU_HEADER_SUBJECT, "", COMPOSE_REPLACE);
+    {
+      size_t last;
 
-  mu_printf ("To: %s\n",
-	   compose_header_get (&env, MU_HEADER_TO, ""));
-  rcpt = compose_header_get (&env, MU_HEADER_CC, NULL);
-  if (rcpt)
-    mu_printf ("Cc: %s\n", rcpt);
-  mu_printf ("Subject: %s\n\n",
-	     compose_header_get (&env, MU_HEADER_SUBJECT, ""));
+      set_cursor (msgset_msgno (msgset));
+
+      mu_message_get_header (msg, &hdr);
+
+      compose_init (&env);
+
+      for (mp = msgset; mp; mp = mp->next)
+	{
+	  mu_message_t mesg;
+	  last = msgset_msgno (mp);
+	  if (util_get_message (mbox, last, &mesg) == 0)
+	    {
+	      p = util_message_sender (mesg, 0);
+	      if (p)
+		{
+		  compose_set_address (&env, MU_HEADER_TO, p);
+		  free (p);
+		}
+	      util_mark_read (mesg);
+	    }
+	}
+      
+      /* Add subject header */
+      if (mu_header_aget_value (hdr, MU_HEADER_SUBJECT, &p) == 0)
+	{
+	  char *subj = NULL;
+      
+	  if (mu_unre_subject (p, NULL))
+	    util_strcat (&subj, util_reply_prefix ());
+	  util_strcat (&subj, p);
+	  free (p);
+	  compose_header_set (&env, MU_HEADER_SUBJECT, subj, COMPOSE_REPLACE);
+	  free (subj);
+	}
+      else
+	compose_header_set (&env, MU_HEADER_SUBJECT, "", COMPOSE_REPLACE);
+      
+      mu_printf ("To: %s\n", compose_header_get (&env, MU_HEADER_TO, ""));
+      str = compose_header_get (&env, MU_HEADER_CC, NULL);
+      if (str)
+	mu_printf ("Cc: %s\n", str);
+      mu_printf ("Subject: %s\n\n",
+		 compose_header_get (&env, MU_HEADER_SUBJECT, ""));
   
-  make_in_reply_to (&env, msg);
-  make_references (&env, msg);
-  status = mail_send0 (&env, mailvar_is_true (mailvar_name_byname));
-  compose_destroy (&env);
+      make_in_reply_to (&env, msg);
+      make_references (&env, msg);
+      status = mail_compose_send (&env, record_sender);
+      compose_destroy (&env);
 
-  return status;
+      set_cursor (last);
+    }
+  msgset_free (msgset);
+  
+  return status;  
 }
 
 int
 mail_reply (int argc, char **argv)
 {
-  int lower = mu_islower (argv[0][0]);
+  int all = mu_islower (argv[0][0]);
   if (mailvar_is_true (mailvar_name_flipr))
-    lower = !lower;
-  return util_foreach_msg (argc, argv, MSG_NODELETED, reply0, &lower);
+    all = !all;
+  return (all ? respond_all : respond_msg) (argc, argv, 0);
 }
-
+  
+int
+mail_followup (int argc, char **argv)
+{
+  int all = mu_islower (argv[0][0]);
+  return (all ? respond_all : respond_msg) (argc, argv, 1);
+}  

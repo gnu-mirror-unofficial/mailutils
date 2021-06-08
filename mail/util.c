@@ -487,14 +487,11 @@ util_folder_path (const char *name)
 }
 
 char *
-util_get_sender (int msgno, int strip)
+util_message_sender (mu_message_t msg, int strip)
 {
-  mu_message_t msg = NULL;
-  mu_address_t addr = NULL;
-  char *buf = NULL, *p;
-
-  mu_mailbox_get_message (mbox, msgno, &msg);
-  addr = get_sender_address (msg);
+  mu_address_t addr = get_sender_address (msg);
+  char *buf;
+  
   if (!addr)
     {
       mu_envelope_t env = NULL;
@@ -503,27 +500,45 @@ util_get_sender (int msgno, int strip)
       if (mu_envelope_sget_sender (env, &buffer)
 	  || mu_address_create (&addr, buffer))
 	{
-	  mu_error (_("Cannot determine sender name (msg %d)"), msgno);
+	  mu_error (_("Cannot determine sender name"));
 	  return NULL;
 	}
     }
 
-  if (mu_address_aget_email (addr, 1, &buf) || !buf)
-    {
-      mu_error (_("Cannot determine sender name (msg %d)"), msgno);
-      mu_address_destroy (&addr);
-      return NULL;
-    }
-
   if (strip)
     {
+      char *p;
+      if (mu_address_aget_email (addr, 1, &buf) || !buf)
+	{
+	  mu_error (_("Cannot determine sender name"));
+	  mu_address_destroy (&addr);
+	  return NULL;
+	}
+
       p = strchr (buf, '@');
       if (p)
 	*p = 0;
     }
-
+  else if (mu_address_aget_printable (addr, &buf) || !buf)
+    {
+      mu_error (_("Cannot determine sender name"));
+      mu_address_destroy (&addr);
+      return NULL;
+    }
+    
   mu_address_destroy (&addr);
   return buf;
+}
+
+char *
+util_get_sender (int msgno, int strip)
+{
+  mu_message_t msg;
+  if (mu_mailbox_get_message (mbox, msgno, &msg) == 0)
+    {
+      return util_message_sender (msg, strip);
+    }
+  return 0;
 }
 
 void
@@ -648,47 +663,91 @@ util_strcat (char **dest, const char *str)
 char *
 util_outfolder_name (char *str)
 {
+  char *template = NULL;
+  char *folder;
   char *outfolder;
-  char *exp;
   int rc;
 
   if (!str)
-    return NULL;
-
-  switch (*str)
     {
-    case '/':
-    case '~':
-    case '+':
+      mailvar_get (&template, mailvar_name_record, mailvar_type_string, 0);
+      str = template;
+    }
+  else
+    {
+      switch (*str)
+	{
+	case '/':
+	case '~':
+	case '+':
+	  break;
+	  
+	default:
+	  if (mailvar_is_true (mailvar_name_mailx))
+	    {
+	      if (mailvar_get (NULL, mailvar_name_outfolder,
+			       mailvar_type_whatever, 0) == 0)
+		{
+		  if (mailvar_get (&folder, mailvar_name_folder,
+				   mailvar_type_string, 0) == 0)
+		    template = mu_make_file_name (folder, str);
+		}
+	      str = template;
+	    }
+	  else if (mailvar_get (&outfolder, mailvar_name_outfolder,
+				mailvar_type_string, 0) == 0)
+	    {
+	      str = template = mu_make_file_name (outfolder, str);
+	    }
+	  else if (mailvar_is_true (mailvar_name_outfolder))
+	    {
+	      if (mailvar_get (&folder, mailvar_name_folder,
+			       mailvar_type_string, 0) == 0)
+		template = mu_make_file_name (folder, str);
+	      str = template;
+	    }
+	  else
+	    str = NULL;
+	  break;
+	}
+    }
+  
+  if (str)
+    {
+      char *tilde_template = NULL;
+      char *exp;
+
+      if (mailvar_is_true (mailvar_name_mailx))
+	{
+	  switch (*str)
+	    {
+	    case '/':
+	    case '~':
+	    case '+':
+	      break;
+	      
+	    default:
+	      if (mu_asprintf (&tilde_template, "~/%s", str))
+		{
+		  mu_alloc_die ();
+		}
+	      str = tilde_template;
+	    }
+	}      
+      
       rc = mu_mailbox_expand_name (str, &exp);
       if (rc)
 	{
 	  mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_expand_name", str, rc);
-	  return NULL;
-	}
-      break;
-
-    default:
-      if (mailvar_get (&outfolder, mailvar_name_outfolder,
-		       mailvar_type_string, 0) == 0)
-	{
-	  char *s = mu_make_file_name (outfolder, str);
-	  rc = mu_mailbox_expand_name (s, &exp);
-	  if (rc)
-	    {
-	      mu_diag_funcall (MU_DIAG_ERROR, "mu_mailbox_expand_name", s, rc);
-	      free (s);
-	      return NULL;
-	    }
-	  free (s);
+	  str = NULL;
 	}
       else
-	exp = mu_strdup (str);
-      break;
-
+	str = exp;
+      free (tilde_template);
     }
-
-  return exp;
+  free (template);
+  
+  return str;
 }
 
 /* Save an outgoing message. The SAVEFILE argument overrides the setting
@@ -696,38 +755,35 @@ util_outfolder_name (char *str)
 void
 util_save_outgoing (mu_message_t msg, char *savefile)
 {
-  char *record;
-
-  if (mailvar_get (&record, mailvar_name_record, mailvar_type_string, 0) == 0)
+  char *filename = util_outfolder_name (savefile);
+  if (filename)
     {
       int rc;
       mu_mailbox_t outbox;
-      char *filename = util_outfolder_name (savefile ? savefile : record);
 
       rc = mu_mailbox_create_default (&outbox, filename);
       if (rc)
 	{
 	  mu_error (_("Cannot create output mailbox `%s': %s"),
-		      filename, mu_strerror (rc));
-	  free (filename);
-	  return;
-	}
-
-      rc = mu_mailbox_open (outbox, MU_STREAM_WRITE | MU_STREAM_CREAT);
-      if (rc)
-	mu_error (_("Cannot open output mailbox `%s': %s"),
 		    filename, mu_strerror (rc));
+	}
       else
 	{
-	  rc = mu_mailbox_append_message (outbox, msg);
+	  rc = mu_mailbox_open (outbox, MU_STREAM_WRITE | MU_STREAM_CREAT);
 	  if (rc)
-	    mu_error (_("Cannot append message to `%s': %s"),
-			filename, mu_strerror (rc));
+	    mu_error (_("Cannot open output mailbox `%s': %s"),
+		      filename, mu_strerror (rc));
+	  else
+	    {
+	      rc = mu_mailbox_append_message (outbox, msg);
+	      if (rc)
+		mu_error (_("Cannot append message to `%s': %s"),
+			  filename, mu_strerror (rc));
+	    }
+	      
+	  mu_mailbox_close (outbox);
+	  mu_mailbox_destroy (&outbox);
 	}
-
-      mu_mailbox_close (outbox);
-      mu_mailbox_destroy (&outbox);
-
       free (filename);
     }
 }

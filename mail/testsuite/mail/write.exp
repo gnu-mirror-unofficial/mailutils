@@ -92,26 +92,26 @@ mail_test "headers" \
     -re {>N   1 Sergey Poznyakoff  Tue Jul 16 12:11  *[0-9]+/[0-9]+  *MBOX}
 mail_exit
 
-# Test write 
+# Test write
+cd "$MU_FOLDER_DIR"
 mail_start -reuse-spool "--file=%teaparty.mbox"
-mail_command "set outfolder=\"$MU_FOLDER_DIR\""
 mail_test "write" \
-	-re "\"$MU_FOLDER_DIR/1\"  *\[0-9\]+/\[0-9\]+"
+    -re "\"[pwd]/1\"  *\[0-9\]+/\[0-9\]+"
 
 mail_test "write 2 3 tmp" \
-	-re "\"$MU_FOLDER_DIR/tmp\"  *\[0-9\]+/\[0-9\]+"
+    -re "\"[pwd]/tmp\"  *\[0-9\]+/\[0-9\]+"
 
 mail_test "Write 1 2 3" \
-	-re "\"$MU_FOLDER_DIR/hare\"  *\[0-9\]+/\[0-9\]+"
+    -re "\"[pwd]/hare\"  *\[0-9\]+/\[0-9\]+"
 mail_exit
 
 # Now examine the created files
 
-mu_test_file "$MU_FOLDER_DIR/1" "Have some wine"
-mu_test_file "$MU_FOLDER_DIR/tmp" \
+mu_test_file "1" "Have some wine"
+mu_test_file "tmp" \
 	"I don't see any wine" \
 	"There isn't any"
-mu_test_file "$MU_FOLDER_DIR/hare" \
+mu_test_file "hare" \
 	"Have some wine" \
 	"I don't see any wine" \
 	"There isn't any"

@@ -166,7 +166,6 @@ struct mailvar_variable
 #define mailvar_name_asksub                     "asksub"
 #define mailvar_name_autoinc                    "autoinc"
 #define mailvar_name_autoprint                  "autoprint"
-#define mailvar_name_byname                     "byname"
 #define mailvar_name_bang                       "bang"
 #define mailvar_name_charset                    "charset"
 #define mailvar_name_cmd                        "cmd"
@@ -321,7 +320,7 @@ int if_cond (void);
 
 void mail_mainloop (char *(*input) (void *, int), void *closure, int do_history);
 int mail_copy0 (int argc, char **argv, int mark);
-int mail_send0 (compose_env_t *env, int save_to);
+int mail_compose_send (compose_env_t *env, int save_to);
 void free_env_headers (compose_env_t *env);
 
 /*extern void print_message (mu_message_t mesg, char *prefix, int all_headers, FILE *file);*/
@@ -487,6 +486,7 @@ char *util_get_homedir (void);
 char *util_fullpath (const char *inpath);
 char *util_folder_path (const char *name);
 char *util_get_sender (int msgno, int strip);
+char *util_message_sender (mu_message_t msg, int strip);
 
 void util_slist_print (mu_list_t list, int nl);
 int util_slist_lookup (mu_list_t list, const char *str);

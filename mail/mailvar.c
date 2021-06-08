@@ -85,10 +85,6 @@ struct mailvar_symbol mailvar_tab[] =
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       /* TRANSLATORS: "delete" and "dp" are command names. */
       N_("delete command behaves like dp") },
-    { { mailvar_name_byname },
-      MAILVAR_TYPEMASK (mailvar_type_boolean),
-      N_("record outgoing messages in a file named after the first recipient; "
-	 "overrides the `record' variable") },
     { { mailvar_name_bang, },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("replace every occurrence of ! in arguments to the shell command"
@@ -204,8 +200,12 @@ struct mailvar_symbol mailvar_tab[] =
       MAILVAR_TYPEMASK (mailvar_type_string),
       N_("display this text when sending a message with empty body") },
     { { mailvar_name_outfolder, },
-      MAILVAR_TYPEMASK (mailvar_type_string),
-      N_("keep created files in this folder") },
+      MAILVAR_TYPEMASK (mailvar_type_string) |
+      MAILVAR_TYPEMASK (mailvar_type_boolean),
+      N_("If boolean, causes the files used to record outgoing messages to"
+	 " be located in the directory specified by the folder variable"
+	 " (unless the pathname is absolute).\n"
+	 "If string, names the directory where to store these files.") },
     { { mailvar_name_page, },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("pipe command terminates each message with a formfeed") },
@@ -343,10 +343,15 @@ print_descr (mu_stream_t out, const char *s, int n,
 	mu_stream_write (out, " ", 1, NULL);
 
       for (p = s; *p && p < s + (rmargin - doc_col); p++)
-	if (mu_isspace (*p))
+	if (*p == '\n')
+	  {
+	    space = p;
+	    break;
+	  }
+	else if (mu_isspace (*p))
 	  space = p;
 
-      if (!space || p < s + (rmargin - doc_col))
+      if (!space || (*space != '\n' && p < s + (rmargin - doc_col)))
 	{
 	  mu_stream_printf (out, "%s", s);
 	  s += strlen (s);
@@ -439,7 +444,7 @@ mailvar_get (void *ptr, const char *variable, enum mailvar_type type, int warn)
 {
   struct mailvar_variable *var = mailvar_find_variable (variable, 0);
 
-  if (!var->set || var->type != type)
+  if (!var->set || (type != mailvar_type_whatever && var->type != type))
     {
       if (warn)
 	mu_error (_("No value set for \"%s\""), variable);

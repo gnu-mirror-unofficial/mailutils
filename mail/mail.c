@@ -31,6 +31,8 @@ const char *program_version = "mail (" PACKAGE_STRING ")";
 
 #define HINT_SEND_MODE   0x1
 #define HINT_FILE_OPTION 0x2
+#define HINT_BYNAME      0x4
+
 int hint;
 char *file;
 char *user;
@@ -72,6 +74,7 @@ cli_command_option (struct mu_parseopt *po, struct mu_option *opt,
 
     case 'r':
       util_cache_command (&command_list, "set return-address=%s", arg);
+      hint |= HINT_SEND_MODE;      
       break;
 
     case 'q':
@@ -81,7 +84,7 @@ cli_command_option (struct mu_parseopt *po, struct mu_option *opt,
     case 't':
       read_recipients = 1;
       util_cache_command (&command_list, "set editheaders");
-      util_cache_command (&command_list, "setq mode=send");
+      hint |= HINT_SEND_MODE;      
       break;
 
     case 'H':
@@ -105,7 +108,8 @@ cli_command_option (struct mu_parseopt *po, struct mu_option *opt,
       break;
 
     case 'F':
-      util_cache_command (&command_list, "set byname");
+      hint |= HINT_SEND_MODE;
+      hint |= HINT_BYNAME;
       break;
 
     case 0:
@@ -581,13 +585,17 @@ main (int argc, char **argv)
   /* Mode is just sending */
   if (strcmp (mode, "send") == 0)
     {
-      char *buf = NULL;
-      int rc;
-
-      mu_argcv_string (argc, argv, &buf);
-      rc = util_do_command ("mail %s", buf);
-      free (buf);
-      return mailvar_is_true (mailvar_name_mailx) ? 0 : rc;
+      --argv;
+      ++argc;
+      if (hint & HINT_BYNAME)
+	argv[0] = "Mail";
+      else
+	argv[0] = "mail";
+      if (mail_send (argc, argv))
+	rc = EXIT_FAILURE;
+      if (mailvar_is_true (mailvar_name_mailx))
+	rc = 0;
+      return rc;
     }
   /* Or acting as a normal reader */
   else

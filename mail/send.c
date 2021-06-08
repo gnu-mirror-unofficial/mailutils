@@ -693,6 +693,7 @@ mail_send (int argc, char **argv)
   compose_env_t env;
   int status;
   int save_to = mu_isupper (argv[0][0]);
+
   compose_init (&env);
 
   if (argc < 2)
@@ -764,7 +765,7 @@ mail_send (int argc, char **argv)
 			    COMPOSE_REPLACE);
     }
   
-  status = mail_send0 (&env, save_to);
+  status = mail_compose_send (&env, save_to);
   compose_destroy (&env);
   return status;
 }
@@ -943,8 +944,7 @@ compose_header_set (compose_env_t *env, const char *name,
 	    if (mu_header_aget_value (env->header, name, &old_value) == 0
 		&& old_value[0])
 	      {
-		if (is_address_field (name)
-		    && mailvar_is_true (mailvar_name_inplacealiases))
+		if (is_address_field (name))
 		  {
 		    status = util_merge_addresses (&old_value, value);
 		    if (status == 0)
@@ -1144,12 +1144,27 @@ save_dead_message (mu_message_t msg)
 static int
 send_message (mu_message_t msg)
 {
+  char *mailer_url = NULL;
   char *sendmail;
   int status;
   
   if (mailvar_get (&sendmail, mailvar_name_sendmail,
 		   mailvar_type_string, 0) == 0)
     {
+      if (mailvar_is_true (mailvar_name_mailx))
+	{
+	  /*
+	   * Mailx compatibility: assume sendmail:// scheme.
+	   */
+	  if (!mu_is_proto (sendmail))
+	    {
+	      status = mu_asprintf (&mailer_url, "sendmail://%s", sendmail);
+	      if (status)
+		return status;
+	      sendmail = mailer_url;
+	    }
+	}
+      
       if (sendmail[0] == '/')
 	status = msg_to_pipe (sendmail, msg);
       else
@@ -1205,6 +1220,7 @@ send_message (mu_message_t msg)
       mu_error (_("Variable sendmail not set: no mailer"));
       status = ENOSYS;
     }
+  free (mailer_url);
   return status;
 }
 
@@ -1235,7 +1251,7 @@ message_add_date (mu_message_t msg)
     mu_diag_funcall (MU_DIAG_ERROR, "mu_header_set_value", MU_HEADER_DATE, rc);
 }
 
-/* mail_send0(): shared between mail_send() and mail_reply();
+/* mail_compose_send(): shared between mail_send() and mail_reply();
 
    If the variable "record" is set, the outgoing message is
    saved after being sent. If "save_to" argument is non-zero,
@@ -1251,7 +1267,7 @@ message_add_date (mu_message_t msg)
    addresses on the command line and message contents on standard input. */
 
 int
-mail_send0 (compose_env_t *env, int save_to)
+mail_compose_send (compose_env_t *env, int save_to)
 {
   int done = 0;
   int rc;
@@ -1396,11 +1412,16 @@ mail_send0 (compose_env_t *env, int save_to)
 	  if (status)
 	    break;
 	  
+	  message_add_date (msg);
+
 	  /* Save outgoing message */
 	  if (save_to)
 	    {
-	      char const *rcpt = compose_header_get (env, MU_HEADER_TO, NULL);
-	      if (rcpt)
+	      mu_header_t hdr;
+	      char const *rcpt;
+
+	      mu_message_get_header (msg, &hdr);
+	      if (mu_header_sget_value (hdr, MU_HEADER_TO, &rcpt) == 0)
 		{
 		  mu_address_t addr = NULL;
 		  struct mu_address hint = MU_ADDRESS_HINT_INITIALIZER;
@@ -1460,7 +1481,6 @@ mail_send0 (compose_env_t *env, int save_to)
 	  /* Do we need to Send the message on the wire?  */
 	  if (status == 0 && sendit)
 	    {
-	      message_add_date (msg);
 	      status = send_message (msg);
 	      if (status)
 		{

@@ -27,7 +27,7 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
     mail_command "setenv MAIL_DUMP=\"$MU_FOLDER_DIR/mta.diag\""
 
     mail_test -noprompt "reply 1" \
-	"To: <foobar@nonexistent.net>,<bar@dontmailme.org>"\
+	"To: \"Foo Bar\" <foobar@nonexistent.net>,\"Bar\" <bar@dontmailme.org>"\
 	"Subject: Re: Jabberwocky"\
 	""
 
@@ -46,12 +46,13 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
         "RCPT\[0\]: <foobar@nonexistent.net>"\
 	"RCPT\[1\]: <bar@dontmailme.org>"\
 	-re {^LENGTH: [0-9]+}\
-	"To: <foobar@nonexistent.net>,<bar@dontmailme.org>"\
+	"To: \"Foo Bar\" <foobar@nonexistent.net>,\"Bar\" <bar@dontmailme.org>"\
 	"Subject: Re: Jabberwocky"\
 	"In-Reply-To: Your message of Fri, 28 Dec 2001 22:18:08 +0200"\
 	"\t<200112282018.fBSKI8N04906@nonexistent.net>"\
 	"References: <200112282018.fBSKI8N04906@nonexistent.net>"\
 	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)"\
+	-re {^Date:[^\r\n]*}\
 	""\
 	"> Received: (from foobar@nonexistent.net)"\
 	"> 	by nonexistent.net id fBSKI8N04906"\
