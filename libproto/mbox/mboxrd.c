@@ -1194,11 +1194,12 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 
   if (rc)
     {
+      int rc1;
       mu_stream_destroy (&istr);
-      rc = mu_stream_truncate (mailbox->stream, size);
-      if (rc)
+      rc1 = mu_stream_truncate (mailbox->stream, size);
+      if (rc1)
 	mu_error (_("cannot truncate stream after failed append: %s"),
-		  mu_stream_strerror (mailbox->stream, rc));
+		  mu_stream_strerror (mailbox->stream, rc1));
       return rc;
     }
 
