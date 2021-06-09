@@ -1,5 +1,5 @@
 # This file is part of GNU Mailutils. -*- Autotest -*-
-# Copyright (C) 2007-2021 Free Software Foundation, Inc.
+# Copyright (C) 2015-2021 Free Software Foundation, Inc.
 #
 # GNU Mailutils is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -14,32 +14,32 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_include([testsuite.inc])
+AT_SETUP([send])
 
-m4_define([MUT_MAIL_CMD],[MAILRC=/dev/null mail MUT_DEFAULT_OPTIONS])
+AT_DATA([text],
+[Test message.
+Bye.
+])
 
-AT_INIT
-AT_TESTED([mail])
+AT_CHECK([unset MAIL_DUMP
+MUT_MAIL_CMD -E "set sendmail=$MAILER" -s 'Test 22.1' gray@example.org < text
+sed -e '/^SENDER:/d' \
+    -e '/^Date:/d' \
+    -e '/^X-Mailer:/d' mail.dump],
+[0],
+[MSGID: 0001
+NRCPT: 1
+RCPT[[0]]: <gray@example.org>
+LENGTH: 139
+Subject: Test 22.1
+To: <gray@example.org>
 
-m4_include([version.at])
-m4_include([nohome.at])
-m4_include([cols00.at])
-m4_include([cols01.at])
-m4_include([copy00.at])
-m4_include([copy01.at])
-m4_include([copy02.at])
-m4_include([copy03.at])
-m4_include([copy04.at])
-m4_include([align.at])
-m4_include([D.at])
-m4_include([hold.at])
+Test message.
+Bye.
 
-AT_BANNER([Sending and replying])
-m4_include([send.at])
-m4_include([sendrec.at])
-m4_include([sendbyname.at])
+])
 
-m4_include([reply.at])
-m4_include([Reply.at])
-m4_include([followup.at])
-m4_include([Followup.at])
+AT_CLEANUP
+
+
+

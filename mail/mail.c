@@ -591,11 +591,9 @@ main (int argc, char **argv)
 	argv[0] = "Mail";
       else
 	argv[0] = "mail";
-      if (mail_send (argc, argv))
-	rc = EXIT_FAILURE;
-      if (mailvar_is_true (mailvar_name_mailx))
-	rc = 0;
-      return rc;
+      return mail_send (argc, argv)
+	       ? (mailvar_is_true (mailvar_name_mailx) ? 0 : EXIT_FAILURE)
+	       : 0;
     }
   /* Or acting as a normal reader */
   else

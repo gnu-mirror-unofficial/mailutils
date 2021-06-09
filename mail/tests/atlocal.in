@@ -4,6 +4,7 @@
 
 PATH=@abs_top_builddir@/testsuite:@abs_builddir@:@abs_top_builddir@/mail:$top_srcdir:$srcdir:$PATH
 testsuitedir=@abs_top_srcdir@/testsuite
+MAILER=sendmail://@abs_top_builddir@/testsuite/mockmail
 MALLOC_CHECK_=2
 export MALLOC_CHECK_
 catmbox() {

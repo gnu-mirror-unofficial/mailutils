@@ -1,0 +1,119 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2015-2021 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# GNU Mailutils is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([send -F])
+
+AT_DATA([text],
+[Test message.
+Bye.
+])
+
+#
+# Send with record by name
+# 
+AT_CHECK([touch record
+mkdir folder outfolder
+])
+
+AT_CHECK([unset MAIL_DUMP
+MUT_MAIL_CMD -E "set sendmail=$MAILER" \
+             -E "set record=$(pwd)/record" \
+	     -E "set folder=$(pwd)/folder" \
+	     -E "set outfolder" \
+	     -F \
+	     -s 'Test 22.3' gray@example.org < text
+])
+
+AT_CHECK([
+sed -e '/^SENDER:/d' \
+    -e '/^Date:/d' \
+    -e '/^X-Mailer:/d' mail.dump],
+[0],
+[MSGID: 0001
+NRCPT: 1
+RCPT[[0]]: <gray@example.org>
+LENGTH: 139
+Subject: Test 22.3
+To: <gray@example.org>
+
+Test message.
+Bye.
+
+])
+
+AT_CHECK([cat record])
+
+AT_CHECK([
+sed -e '1s/^From .*/Envelope/' \
+    -e '/^X-[[a-zA-Z]]*:/d' \
+    -e '/^Date:/d' folder/gray],
+[0],
+[Envelope
+Subject: Test 22.3
+To: <gray@example.org>
+
+Test message.
+Bye.
+
+])
+
+#
+# Send with record by name
+# 
+AT_CHECK([unset MAIL_DUMP
+MUT_MAIL_CMD -E "set sendmail=$MAILER" \
+             -E "set record=$(pwd)/record" \
+	     -E "set folder=$(pwd)/folder" \
+	     -E "set outfolder=$(pwd)/outfolder" \
+	     -F \
+	     -s 'Test 22.3' gray@example.org < text
+])
+
+AT_CHECK([
+sed -e '/^SENDER:/d' \
+    -e '/^Date:/d' \
+    -e '/^X-Mailer:/d' mail.dump],
+[0],
+[MSGID: 0001
+NRCPT: 1
+RCPT[[0]]: <gray@example.org>
+LENGTH: 139
+Subject: Test 22.3
+To: <gray@example.org>
+
+Test message.
+Bye.
+
+])
+
+AT_CHECK([cat record])
+
+AT_CHECK([
+sed -e '1s/^From .*/Envelope/' \
+    -e '/^X-[[a-zA-Z]]*:/d' \
+    -e '/^Date:/d' outfolder/gray record],
+[0],
+[Envelope
+Subject: Test 22.3
+To: <gray@example.org>
+
+Test message.
+Bye.
+
+])
+
+AT_CLEANUP
+

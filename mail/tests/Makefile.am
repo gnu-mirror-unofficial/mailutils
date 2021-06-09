@@ -26,8 +26,15 @@ TESTSUITE_AT +=\
  copy02.at\
  copy03.at\
  copy04.at\
- nohome.at\
+ followup.at\
+ Followup.at\
  hold.at\
+ nohome.at\
+ reply.at\
+ Reply.at\
+ send.at\
+ sendrec.at\
+ sendbyname.at\
  testsuite.at\
  version.at
 
