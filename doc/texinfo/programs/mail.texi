@@ -1042,6 +1042,10 @@ is derived from the author of the first message.  @xref{Mail}, for a
 detailed discussion of how the file name is selected.
 @end deffn
 
+By default, @command{mail} will preserve personal email parts when
+forming lists of recipient addresses.  If this is not desired, unset
+the @code{fullnames} variable (@pxref{fullnames}).
+
 To determine the sender of the message @command{mail} uses the
 list of sender fields (@pxref{Controlling Sender Fields}).  The first field
 from this list is looked up in message headers.  If it is found
@@ -2207,6 +2211,19 @@ Unsetting this variable tells @command{mail} to obtain it from the
 @acronym{SMTP} envelope, instead.
 
 @xref{datefield}.
+
+@anchor{fullnames}
+@kwindex fullnames
+@item fullnames
+@*Type: Boolean.
+@*Default: True.
+
+Preserve personal parts (comments) of recipient addresses when replying to a
+message.
+
+When unset, only emails will be used.
+
+@xref{Replying}.
 
 @kwindex header
 @item header

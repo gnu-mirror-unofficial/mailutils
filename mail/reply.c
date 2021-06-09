@@ -85,6 +85,37 @@ compose_set_address (compose_env_t *env, char const *hname, char const *input)
     }
 }
 
+static void
+compose_remove_personal (compose_env_t *env, char *hname)
+{
+  char const *value;
+
+  value = compose_header_get (env, hname, NULL);
+  if (value)
+    {
+      mu_address_t addr = NULL, ap;
+      struct mu_address hint = MU_ADDRESS_HINT_INITIALIZER;
+      char *result;
+      
+      mu_address_create_hint (&addr, value, &hint, 0);
+      for (ap = addr; ap; ap = ap->next)
+	{
+	  free (ap->printable);
+	  ap->printable = NULL;
+	  free (ap->comments);
+	  ap->comments = NULL;
+	  free (ap->personal);
+	  ap->personal = NULL;
+	  free (ap->route);
+	  ap->route = NULL;
+	}
+      mu_address_aget_printable (addr, &result);
+      compose_header_set (env, hname, result, COMPOSE_REPLACE);
+      free (result);
+      mu_address_destroy (&addr);
+    }
+}
+
 /*
  * r[eply] [message]
  * r[espond] [message]
@@ -158,6 +189,12 @@ respond_all (int argc, char **argv, int record_sender)
       else
 	compose_header_set (&env, MU_HEADER_SUBJECT, "", COMPOSE_REPLACE);
 
+      if (!mailvar_is_true (mailvar_name_fullnames))
+	{
+	  compose_remove_personal (&env, MU_HEADER_TO);
+	  compose_remove_personal (&env, MU_HEADER_CC);
+	}
+      
       mu_printf ("To: %s\n", compose_header_get (&env, MU_HEADER_TO, ""));
       str = compose_header_get (&env, MU_HEADER_CC, NULL);
       if (str)
@@ -242,6 +279,12 @@ respond_msg (int argc, char **argv, int record_sender)
 	}
       else
 	compose_header_set (&env, MU_HEADER_SUBJECT, "", COMPOSE_REPLACE);
+
+      if (!mailvar_is_true (mailvar_name_fullnames))
+	{
+	  compose_remove_personal (&env, MU_HEADER_TO);
+	  compose_remove_personal (&env, MU_HEADER_CC);
+	}
       
       mu_printf ("To: %s\n", compose_header_get (&env, MU_HEADER_TO, ""));
       str = compose_header_get (&env, MU_HEADER_CC, NULL);

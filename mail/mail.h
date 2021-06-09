@@ -181,6 +181,7 @@ struct mailvar_variable
 #define mailvar_name_flipr                      "flipr"
 #define mailvar_name_folder                     "folder"
 #define mailvar_name_fromfield                  "fromfield"
+#define mailvar_name_fullnames                  "fullnames"  
 #define mailvar_name_gnu_last_command           "gnu-last-command"
 #define mailvar_name_header                     "header"
 #define mailvar_name_headline                   "headline"

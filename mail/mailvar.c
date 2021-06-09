@@ -289,16 +289,20 @@ struct mailvar_symbol mailvar_tab[] =
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("always compose MIME messages") },
 
+    { { mailvar_name_fullnames },
+      MAILVAR_TYPEMASK (mailvar_type_boolean),
+      N_("when replying, preserve personal parts of recipient emails") },
+
+    { { mailvar_name_PID },
+      MAILVAR_TYPEMASK (mailvar_type_string) | MAILVAR_RDONLY,
+      N_("PID of this process") },
+
     /* These will be implemented later */
     { { mailvar_name_onehop, }, MAILVAR_HIDDEN, NULL },
 
     { { mailvar_name_quiet, },
       MAILVAR_TYPEMASK (mailvar_type_boolean) | MAILVAR_HIDDEN,
       N_("suppress the printing of the version when first invoked") },
-
-    { { mailvar_name_PID },
-      MAILVAR_TYPEMASK (mailvar_type_string) | MAILVAR_RDONLY,
-      N_("PID of this process") },
 
     { { NULL }, }
   };

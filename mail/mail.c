@@ -402,6 +402,7 @@ static char *default_setup[] = {
   "set fromfield",
   "set headline=\"%>%a%4m %18f %16d %3L/%-5o %s\"",
   "unset folder",
+  "set fullnames",
 
   /* Start in mail reading mode */
   "setq mode=read",
