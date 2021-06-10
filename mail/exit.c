@@ -20,5 +20,6 @@ int
 mail_exit (int argc MU_ARG_UNUSED, char **argv MU_ARG_UNUSED)
 {
   mu_mailbox_close (mbox);
+  mu_mailbox_destroy (&mbox);
   exit (0);
 }

@@ -223,13 +223,21 @@ mail_copy0 (int argc, char **argv, int mark)
   msgset_t *msglist = NULL;
   struct append_stat totals = { 0, 0 };
   int rc;
-  char *filename;
-
+  char *filename, *storage = NULL;
+  
   if (mu_isupper (argv[0][0]))
     {
       if (msgset_parse (argc, argv, MSG_NODELETED, &msglist))
 	return 1;
-      filename = util_outfolder_name (util_get_sender (msgset_msgno (msglist), 1));
+      storage = util_get_sender (msgset_msgno (msglist), 1);
+      filename = util_outfolder_name (storage);
+      if (filename)
+	{
+	  free (storage);
+	  storage = filename;
+	}
+      else
+	filename = storage;
     }
   else
     {
@@ -238,19 +246,22 @@ mail_copy0 (int argc, char **argv, int mark)
 	return 1;
     }
 
-  if (mail_expand_name (filename, &url))
-    return 1;
-  filename = (char*) mu_url_to_string (url);
-  if (mu_url_is_scheme (url, "file") || mu_url_is_scheme (url, "mbox"))
-    rc = append_to_file (filename, msglist, mark, &totals);
-  else
-    rc = append_to_mailbox (url, msglist, mark, &totals);
+  rc = mail_expand_name (filename, &url);
   if (rc == 0)
-    mu_printf ("\"%s\" %3lu/%-5lu\n", filename,
-	       (unsigned long) totals.lines, (unsigned long) totals.size);
-  mu_url_destroy (&url);
+    {
+      filename = (char*) mu_url_to_string (url);
+      if (mu_url_is_scheme (url, "file") || mu_url_is_scheme (url, "mbox"))
+	rc = append_to_file (filename, msglist, mark, &totals);
+      else
+	rc = append_to_mailbox (url, msglist, mark, &totals);
+      if (rc == 0)
+	mu_printf ("\"%s\" %3lu/%-5lu\n", filename,
+		   (unsigned long) totals.lines, (unsigned long) totals.size);
+      mu_url_destroy (&url);
+    }
+  free (storage);
   msgset_free (msglist);
-  return 0;
+  return rc;
 }
 
 int

@@ -491,7 +491,7 @@ main (int argc, char **argv)
   else
     util_do_command ("set columns=%d", util_getcols ());
 
-  /* Set the default mailer to sendmail.  */
+  /* Set the default mailer to sendmail. FIXME: Minor memory leak. */
   mailvar_set (mailvar_name_sendmail,
 	       mu_strdup ("sendmail:" PATH_SENDMAIL), mailvar_type_string,
 	       MOPTF_OVERWRITE);

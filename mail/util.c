@@ -223,7 +223,7 @@ util_range_msg (size_t low, size_t high, int flags,
 	   {
 	     msgset_t *set = msgset_make_1 (low);
 	     func (set, mesg, data);
-	     free (set);
+	     msgset_free (set);
 	   }
 	 /* Bail out if we receive an interrupt.  */
 	 if (ml_got_interrupt () != 0)

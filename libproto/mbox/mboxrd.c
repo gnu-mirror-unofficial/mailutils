@@ -790,7 +790,8 @@ mboxrd_rescan_unlocked (mu_mailbox_t mailbox, mu_off_t offset)
 		 mu_strerror (rc)));
     }
   mu_stream_unref (stream);
-
+  free (buf);
+  
   if (force_init_uids)
     {
       dmp->uidvalidity = (unsigned long) time (NULL);
@@ -1997,6 +1998,7 @@ mboxrd_detect (char const *name)
 		}
 	    }
 	  free (buf);
+	  mu_stream_destroy (&str);
 	}
     }
   return res;
