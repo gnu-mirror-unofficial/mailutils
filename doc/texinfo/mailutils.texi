@@ -138,10 +138,9 @@ Mailutils Programs
 * messages::          Count the Number of Messages in a Mailbox.
 * movemail::          Moves Mail from the User Maildrop to the Local File.
 * readmsg::           Extract Messages from a Folder.
+* decodemail::        Decode multipart messages.
 
-* decodemail::        Decode MIME messages.
 * sieve::             Mail Filtering Utility.
-
 * guimb::             Mailbox Scanning and Processing Language.
 
 * mda::               Local Mail Delivery Agent.
@@ -157,6 +156,7 @@ Mailutils Programs
 * mh::                The MH Message Handling System.
 
 * mailutils::         The Mailutils Multi-Purpose Tool.
+* dotlock::           The External Locker Utility. 
 
 Command Line
 
@@ -172,6 +172,7 @@ Mailutils Configuration File
 * logging statement::
 * debug statement::
 * mailbox statement::
+* mime statement::
 * locking statement::
 * mailer statement::
 * acl statement::
@@ -208,6 +209,7 @@ Debugging
 
 * Invoking Mail::            Command Line Options.
 * Reading Mail::             Reading Mail.
+* Saving and Recording::     Where Mail Messages are Stored.  
 * Composing Mail::           Composing Mail.
 * MIME::                     How to Attach Files.
 * Scripting::                Scripting.
@@ -261,6 +263,12 @@ Composing Mail
 * Opt-readmsg::   Invocation of @command{readmsg}.
 * Conf-readmsg::  Configuration of @command{readmsg}.
 
+@command{decodemail} -- Decode multipart messages
+
+* Opt-decodemail::   Invocation of @command{decodemail}.
+* Conf-decodemail::  Configuration of @command{decodemail}.
+* Using-decodemail:: Purpose and caveats of @command{decodemail}.
+
 @command{sieve}
 
 * sieve interpreter::   A Sieve Interpreter
@@ -300,6 +308,15 @@ Scripting in @command{mda}
 * Sieve MDA Filters::
 * Scheme MDA Filters::
 * Python MDA Filters::
+
+lmtpd
+
+* MeTA1-lmtpd:: Using @command{lmtpd} with MeTA1.
+
+putmail
+
+* putmail options::
+* putmail configuration::
 
 mimeview
 
@@ -361,6 +378,7 @@ mailutils
 * mailutils imap::                IMAP4 client shell.
 * mailutils send::                Send a message.
 * mailutils smtp::                Run a SMTP session.
+* mailutils maildir_fixup::       Fix-up maildirs created by versions prior to 3.10.90
 
 mailutils dbm
 

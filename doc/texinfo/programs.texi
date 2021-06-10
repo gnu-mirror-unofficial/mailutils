@@ -1428,6 +1428,7 @@ The mailer statement contains a single sub-statement:
 Set the mailer @acronym{URL}.
 @end deffn
 
+@anchor{mailer URL}
 GNU Mailutils supports three types of mailer @acronym{URL}s, described
 in the table below:
 

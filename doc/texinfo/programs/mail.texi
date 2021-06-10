@@ -27,6 +27,7 @@ Configuration Files}, for a detailed description of their format.
 @menu
 * Invoking Mail::            Command Line Options.
 * Reading Mail::             Reading Mail.
+* Saving and Recording::     Where Mail Messages are Stored.  
 * Composing Mail::           Composing Mail.
 * MIME::                     How to Attach Files.
 * Scripting::                Scripting.
@@ -736,7 +737,7 @@ Displays current mailbox summary.  E.g.:
 Prints out the messages from @var{msglist}.  The variable @code{crt}
 determines the minimum number of lines the body of the message must
 contain in order to be piped through pager command specified
-by environment variable @code{PAGER}.  If @code{crt} is set to a numeric
+by environment variable @env{PAGER}.  If @code{crt} is set to a numeric
 value, this value is taken as the minimum number of lines.  Otherwise,
 if @code{crt} is set without a value then the height of the terminal
  screen is used to compute the threshold.  The number of lines on
@@ -872,7 +873,7 @@ command, unless the variable @code{keepsave} is set.
 @deffnx {Mail command} S [@var{msglist}]
 Like @code{save}, but the file to append messages to is named after the
 sender of the first message in @var{msglist}.  The file name is
-selected as described in @ref{Mail}.  For example:
+selected as described in @ref{saving mail by name}.  For example:
 
 @example
 @cartouche
@@ -996,13 +997,22 @@ saved in the folder named by it.
 @deffn {Mail command} Mail [@var{address}...]
 @deffnx {Mail command} M [@var{address}...]
 Same as @code{mail}, but the name of the file to save the composed
-message is determined as follows:
+message is derived from its first recipient as outlined below.
 
-If the @code{outfolder} variable is set, and has a string value,
-the filename is @file{@code{outfolder}/@var{recipient}}.  If if
-has a boolean value @samp{true}, the filename is
-@file{@code{folder}/@var{recipient}}.  Otherwise, the message will not
-be saved.
+If the @code{outfolder} variable is set, and has a string value @var{s},
+the filename is @file{@var{s}/@var{recipient}}.  If it is a boolean,
+then the @code{folder} variable is consulted.  If it is set, then the
+filename is @file{@var{folder}/@var{recipient}}.  Otherwise, the
+message will not be saved.
+
+The value @var{recipient} is derived from the email of the first
+recipient of the message.  By default it is a local part of that
+email.  If the @code{outfilename} variable has the value
+@samp{domain}, the domain part of the email is used.  If this
+variable is set to @samp{email}, then entire email address is
+used.
+
+@xref{saving mail by name}, for a detailed discussion.
 @end deffn
 
 @deffn {Mail command} reply [@var{message}]
@@ -1031,15 +1041,15 @@ Variables}) swaps the meanings of the two above commands
 @deffn {Mail command} followup [@var{message}]
 @deffnx {Mail command} fo [@var{message}]
 Respond to @var{message}, recording the response in a file whose name
-is derived from the author of the message.  @xref{Mail}, for a
-detailed discussion of how the file name is selected.
+is derived from the author of the message.  @xref{saving mail by
+name}, for a discussion of how the file name is selected.
 @end deffn
 
 @deffn {Mail command} Followup [@var{msglist}]
 @deffnx {Mail command} F [@var{msglist}]
 Same as @code{Reply}, but the response is saved in a file whose name
-is derived from the author of the first message.  @xref{Mail}, for a
-detailed discussion of how the file name is selected.
+is derived from the author of the first message.  @xref{saving mail by
+name}, for a detailed discussion of how the file name is selected.
 @end deffn
 
 By default, @command{mail} will preserve personal email parts when
@@ -1117,8 +1127,15 @@ Subject: Re: News
 @kyindex sender, mail command
 @kyindex nosender, mail command
 
-Commands @code{sender} and @code{nosender} are used to manipulate
-the contents of the sender field list.
+When @command{mail} needs to know the sender of a message, it
+looks it up in one or more headers of that message.  Such headers
+constitute a @dfn{sender list}.  The first header from the list
+that is present in the message and has a non-empty value is used.
+If none is found or if the sender list is empty, the value of the
+message envelope is used.
+
+The commands @code{sender} and @code{nosender} manipulate the sender
+list.
 
 If the command @code{sender} is used without arguments, it displays
 the contents of the sender field list.  If arguments are given,
@@ -1185,6 +1202,55 @@ command starts the user login shell.  Otherwise, it uses its first
 argument as a file name to execute and all subsequent arguments are
 passed as positional parameters to this command.  The @code{shell}
 command can also be spelled as @code{!}.
+
+@node Saving and Recording
+@subsection Saving and Recording
+
+Several commands discussed in the previous section save messages in
+a disk file.  The name of that file is either obtained from the
+@code{record} variable (@dfn{recording mail}) or is derived from the
+first recipient of the message (@dfn{saving by name}).
+
+The following commands record mails:
+
+@itemize @bullet
+@item @code{mail}
+@item @code{reply}
+@item @code{Reply}
+@end itemize
+
+The following commands save mail by name:
+
+@itemize @bullet
+@item @code{Copy}
+@item @code{Save}
+@item @code{Mail}
+@item @code{followup}
+@item @code{Followup}
+@end itemize
+
+@anchor{saving mail by name}
+Saving mail by name is controlled by three mail variables:
+@code{outfolder}, @code{folder}, and @code{outfilename}.  
+The first, @code{outfolder}, is a boolean variable which, when set,
+enables saving mail by name.  The @code{folder} variable defines a
+directory where mail files are stored.  Name of file in that directory
+where the message will be saved is derived from the message
+recipient@footnote{In case of @code{Copy} and @code{Save}, message sender is
+used instead}.  This process is controlled by the @code{outfilename}
+variable: if its value is @samp{local}, the file is named by the local
+part of the email (this is the default).  If it is @samp{domain}, the
+domain part is used instead.  Finally, if it's value is @samp{email},
+the entire email is used.
+
+As a GNU extension, @code{outfolder} can be a string variable.  In
+that case its value names the directory to use instead of
+@code{folder}.
+
+The @code{mailx} variable, if set, disables GNU extensions.  In this
+case, @code{outfolder} is used as a boolean value, and file names are
+derived from the local part of the email, ignoring the
+@code{outfilename} value.
 
 @node Composing Mail
 @subsection Composing Mail
@@ -1949,87 +2015,79 @@ set
 
 Following variables control the behavior of GNU @command{mail}:
 
-@table @code
-@kwindex append
-@item append
-@*Type: Boolean, Read-Only
+@c -----------------------------------------
+@deftypevr {mail} boolean append
 @*Default: True
-@vrindex append, mail variable
+@*Comment: Read-Only
 
-Messages saved in @file{mbox} are appended to the end rather than
+Messages saved in @file{mbox} are appended to the end, rather than
 prepended. This is the default and cannot be changed.  This variable
 exists only for compatibility with other @command{mailx}
 implementations.
+@end deftypevr
 
-@kwindex appenddeadletter
-@item appenddeadletter
-@*Type: Boolean.
-@*Default: False.
-@vrindex appenddeadletter, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean appenddeadletter
+@*Default: False
 
-If this variable is @code{True}, the contents of canceled letter is
+If this variable is set, the contents of canceled letter is
 appended to the user's @file{dead.letter} file.  Otherwise it overwrites
 its contents.
+@end deftypevr
 
-@kwindex askbcc
-@item askbcc
-@*Type: Boolean.
-@*Default: False.
-@vrindex askbcc, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean askbcc
+@*Default: False
 
 When set to @code{True} the user will be prompted to enter @code{Bcc}
 field before composing the message.
+@end deftypevr
 
-@kwindex askcc
-@item askcc
-@*Type: Boolean.
-@*Default: True.
-@vrindex askcc, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean askcc
+@*Default: True
 
 When set to @code{True} the user will be prompted to enter @code{Cc}
 field before composing the message.
+@end deftypevr
 
-@kwindex asksub
-@item asksub
-@*Type: Boolean.
+@c -----------------------------------------
+@deftypevr {mail} boolean asksub
 @*Default: True in interactive mode, False otherwise.
-@vrindex asksub, mail variable
 
 When set to @code{True} the user will be prompted to enter @code{Subject}
 field before composing the message.
+@end deftypevr
 
-@kwindex autoinc
-@item autoinc
-@*Type: Boolean.
-@*Default: True.
-@vrindex autoinc, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean autoinc
+@*Default: True
 
 Automatically incorporate newly arrived messages.
+@end deftypevr
 
-@kwindex autoprint
-@item autoprint
-@*Type: Boolean.
-@*Default: False.
-@vrindex autoprint, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean autoprint
+@*Default: False
 
-Causes the delete command to behave like dp - thus, after deleting a
+Causes the delete command to behave like @code{dp}: after deleting a
 message, the next one will be typed automatically.
+@end deftypevr
 
-@kwindex bang
-@item bang
-@*Type: Boolean.
-@*Default: False.
-@vrindex bang, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean bang
+@*Default: False
 
 When set, every occurrence of @code{!} in arguments to @code{!}
-command is replaced with the last executed command.
+escape is replaced with the last executed command.
 
+@xref{Executing Shell Commands}, for details on the @code{!} escape.
+@end deftypevr
+
+@c -----------------------------------------
 @anchor{datefield}
-@kwindex datefield
-@item datefield
-@*Type: Boolean.
-@*Default: False.
-@vrindex datefield, mail variable
+@deftypevr {mail} boolean datefield
+@*Default: False
 
 By default the date in a header summary is taken from the @acronym{SMTP}
 envelope of the message.  Setting this variable tells @command{mail}
@@ -2038,69 +2096,68 @@ local time.  Notice, that for messages lacking this field @command{mail}
 will fall back to using @acronym{SMTP} envelope.
 
 @xref{fromfield}.
+@end deftypevr
 
-@kwindex charset
-@item charset
-@*Type: string
+@c -----------------------------------------
+@deftypevr {mail} string charset
 @*Default: @samp{auto}
-@vrindex charset, mail variable
 
 The value of this variable is the character set used for input and
 output operations.  If the value is @samp{auto}, @command{mail} will
 try to deduce the name of the character set from the value of
-@samp{LC_ALL} environment variable.  If the variable contains the
+@env{LC_ALL} environment variable.  If the variable contains the
 character set part (e.g. @samp{nb_NO.utf-8}), it will be used.
 Otherwise, @command{mail} will look up in its built-in database the
 value of the character for this language/territory combination.  If
-@samp{LC_ALL} is not set, the @samp{LANG} environment variable is
+@env{LC_ALL} is not set, the @env{LANG} environment variable is
 inspected.
 
-The value of @samp{charset} controls both input and output
+The value of @code{charset} controls both input and output
 operations.  On input, it is used to set the value of the
 @samp{charset} parameter in the @samp{Content-Type} MIME header, if
-its value begins with @samp{text/} and @samp{charset} is not present.
+its value begins with @samp{text/} and the @samp{charset} parameter is
+not present.
 
 On output, it is used to display values of the header fields encodied
 using RFC 2047.  If the variable is unset, no decoding is performed
 and the fields are printed as they are.  Otherwise, they are recoded
 to that character set.
+@end deftypevr
 
-@kwindex cmd
-@item cmd
-@*Type: String.
-@*Default: Unset.
-@vrindex cmd, mail variable
+@c -----------------------------------------
+@deftypevr {mail} string cmd
+@*Default: Unset
 
 Contains default shell command for @code{pipe}.
+@end deftypevr
 
-@kwindex columns
-@item columns
-@*Type: Numeric.
+@c -----------------------------------------
+@deftypevr {mail} numeric columns
 @*Default: Detected at startup by querying the terminal device.  If this
-fails, the value of environment variable @code{COLUMNS} is used.
-@vrindex columns, mail variable
+fails, the value of environment variable @env{COLUMNS} is used.
 
 This variable contains the number of columns on terminal screen.
+@end deftypevr
 
-@kwindex crt
-@item crt
-@*Type: Boolean or Numeric
+@c -----------------------------------------
+@anchor{crt}
+@deftypevr {mail} numeric crt
+@deftypevrx {mail} boolean crt
 @*Default: True in interactive mode, False otherwise.
-@vrindex crt, mail variable
 
 The variable @code{crt} determines the minimum number of lines the body
 of the message must contain in order to be piped through pager command
-specified by environment variable @code{PAGER}.  If @code{crt} is set
+specified by environment variable @env{PAGER}.  If @code{crt} is set
 to a numeric value, this value is taken as the threshold.  Otherwise,
 if @code{crt} is set without a value, then the height of the terminal
 screen is used to compute the threshold.  The number of lines on
 screen is controlled by @code{screen} variable.
+@end deftypevr
 
-@kwindex debug
-@item debug
-@*Type: String to boolean
-@*Default: Not set
-@vrindex debug, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean debug
+@deftypevrx {mail} string debug
+@*Default: Unset
 
 Sets mailutils debug level.  If set to string, the value must be a
 valid Mailutils debugging specification.  @xref{Debug Statement}, for
@@ -2110,12 +2167,11 @@ If unset (i.e.  @code{set nodebug}), clears and disables all debugging
 information.  If set to @samp{true} (i.e.  @code{set debug}), sets
 maximum debugging (@samp{<trace7}) on mailbox and its underlying
 objects.
+@end deftypevr
 
-@kwindex decode-fallback
-@item decode-fallback
-@*Type: String.
-@*Default: @samp{none}.
-@vrindex decode-fallback, mail variable
+@c -----------------------------------------
+@deftypevr {mail} string decode-fallback
+@*Default: @samp{none}
 
 This variable controls the way to represent characters that cannot
 be rendered using current character set.  It can have three values:
@@ -2133,91 +2189,74 @@ your setup, this may screw-up your terminal settings.
 Unprintable characters are represented by their octal codes.  Printable
 ones are printed @samp{as is}.
 @end table
+@end deftypevr
 
-@kwindex debug
-@item debug
-@*Type: Boolean
-@*Default: Unset
-@vrindex debug, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean dot
+@*Default: False
 
-This variable is not used.  It exists for compatibility with other
-@command{mailx} implementations and for future use.
-
-@kwindex dot
-@item dot
-@*Type: Boolean.
-@*Default: False.
-@vrindex dot, mail variable
-
-If @code{True}, causes @command{mail} to interpret a period alone on a line as the
+If set, causes @command{mail} to interpret a period alone on a line as the
 terminator of a message you are sending.
+@end deftypevr
 
-@kwindex emptystart
-@item emptystart
-@*Type: Boolean.
-@*Default: False.
-@vrindex emptystart, mail variable
-
-If the mailbox is empty, @command{mail} normally prints @samp{No mail for user} and
-exits immediately.  If this option is set, @command{mail} will start no matter is
-the mailbox empty or not.
-
-@kwindex editheaders
-@item editheaders
-@*Type: Boolean.
-@*Default: False.
-@vrindex editheaders, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean editheaders
+@*Default: False
 
 When set, @command{mail} will include message headers in the text to
 be the @code{~e} and @code{~v} escapes, thus allowing you to customize
 the headers.
+@end deftypevr
 
-@kwindex escape
-@item escape
-@*Type: String.
-@*Default: ~
-@vrindex escape, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean emptystart
+@*Default: False
 
-If defined, the first character of this option gives the character to
-denoting escapes.
+If the mailbox is empty, @command{mail} normally prints @samp{No mail
+for user} and exits immediately.  If this option is set,
+@command{mail} will start no matter is the mailbox empty or not.
+@end deftypevr
 
-@kwindex flipr
-@item flipr
-@*Type: Boolean
+@c -----------------------------------------
+@deftypevr {mail} string escape
+@*Default: @samp{~}
+
+Current value of the command escape character.
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} boolean flipr
 @*Default: Unset
-@vrindex flipr, mail variable
 
 If set, the variable @code{flipr} swaps the meanings of @code{reply}
 and @code{Reply} commands (@pxref{Replying}).
+@end deftypevr
 
+@c -----------------------------------------
 @anchor{folder variable}
-@kwindex folder
-@item folder
-@*Type: String.
-@*Default: Unset.
-@vrindex folder, mail variable
+@deftypevr {mail} string folder
+@*Default: Unset
 
 The name of the directory to use for storing folders of messages.  If
 unset, @env{$HOME} is assumed.
+@end deftypevr
 
+@c -----------------------------------------
 @anchor{fromfield}
-@kwindex fromfield
-@item fromfield
-@*Type: Boolean.
-@*Default: True.
+@deftypevr {mail} boolean fromfield
+@*Default: True
 
 By default the sender address is taken from the @samp{From} header.
 Unsetting this variable tells @command{mail} to obtain it from the
-@acronym{SMTP} envelope, instead.
+@acronym{SMTP} envelope instead.
 
 @xref{datefield}.
+@end deftypevr
 
+@c -----------------------------------------
 @anchor{fullnames}
-@kwindex fullnames
-@item fullnames
-@*Type: Boolean.
-@*Default: True.
-@vrindex fullnames, mail variable
+@deftypevr {mail} boolean fullnames
+@*Default: True
 
 Preserve personal parts (comments) of recipient addresses when replying to a
 message.
@@ -2225,20 +2264,19 @@ message.
 When unset, only emails will be used.
 
 @xref{Replying}.
+@end deftypevr
 
-@kwindex header
-@item header
-@*Type: Boolean.
+@c -----------------------------------------
+@deftypevr {mail} boolean header
 @*Default: True, unless started with @option{--nosum} (@option{-N}) option.
-@vrindex header, mail variable
 
 Whether to run @code{headers} command automatically after entering
 interactive mode.
+@end deftypevr
 
+@c -----------------------------------------
 @anchor{headline}
-@kwindex headline
-@item headline
-@*Type: String
+@deftypevr {mail} string headline
 @*Default: @samp{%>%a%4m %18f %16d %3l/%-5o %s}
 
 Format string to use for the header summary.  The @samp{%} character
@@ -2283,10 +2321,10 @@ Message attribute.  One of the following letters, or a single
 horizontal space, if none of them applies:
 
 @multitable @columnfractions 0.2 0.6
-@item @samp{M} @tab the message was copied to the mailbox (@samp{mbox} command)
-@item @samp{P} @tab the message was preserved (@samp{hold} command)
-@item @samp{*} @tab the message was saved (@samp{save} or @samp{Save})
-@item @samp{T} @tab the message was tagged (@samp{tag})
+@item @samp{M} @tab the message was copied to the mailbox (@code{mbox} command)
+@item @samp{P} @tab the message was preserved (@code{hold} command)
+@item @samp{*} @tab the message was saved (@code{save} or @code{Save})
+@item @samp{T} @tab the message was tagged (@code{tag})
 @item @samp{R} @tab the message was read
 @item @samp{N} @tab the message is new (was not seen)
 @item @samp{U} @tab the message was seen, but wasn't read
@@ -2294,7 +2332,7 @@ horizontal space, if none of them applies:
 
 @item %d
 The date when the message was received.  It is determined from the
-message header set by the @samp{datefield} variable
+message header defined by the @samp{datefield} variable
 (@pxref{datefield}).  If that variable is not set, or the requested
 header is not present in the message, the date from the envelope is
 used.
@@ -2368,13 +2406,12 @@ A @samp{<} for the current message, otherwise a space.
 @item %%
 A @samp{%} character.
 @end table
+@end deftypevr
 
-@kwindex hold
-@item hold
+@c -----------------------------------------
 @anchor{the hold variable}
-@*Type: Boolean.
-@*Default: False.
-@vrindex hold, mail variable
+@deftypevr {mail} boolean hold
+@*Default: False
 
 Determines the location where to store the messages in state
 @samp{read} and (if the @code{keepsave} is also set) @samp{saved}.
@@ -2388,60 +2425,56 @@ detailed information on how such messages are processed
 when the mailbox is being closed.
 
 @xref{keepsave}, for the discussion of the @code{keepsave} variable.
+@end deftypevr
 
-@kwindex ignore 
-@item ignore
-@*Type: Boolean.
-@*Default: False.
-@vrindex ignore, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean ignore 
+@*Default: False
 
 When set to @code{True}, @command{mail} will ignore keyboard interrupts
 when composing messages.  Otherwise an interrupt will be taken as a
 signal to abort composing.
+@end deftypevr
 
-@kwindex ignoreeof
-@item ignoreeof
-@*Type: Boolean.
-@*Default: False.
-@vrindex ignoreeof, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean ignoreeof
+@*Default: False
 
 Controls whether typing EOF character terminates the letter being
 composed.
+@end deftypevr
 
-@kwindex indentprefix
-@item indentprefix
-@*Type: String.
+@c -----------------------------------------
+@deftypevr {mail} string indentprefix
 @*Default: "\t" (a tab character).
-@vrindex indentprefix, mail variable
 
 String used by the @code{~m} tilde escape for indenting quoted messages.
+@end deftypevr
 
-@kwindex inplacealiases
-@item inplacealiases
-@*Type: Boolean
+@c -----------------------------------------
+@deftypevr {mail} boolean inplacealiases
 @*Default: False
 
 If set, @command{mail} will expand aliases in the address header field
 before entering send mode (@pxref{Composing Mail}).  By default, the
 address header fields are left intact while composing, the alias
 expansion takes place immediately before sending message.
+@end deftypevr
 
-@kwindex keep
-@item keep
-@*Type: Boolean, Read-Only
+@c -----------------------------------------
+@deftypevr {mail} boolean keep
+@*Comment: Read-Only
 @*Default: True
-@vrindex append, mail variable
 
 Truncate the user's system mailbox when it is empty, instead of
 removing it.  This is the default and cannot be changed.  This variable
 exists only for compatibility with other @command{mailx} implementations.
+@end deftypevr
 
-@kwindex keepsave
+@c -----------------------------------------
 @anchor{keepsave}
-@item keepsave
-@*Type: Boolean.
-@*Default: False.
-@vrindex keepsave, mail variable
+@deftypevr {mail} boolean keepsave
+@*Default: False
 
 Controls whether saved messages should be retained.  The location
 where they will be retained is controlled by the @code{hold} variable
@@ -2452,12 +2485,12 @@ mailbox.
 
 @xref{saved messages}, for a detailed information on how
 the saved messages are processed when the mailbox is being closed.
+@end deftypevr
 
-@kwindex mailx
-@item mailx
-@*Type: Boolean.
-@*Default: False.
-@vrindex mailx, mail variable
+@c -----------------------------------------
+@anchor{mailx mail variable}
+@deftypevr {mail} boolean mailx
+@*Default: False
 
 When set, enables @dfn{mailx compatibility mode}.  This mode
 has the following effects:
@@ -2471,13 +2504,27 @@ the body.
 @item In send mode, if the composition was interrupted, @command{mail}
 will exit with zero status.  By default it exits with zero status only
 if the message was sent successfully.
-@end itemize
 
-@kwindex metamail
-@item metamail
-@*Type: Boolean or String.
-@*Default: True.
-@vrindex metamail, mail variable
+@item The @code{outfolder} variable is treated as boolean.
+@pxref{outfolder}.
+
+@item The value of @code{outfilename} is ignored (assumed to be
+@samp{local}).  @pxref{outfilename}.
+
+@item The values of @code{folder} and @code{record} variables are
+assumed relative to the home directory, unless they begin with
+@samp{/}, @samp{~}, or @samp{+}.
+
+@item If the value of the @code{sendmail} variable does not begin with
+a scheme specification, @samp{sendmail:/} is assumed.  @xref{sendmail
+mail variable}.
+@end itemize
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} boolean metamail
+@deftypevrx {mail} string metamail
+@*Default: True
 
 This variable controls operation of @code{decode} command.  If
 it is unset, @code{decode} will not attempt any interpretation
@@ -2496,23 +2543,21 @@ set metamail
 # Use external program to display MIME parts:
 set metamail="metamail -m mail -p"
 @end example
+@end deftypevr
 
-@kwindex mime
-@item mime
-@*Type: String
-@*Default: Unset (false)
-@vrindex mime, mail variable
+@c -----------------------------------------
+@deftypevr {mail} string mime
+@*Default: False
 
 If set, this variable instructs @command{mail} to compose MIME
 messages.
 
 It can be set from the command line using @option{--mime} option.
+@end deftypevr
 
-@kwindex mimenoask
-@item mimenoask
-@*Type: String
-@*Default: Empty
-@vrindex mimenoask, mail variable
+@c -----------------------------------------
+@deftypevr {mail} string mimenoask
+@*Default: Unset
 
 By default @command{mail} asks for confirmation before running
 interpreter to view a part of the multi-part message.  If this variable
@@ -2528,22 +2573,21 @@ set mimenoask=text/*,image/jpeg
 will disable prompting before displaying any textual files, no
 matter what their subtype is, and before displaying files with
 type @samp{image/jpeg}.
+@end deftypevr
 
-@kwindex metoo
-@item metoo
-@*Type: Boolean.
-@*Default: False.
-@vrindex metoo, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean metoo
+@*Default: False
 
 Usually, when an alias is expanded that contains the sender, the sender
 is removed from the expansion.  Setting this option causes the sender to
 be included in the group.
+@end deftypevr
 
-@kwindex mode
-@item mode
-@*Type: String, Read-Only
+@c -----------------------------------------
+@deftypevr {mail} string mode
+@*Comment: Read-Only
 @*Default: The name of current operation mode.
-@vrindex mode, mail variable
 
 This variable keeps the name of the current operation mode.  Its
 possible values are:
@@ -2568,12 +2612,11 @@ The program operates in read mode.  This is the default.
 The program operates in send mode.  This means it was given one or more
 recipient addresses in the command line.
 @end table
+@end deftypevr
 
-@kwindex nullbody
-@item nullbody
-@* Type: Boolean
-@* Default: True
-@vrindex nullbody, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean nullbody
+@*Default: True
 
 Controls whether @command{mail} accepts messages with an empty
 body.  The default value, @code{true}, means such messages are sent,
@@ -2593,41 +2636,33 @@ outputs something on its standard output or error:
    /bin/mail -E'set nonullbody' -s 'Periodic synchronization'
 @end group
 @end example
+@end deftypevr
 
-@kwindex showenvelope
-@item showenvelope
-@*Type: Boolean
-@*Default: Unset
+@c -----------------------------------------
+@deftypevr {mail} string nullbodymsg
+@*Default: @samp{Null message body; hope that's ok}
 
-If this variable is set, the @code{print} command will include the
-@acronym{STMP} envelope in its output.
-
-@kwindex nullbodymsg
-@item nullbodymsg
-@*Type: String
-@*Default: Null message body; hope that's ok 
-@vrindex nullbodymsg
-
-Keeps the text of the warning, displayed by @command{mail} before
+Text of the warning displayed by @command{mail} before
 sending an empty message.  When available, the translation of
 this text, in accordance with the current locale, is displayed.
 
 Unsetting this variable disables the warning.
+@end deftypevr
 
-@kwindex onehop
-@item onehop
-@*Type: Boolean
+@c -----------------------------------------
+@deftypevr {mail} boolean onehop
 @*Default: Unset
 @vrindex onehop, mail variable
 
 This variable is not used.  It exists for compatibility with other
 @command{mailx} implementations and for future use.
+@end deftypevr
 
-@kwindex outfilename
-@item outfilename
-@*Type: Three-state: @samp{local}, @samp{email}, @samp{domain}.
+@c -----------------------------------------
+@anchor{outfilename}
+@deftypevr {mail} string outfilename
+@*Comment: Three-state: @samp{local}, @samp{email}, @samp{domain}.
 @*Default: @samp{local}
-@vrindex outfilename, mail variable
 
 Defines the algorithm to convert the recipient email to the name of
 the file used to record outgoing messages to that recipient.  This
@@ -2643,130 +2678,127 @@ the default.
 Entire email is takes as the file name.
 
 @item domain
-
 Domain part of the email is used as the file name.
 @end table
+@end deftypevr
 
-@kwindex outfolder
-@item outfolder
-@*Type: Boolean or String.
-@*Default: Unset.
-@vrindex outfolder, mail variable
+@c -----------------------------------------
+@anchor{outfolder}
+@deftypevr {mail} boolean outfolder
+@deftypevrx {mail} string outfolder
+@*Default: Unset
 
 When set as boolean, causes the files used to record outgoing messages
 to be located in the directory specified by the @code{folder} variable
 (unless the pathname is absolute).
 
-If string, its value names the directory where to store these files.
+If set to a string value, names the directory where to store these files.
 
 This variable affects the following commands: @code{Copy},
 @code{Save}, @code{Mail}, @code{followup}, and @code{Followup}.
 
-@kwindex PID
-@item PID
-@*Type: String, Read-Only
+In mailx compatibility mode, only boolean value is allowed.
+@pxref{mailx mail variable}.
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} boolean page
+@*Default: Unset
+
+If set, the @code{pipe} command will emit a linefeed
+character after printing each message.
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} string PID
+@*Comment: Read-Only
 @*Default: PID of the process.
-@vrindex PID, mail variable
 
 PID of the current @command{mail} process.
+@end deftypevr
 
-@kwindex page
-@item page
-@*Type: Boolean.
-@*Default: False.
-@vrindex page, mail variable
-
-If set to @code{True}, the @code{pipe} command will emit a linefeed
-character after printing each message.
-
-@kwindex prompt
-@item prompt
-@*Type: String.
+@c -----------------------------------------
+@deftypevr {mail} string prompt
 @*Default: "? "
-@vrindex prompt, mail variable
 
 Contains the command prompt sequence.
+@end deftypevr
 
-@kwindex quiet
-@item quiet
-@*Type: Boolean
+@c -----------------------------------------
+@deftypevr {mail} boolean quiet
 @*Default: Unset
-@vrindex quiet, mail variable
 
 This variable is not used.  It exists for compatibility with other
 @command{mailx} implementations and for future use.
+@end deftypevr
 
-@kwindex quit
-@item quit
-@*Type: Boolean.
+@c -----------------------------------------
+@deftypevr {mail} boolean quit
 @*Default: False, unless started with @option{--quit} (@option{-q}) option.
-@vrindex quit, mail variable
 
 When set, causes keyboard interrupts to terminate the program.
+@end deftypevr
 
-@kwindex rc
-@item rc
-@*Type: Boolean.
+@c -----------------------------------------
+@deftypevr {mail} boolean rc
 @*Default: True, unless started with @option{--norc} (@option{-N}) option.
-@vrindex rc, mail variable
 
 When this variable is set, @command{mail} will read the system-wide
-configuration file upon startup.  See @ref{Mail Configuration Files}.
+configuration file upon startup.  @xref{Mail Configuration Files}.
+@end deftypevr
 
-@kwindex readonly
-@item readonly
-@*Type: Boolean
+@c -----------------------------------------
+@deftypevr {mail} boolean readonly
 @*Default: False
-@vrindex readonly, mail variable
 
 When set, mailboxes are opened in readonly mode.  In this mode, any
 @command{mail} commands that alter the contents of the mailbox are
 disabled.  These commands include, but are not limited to: 
 @code{delete}, @code{save} and @code{mbox}.
+@end deftypevr
 
-@kwindex record
-@item record
-@*Type: String.
-@*Default: Unset.
-@vrindex record, mail variable
+@c -----------------------------------------
+@anchor{record}
+@deftypevr {mail} string record
+@*Default: Unset
 
-When set, any outgoing message will be saved to the named file.
+When set, outgoing messages produced by the following commmands will
+be saved to the named file: @code{mail}, @code{reply}, @code{Reply}.
 
-@kwindex recursivealiases
-@item recursivealiases
-@*Type: Boolean
+See also @ref{outfolder} and @ref{outfilename}.
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} boolean recursivealiases
 @*Default: True
 
 When set, @command{mail} will expand aliases recursively.
+@end deftypevr
 
-@kwindex regex
-@item regex
-@*Type: Boolean.
+@c -----------------------------------------
+@deftypevr {mail} boolean regex
 @*Default: True.
-@vrindex regex, mail variable
 
-Setting this to @code{True} enables use of regular expressions in
+If set, enables the use of regular expressions in
 @samp{/.../} message specifications.
+@end deftypevr
 
-@kwindex replyprefix
-@item replyprefix
-@*Type: String
+@c -----------------------------------------
+@deftypevr {mail} string replyprefix
 @*Default: @samp{Re: }
-@vrindex replyprefix, mail variable
 
 Sets the prefix that will be used when constructing the subject line
 of a reply message.
+@end deftypevr
 
-@kwindex replyregex
-@item replyregex
-@*Type: String
+@c -----------------------------------------
+@deftypevr {mail} string replyregex
 @*Default: @samp{^re: *}
-@vrindex replyregex, mail variable
 
 Sets the regular expression used to recognize subjects of reply
 messages.  If the @code{Subject} header of the message matches this
 expression, the value of @code{replyprefix} will not be prepended to
-it before replying.  The expression should be a POSIX extended regular
+it before replying.  The value should be a POSIX extended regular
 expression.  The comparison is case-insensitive.
 
 For example, to recognize usual English, Polish, Norwegian and German
@@ -2778,113 +2810,121 @@ set replyregex="^(re|odp|aw|ang)(\\[[0-9]+\\])?:[[:blank:]]"
 
 @noindent
 (Notice the quoting of backslash characters).
+@end deftypevr
 
+@c -----------------------------------------
 @anchor{return-address}
-@kwindex return-address
-@item return-address
-@*Type: String
+@deftypevr {mail} string return-address
 @*Default: unset
-@vrindex return-address, mail variable.
 
 Sets the return email address to use when sending messages.  If unset,
-the address is composed from the current user name and the host name.
+return address is composed from the current user name and the host name.
+@end deftypevr
 
-@kwindex save
-@item save
-@*Type: Boolean.
+@c -----------------------------------------
+@deftypevr {mail} boolean save
 @*Default: True.
-@vrindex save, mail variable
 
 When set, the aborted messages will be stored in the user's
 @file{dead.file}.  See also @code{appenddeadletter}.
+@end deftypevr
 
-@kwindex screen
-@item screen
-@*Type: Numeric.
+@c -----------------------------------------
+@deftypevr {mail} numeric screen
 @*Default: Detected at startup by querying the terminal device.  If this
-fails, the value of environment variable @code{LINES} is used.
-@vrindex screen, mail variable
+fails, the value of environment variable @env{LINES} is used.
 
-This variable contains the number of lines on terminal screen.
+This variable contains the number of lines on terminal screen.  See
+also @ref{crt}.
+@end deftypevr
 
-@kwindex sendmail
-@item sendmail
-@*Type: String.
-@*Default: sendmail:/usr/lib/sendmail
-@vrindex sendmail, mail variable
+@c -----------------------------------------
+@anchor{sendmail mail variable}
+@deftypevr {mail} string sendmail
+@*Default: @samp{sendmail:/usr/lib/sendmail}
 
-Contains URL of the mail transport agent.
+Contains URL of the mail transport agent.  If the value begins with a
+scheme specifier, it must be one of the mailer URL schemes supported
+by mailutils (@pxref{mailer URL}).  Otherwise, if not in mailx
+compatibility mode, the value starting with directory separator
+(@samp{/}) is treated as the external command that will be started as
+is and the composed message will be piped to its standard input.
 
-@kwindex sendwait
-@item sendwait
-@*Type: Boolean
+In mailx compatibility mode (@pxref{mailx mail variable}), the
+@samp{sendmail:} prefix is assumed.
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} boolean sendwait
 @*Default: Unset
-@vrindex sendwait, mail variable
 
 This variable is not used.  It exists for compatibility with other
 @command{mailx} implementations and for future use.
+@end deftypevr
 
-@kwindex showto
-@item showto
-@*Type: Boolean
-@*Default: False
-@vrindex showto, mail variable
-
-If the message was sent by the user, print its recipient address in
-the header summary.
-
-@kwindex Sign
-@item Sign
-@*Type: String.
-@*Default: Unset.
-@vrindex Sign, mail variable
+@c -----------------------------------------
+@deftypevr {mail} string Sign
+@*Default: Unset
 
 Contains the filename holding users signature.  The contents of this
 file is appended to the end of a message being composed by @code{~A}
 escape.
+@end deftypevr
 
-@kwindex sign
-@item sign
-@*Type: String.
-@*Default: Unset.
-@vrindex sign, mail variable
+@c -----------------------------------------
+@deftypevr {mail} string sign
+@*Default: Unset
 
 Contains the user's signature.  The contents of this variable is appended
 to the end of a message being composed by @code{~a} escape.  Use
 @code{Sign} variable, if your signature occupies more than one line.
+@end deftypevr
 
-@kwindex showto
-@item showto
-@*Type: Boolean
-@*Default: unset
-@vrindex showto, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean showenvelope
+@*Default: Unset
+
+If this variable is set, the @code{print} command will include the
+@acronym{SMTP} envelope in its output.
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} boolean showto
+@*Default: Unset
 
 If this variable is set, @command{mail} will show @code{To:} addresses
 instead of @code{From:} for all messages that come from the user that
 invoked the program.
+@end deftypevr
 
-@kwindex subject
-@item subject
-@*Type: String.
-@*Default: Unset.
-@vrindex subject, mail variable
+@c -----------------------------------------
+@deftypevr {mail} string subject
+@*Default: Unset
 
 Contains default subject line.  This will be used when @code{asksub} is
 off.
+@end deftypevr
 
-@kwindex toplines
-@item toplines
-@*Type: Numeric.
+@c -----------------------------------------
+@deftypevr {mail} numeric toplines
 @*Default: 5
-@vrindex toplines, mail variable
 
 Number of lines to be displayed by @code{top} and @code{Top} commands.
+@end deftypevr
 
-@kwindex variable-strict
-@item variable-strict
-@itemx varstrict
-@*Type: Boolean.
-@*Default: False.
+@c -----------------------------------------
+@deftypevr {mail} boolean variable-pretty-print
+@deftypevrx {mail} boolean varpp
+@*Default: False
+
+If this variable is set, the listing output by @command{set} contains short
+descriptions before each variable.  @xref{Setting and Unsetting the Variables}. 
+@end deftypevr
+
+@c -----------------------------------------
+@deftypevr {mail} boolean variable-strict
+@deftypevrx {mail} boolean varstrict
+@*Default: False
 
 Setting this variable enables strict control over variable
 settings.  In this mode, @command{mail} refuses to set read-only
@@ -2892,29 +2932,18 @@ variables.  Also, if the user is trying to set an unknown variable,
 @command{mail} prints a warning.
 
 @xref{Setting and Unsetting the Variables}.
+@end deftypevr
 
-@kwindex variable-pretty-print
-@item variable-pretty-print
-@itemx varpp
-@*Type: Boolean.
-@*Default: False.
-
-If this variable is set, the listing output by @command{set} contains short
-descriptions before each variable.  @xref{Setting and Unsetting the Variables}. 
-
-@kwindex verbose
-@item verbose
-@*Type: Boolean.
-@*Default: False.
-@vrindex verbose, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean verbose
+@*Default: False
 
 When set, the actual delivery of messages is displayed on the user's terminal.
+@end deftypevr
 
-@kwindex xmailer
-@item xmailer
-@*Type: Boolean.
-@*Default: Set.
-@vrindex xmailer, mail variable
+@c -----------------------------------------
+@deftypevr {mail} boolean xmailer
+@*Default: True
 
 Controls whether the header @samp{X-Mailer} should be added to 
 outgoing messages.  The default value of this header is
@@ -2922,8 +2951,7 @@ outgoing messages.  The default value of this header is
 @example
 X-Mailer: mail (GNU Mailutils @value{VERSION})
 @end example
-
-@end table
+@end deftypevr
 
 @node Mail Configuration Files
 @subsection Personal and System-wide Configuration Files

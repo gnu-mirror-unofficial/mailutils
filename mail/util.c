@@ -500,7 +500,8 @@ util_outfilename (mu_address_t addr)
       return NULL;
     }
 
-  switch (outfilename_mode)
+  switch (mailvar_is_true (mailvar_name_mailx)
+	  ? outfilename_local : outfilename_mode))
     {
     case outfilename_local:
       p = strchr (buf, '@');

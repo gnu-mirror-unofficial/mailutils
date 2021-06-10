@@ -55,6 +55,8 @@ static int set_headline (enum mailvar_cmd,
 			 struct mailvar_variable *);
 static int set_outfilename (enum mailvar_cmd,
 			    struct mailvar_variable *);
+static int set_escape (enum mailvar_cmd,
+		       struct mailvar_variable *);
 
 struct mailvar_symbol mailvar_tab[] =
   {
@@ -132,7 +134,8 @@ struct mailvar_symbol mailvar_tab[] =
       N_("start interactive mode if the mailbox is empty") },
     { { mailvar_name_escape, },
       MAILVAR_TYPEMASK (mailvar_type_string),
-      N_("character denoting escapes") },
+      N_("command escape character"),
+      set_escape },
     { { mailvar_name_flipr, },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("swap the meaning of reply and Reply commands") },
@@ -765,6 +768,25 @@ set_outfilename (enum mailvar_cmd cmd, struct mailvar_variable *var)
       
     default:
       return 1;
+    }
+  return 0;
+}
+
+static int
+set_escape (enum mailvar_cmd cmd, struct mailvar_variable *var)
+{
+  if (cmd == mailvar_cmd_set)
+    {
+      if (var->value.string[0] == 0)
+	{
+	  mu_error (_("escape character cannot be empty"));
+	  return 1;
+	}
+      else if (var->value.string[1] != 0)
+	{
+	  mu_error (_("escape value must be a single character"));
+	  return 1;
+	}
     }
   return 0;
 }
