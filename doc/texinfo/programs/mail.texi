@@ -2217,6 +2217,7 @@ Unsetting this variable tells @command{mail} to obtain it from the
 @item fullnames
 @*Type: Boolean.
 @*Default: True.
+@vrindex fullnames, mail variable
 
 Preserve personal parts (comments) of recipient addresses when replying to a
 message.
@@ -2622,6 +2623,30 @@ Unsetting this variable disables the warning.
 This variable is not used.  It exists for compatibility with other
 @command{mailx} implementations and for future use.
 
+@kwindex outfilename
+@item outfilename
+@*Type: Three-state: @samp{local}, @samp{email}, @samp{domain}.
+@*Default: @samp{local}
+@vrindex outfilename, mail variable
+
+Defines the algorithm to convert the recipient email to the name of
+the file used to record outgoing messages to that recipient.  This
+affects the following commands: @code{Copy}, @code{Save}, @code{Mail},
+@code{followup}, and @code{Followup}.  The following values are allowed:
+
+@table @code
+@item local
+Local part of the email address is taken as the file name.  This is
+the default.
+
+@item email
+Entire email is takes as the file name.
+
+@item domain
+
+Domain part of the email is used as the file name.
+@end table
+
 @kwindex outfolder
 @item outfolder
 @*Type: Boolean or String.
@@ -2635,7 +2660,7 @@ to be located in the directory specified by the @code{folder} variable
 If string, its value names the directory where to store these files.
 
 This variable affects the following commands: @code{Copy},
-@code{Save}, @code{Mail}, @code{Reply}, and @code{Followup}.
+@code{Save}, @code{Mail}, @code{followup}, and @code{Followup}.
 
 @kwindex PID
 @item PID

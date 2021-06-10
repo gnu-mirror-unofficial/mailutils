@@ -403,6 +403,7 @@ static char *default_setup[] = {
   "set headline=\"%>%a%4m %18f %16d %3L/%-5o %s\"",
   "unset folder",
   "set fullnames",
+  "set outfilename=local",
 
   /* Start in mail reading mode */
   "setq mode=read",

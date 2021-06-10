@@ -199,6 +199,7 @@ struct mailvar_variable
 #define mailvar_name_mode                       "mode"
 #define mailvar_name_nullbody                   "nullbody"
 #define mailvar_name_nullbodymsg                "nullbodymsg"
+#define mailvar_name_outfilename                "outfilename"
 #define mailvar_name_outfolder                  "outfolder"
 #define mailvar_name_page                       "page"
 #define mailvar_name_prompt                     "prompt"
@@ -421,6 +422,15 @@ msgset_str (const msgset_t *set)
   return mu_coord_string (set->crd);
 }
 
+/* Constants for naming outgoing mail files */
+enum
+  {
+    outfilename_local, /* File is named by local part of the recipient email. */
+    outfilename_email, /* File is named by entire email. */
+    outfilename_domain /* File is named by domain part. */
+  };
+extern int outfilename_mode;
+
 #define MDHINT_SELECTED_HEADERS 0x1
 
 struct mime_descend_closure
@@ -496,6 +506,7 @@ void util_slist_remove (mu_list_t *list, char *value);
 void util_slist_destroy (mu_list_t *list);
 char *util_slist_to_string (mu_list_t list, const char *delim);
 void util_strcat (char **dest, const char *str);
+char *util_outfilename (mu_address_t addr);
 char *util_outfolder_name (char *str);
 void util_save_outgoing (mu_message_t msg, char *savefile);
 int util_error_range (size_t msgno);

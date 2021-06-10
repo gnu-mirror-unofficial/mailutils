@@ -486,11 +486,54 @@ util_folder_path (const char *name)
   return folder;
 }
 
+int outfilename_mode;
+
+char *
+util_outfilename (mu_address_t addr)
+{
+  char *buf, *p;
+  int rc;
+  
+  if ((rc = mu_address_aget_email (addr, 1, &buf)) != 0)
+    {
+      mu_error (_("Cannot determine sender name: %s"), mu_strerror (rc));
+      return NULL;
+    }
+
+  switch (outfilename_mode)
+    {
+    case outfilename_local:
+      p = strchr (buf, '@');
+      if (p)
+	*p = 0;
+      break;
+
+    case outfilename_email:
+      break;
+
+    case outfilename_domain:
+      p = strchr (buf, '@');
+      if (p)
+	{
+	  p++;
+	  memmove (buf, p, strlen (p) + 1);
+	}
+      else
+	{
+	  free (buf);
+	  buf = mu_strdup ("localdomain");
+	}
+      break;
+    }
+  return buf;
+}
+
 char *
 util_message_sender (mu_message_t msg, int strip)
 {
   mu_address_t addr = get_sender_address (msg);
   char *buf;
+  int rc;
   
   if (!addr)
     {
@@ -507,23 +550,12 @@ util_message_sender (mu_message_t msg, int strip)
 
   if (strip)
     {
-      char *p;
-      if (mu_address_aget_email (addr, 1, &buf) || !buf)
-	{
-	  mu_error (_("Cannot determine sender name"));
-	  mu_address_destroy (&addr);
-	  return NULL;
-	}
-
-      p = strchr (buf, '@');
-      if (p)
-	*p = 0;
+      buf = util_outfilename (addr);
     }
-  else if (mu_address_aget_printable (addr, &buf) || !buf)
+  else if ((rc = mu_address_aget_printable (addr, &buf)) != 0)
     {
-      mu_error (_("Cannot determine sender name"));
-      mu_address_destroy (&addr);
-      return NULL;
+      mu_error (_("Cannot determine sender name: %s"), mu_strerror (rc));
+      buf = NULL;
     }
     
   mu_address_destroy (&addr);

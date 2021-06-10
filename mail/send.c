@@ -1427,14 +1427,8 @@ mail_compose_send (compose_env_t *env, int save_to)
 		  struct mu_address hint = MU_ADDRESS_HINT_INITIALIZER;
 
 		  mu_address_create_hint (&addr, rcpt, &hint, 0);
-		  mu_address_aget_email (addr, 1, &savefile);
+		  savefile = util_outfilename (addr);
 		  mu_address_destroy (&addr);
-		  if (savefile)
-		    {
-		      char *p = strchr (savefile, '@');
-		      if (p)
-			*p = 0;
-		    }
 		}
 	    }
 	  util_save_outgoing (msg, savefile);

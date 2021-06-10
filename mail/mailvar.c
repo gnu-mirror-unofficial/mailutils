@@ -15,6 +15,7 @@
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "mail.h"
+#include "mailutils/kwd.h"
 
 #define MAILVAR_ALIAS  0x0001
 #define MAILVAR_RDONLY 0x0002
@@ -52,6 +53,8 @@ static int set_folder (enum mailvar_cmd cmd,
 		       struct mailvar_variable *);
 static int set_headline (enum mailvar_cmd,
 			 struct mailvar_variable *);
+static int set_outfilename (enum mailvar_cmd,
+			    struct mailvar_variable *);
 
 struct mailvar_symbol mailvar_tab[] =
   {
@@ -292,6 +295,11 @@ struct mailvar_symbol mailvar_tab[] =
     { { mailvar_name_fullnames },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("when replying, preserve personal parts of recipient emails") },
+
+    { { mailvar_name_outfilename },
+      MAILVAR_TYPEMASK (mailvar_type_string),
+      N_("how to create outgoing file name: local, domain, email"),
+      set_outfilename },
 
     { { mailvar_name_PID },
       MAILVAR_TYPEMASK (mailvar_type_string) | MAILVAR_RDONLY,
@@ -735,6 +743,31 @@ set_debug (enum mailvar_cmd cmd, struct mailvar_variable *var)
   return 0;
 }
 
+static int
+set_outfilename (enum mailvar_cmd cmd, struct mailvar_variable *var)
+{
+  static struct mu_kwd kwtab[] = {
+    { "local", outfilename_local },
+    { "email", outfilename_email },
+    { "domain", outfilename_domain },
+    { NULL }
+  };
+  
+  switch (cmd)
+    {
+    case mailvar_cmd_set:
+      if (mu_kwd_xlat_name (kwtab, var->value.string, &outfilename_mode))
+	{
+	  mu_error (_("unsupported value for %s"), var->name);
+	  return 1;
+	}
+      break;
+      
+    default:
+      return 1;
+    }
+  return 0;
+}
 
 size_t
 _mailvar_symbol_count (int set)
