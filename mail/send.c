@@ -1513,8 +1513,18 @@ msg_to_pipe (const char *cmd, mu_message_t msg)
 {
   mu_stream_t progstream, msgstream;
   int status, rc;
-  
-  status = mu_command_stream_create (&progstream, cmd, MU_STREAM_WRITE);
+  char *argv[4];
+
+  argv[0] = getenv ("SHELL");
+  if (!argv[0])
+    argv[0] = "/bin/sh";
+  argv[1] = "-c";
+  argv[2] = (char*) cmd;
+  argv[3] = NULL;
+  status = mu_prog_stream_create (&progstream,
+				  argv[0],
+				  3, argv,
+				  0, NULL, MU_STREAM_WRITE);
   if (status)
     {
       mu_error (_("Cannot pipe to %s: %s"), cmd, mu_strerror (status));
