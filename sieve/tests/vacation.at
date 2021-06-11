@@ -33,7 +33,7 @@ cat $MAIL_DUMP
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: bar@dontmailme.org
-LENGTH: 321
+LENGTH: 320
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -44,7 +44,6 @@ In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
 References: <200112232808.fERKR9N16790@dontmailme.org>
 
 I'm on vacation
-
 ]],
 [VACATION on msg uid 1
 VACATION on msg uid 2
@@ -67,7 +66,7 @@ cat $MAIL_DUMP
 SENDER: roadrunner@acme.example.com
 NRCPT: 1
 RCPT[0]: coyote@desert.example.org
-LENGTH: 240
+LENGTH: 239
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -76,12 +75,11 @@ Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
 In-Reply-To: Your message of Sun May  6 22:16:47 2001
 
 I'm on vacation
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: bar@dontmailme.org
-LENGTH: 321
+LENGTH: 320
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -92,7 +90,6 @@ In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
 References: <200112232808.fERKR9N16790@dontmailme.org>
 
 I'm on vacation
-
 ]],
 [VACATION on msg uid 1
 VACATION on msg uid 2
@@ -115,7 +112,7 @@ cat $MAIL_DUMP
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: coyote@desert.example.org
-LENGTH: 240
+LENGTH: 239
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -124,12 +121,11 @@ Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
 In-Reply-To: Your message of Sun May  6 22:16:47 2001
 
 I'm on vacation
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: b1ff@de.res.example.com
-LENGTH: 232
+LENGTH: 231
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -138,12 +134,11 @@ Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
 In-Reply-To: Your message of TBD
 
 I'm on vacation
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: bar@dontmailme.org
-LENGTH: 321
+LENGTH: 320
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -154,7 +149,6 @@ In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
 References: <200112232808.fERKR9N16790@dontmailme.org>
 
 I'm on vacation
-
 ]],
 [VACATION on msg uid 1
 VACATION on msg uid 2
@@ -178,7 +172,7 @@ cat $MAIL_DUMP
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: coyote@desert.example.org
-LENGTH: 240
+LENGTH: 239
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -187,12 +181,11 @@ Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
 In-Reply-To: Your message of Sun May  6 22:16:47 2001
 
 I'm on vacation
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: b1ff@de.res.example.com
-LENGTH: 232
+LENGTH: 231
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -201,12 +194,11 @@ Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
 In-Reply-To: Your message of TBD
 
 I'm on vacation
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: bar@dontmailme.org
-LENGTH: 321
+LENGTH: 320
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -217,7 +209,6 @@ In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
 References: <200112232808.fERKR9N16790@dontmailme.org>
 
 I'm on vacation
-
 ]],
 [VACATION on msg uid 1
 VACATION on msg uid 2
@@ -243,7 +234,7 @@ cat $MAIL_DUMP
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: coyote@desert.example.org
-LENGTH: 251
+LENGTH: 250
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: base64
@@ -252,12 +243,11 @@ Subject: =?UTF-8?Q?Re:_I_have_a_present_for_you?=
 In-Reply-To: Your message of Sun May  6 22:16:47 2001
 
 SSdtIG9uIHZhY2F0aW9uLg==
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: b1ff@de.res.example.com
-LENGTH: 243
+LENGTH: 242
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: base64
@@ -266,12 +256,11 @@ Subject: =?UTF-8?Q?Re:_$$$_YOU,_TOO,_CAN_BE_A_MILLIONAIRE!_$$$?=
 In-Reply-To: Your message of TBD
 
 SSdtIG9uIHZhY2F0aW9uLg==
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: bar@dontmailme.org
-LENGTH: 332
+LENGTH: 331
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: base64
@@ -282,7 +271,6 @@ In-Reply-To: Your message of Fri, 28 Dec 2001 23:28:08 +0200
 References: <200112232808.fERKR9N16790@dontmailme.org>
 
 SSdtIG9uIHZhY2F0aW9uLg==
-
 ]],
 [VACATION on msg uid 1
 VACATION on msg uid 2
@@ -387,7 +375,7 @@ cat ./mta.diag
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: coyote@desert.example.org
-LENGTH: 326
+LENGTH: 325
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -401,12 +389,11 @@ I will attend to your message as soon as I'm back.
 Best regards,
 Ty Coon
 
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: b1ff@de.res.example.com
-LENGTH: 318
+LENGTH: 317
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -420,12 +407,11 @@ I will attend to your message as soon as I'm back.
 Best regards,
 Ty Coon
 
-
 MSGID: 0001
 SENDER: foobar@nonexistent.net
 NRCPT: 1
 RCPT[0]: bar@dontmailme.org
-LENGTH: 407
+LENGTH: 406
 MIME-Version: 1.0
 Content-Type: text/plain;charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -440,7 +426,6 @@ I will attend to your message as soon as I'm back.
 
 Best regards,
 Ty Coon
-
 
 ]],
 [VACATION on msg uid 1

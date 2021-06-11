@@ -601,7 +601,6 @@ MIME-Version: 1.0
 Content-Type: text/plain
 
 #when sent, this line will start with only one #
-
 ])
 
 MH_CHECK([mhn-compose: charset],
@@ -624,7 +623,6 @@ Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
 Cze=C5=9B=C4=87
-
 ])
 
 MH_CHECK([mhn-compose: forward],
@@ -744,7 +742,6 @@ Content-Description: Single line part
 --BOUNDARY-2--
 
 --BOUNDARY-1--
-
 ])
 
 MH_CHECK([mhn-compose: forward (current folder)],
@@ -865,7 +862,6 @@ Content-Description: Single line part
 --BOUNDARY-2--
 
 --BOUNDARY-1--
-
 ])
 
 MH_CHECK([mhn-compose: forward (single message)],
@@ -932,8 +928,6 @@ Did gyre and gimble in the wabe;
 All mimsy were the borogoves,
 And the mome raths outgrabe.
 
-
-
 ])
 
 MH_CHECK([mhn-compose: external data],
@@ -964,7 +958,6 @@ Content-Type: message/external-body; name="mailutils-3.0.tar.gz"; directory="/gn
 Content-Type: application/octet-stream; type=tar; conversions=compress
 Content-ID: 1
 Content-Description: GNU Mailutils distribution
-
 
 ])
 
@@ -1062,7 +1055,6 @@ He chortled in his joy.
 Did gyre and gimble in the wabe;
 All mimsy were the borogoves,
 And the mome raths outgrabe.
-
 
 
 --BOUNDARY-2

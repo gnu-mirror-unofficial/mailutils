@@ -550,7 +550,9 @@ _mime_part_size (mu_mime_t mime, size_t *psize)
     return ret;
   if (mime->nmtp_parts == 1)
     {
-      ret = mu_message_size (mime->mtp_parts[0]->msg, &total);
+      mu_body_t part_body;
+      if ((ret = mu_message_get_body (mime->mtp_parts[0]->msg, &part_body)) == 0)
+	ret = mu_body_size (part_body, &total);
     }
   else
     {
@@ -568,7 +570,8 @@ _mime_part_size (mu_mime_t mime, size_t *psize)
 	}
       total += 2; /* ending boundary line */
     }
-  *psize = total;
+  if (ret == 0)
+    *psize = total;
   return ret;
 }
 
@@ -669,69 +672,12 @@ _mime_body_stream_read (mu_stream_t stream, char *buf, size_t buflen,
   
   if ((ret = _mime_set_content_type (mime)) == 0)
     {
-      do
+      if (mime->nmtp_parts == 1)
 	{
-	  size_t part_nbytes = 0;
-
-	  if (buflen == 0)
-	    break;
-	  if (mime->nmtp_parts > 1)
-	    {
-	      size_t len;
-	      
-	      if (mime->flags & MIME_INSERT_BOUNDARY)
-		{
-		  if ((mime->flags & MIME_ADDING_BOUNDARY) == 0)
-		    {
-		      mime->boundary_len = strlen (mime->boundary);
-		      mime->preamble = 2;
-		      if (mime->cur_part == mime->nmtp_parts)
-			mime->postamble = 2;
-		      mime->flags |= MIME_ADDING_BOUNDARY;
-		    }
-		  while (mime->preamble)
-		    {
-		      mime->preamble--;
-		      ADD_CHAR (buf, '-', mime->cur_offset, buflen,
-				total, nbytes);
-		    }
-		  len = strlen (mime->boundary) - mime->boundary_len;
-		  while (mime->boundary_len)
-		    {
-		      mime->boundary_len--;
-		      ADD_CHAR (buf,
-				mime->boundary[len++],
-				mime->cur_offset, buflen,
-				total, nbytes);
-		    }
-		  while (mime->postamble)
-		    {
-		      mime->postamble--;
-		      ADD_CHAR (buf, '-', mime->cur_offset, buflen,
-				total, nbytes);
-		    }
-		  mime->flags &=
-		    ~(MIME_INSERT_BOUNDARY | MIME_ADDING_BOUNDARY);
-		  mime->part_offset = 0;
-		  ADD_CHAR (buf, '\n', mime->cur_offset, buflen,
-			    total, nbytes);
-		}
-
-	      if (!mime->part_stream)
-		{
-		  if (mime->cur_part >= mime->nmtp_parts)
-		    {
-		      *nbytes = total;
-		      return 0;
-		    }
-		  ret = mu_message_get_streamref (mime->mtp_parts[mime->cur_part]->msg,
-						  &mime->part_stream);
-		}
-	    }
-	  else if (!mime->part_stream)
+	  if (!mime->part_stream)
 	    {
 	      mu_body_t part_body;
-
+	      
 	      if (mime->cur_part >= mime->nmtp_parts)
 		{
 		  *nbytes = total;
@@ -741,39 +687,123 @@ _mime_body_stream_read (mu_stream_t stream, char *buf, size_t buflen,
 				   &part_body);
 	      ret = mu_body_get_streamref (part_body, &mime->part_stream);
 	    }
-	  if (ret)
-	    break;
-	  ret = mu_stream_seek (mime->part_stream, mime->part_offset,
-				MU_SEEK_SET, NULL);
-	  if (ret)
+	  if (ret == 0)
 	    {
-	      mu_stream_destroy (&mime->part_stream);
-	      break;
-	    }
-	  while (buflen > 0 &&
-		 (ret = mu_stream_read (mime->part_stream, buf, buflen,
-					&part_nbytes)) == 0)
-	    {
-	      if (part_nbytes)
+	      size_t part_nbytes = 0;
+	      while (buflen > 0 &&
+		     (ret = mu_stream_read (mime->part_stream, buf, buflen,
+					    &part_nbytes)) == 0)
 		{
-		  mime->part_offset += part_nbytes;
-		  mime->cur_offset += part_nbytes;
-		  total += part_nbytes;
-		  buflen -= part_nbytes;
-		  buf += part_nbytes;
+		  if (part_nbytes)
+		    {
+		      mime->part_offset += part_nbytes;
+		      mime->cur_offset += part_nbytes;
+		      total += part_nbytes;
+		      buflen -= part_nbytes;
+		      buf += part_nbytes;
+		    }
+		  else 
+		    {
+		      mu_stream_destroy (&mime->part_stream);
+		      mime->cur_part++;
+		      break;
+		    }
 		}
-	      else 
-		{
-		  mu_stream_destroy (&mime->part_stream);
-		  mime->flags |= MIME_INSERT_BOUNDARY;
-		  mime->cur_part++;
-		  ADD_CHAR (buf, '\n', mime->cur_offset, buflen,
-			    total, nbytes);
-		  break;
-		}
-	    }
+	    }	
 	}
-      while (ret == 0 && mime->cur_part <= mime->nmtp_parts);
+      else
+	do
+	  {
+	    size_t part_nbytes = 0;
+
+	    if (buflen == 0)
+	      break;
+	    else 
+	      {
+		size_t len;
+	      
+		if (mime->flags & MIME_INSERT_BOUNDARY)
+		  {
+		    if ((mime->flags & MIME_ADDING_BOUNDARY) == 0)
+		      {
+			mime->boundary_len = strlen (mime->boundary);
+			mime->preamble = 2;
+			if (mime->cur_part == mime->nmtp_parts)
+			  mime->postamble = 2;
+			mime->flags |= MIME_ADDING_BOUNDARY;
+		      }
+		    while (mime->preamble)
+		      {
+			mime->preamble--;
+			ADD_CHAR (buf, '-', mime->cur_offset, buflen,
+				  total, nbytes);
+		      }
+		    len = strlen (mime->boundary) - mime->boundary_len;
+		    while (mime->boundary_len)
+		      {
+			mime->boundary_len--;
+			ADD_CHAR (buf,
+				  mime->boundary[len++],
+				  mime->cur_offset, buflen,
+				  total, nbytes);
+		      }
+		    while (mime->postamble)
+		      {
+			mime->postamble--;
+			ADD_CHAR (buf, '-', mime->cur_offset, buflen,
+				  total, nbytes);
+		      }
+		    mime->flags &=
+		      ~(MIME_INSERT_BOUNDARY | MIME_ADDING_BOUNDARY);
+		    mime->part_offset = 0;
+		    ADD_CHAR (buf, '\n', mime->cur_offset, buflen,
+			      total, nbytes);
+		  }
+		
+		if (!mime->part_stream)
+		  {
+		    if (mime->cur_part >= mime->nmtp_parts)
+		      {
+			*nbytes = total;
+			return 0;
+		      }
+		    ret = mu_message_get_streamref (mime->mtp_parts[mime->cur_part]->msg,
+						    &mime->part_stream);
+		  }
+	      }
+	    
+	    if (ret)
+	      break;
+	    ret = mu_stream_seek (mime->part_stream, mime->part_offset,
+				  MU_SEEK_SET, NULL);
+	    if (ret)
+	      {
+		mu_stream_destroy (&mime->part_stream);
+		break;
+	      }
+	    while (buflen > 0 &&
+		   (ret = mu_stream_read (mime->part_stream, buf, buflen,
+					  &part_nbytes)) == 0)
+	      {
+		if (part_nbytes)
+		  {
+		    mime->part_offset += part_nbytes;
+		    mime->cur_offset += part_nbytes;
+		    total += part_nbytes;
+		    buflen -= part_nbytes;
+		    buf += part_nbytes;
+		  }
+		else 
+		  {
+		    mu_stream_destroy (&mime->part_stream);
+		    mime->flags |= MIME_INSERT_BOUNDARY;
+		    mime->cur_part++;
+		    ADD_CHAR (buf, '\n', mime->cur_offset, buflen, total, nbytes);
+		    break;
+		  }
+	      }
+	  }
+	while (ret == 0 && mime->cur_part <= mime->nmtp_parts);
     }
   if (ret)
     mu_stream_destroy (&mime->part_stream);
