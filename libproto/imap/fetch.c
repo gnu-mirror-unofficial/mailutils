@@ -870,9 +870,7 @@ _fill_response (void *item, void *data)
   switch (env->n++)
     {
     case env_date:
-      if (elt->type != imap_eltype_string)
-	rc = MU_ERR_FAILURE;
-      else
+      if (elt->type == imap_eltype_string)
 	{
 	  if (mu_scan_datetime (elt->v.string,
 				MU_DATETIME_SCAN_RFC822,
@@ -882,6 +880,10 @@ _fill_response (void *item, void *data)
 	  else
 	    rc = 0;
 	}
+      else if (_mu_imap_list_element_is_nil (elt))
+	rc = 0;
+      else
+	rc = MU_ERR_FAILURE;
       break;
       
     case env_subject:

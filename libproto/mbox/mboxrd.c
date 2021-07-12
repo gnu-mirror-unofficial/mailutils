@@ -1141,6 +1141,14 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 		  if (rc == 0)
 		    {
 		      rc = mu_envelope_aget_date (env, &date);
+		      if (rc == MU_ERR_NOENT)
+			{
+			  date = strdup ("Thu Jan  1 00:00:00 1970");
+			  if (date)
+			    rc = 0;
+			  else
+			    rc = ENOMEM;
+			}
 		    }
 
 		  mu_envelope_destroy (&env, msg);

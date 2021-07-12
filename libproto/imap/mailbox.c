@@ -174,7 +174,7 @@ __imap_msg_get_stream (struct _mu_imap_message *imsg, size_t msgno,
 	  mu_stream_set_buffer (imbx->cache, mu_buffer_full, 8192);
 	}
 
-      rc = mu_stream_size (imbx->cache, &imsg->offset);
+      rc = mu_stream_seek (imbx->cache, 0, MU_SEEK_END, &imsg->offset);
       if (rc)
 	return rc;
 
