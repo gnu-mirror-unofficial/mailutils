@@ -223,14 +223,9 @@ int
 mu_streamref_create_abridged (mu_stream_t *pref, mu_stream_t str,
 			      mu_off_t start, mu_off_t end)
 {
-  int rc;
-  mu_off_t off;
   int flags;
   struct _mu_streamref *sp;
   
-  rc = mu_stream_seek (str, 0, MU_SEEK_SET, &off);/*FIXME: SEEK_CUR?*/
-  if (rc)
-    return rc;
   mu_stream_get_flags (str, &flags);
   sp = (struct _mu_streamref *)
          _mu_stream_create (sizeof (*sp), flags | _MU_STR_OPEN);
@@ -256,9 +251,7 @@ mu_streamref_create_abridged (mu_stream_t *pref, mu_stream_t str,
   sp->transport = str;
   sp->start = start;
   sp->end = end;
-  if (off < start || off > end)
-    off = start;
-  sp->offset = off;
+  sp->offset = start;
   *pref = (mu_stream_t) sp;
 
   mu_stream_set_buffer (*pref, mu_buffer_full, 0);
