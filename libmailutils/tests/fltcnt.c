@@ -1,19 +1,42 @@
 /*
 NAME
-  fltcnt - check how mu_filter_chain_create() changes the reference counter
-           of its input stream.
+  fltcnt - checks transport reference counter changes during filter creation.
 
-DESCRIPTION
-  On success, mu_filter_chain_create shall increment the reference counter
-  if its "transport" argument by 1.  On error, the reference counter shall
-  remain unchanged.  Versions of mailutils prior to 2021-07-15 failed to
-  meet the latter requirement.
+SYNOPSIS
+  fltcnt [NAME...]
   
-  The program checks how the input reference counter changes across two
-  calls to mu_filter_chain_create: one that succeeds and other that fails.
-  If the changes are as described above, it returns 0.  Otherwise it prints
-  a diagnostics message on standard error and returns 1.
+DESCRIPTION
+  Any filter creation call should behave as follows:
 
+  On success, it shall increment the reference counter in its "transport"
+  argument by 1.
+  On error, the reference counter shall remain unchanged.
+
+  The following functions failed to meet these requirements in mailutils
+  versions prior to 2021-07-15:
+
+  mu_filter_chain_create
+    On error, this function decremented the transport reference counter.
+    This happened, in particular, if an invalid filter has been requested.
+    However, if improper arguments were given to a valid filter, the
+    mu_filter_stream_create bug described below would compensate for this.
+
+    To check for this bug, the program does two mu_filter_chain_create
+    calls: one with a valid filter name, and another one with an inexisting
+    filter name.  Reference counter values are verified after each call.
+    
+  mu_filter_stream_create
+    If the mu_filter_xcode_t function failed in mu_filter_init request,
+    mu_filter_stream_create would leave the transport reference counter
+    incremented by one.
+
+  By default, the program runs both tests in this order.  If any of them
+  fails, it prints two diagnostic messages: the first one describes where
+  exactly the program failed to meet its expectations and the second one
+  gives the name of the test that failed.
+
+  To run a single test, give its name as a command line argument.
+ 
 LICENSE
   GNU Mailutils -- a suite of utilities for electronic mail
   Copyright (C) 2021 Free Software Foundation, Inc.
@@ -40,16 +63,13 @@ LICENSE
 #include <mailutils/sys/stream.h>
 
 int
-main (int argc, char **argv)
+test_mu_filter_chain_create (mu_stream_t in)
 {
-  mu_stream_t in, flt;
+  mu_stream_t flt;
   int rc;
   char *fargv[] = { "7bit", "+", "7bit", NULL };
   int init_ref_count;
 
-  /* Create input stream and increase its reference counter. */ 
-  MU_ASSERT (mu_stdio_stream_create (&in, MU_STDIN_FD, 0));
-  mu_stream_ref (in);
   /* Save the initial reference counter. */
   init_ref_count = in->ref_count;
 
@@ -119,5 +139,89 @@ main (int argc, char **argv)
   
   return 0;
 }
+
+static enum mu_filter_result
+xfail_transcoder (void *xdata,
+		  enum mu_filter_command cmd,
+		  struct mu_filter_io *iobuf)
+{
+  if (cmd == mu_filter_init)
+    {
+      iobuf->errcode = MU_ERR_USER0;
+      return mu_filter_failure;
+    }
+  return mu_filter_ok;
+}
 
+int
+test_mu_filter_stream_create (mu_stream_t in)
+{
+  int rc;
+  int init_ref_count;
+  mu_stream_t flt;
+  void *data = malloc(1);
   
+  /* Save the initial reference counter. */
+  init_ref_count = in->ref_count;
+
+  rc = mu_filter_stream_create (&flt, in, 
+				MU_FILTER_ENCODE, 
+				xfail_transcoder,
+				data, MU_STREAM_READ);
+
+  if (rc != MU_ERR_USER0)
+    {
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_filter_stream_create", NULL, rc);
+      return 1;
+    }
+
+  if (in->ref_count != init_ref_count)
+    {
+      mu_error ("after failed mu_filter_stream_create: unexpected ref_count: %lu",
+		(unsigned long) in->ref_count);
+      return 1;
+    }
+  return 0;
+}
+
+int
+main (int argc, char **argv)
+{
+  mu_stream_t in;
+  static struct testtab
+  {
+    char *name;
+    int (*test) (mu_stream_t);
+  } testtab[] = {
+    { "mu_filter_chain_create", test_mu_filter_chain_create },
+    { "mu_filter_stream_create", test_mu_filter_stream_create },
+    { NULL }
+  };
+  int i;
+  
+  /* Create input stream and increase its reference counter. */ 
+  MU_ASSERT (mu_stdio_stream_create (&in, MU_STDIN_FD, 0));
+  mu_stream_ref (in);
+
+  for (i = 0; testtab[i].name; i++)
+    {
+      int rc;
+      
+      if (argc > 1)
+	{
+	  int j;
+	  for (j = 1; j < argc; j++)
+	    if (strcmp (argv[j], testtab[i].name) == 0)
+	      break;
+	  if (j == argc)
+	    continue;
+	}
+      rc = testtab[i].test (in);
+      if (rc)
+	{
+	  mu_error ("%s: FAIL", testtab[i].name);
+	  return rc;
+	}
+    }
+  return 0;
+}

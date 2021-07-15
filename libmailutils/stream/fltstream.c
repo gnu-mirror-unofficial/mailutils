@@ -719,6 +719,7 @@ mu_filter_stream_create (mu_stream_t *pflt,
   rc = filter_stream_init (fs);
   if (rc)
     {
+      mu_stream_unref (str);
       free (fs);
       return rc;
     }
