@@ -14,6 +14,7 @@ decode2047
 dump
 encode2047
 exp
+fltcnt
 fltst
 fsaf
 fsaftomod

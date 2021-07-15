@@ -37,6 +37,7 @@ noinst_PROGRAMS = \
  encode2047\
  exp\
  fltst\
+ fltcnt\
  fsaf\
  fsaftomod\
  fsfolder\
@@ -103,6 +104,7 @@ TESTSUITE_AT += \
  content-type.at\
  encode2047.at\
  exp.at\
+ fltcnt.at\
  fromflt.at\
  fromrb.at\
  fsaf.at\

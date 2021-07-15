@@ -1,0 +1,6 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# For the description, and copying conditions, please see fltcnt.c
+AT_SETUP([input reference counter in filter chains])
+AT_KEYWORDS([filter fltcnt])
+AT_CHECK([fltcnt])
+AT_CLEANUP

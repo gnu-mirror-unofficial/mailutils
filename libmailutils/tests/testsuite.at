@@ -230,6 +230,7 @@ m4_include([xml.at])
 m4_include([dot.at])
 m4_include([crlf.at])
 m4_include([crlfdot.at])
+m4_include([fltcnt.at])
 
 AT_BANNER(Debug Specification)
 m4_include([debugspec.at])

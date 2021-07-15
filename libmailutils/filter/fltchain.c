@@ -70,7 +70,15 @@ _add_next_link (mu_stream_t *pret, mu_stream_t transport,
       status = mu_filter_create_args (pret, transport, fltname,
 				      argc, (const char **)argv,
 				      mode, flags);
-      mu_stream_unref (transport);
+      /*
+       * Make sure transport reference counter does not change:
+       * 
+       * If mu_filter_create_args succeeds, transport reference counter is
+       * increased by 1, so we decrement it.
+       * If it fails, transport reference counter remains unchanged.
+       */
+      if (status == 0)
+	mu_stream_unref (transport);
     }
   return status;
 }
