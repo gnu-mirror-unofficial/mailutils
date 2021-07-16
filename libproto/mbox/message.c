@@ -247,7 +247,7 @@ _msg_body_setup (mu_message_t msg, struct mu_mboxrd_message *dmsg)
   
   if (dmsg->body_from_escaped)
     {
-      rc = mu_filter_create (&flt, stream, "FROMRB",
+      rc = mu_filter_create (&flt, stream, "FROMRD",
 			     MU_FILTER_DECODE, MU_STREAM_READ);
       mu_stream_unref (stream);
       if (rc)
@@ -606,7 +606,7 @@ mu_mboxrd_message_reconstruct (mu_stream_t dest,
       rc = mu_body_get_streamref (body, &str);
       if (rc)
 	return rc;
-      rc = mu_filter_create (&flt, str, "FROMRB",
+      rc = mu_filter_create (&flt, str, "FROMRD",
 			     MU_FILTER_ENCODE, MU_STREAM_READ);
       mu_stream_unref (str);
       if (rc)

@@ -1,4 +1,4 @@
-AT_SETUP([FROMRB filter])
+AT_SETUP([FROMRD filter])
 AT_DATA([enc],
 [From me
 Fromme
@@ -11,7 +11,7 @@ From
 >From me
 >>From me
 ])
-AT_CHECK([fltst FROMRB encode read < enc],
+AT_CHECK([fltst FROMRD encode read < enc],
 [0],
 [>From me
 Fromme
@@ -38,7 +38,7 @@ AT_DATA([dec],
 >FrOm X
 >FRom X
 ])
-AT_CHECK([fltst FROMRB decode read < dec],
+AT_CHECK([fltst FROMRD decode read < dec],
 [0],
 [From me
 From me

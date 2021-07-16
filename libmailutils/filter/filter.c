@@ -87,6 +87,7 @@ mu_filter_get_list (mu_list_t *plist)
       mu_list_append (filter_list, mu_xml_filter);
       mu_list_append (filter_list, mu_percent_filter);
       mu_list_append (filter_list, mu_dq_filter);
+      mu_list_append (filter_list, mu_fromrd_filter);
       mu_list_append (filter_list, mu_fromrb_filter);
       
       /* FIXME: add the default encodings?  */

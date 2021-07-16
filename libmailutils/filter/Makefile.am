@@ -29,7 +29,7 @@ libfilter_la_SOURCES =\
  filter.c\
  fltchain.c\
  fromflt.c\
- fromrb.c\
+ fromrd.c\
  header.c\
  htmlent.c\
  iconvflt.c\

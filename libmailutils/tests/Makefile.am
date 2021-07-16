@@ -106,7 +106,7 @@ TESTSUITE_AT += \
  exp.at\
  fltcnt.at\
  fromflt.at\
- fromrb.at\
+ fromrd.at\
  fsaf.at\
  fsaftomod.at\
  fsfolder00.at\

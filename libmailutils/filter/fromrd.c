@@ -28,7 +28,7 @@ static char from_line[] = "From ";
 /* Move min(isize,osize) bytes from iptr to optr, removing initial '>'
    from each sequence '>+From ' at the beginning of line */
 static enum mu_filter_result
-_fromrb_decoder (void *xd,
+_fromrd_decoder (void *xd,
 		 enum mu_filter_command cmd,
 		 struct mu_filter_io *iobuf)
 {
@@ -141,7 +141,7 @@ _fromrb_decoder (void *xd,
 }
 
 static enum mu_filter_result
-_fromrb_encoder (void *xd,
+_fromrd_encoder (void *xd,
 		 enum mu_filter_command cmd,
 		 struct mu_filter_io *iobuf)
 {
@@ -261,7 +261,7 @@ _fromrb_encoder (void *xd,
 
 
 static int
-_fromrb_alloc_state (void **pret, int mode,
+_fromrd_alloc_state (void **pret, int mode,
 		   int argc MU_ARG_UNUSED, const char **argv MU_ARG_UNUSED)
 {
   *pret = malloc (sizeof (struct transcoder));
@@ -270,11 +270,21 @@ _fromrb_alloc_state (void **pret, int mode,
   return 0;
 }
 
+static struct _mu_filter_record _fromrd_filter = {
+  "FROMRD",
+  _fromrd_alloc_state,
+  _fromrd_encoder,
+  _fromrd_decoder
+};
+
+mu_filter_record_t mu_fromrd_filter = &_fromrd_filter;
+
+/* For compatibility with previous versions */
 static struct _mu_filter_record _fromrb_filter = {
   "FROMRB",
-  _fromrb_alloc_state,
-  _fromrb_encoder,
-  _fromrb_decoder
+  _fromrd_alloc_state,
+  _fromrd_encoder,
+  _fromrd_decoder
 };
 
 mu_filter_record_t mu_fromrb_filter = &_fromrb_filter;

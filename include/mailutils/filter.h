@@ -127,6 +127,7 @@ extern mu_filter_record_t mu_htmlent_filter;
 extern mu_filter_record_t mu_xml_filter;
 extern mu_filter_record_t mu_percent_filter;
 extern mu_filter_record_t mu_dq_filter;
+extern mu_filter_record_t mu_fromrd_filter;
 extern mu_filter_record_t mu_fromrb_filter;
 
 enum mu_iconv_fallback_mode

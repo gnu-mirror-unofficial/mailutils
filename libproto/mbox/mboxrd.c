@@ -1193,7 +1193,7 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
       if (rc)
 	break;
 
-      rc = mu_filter_create (&flt, istr, "FROMRB",
+      rc = mu_filter_create (&flt, istr, "FROMRD",
 			     MU_FILTER_ENCODE, MU_STREAM_READ);
       mu_stream_destroy (&istr);
       rc = mu_stream_copy_nl (mailbox->stream, flt, 0, NULL);
