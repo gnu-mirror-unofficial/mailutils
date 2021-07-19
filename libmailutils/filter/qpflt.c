@@ -84,7 +84,7 @@ _qp_decoder (void *xd,
 		    sz = osize - nbytes;
 		  else
 		    sz = wscount;
-		  memcpy(optr, iptr - wscount - 1, sz);
+		  memcpy (optr, iptr - wscount - 1, sz);
 		  optr += sz;
 		  nbytes += sz;
 		  if (wscount > sz)
@@ -100,9 +100,22 @@ _qp_decoder (void *xd,
 	  
 	  if (c == '=')
 	    {
-	      /* There must be 2 more characters before I consume this.  */
-	      if (consumed + 2 >= isize)
+	      if (consumed + 1 == isize)
 		break;
+
+	      if (*iptr == '\n')
+		{
+		  iptr++;
+		  consumed++;
+		}
+	      else if (consumed + 2 >= isize)
+		/* There must be 2 more characters before I consume this.  */
+		break;
+	      else if (iptr[0] == '\r' && iptr[1] == '\n')
+		{
+		  iptr += 2;
+		  consumed += 2;
+		}
 	      else
 		{
 		  /* you get =XX where XX are hex characters.  */
