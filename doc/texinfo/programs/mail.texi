@@ -1262,8 +1262,10 @@ capabilities through @dfn{compose escapes}.  The @dfn{compose escapes}
 are single-character commands, preceded by special @dfn{escape character},
 which defaults to @samp{~}.  The combination @code{escape character + command}
 is recognized as a compose escape only if it occurs at the beginning of
-a line.  If the escape character must appear at the beginning of a
-line, enter it twice.
+a line and the standard input is connected to a terminal.  If the
+escape character must appear at the beginning of a line, enter it
+twice.
+
 The actual escape character may be changed by setting the value of
 @code{escape} mail variable (@pxref{Mail Variables}).
 

@@ -1324,8 +1324,9 @@ mail_compose_send (compose_env_t *env, int save_to)
 
       if (strcmp (buf, ".") == 0 && mailvar_is_true (mailvar_name_dot))
 	done = 1;
-      else if (mailvar_get (&escape, mailvar_name_escape,
-			    mailvar_type_string, 0) == 0
+      else if (interactive
+	       && mailvar_get (&escape, mailvar_name_escape,
+			       mailvar_type_string, 0) == 0
 	       && buf[0] == escape[0])
 	{
 	  if (buf[1] == buf[0])
