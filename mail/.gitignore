@@ -2,7 +2,7 @@ Makefile.in
 Makefile
 .deps
 .libs
-mail
+/mail
 msgset.c
 y.output
 .gdbinit

@@ -93,6 +93,7 @@ mail_test "headers" \
 mail_exit
 
 # Test write
+set dir [pwd]
 cd "$MU_FOLDER_DIR"
 mail_start -reuse-spool "--file=%teaparty.mbox"
 mail_test "write" \
@@ -115,7 +116,8 @@ mu_test_file "hare" \
 	"Have some wine" \
 	"I don't see any wine" \
 	"There isn't any"
-
+cd $dir
 mail_stop
+
 # End of write.exp
 

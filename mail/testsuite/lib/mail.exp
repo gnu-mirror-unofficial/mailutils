@@ -32,16 +32,7 @@ if ![info exists mail_prompt] then {
 ### Only procedures should come after this point.
 
 proc mail_version {} {
-    global MU_TOOL
-    global MU_TOOL_FLAGS
-    global MU_TOOL_VERSION
-    
     mu_version
-    if ![is_remote host] {
-	clone_output "[which $MU_TOOL] version $MU_TOOL_VERSION"
-    } else {
-	clone_output "$MU_TOOL on remote host version $MU_TOOL_VERSION"
-    }
 }
 
 proc default_mail_start {args} {

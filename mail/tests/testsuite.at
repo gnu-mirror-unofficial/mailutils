@@ -39,7 +39,3 @@ m4_include([send.at])
 m4_include([sendrec.at])
 m4_include([sendbyname.at])
 
-m4_include([reply.at])
-m4_include([Reply.at])
-m4_include([followup.at])
-m4_include([Followup.at])

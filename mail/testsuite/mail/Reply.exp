@@ -1,0 +1,88 @@
+# -*- tcl -*-
+# This file is part of Mailutils testsuite.
+# Copyright (C) 2021 Free Software Foundation, Inc.
+#  
+# GNU Mailutils is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#   
+# GNU Mailutils is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#  
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
+
+mail_version
+
+if ![mu_check_capability ENABLE_SENDMAIL] {
+    unsupported "Support for sendmail not compiled in"
+} else {
+    mail_start "--file=%teaparty.mbox" \
+	"-E" "set noheader" \
+        "-E" "set sendmail=sendmail://$top_builddir/testsuite/mockmail" \
+        "-E" "set record=$MU_SPOOL_DIR/record" \
+        "-E" "set folder=$MU_SPOOL_DIR/folder" \
+        "-E" "set outfolder" \
+        "-E" "set dot" \
+        "-E" "set indentprefix=>"
+
+    file mkdir $MU_SPOOL_DIR/folder
+    file mkdir $MU_SPOOL_DIR/outfolder
+
+    mail_test "setenv MAIL_DUMP=\"$MU_SPOOL_DIR/mail.dump\""
+
+    mail_test "retain To"
+    mail_test -noprompt "Reply 2 1 3" \
+	{To: "Alice" <alice@wonder.land>,"March Hare" <hare@wonder.land>}\
+	{Subject: Re: Invitation}\
+	{}
+
+    mail_test -noprompt "~m" \
+	{Interpolating: 2} \
+        {(continue)}
+
+    mail_test "."
+
+    mu_test_file "$MU_SPOOL_DIR/mail.dump" \
+	{MSGID: 0001} \
+	-re {^SENDER: [^ \r\n]*} \
+	{NRCPT: 2} \
+	{RCPT[0]: <alice@wonder.land>} \
+	{RCPT[1]: <hare@wonder.land>} \
+	-re {^LENGTH: [0-9]+} \
+	{To: "Alice" <alice@wonder.land>,"March Hare" <hare@wonder.land>} \
+	{Subject: Re: Invitation} \
+	{In-Reply-To: Your message of Mon, 29 Jul 2002 22:00:02 +0100} \
+	{	<200207292200.3302@wonder.land>} \
+	{References: <200207292200.3302@wonder.land>} \
+	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)" \
+	-re {^Date:[^\r\n]*} \
+	{}\
+	{To: March Hare  <hare@wonder.land>} \
+	{>} \
+	{>I don't see any wine} \
+	{>}
+
+    mu_test_file "$MU_SPOOL_DIR/record" \
+	-re {^From[^\r\n]*} \
+	{To: "Alice" <alice@wonder.land>,"March Hare" <hare@wonder.land>} \
+	{Subject: Re: Invitation} \
+	{In-Reply-To: Your message of Mon, 29 Jul 2002 22:00:02 +0100} \
+        {	<200207292200.3302@wonder.land>} \
+	{References: <200207292200.3302@wonder.land>} \
+	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)" \
+	-re {^Date:[^\r\n]*}\
+	-re {^X-IMAPbase:[^\r\n]*}\
+	-re {^X-UID:[^\r\n]*}\
+	""\
+	{>To: March Hare  <hare@wonder.land>} \
+	{>} \
+	{>I don't see any wine} \
+	{>}
+
+    mail_stop
+}
+
