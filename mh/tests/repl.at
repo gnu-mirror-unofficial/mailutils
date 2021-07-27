@@ -37,14 +37,14 @@ cat Mail/draft
 -- Input file:
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 -- Input file end
 What now? draft left on "./Mail/draft".
 == Mail/draft ==
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 Seen by mhed
 ])
@@ -67,14 +67,14 @@ cat Mail/drafts/1
 -- Input file:
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 -- Input file end
 What now? draft left on "./Mail/drafts/1".
 == Mail/drafts/1 ==
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 Seen by mhed
 ])
@@ -99,14 +99,14 @@ cat Mail/drafts/1
 -- Input file:
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 -- Input file end
 What now? draft left on "./Mail/drafts/1".
 == Mail/drafts/1 ==
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 Seen by mhed
 ])
@@ -131,14 +131,14 @@ cat Mail/draft
 -- Input file:
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 -- Input file end
 What now? draft left on "./Mail/draft".
 == Mail/draft ==
 To: <gray@example.com>
 Subject: Re: test input
-X-Mailer: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
+User-Agent: MH (AT_PACKAGE_NAME AT_PACKAGE_VERSION)
 --------
 Seen by mhed
 ])

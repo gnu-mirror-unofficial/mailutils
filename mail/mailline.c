@@ -693,6 +693,7 @@ header_generator (const char *text, int state)
     MU_HEADER_DELIVERY_DATE,
     MU_HEADER_ENVELOPE_TO,
     MU_HEADER_X_EXPIRE_TIMESTAMP,
+    MU_HEADER_USER_AGENT,
     NULL
   };
 

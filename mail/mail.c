@@ -392,7 +392,7 @@ static char *default_setup[] = {
   "set regex",
   "set replyprefix=\"Re: \"",
   "set charset=auto",
-  "set xmailer",
+  "set useragent",
   "unfold subject",
   "sender mail-followup-to reply-to from",
   "set nocmd",

@@ -24,13 +24,13 @@ Bye.
 AT_CHECK([unset MAIL_DUMP
 MUT_MAIL_CMD -E "set sendmail=$MAILER" -s 'Test 22.1' gray@example.org < text
 sed -e '/^SENDER:/d' \
+    -e '/^LENGTH:/d' \
     -e '/^Date:/d' \
-    -e '/^X-Mailer:/d' mail.dump],
+    -e '/^User-Agent:/d' mail.dump],
 [0],
 [MSGID: 0001
 NRCPT: 1
 RCPT[[0]]: <gray@example.org>
-LENGTH: 139
 Subject: Test 22.1
 To: <gray@example.org>
 

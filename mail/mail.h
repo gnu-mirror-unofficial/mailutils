@@ -230,7 +230,8 @@ struct mailvar_variable
 #define mailvar_name_mime                       "mime"
 #define mailvar_name_onehop                     "onehop"
 #define mailvar_name_quiet                      "quiet"
-#define mailvar_name_PID                        "PID"  
+#define mailvar_name_PID                        "PID"
+#define mailvar_name_useragent                  "useragent"
 
 typedef struct message_set msgset_t;
 

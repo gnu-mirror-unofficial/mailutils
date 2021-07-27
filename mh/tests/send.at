@@ -41,7 +41,7 @@ From: mhtester@example.net
 To: <gray@example.net>
 Subject: Send file test
 Date: now
-X-Mailer: MH (AT_PACKAGE_STRING)
+User-Agent: MH (AT_PACKAGE_STRING)
 
 Message body
 
@@ -83,7 +83,7 @@ From: mhtester@example.net
 To: <gray@example.net>
 Subject: Send file test 1
 Date: now
-X-Mailer: MH (AT_PACKAGE_STRING)
+User-Agent: MH (AT_PACKAGE_STRING)
 
 Message body 1
 
@@ -96,7 +96,7 @@ From: mhtester@example.net
 To: <gray@example.org>
 Subject: Send file test 2
 Date: now
-X-Mailer: MH (AT_PACKAGE_STRING)
+User-Agent: MH (AT_PACKAGE_STRING)
 
 Message body 2
 
@@ -128,7 +128,7 @@ From: mhtester@example.net
 To: <gray@example.net>
 Subject: Send file test
 Date: now
-X-Mailer: MH (AT_PACKAGE_STRING)
+User-Agent: MH (AT_PACKAGE_STRING)
 
 Message body
 
@@ -166,7 +166,7 @@ From: mhtester@example.net
 To: <gray@example.net>
 Subject: Draftfolder test
 Date: now
-X-Mailer: MH (AT_PACKAGE_STRING)
+User-Agent: MH (AT_PACKAGE_STRING)
 
 Message body
 
@@ -206,7 +206,7 @@ From: mhtester@example.net
 To: <gray@example.org>
 Subject: Draftmessage test
 Date: now
-X-Mailer: MH (AT_PACKAGE_STRING)
+User-Agent: MH (AT_PACKAGE_STRING)
 
 Message body
 

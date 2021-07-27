@@ -41,7 +41,7 @@ static int watch;                /* Watch the delivery process */
 
 static int keep_files;           /* Keep draft files */
 
-#define DEFAULT_X_MAILER "MH (" PACKAGE_STRING ")"
+#define DEFAULT_USER_AGENT "MH (" PACKAGE_STRING ")"
 
 #define WATCH(c) do {\
   if (watch)\
@@ -613,16 +613,19 @@ _action_send (void *item, void *data)
 	  && mu_header_get_value (hdr, MU_HEADER_MESSAGE_ID, NULL, 0, &n))
 	create_message_id (hdr);
 
-      if (mu_header_get_value (hdr, MU_HEADER_X_MAILER, NULL, 0, &n))
+      if (mu_header_get_value (hdr, MU_HEADER_USER_AGENT, NULL, 0, &n))
 	{
 	  const char *p = mu_mhprop_get_value (mts_profile,
-					       "x-mailer", "yes");
+					       "user-agent",
+					       mu_mhprop_get_value (mts_profile,
+								    "x-mailer",
+								    "yes"));
 
 	  if (!strcmp (p, "yes"))
-	    mu_header_set_value (hdr, MU_HEADER_X_MAILER,
-				 DEFAULT_X_MAILER, 0);
+	    mu_header_set_value (hdr, MU_HEADER_USER_AGENT,
+				 DEFAULT_USER_AGENT, 0);
 	  else if (strcmp (p, "no"))
-	    mu_header_remove (hdr, MU_HEADER_X_MAILER, 1);
+	    mu_header_remove (hdr, MU_HEADER_USER_AGENT, 1);
 	}
     }
   

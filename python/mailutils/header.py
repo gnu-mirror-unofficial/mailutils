@@ -176,6 +176,7 @@ MU_HEADER_FCC =                       "Fcc"
 MU_HEADER_DELIVERY_DATE =             "Delivery-date"
 MU_HEADER_ENVELOPE_TO =               "Envelope-to"
 MU_HEADER_X_EXPIRE_TIMESTAMP =        "X-Expire-Timestamp"
+MU_HEADER_USER_AGENT =                "User-Agent"
 
 MU_HEADER_REPLACE = 0x01
 MU_HEADER_BEFORE  = 0x02

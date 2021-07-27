@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2021-07-19
+GNU mailutils NEWS -- history of user-visible changes. 2021-07-27
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
@@ -58,6 +58,10 @@ This fixes https://savannah.gnu.org/bugs/?60937
 	           file name.  This is the default.
 	"email"  - Entire email is takes as the file name.
 	"domain" - Domain part of the email is used as the file name.
+  - useragent
+      When set, the User-Agent header will be added to each outgoing
+      message.  This is the default.
+      The use of X-Mailer header has been discontinued.
 
 Version 3.12, 2021-02-13
 

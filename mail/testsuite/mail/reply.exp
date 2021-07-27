@@ -31,8 +31,8 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
 
     file mkdir $MU_SPOOL_DIR/folder
     file mkdir $MU_SPOOL_DIR/outfolder
-    unset -nocomplain env(MAIL_DUMP)
-    mail_test "retain To" 
+    mail_command "setenv MAIL_DUMP=\"$MU_FOLDER_DIR/mta.diag\""
+    mail_command "retain To" 
     mail_test -noprompt "reply 1" \
 	{To: "March Hare" <hare@wonder.land>,"Alice" <alice@wonder.land>}\
         {Subject: Re: Invitation}\
@@ -51,7 +51,7 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
 	{In-Reply-To: Your message of Mon, 29 Jul 2002 22:00:01 +0100}\
 	-re {[[:space:]]+<200207292200.3301@wonder.land>}\
 	{References: <200207292200.3301@wonder.land>}\
-	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)"\
+	"User-Agent: mail (GNU Mailutils $MU_TOOL_VERSION)"\
 	-re {^Date:[^\r\n]*}\
 	-re {^X-IMAPbase:[^\r\n]*}\
 	-re {^X-UID:[^\r\n]*}\

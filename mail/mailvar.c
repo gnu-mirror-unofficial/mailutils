@@ -287,9 +287,11 @@ struct mailvar_symbol mailvar_tab[] =
       MAILVAR_TYPEMASK (mailvar_type_boolean),
       N_("verbosely trace the process of message delivery"),
       set_verbose },
-    { { mailvar_name_xmailer, },
+
+    { { mailvar_name_useragent, },
       MAILVAR_TYPEMASK (mailvar_type_boolean),
-      N_("add the `X-Mailer' header to the outgoing messages") },
+      N_("add the `User-Agent' header to the outgoing messages") },
+    { { mailvar_name_xmailer, }, MAILVAR_ALIAS },
 
     { { mailvar_name_mime },
       MAILVAR_TYPEMASK (mailvar_type_boolean),

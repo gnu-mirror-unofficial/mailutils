@@ -30,9 +30,9 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
 
     file mkdir $MU_SPOOL_DIR/folder
 
-    mail_test "setenv MAIL_DUMP=\"$MU_SPOOL_DIR/mail.dump\""
-    mail_test "retain To"
-    mail_test "set outfolder"
+    mail_command "setenv MAIL_DUMP=\"$MU_SPOOL_DIR/mail.dump\""
+    mail_command "retain To"
+    mail_command "set outfolder"
 
     mail_test -noprompt "followup 1" \
 	{To: "March Hare" <hare@wonder.land>,"Alice" <alice@wonder.land>} \
@@ -88,7 +88,8 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
         "-E" "set dot" \
         "-E" "set indentprefix=>"
     file mkdir $MU_SPOOL_DIR/outfolder
-    mail_test "set outfolder=\"$MU_SPOOL_DIR/outfolder\""
+    mail_command "setenv MAIL_DUMP=\"$MU_SPOOL_DIR/mail.dump\""
+    mail_command "set outfolder=\"$MU_SPOOL_DIR/outfolder\""
 
     mail_test -noprompt "followup 1" \
 	{To: "March Hare" <hare@wonder.land>,"Alice" <alice@wonder.land>} \

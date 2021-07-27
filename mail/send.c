@@ -1384,8 +1384,8 @@ mail_compose_send (compose_env_t *env, int save_to)
     read_cc_bcc (env);
 
   /* Prepare the header */
-  if (mailvar_is_true (mailvar_name_xmailer))
-    mu_header_set_value (env->header, MU_HEADER_X_MAILER, program_version, 1);
+  if (mailvar_is_true (mailvar_name_useragent))
+    mu_header_set_value (env->header, MU_HEADER_USER_AGENT, program_version, 1);
 
   if (util_header_expand_aliases (&env->header) == 0)
     {

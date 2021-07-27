@@ -70,6 +70,7 @@ extern "C" {
 #define MU_HEADER_DELIVERY_DATE             "Delivery-Date"
 #define MU_HEADER_ENVELOPE_TO               "Envelope-To"
 #define MU_HEADER_X_EXPIRE_TIMESTAMP        "X-Expire-Timestamp"
+#define MU_HEADER_USER_AGENT                "User-Agent"
   
 #define MU_HEADER_REPLACE 0x01
 #define MU_HEADER_BEFORE  0x02

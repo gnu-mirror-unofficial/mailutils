@@ -39,13 +39,13 @@ MUT_MAIL_CMD -E "set sendmail=$MAILER" \
 
 AT_CHECK([
 sed -e '/^SENDER:/d' \
+    -e '/^LENGTH:/d' \
     -e '/^Date:/d' \
-    -e '/^X-Mailer:/d' mail.dump],
+    -e '/^User-Agent:/d' mail.dump],
 [0],
 [MSGID: 0001
 NRCPT: 1
 RCPT[[0]]: <gray@example.org>
-LENGTH: 139
 Subject: Test 22.3
 To: <gray@example.org>
 
@@ -59,6 +59,7 @@ AT_CHECK([cat record])
 AT_CHECK([
 sed -e '1s/^From .*/Envelope/' \
     -e '/^X-[[a-zA-Z]]*:/d' \
+    -e '/^User-Agent:/d' \
     -e '/^Date:/d' folder/gray],
 [0],
 [Envelope
@@ -84,13 +85,13 @@ MUT_MAIL_CMD -E "set sendmail=$MAILER" \
 
 AT_CHECK([
 sed -e '/^SENDER:/d' \
+    -e '/^LENGTH:/d' \
     -e '/^Date:/d' \
-    -e '/^X-Mailer:/d' mail.dump],
+    -e '/^User-Agent:/d' mail.dump],
 [0],
 [MSGID: 0001
 NRCPT: 1
 RCPT[[0]]: <gray@example.org>
-LENGTH: 139
 Subject: Test 22.3
 To: <gray@example.org>
 
@@ -104,6 +105,7 @@ AT_CHECK([cat record])
 AT_CHECK([
 sed -e '1s/^From .*/Envelope/' \
     -e '/^X-[[a-zA-Z]]*:/d' \
+    -e '/^User-Agent:/d' \
     -e '/^Date:/d' outfolder/gray record],
 [0],
 [Envelope

@@ -32,9 +32,8 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
     file mkdir $MU_SPOOL_DIR/folder
     file mkdir $MU_SPOOL_DIR/outfolder
 
-    mail_test "setenv MAIL_DUMP=\"$MU_SPOOL_DIR/mail.dump\""
-
-    mail_test "retain To"
+    mail_command "setenv MAIL_DUMP=\"$MU_SPOOL_DIR/mail.dump\""
+    mail_command "retain To"
     mail_test -noprompt "Reply 2 1 3" \
 	{To: "Alice" <alice@wonder.land>,"March Hare" <hare@wonder.land>}\
 	{Subject: Re: Invitation}\
@@ -58,7 +57,7 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
 	{In-Reply-To: Your message of Mon, 29 Jul 2002 22:00:02 +0100} \
 	{	<200207292200.3302@wonder.land>} \
 	{References: <200207292200.3302@wonder.land>} \
-	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)" \
+	"User-Agent: mail (GNU Mailutils $MU_TOOL_VERSION)" \
 	-re {^Date:[^\r\n]*} \
 	{}\
 	{To: March Hare  <hare@wonder.land>} \
@@ -73,7 +72,7 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
 	{In-Reply-To: Your message of Mon, 29 Jul 2002 22:00:02 +0100} \
         {	<200207292200.3302@wonder.land>} \
 	{References: <200207292200.3302@wonder.land>} \
-	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)" \
+	"User-Agent: mail (GNU Mailutils $MU_TOOL_VERSION)" \
 	-re {^Date:[^\r\n]*}\
 	-re {^X-IMAPbase:[^\r\n]*}\
 	-re {^X-UID:[^\r\n]*}\

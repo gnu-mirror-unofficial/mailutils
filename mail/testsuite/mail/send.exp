@@ -51,7 +51,7 @@ if ![mu_check_capability ENABLE_SENDMAIL] {
 	"In-Reply-To: Your message of Fri, 28 Dec 2001 22:18:08 +0200"\
 	"\t<200112282018.fBSKI8N04906@nonexistent.net>"\
 	"References: <200112282018.fBSKI8N04906@nonexistent.net>"\
-	"X-Mailer: mail (GNU Mailutils $MU_TOOL_VERSION)"\
+	"User-Agent: mail (GNU Mailutils $MU_TOOL_VERSION)"\
 	-re {^Date:[^\r\n]*}\
 	""\
 	"> Received: (from foobar@nonexistent.net)"\

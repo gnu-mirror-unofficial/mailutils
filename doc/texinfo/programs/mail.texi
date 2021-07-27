@@ -2944,15 +2944,21 @@ When set, the actual delivery of messages is displayed on the user's terminal.
 @end deftypevr
 
 @c -----------------------------------------
-@deftypevr {mail} boolean xmailer
+@deftypevr {mail} boolean useragent
 @*Default: True
 
-Controls whether the header @samp{X-Mailer} should be added to 
+Controls whether the @samp{User-Agent} header should be added to 
 outgoing messages.  The default value of this header is
 
 @example
-X-Mailer: mail (GNU Mailutils @value{VERSION})
+User-Agent: mail (GNU Mailutils @value{VERSION})
 @end example
+@end deftypevr
+
+@deftypevr {mail} boolean xmailer
+This header is retained for compatibility with previous releases of
+GNU Mailutils.  Since version 3.13 it is an alias for
+@code{useragent}.
 @end deftypevr
 
 @node Mail Configuration Files

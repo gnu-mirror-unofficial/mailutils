@@ -24,10 +24,10 @@ To: root@example.com
 X-IMAPbase: 1 5
 Message-Id: 0123456778
 X-IMAPtest: foo
-X-Mailer: hidden
+User-Agent: hidden
 ])
 
-hdrcpy X-uid X-imapbase x-Mailer < input
+hdrcpy X-uid X-imapbase User-Agent < input
 ],
 [0],
 [From: gray@example.com

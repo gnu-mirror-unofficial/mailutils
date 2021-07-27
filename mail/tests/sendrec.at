@@ -31,13 +31,13 @@ MUT_MAIL_CMD -E "set sendmail=$MAILER" -E "set record=$RECORD" -s 'Test 22.2' gr
 
 AT_CHECK([
 sed -e '/^SENDER:/d' \
+    -e '/^LENGTH:/d' \
     -e '/^Date:/d' \
-    -e '/^X-Mailer:/d' mail.dump],
+    -e '/^User-Agent:/d' mail.dump],
 [0],
 [MSGID: 0001
 NRCPT: 1
 RCPT[[0]]: <gray@example.org>
-LENGTH: 139
 Subject: Test 22.2
 To: <gray@example.org>
 
@@ -49,6 +49,7 @@ Bye.
 AT_CHECK([
 sed -e '1s/^From .*/Envelope/' \
     -e '/^X-[[a-zA-Z]]*:/d' \
+    -e '/^User-Agent:/d' \
     -e '/^Date:/d' record],
 [0],
 [Envelope

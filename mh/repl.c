@@ -178,7 +178,7 @@ static char default_format_str[] =
     "%(void Re:)%>) %(void(unre{subject}))%(trim)%(putstr)%>\n"
     "%(lit)%<(in_reply_to)%(void(width))%(printhdr In-reply-to: )\\n%>"
     "%(lit)%<(references)%(void(width))%(printhdr References: )\\n%>"
-    "X-Mailer: MH (%(package_string))\n"
+    "User-Agent: MH (%(package_string))\n"
     "--------\n";
 
 void
