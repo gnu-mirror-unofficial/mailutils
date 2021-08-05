@@ -1,9 +1,9 @@
-GNU mailutils NEWS -- history of user-visible changes. 2021-07-27
+GNU mailutils NEWS -- history of user-visible changes. 2021-08-05
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.12.90 (git)
+Version 3.13, 2021-08-05
 
 * Improved mailbox locking
 
@@ -62,6 +62,17 @@ This fixes https://savannah.gnu.org/bugs/?60937
       When set, the User-Agent header will be added to each outgoing
       message.  This is the default.
       The use of X-Mailer header has been discontinued.
+
+* Bugfixes
+
+** QP decoder:  Accept soft line breaks (RFC 2045, 6.7, page 19).
+
+** Fix stream reference policy in filter streams.
+
+** Various bugfixes in IMAP client.
+
+** Fix handling of single-path MIME messages.
+
 
 Version 3.12, 2021-02-13
 
