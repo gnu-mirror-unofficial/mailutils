@@ -599,6 +599,7 @@ struct mutool_command pop_comtab[] = {
 int
 main (int argc, char **argv)
 {
+  mu_set_program_name (argv[0]);
 
   mu_registrar_record (mu_pop_record);
   mu_registrar_record (mu_pops_record);

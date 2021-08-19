@@ -1298,6 +1298,8 @@ struct mutool_command imap_comtab[] = {
 int
 main (int argc, char **argv)
 {
+  mu_set_program_name (argv[0]);
+  
   mu_action_getopt (&argc, &argv, NULL, imap_docstring, NULL);
 
   if (argc)

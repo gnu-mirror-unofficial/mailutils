@@ -910,6 +910,8 @@ struct mutool_command smtp_comtab[] = {
 int
 main (int argc, char **argv)
 {
+  mu_set_program_name (argv[0]);
+
   mu_registrar_record (mu_smtp_record);
   mu_registrar_record (mu_smtps_record);
 
