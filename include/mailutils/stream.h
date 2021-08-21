@@ -17,8 +17,9 @@
 #ifndef _MAILUTILS_STREAM_H
 #define _MAILUTILS_STREAM_H
 
-#include <mailutils/types.h>
+#include <stdlib.h>
 #include <stdarg.h>
+#include <mailutils/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,7 +80,10 @@ enum mu_buffer_type
 #define MU_IOCTL_TLSSTREAM       13 /* TLS stream */
 #define MU_IOCTL_WORDWRAPSTREAM  14 /* Word-wrapper stream */
 #define MU_IOCTL_TCPSTREAM       15 /* TCP stream */
-  
+
+#define MU_IOCTL_TIMEOUT         16 /* Get or set the I/O timeout value
+				       (struct timeval) */
+
   /* Opcodes common for various families */
 #define MU_IOCTL_OP_GET 0
 #define MU_IOCTL_OP_SET 1  
@@ -337,13 +341,54 @@ int mu_stream_set_buffer (mu_stream_t stream, enum mu_buffer_type type,
 int mu_stream_get_buffer (mu_stream_t stream,
 			  struct mu_buffer_query *qry);
 int mu_stream_read (mu_stream_t stream, void *buf, size_t size, size_t *pread);
-int mu_stream_readdelim (mu_stream_t stream, char *buf, size_t size,
-			 int delim, size_t *pread);
-int mu_stream_readline (mu_stream_t stream, char *buf, size_t size, size_t *pread);
-int mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
-			int delim, size_t *pread);
-int mu_stream_getline (mu_stream_t stream, char **pbuf, size_t *psize,
-		       size_t *pread);
+int mu_stream_timed_readdelim (mu_stream_t stream, char *buf, size_t size,
+			       int delim, struct timeval *to, size_t *pread);
+static inline int
+mu_stream_readdelim (mu_stream_t stream, char *buf, size_t size,
+		     int delim, size_t *pread)
+{
+  return mu_stream_timed_readdelim (stream, buf, size, delim, NULL, pread);
+}
+
+static inline int
+mu_stream_timed_readline (mu_stream_t stream, char *buf, size_t size,
+			  struct timeval *tv,
+			  size_t *pread)
+{
+  return mu_stream_timed_readdelim (stream, buf, size, '\n', tv, pread);
+}
+
+static inline int
+mu_stream_readline (mu_stream_t stream, char *buf, size_t size, size_t *pread)
+{
+  return mu_stream_timed_readline (stream, buf, size, NULL, pread);
+}
+
+int mu_stream_timed_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
+			      int delim, struct timeval *to, size_t *pread);
+
+static inline int
+mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
+		    int delim, size_t *pread)
+{
+  return mu_stream_timed_getdelim (stream, pbuf, psize, delim, NULL, pread);
+}
+
+static inline int
+mu_stream_timed_getline (mu_stream_t stream, char **pbuf, size_t *psize,
+			 struct timeval *to,
+			 size_t *pread)
+{
+  return mu_stream_timed_getdelim (stream, pbuf, psize, '\n', to, pread);
+}
+
+static inline int
+mu_stream_getline (mu_stream_t stream, char **pbuf, size_t *psize,
+		   size_t *pread)
+{
+  return mu_stream_timed_getline (stream, pbuf, psize, NULL, pread);
+}
+
 int mu_stream_write (mu_stream_t stream, const void *buf, size_t size,
 		     size_t *pwrite);
 int mu_stream_writeline (mu_stream_t stream, const char *buf, size_t size);

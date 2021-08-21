@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <poll.h>
+
 #if HAVE_TERMIOS_H
 # include <termios.h>
 #endif
@@ -40,7 +42,38 @@ static int
 fd_read (struct _mu_stream *str, char *buf, size_t size, size_t *pret)
 {
   struct _mu_file_stream *fstr = (struct _mu_file_stream *) str;
-  ssize_t n = read (fstr->fd, buf, size);
+  ssize_t n;
+
+  if (fstr->io_timeout > 0)
+    {
+      struct pollfd pfd;
+      pfd.fd = fstr->fd;
+      pfd.events = POLLIN;
+      switch (poll (&pfd, 1, fstr->io_timeout))
+	{
+	case 0:
+	  return MU_ERR_TIMEOUT;
+
+	case -1:
+	  return errno;
+
+	case 1:
+	  break;
+
+	default:
+	  /* Should not happen */
+	  return MU_ERR_FAILURE;
+	}
+
+      if (!(pfd.revents & POLLIN))
+	{
+	  if (pfd.revents & POLLHUP)
+	    return 0;
+	  return MU_ERR_READ;
+	}
+    }
+  
+  n = read (fstr->fd, buf, size);
   if (n == -1)
     return errno;
   *pret = n;
@@ -51,7 +84,36 @@ static int
 fd_write (struct _mu_stream *str, const char *buf, size_t size, size_t *pret)
 {
   struct _mu_file_stream *fstr = (struct _mu_file_stream *) str;
-  ssize_t n = write (fstr->fd, (char*) buf, size);
+  ssize_t n;
+
+  if (fstr->io_timeout > 0)
+    {
+      struct pollfd pfd;
+      pfd.fd = fstr->fd;
+      pfd.events = POLLOUT;
+      switch (poll (&pfd, 1, fstr->io_timeout))
+	{
+	case 0:
+	  return MU_ERR_TIMEOUT;
+
+	case -1:
+	  return errno;
+
+	case 1:
+	  break;
+
+	default:
+	  /* Should not happen */
+	  return MU_ERR_FAILURE;
+	}
+
+      if (!(pfd.revents & POLLOUT))
+	{
+	  return MU_ERR_FAILURE; //FIXME: MU_ERR_WRITE?
+	}
+    }
+
+  n = write (fstr->fd, (char*) buf, size);
   if (n == -1)
     return errno;
   *pret = n;
@@ -188,6 +250,9 @@ fd_ioctl (struct _mu_stream *str, int code, int opcode, void *ptr)
 	  ptrans = ptr;
 	  fstr->fd = (int) (intptr_t) ptrans[0];
 	  break;
+
+	default:
+	  return EINVAL;
 	}
       break;
 
@@ -201,8 +266,12 @@ fd_ioctl (struct _mu_stream *str, int code, int opcode, void *ptr)
 	    {
 	    case MU_IOCTL_OP_GET:
 	      return mu_stream_get_buffer (str, qp);
+	      
 	    case MU_IOCTL_OP_SET:
 	      return mu_stream_set_buffer (str, qp->buftype, qp->bufsize);
+	      
+	    default:
+	      return EINVAL;
 	    }
 	}
       break;
@@ -268,6 +337,9 @@ fd_ioctl (struct _mu_stream *str, int code, int opcode, void *ptr)
 	    return ENOSYS;
 #endif
 	  }
+
+	default:
+	  return EINVAL;
 	}
       break;
 
@@ -286,9 +358,43 @@ fd_ioctl (struct _mu_stream *str, int code, int opcode, void *ptr)
 	  else
 	    fstr->flags &= ~_MU_FILE_STREAM_FD_BORROWED;
 	  break;
+
+	default:
+	  return EINVAL;
 	}
       break;
-	    
+
+    case MU_IOCTL_TIMEOUT:
+      if (!ptr)
+	return EINVAL;
+      else
+	{
+	  unsigned n;
+	  struct timeval *tv = ptr;
+# define MSEC_PER_SECOND 1000
+	  switch (opcode)
+	    {
+	    case MU_IOCTL_OP_GET:
+	      tv->tv_sec = fstr->io_timeout / MSEC_PER_SECOND;
+	      tv->tv_usec = (fstr->io_timeout % MSEC_PER_SECOND) * 1000;
+	      break;
+
+	    case MU_IOCTL_OP_SET:
+	      if (tv->tv_sec > UINT_MAX / MSEC_PER_SECOND)
+		return ERANGE;
+	      n = tv->tv_sec * MSEC_PER_SECOND;
+	      if (UINT_MAX - n < (unsigned long) tv->tv_usec / 1000)
+		return ERANGE;
+	      n += tv->tv_usec / 1000;
+	      fstr->io_timeout = n;
+	      break;
+	      
+	    default:
+	      return EINVAL;
+	    }
+	}
+      break;
+      
     default:
       return ENOSYS;
     }

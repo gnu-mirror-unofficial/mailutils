@@ -141,3 +141,9 @@ MU_ERR_USER6                _("User-defined error 6")
 MU_ERR_USER7                _("User-defined error 7")
 
 MU_ERR_BASE64               _("invalid base64 input")
+
+MU_ERR_TIMEOUT              _("timed out")
+MU_ERR_SET_TIMEOUT          _("error setting timeout")
+
+MU_ERR_WRITE                _("write error")
+MU_ERR_TLS                  _("TLS error")

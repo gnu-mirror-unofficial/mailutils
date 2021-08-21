@@ -253,16 +253,47 @@ _tls_open (mu_stream_t stream)
       rc = gnutls_handshake (sp->session);
       if (rc != GNUTLS_E_SUCCESS)
 	{
+	  mu_transport_t t[2];
+	  
 	  mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
 		    ("gnutls_handshake: %s", gnutls_strerror (rc)));
 	  sp->tls_err = rc;
+	  switch (rc)
+	    {
+	    case GNUTLS_E_PULL_ERROR:
+	      if (mu_stream_ioctl (sp->transport[0],
+				   MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET,
+				   &t) == 0 &&
+		  mu_stream_err (t[0]))
+		rc = mu_stream_last_error (t[0]);
+	      else
+		rc = MU_ERR_READ;
+	      break;
+	      
+	    case GNUTLS_E_PUSH_ERROR:
+	      if (mu_stream_ioctl (sp->transport[1],
+				   MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET,
+				   &t) == 0 &&
+		  mu_stream_err (t[1]))
+		rc = mu_stream_last_error (t[1]);
+	      else
+		rc = MU_ERR_WRITE;
+	      break;
+
+	    default:
+	      rc = MU_ERR_TLS;
+	    }
+
 	  gnutls_deinit (sp->session);
 	  sp->session = NULL;
 	  sp->state = state_init;
 	}
       else
-	/* FIXME: if (ssl_cafile) verify_certificate (s->session); */
-	sp->state = state_open;
+	{
+	  /* FIXME: if (ssl_cafile) verify_certificate (s->session); */
+	  sp->state = state_open;
+	  rc = 0;
+	}
       break;
 
     default:
@@ -391,7 +422,29 @@ _tls_ioctl (struct _mu_stream *stream, int code, int opcode, void *arg)
       
     case MU_IOCTL_TCPSTREAM:
       return mu_stream_ioctl (sp->transport[0], code, opcode, arg);
-			      
+
+    case MU_IOCTL_TIMEOUT:
+      {
+	int rc;
+	
+	switch (opcode)
+	  {
+	  case MU_IOCTL_OP_SET:
+	    rc = mu_stream_ioctl (sp->transport[0], code, opcode, arg);
+	    if (rc == 0)
+	      rc = mu_stream_ioctl (sp->transport[1], code, opcode, arg);
+	    break;
+	    
+	  case MU_IOCTL_OP_GET:
+	    rc = mu_stream_ioctl (sp->transport[0], code, opcode, arg);
+	    break;
+	    
+	  default:
+	    return EINVAL;
+	  }
+	return rc;
+      }
+      
     default:
       return ENOSYS;
     }

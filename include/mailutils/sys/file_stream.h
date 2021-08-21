@@ -33,6 +33,7 @@ struct _mu_file_stream
   int flags;
   char *filename;
   void *echo_state;
+  unsigned io_timeout;
 };
 
 int _mu_file_stream_create (struct _mu_file_stream **pstream, size_t size,

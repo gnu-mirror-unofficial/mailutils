@@ -23,6 +23,7 @@
 #ifndef SIZE_MAX
 # define SIZE_MAX (~((size_t)0))
 #endif
+#include <sys/time.h>
 
 #include <mailutils/types.h>
 #include <mailutils/alloc.h>
@@ -31,6 +32,7 @@
 #include <mailutils/nls.h>
 #include <mailutils/stream.h>
 #include <mailutils/cstr.h>
+#include <mailutils/datetime.h>
 #include <mailutils/sys/stream.h>
 
 size_t mu_stream_default_buffer_size = MU_STREAM_DEFBUFSIZ;
@@ -776,16 +778,26 @@ mu_stream_read (mu_stream_t stream, void *buf, size_t size, size_t *pread)
   return 0;
 }
 
-int
+static int
 _stream_scandelim (mu_stream_t stream, char *buf, size_t size, int delim,
-		   size_t *pnread)
+		   struct timeval *to,  size_t *pnread)
 {
   int rc = 0;
   size_t nread = 0;
+
+  struct timeval stop_time, saved_timeout;
   
-  size--;
-  if (size == 0)
-    return MU_ERR_BUFSPACE;
+  if (to)
+    {
+      gettimeofday (&stop_time, NULL);
+      stop_time = mu_timeval_add (&stop_time, to);
+      
+      rc = mu_stream_ioctl (stream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_GET,
+			    &saved_timeout);
+      if (rc)
+	return MU_ERR_SET_TIMEOUT;
+    }
+  
   while (size)
     {
       char *p, *q;
@@ -793,6 +805,26 @@ _stream_scandelim (mu_stream_t stream, char *buf, size_t size, int delim,
       
       if (stream->pos == stream->level)
 	{
+	  if (to)
+	    {
+	      struct timeval now, d;
+	      
+	      gettimeofday (&now, NULL);
+	      if (mu_timeval_cmp (&now, &stop_time) >= 0)
+		{
+		  rc = MU_ERR_TIMEOUT;
+		  break;
+		}
+	      d = mu_timeval_sub (&stop_time, &now);
+	      rc = mu_stream_ioctl (stream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET,
+				    &d);
+	      if (rc)
+		{
+		  rc = MU_ERR_SET_TIMEOUT;
+		  break;
+		}
+	    }
+	  
 	  if ((rc = _stream_flush_buffer (stream, FLUSH_RDWR)))
 	    break;
 	  if ((rc = _stream_fill_buffer (stream)) || stream->level == 0)
@@ -814,47 +846,99 @@ _stream_scandelim (mu_stream_t stream, char *buf, size_t size, int delim,
       if (p) /* Delimiter found */
 	break;
     }
-  *buf = 0;
+
+  if (to)
+    {
+      mu_stream_ioctl (stream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET,
+		       &saved_timeout);
+    }
+
   *pnread = nread;
   return rc;
 }
 
 static int
 _stream_readdelim (mu_stream_t stream, char *buf, size_t size,
-		   int delim, size_t *pread)
+		   int delim,
+		   struct timeval *to,
+		   size_t *pread)
 {
   int rc;
   char c;
   size_t n = 0, rdn;
     
-  size--;
-  if (size == 0)
-    return MU_ERR_BUFSPACE;
-  for (n = 0;
-       n < size && (rc = mu_stream_read (stream, &c, 1, &rdn)) == 0 && rdn;)
+  struct timeval stop_time, saved_timeout;
+
+  if (to)
     {
+      gettimeofday (&stop_time, NULL);
+      stop_time = mu_timeval_add (&stop_time, to);
+      
+      rc = mu_stream_ioctl (stream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_GET,
+			    &saved_timeout);
+      if (rc)
+	return MU_ERR_SET_TIMEOUT;
+    }
+
+  n = 0;
+  while (n < size)
+    {
+      if (to)
+	{
+	  struct timeval now, d;
+	  
+	  gettimeofday (&now, NULL);
+	  if (mu_timeval_cmp (&now, &stop_time) >= 0)
+	    {
+	      rc = MU_ERR_TIMEOUT;
+	      break;
+	    }
+	  d = mu_timeval_sub (&stop_time, &now);
+	  rc = mu_stream_ioctl (stream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET,
+				&d);
+	  if (rc)
+	    {
+	      rc = MU_ERR_SET_TIMEOUT;
+	      break;
+	    }
+	}
+
+      rc = mu_stream_read (stream, &c, 1, &rdn);
+      if (rc || rdn == 0)
+	break;
+
       *buf++ = c;
       n++;
       if (c == delim)
 	break;
+    }  
+
+  if (to)
+    {
+      mu_stream_ioctl (stream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET,
+		       &saved_timeout);
     }
-  *buf = 0;
+  
   if (pread)
     *pread = n;
   return rc;
 }
 
 int
-mu_stream_readdelim (mu_stream_t stream, char *buf, size_t size,
-		     int delim, size_t *pread)
+mu_stream_timed_readdelim (mu_stream_t stream, char *buf, size_t size,
+			   int delim, struct timeval *to, size_t *pread)
 {
   int rc;
-  
+  size_t n;
   _bootstrap_event (stream);
   
   if (size == 0)
     return EINVAL;
 
+  size--;
+  if (size == 0)
+    return MU_ERR_BUFSPACE;
+  
   if (!(stream->flags & _MU_STR_OPEN))
     {
       if (stream->open)
@@ -864,26 +948,60 @@ mu_stream_readdelim (mu_stream_t stream, char *buf, size_t size,
 
   if (stream->buftype == mu_buffer_none)
     {
-      rc = _stream_readdelim (stream, buf, size, delim, pread);
+      rc = _stream_readdelim (stream, buf, size, delim, to, &n);
     }
   else
     {
       if ((rc = _stream_flush_buffer (stream, FLUSH_WRITE)))
 	return rc;
-      rc = _stream_scandelim (stream, buf, size, delim, pread);
+      rc = _stream_scandelim (stream, buf, size, delim, to, &n);
     }
+
+  if (rc == 0)
+    {
+      buf[n] = 0;
+      if (pread)
+	*pread = n;
+    }
+  
   return rc;
 }
 
-int
-mu_stream_readline (mu_stream_t stream, char *buf, size_t size, size_t *pread)
+static int
+bufexpand (char **pbuf, size_t *pn, size_t cur_len)
 {
-  return mu_stream_readdelim (stream, buf, size, '\n', pread);
+  size_t n = *pn;
+
+  if (n == 0)
+    *pbuf = NULL;
+  if (cur_len == n)
+    {
+      char *p;
+	  
+      if (!*pbuf)
+	{
+	  if (!n)
+	    {
+	      n = 64;
+	    }
+	}
+      else if ((size_t) -1 / 3 * 2 <= n)
+	return ENOMEM;
+      else
+	n += (n + 1) / 2;
+	  
+      p = realloc (*pbuf, n);
+      if (!p)
+	return errno;
+      *pbuf = p;
+      *pn = n;
+    }
+  return 0;
 }
 
 int
-mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
-		    int delim, size_t *pread)
+mu_stream_timed_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
+			  int delim, struct timeval *to, size_t *pread)
 {
   int rc;
   char *lineptr = *pbuf;
@@ -902,53 +1020,19 @@ mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
   if ((rc = _stream_flush_buffer (stream, FLUSH_WRITE)))
     return rc;
   
-  if (lineptr == NULL || n == 0)
-    {
-      char *new_lineptr;
-      n = 120;
-      new_lineptr = realloc (lineptr, n);
-      if (new_lineptr == NULL) 
-	return ENOMEM;
-      lineptr = new_lineptr;
-    }
-    
   for (;;)
     {
       size_t rdn;
 
-      /* Make enough space for len+1 (for final NUL) bytes.  */
-      if (cur_len + 1 >= n)
-	{
-	  size_t needed_max =
-	    SSIZE_MAX < SIZE_MAX ? (size_t) SSIZE_MAX + 1 : SIZE_MAX;
-	  size_t needed = 2 * n + 1;   /* Be generous. */
-	  char *new_lineptr;
-	  
-	  if (needed_max < needed)
-	    needed = needed_max;
-	  if (cur_len + 1 >= needed)
-	    {
-	      rc = EOVERFLOW;
-	      break;
-	    }
-	    
-	  new_lineptr = realloc (lineptr, needed);
-	  if (new_lineptr == NULL)
-	    {
-	      rc = ENOMEM;
-	      break;
-	    }
-	    
-	  lineptr = new_lineptr;
-	  n = needed;
-	}
+      if ((rc = bufexpand (&lineptr, &n, cur_len)) != 0)
+	break;
 
       if (stream->buftype == mu_buffer_none)
 	rc = _stream_readdelim (stream, lineptr + cur_len, n - cur_len, delim,
-				&rdn); 
+				to, &rdn); 
       else
 	rc = _stream_scandelim (stream, lineptr + cur_len, n - cur_len, delim,
-				&rdn);
+				to, &rdn);
 
       if (rc || rdn == 0)
 	break;
@@ -957,7 +1041,9 @@ mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
       if (lineptr[cur_len - 1] == delim)
 	break;
     }
-  lineptr[cur_len] = '\0';
+
+  if (rc == 0 && (rc = bufexpand (&lineptr, &n, cur_len)) == 0)
+    lineptr[cur_len] = '\0';
     
   *pbuf = lineptr;
   *psize = n;
@@ -965,13 +1051,6 @@ mu_stream_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
   if (pread)
     *pread = cur_len;
   return rc;
-}
-
-int
-mu_stream_getline (mu_stream_t stream, char **pbuf, size_t *psize,
-		   size_t *pread)
-{
-  return mu_stream_getdelim (stream, pbuf, psize, '\n', pread);
 }
 
 /* Return 1 if no more data can be written to the current buffer. */

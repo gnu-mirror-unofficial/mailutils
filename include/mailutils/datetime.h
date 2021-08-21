@@ -22,6 +22,7 @@
 extern "C" {
 #endif
 
+#include <sys/time.h>
 #include <time.h>
 #include <mailutils/types.h>
 
@@ -107,7 +108,53 @@ int mu_scan_datetime (const char *input, const char *fmt, struct tm *tm,
      one for outputting and one for scanning: */
 #define MU_DATETIME_FORM_RFC822  "%a, %e %b %Y %H:%M:%S %z"
 #define MU_DATETIME_SCAN_RFC822  "%[%a, %]%e %b %Y %H:%M%[:%S%] %z"
+
+static inline int
+mu_timeval_cmp (struct timeval const *a, struct timeval const *b)
+{
+    if (a->tv_sec < b->tv_sec)
+        return -1;
+    if (a->tv_sec > b->tv_sec)
+        return 1;
+    if (a->tv_usec < b->tv_usec)
+        return -1;
+    if (a->tv_usec > b->tv_usec)
+        return 1;
+    return 0;
+}
 
+static inline struct timeval
+mu_timeval_add (struct timeval const *a, struct timeval const *b)
+{
+  struct timeval sum;
+
+  sum.tv_sec = a->tv_sec + b->tv_sec;
+  sum.tv_usec = a->tv_usec + b->tv_usec;
+  if (sum.tv_usec >= 1000000)
+    {
+      ++sum.tv_sec;
+      sum.tv_usec -= 1000000;
+    }
+  
+  return sum;
+}
+  
+static inline struct timeval
+mu_timeval_sub (struct timeval const *a, struct timeval const *b)
+{
+  struct timeval diff;
+
+  diff.tv_sec = a->tv_sec - b->tv_sec;
+  diff.tv_usec = a->tv_usec - b->tv_usec;
+  if (diff.tv_usec < 0)
+    { 
+      --diff.tv_sec;
+      diff.tv_usec += 1000000;
+    }
+  
+  return diff;
+}
+  
 #ifdef __cplusplus
 }
 #endif
