@@ -92,7 +92,11 @@ _tls_stream_pull (gnutls_transport_ptr_t fd, void *buf, size_t size)
     ;
   
   if (rc)
-    return -1;
+    {
+      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
+		("_tls_stream_pull: %s", mu_stream_strerror (stream, rc)));
+      return -1;
+    }
   return rdbytes;
 }
 
@@ -105,8 +109,8 @@ _tls_stream_push (gnutls_transport_ptr_t fd, const void *buf, size_t size)
   rc = mu_stream_write (stream, buf, size, &size);
   if (rc)
     {
-      mu_error ("_tls_stream_push: %s",
-		mu_stream_strerror (stream, rc)); /* FIXME */
+      mu_debug (MU_DEBCAT_STREAM, MU_DEBUG_ERROR,
+		("_tls_stream_push: %s", mu_stream_strerror (stream, rc)));
       return -1;
     }
 

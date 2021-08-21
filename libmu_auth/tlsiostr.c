@@ -38,6 +38,7 @@ _tls_io_read (struct _mu_stream *stream, char *buf, size_t bufsize,
 {
   struct _mu_tls_io_stream *sp = (struct _mu_tls_io_stream *) stream;
   ssize_t rc;
+  mu_transport_t t[2];
   
   if (sp->up->state != state_open)
     return EINVAL;
@@ -49,6 +50,30 @@ _tls_io_read (struct _mu_stream *stream, char *buf, size_t bufsize,
       *pnread = rc;
       return 0;
     }
+
+  switch (rc)
+    {
+    case GNUTLS_E_PUSH_ERROR:
+      if (mu_stream_ioctl (sp->up->transport[1],
+			   MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET,
+			   &t) == 0 &&
+	  mu_stream_err (t[1]))
+	rc = mu_stream_last_error (t[1]);
+      else
+	rc = MU_ERR_WRITE;
+      return rc;
+      
+    case GNUTLS_E_PULL_ERROR:
+      if (mu_stream_ioctl (sp->up->transport[0],
+			   MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET,
+			   &t) == 0 &&
+	  mu_stream_err (t[0]))
+	rc = mu_stream_last_error (t[0]);
+      else
+	rc = MU_ERR_READ;
+      return rc;
+    }
+
   sp->up->tls_err = rc;
   return EIO;
 }

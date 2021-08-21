@@ -70,15 +70,32 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
   /* Combine the two streams into an I/O one. */
   if (tls_conf)
     {
-      int rc = mu_tls_stream_create (&str, istream, ostream,
-				     tls_conf,
-				     MU_TLS_SERVER,
-				     0);
+      int rc;
+
+      /* Set timeouts for TLS handshake */
+      struct timeval tv;
+
+      tv.tv_sec = 10;
+      tv.tv_usec = 0;
+      mu_stream_ioctl (istream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
+      mu_stream_ioctl (ostream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
+
+      rc = mu_tls_stream_create (&str, istream, ostream,
+				 tls_conf,
+				 MU_TLS_SERVER,
+				 0);
       if (rc)
 	{
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
 	  imap4d_bye (ERR_STREAM_CREATE);
 	}
+
+      /* Reset timeouts */
+      tv.tv_sec = 0;
+      tv.tv_usec = 0;
+      mu_stream_ioctl (istream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
+      mu_stream_ioctl (ostream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
+
       log_cipher (str);
     }
   else if (mu_iostream_create (&str, istream, ostream))
@@ -638,7 +655,7 @@ check_input_err (int rc, size_t sz)
 	  p = mu_strerror (rc);
 
 	mu_diag_output (MU_DIAG_INFO,
-			_("error reading from input file: %s"), p);
+			_("error reading from input stream: %s"), p);
 	imap4d_bye (ERR_NO_IFILE);
       }
     }
