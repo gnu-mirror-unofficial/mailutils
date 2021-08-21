@@ -810,8 +810,6 @@ imap4d_mainloop (int ifd, int ofd, struct imap4d_srv_config *cfg)
   tokp = imap4d_tokbuf_init ();
   while (1)
     {
-      if (idle_timeout && io_wait_input (idle_timeout) != 1)
-	imap4d_bye (ERR_TIMEOUT);
       imap4d_readline (tokp);
       /* check for updates */
       imap4d_sync ();

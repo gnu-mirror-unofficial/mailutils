@@ -16,6 +16,7 @@
 
 #include "imap4d.h"
 #include <mailutils/property.h>
+#include <mailutils/datetime.h>
 
 mu_stream_t iostream;
 
@@ -374,29 +375,6 @@ io_stream_completion_response (mu_stream_t str,
   return status;
 }
 
-/* Wait TIMEOUT seconds for data on the input stream.
-   Returns 0   if no data available
-           1   if some data is available
-	   -1  an error occurred */
-int
-io_wait_input (int timeout)
-{
-  int wflags = MU_STREAM_READY_RD;
-  struct timeval tv;
-  int status;
-  
-  tv.tv_sec = timeout;
-  tv.tv_usec = 0;
-  status = mu_stream_wait (iostream, &wflags, &tv);
-  if (status)
-    {
-      mu_diag_output (MU_DIAG_ERROR, _("cannot poll input stream: %s"),
-		      mu_strerror(status));
-      return -1;
-    }
-  return wflags & MU_STREAM_READY_RD;
-}
-
 void
 io_flush ()
 {
@@ -407,7 +385,19 @@ void
 io_getline (char **pbuf, size_t *psize, size_t *pnbytes)
 {
   size_t len;
-  int rc = mu_stream_getline (iostream, pbuf, psize, &len);
+  int rc;
+  struct timeval tv, *to;
+
+  if (idle_timeout)
+    {
+      tv.tv_sec = idle_timeout;
+      tv.tv_usec = 0;
+      to = &tv;
+    }
+  else
+    to = NULL;
+
+  rc = mu_stream_timed_getline (iostream, pbuf, psize, to, &len);
   if (rc == 0)
     {
       char *s = *pbuf;
@@ -421,6 +411,8 @@ io_getline (char **pbuf, size_t *psize, size_t *pnbytes)
       if (pnbytes)
 	*pnbytes = len;
     }
+  else if (rc == MU_ERR_TIMEOUT)
+    imap4d_bye (ERR_TIMEOUT);
   else
     {
       mu_error (_("read error: %s"), mu_strerror (rc));
@@ -625,20 +617,30 @@ imap4d_tokbuf_tokenize (struct imap4d_tokbuf *tok, size_t off)
 static void
 check_input_err (int rc, size_t sz)
 {
-  if (rc)
+  switch (rc)
     {
-      const char *p = mu_stream_strerror (iostream, rc);
-      if (!p)
-	p = mu_strerror (rc);
+    case 0:
+      if (sz == 0)
+	{
+	  mu_diag_output (MU_DIAG_INFO, _("unexpected eof on input"));
+	  imap4d_bye (ERR_NO_IFILE);
+	}
+      break;
       
-      mu_diag_output (MU_DIAG_INFO,
-		      _("error reading from input file: %s"), p);
-      imap4d_bye (ERR_NO_IFILE);
-    }
-  else if (sz == 0)
-    {
-      mu_diag_output (MU_DIAG_INFO, _("unexpected eof on input"));
-      imap4d_bye (ERR_NO_IFILE);
+    case MU_ERR_TIMEOUT:
+      imap4d_bye (ERR_TIMEOUT);
+      break;
+
+    default:
+      {
+	const char *p = mu_stream_strerror (iostream, rc);
+	if (!p)
+	  p = mu_strerror (rc);
+
+	mu_diag_output (MU_DIAG_INFO,
+			_("error reading from input file: %s"), p);
+	imap4d_bye (ERR_NO_IFILE);
+      }
     }
 }
 
@@ -647,13 +649,37 @@ imap4d_tokbuf_getline (struct imap4d_tokbuf *tok)
 {
   char buffer[512];
   size_t level = tok->level;
+  struct timeval tv, *to, stop_time;
+
+  if (idle_timeout)
+    {
+      gettimeofday (&stop_time, NULL);
+      stop_time.tv_sec += idle_timeout;
+      to = &tv;
+    }
+  else
+    to = NULL;
 
   do
     {
       size_t len;
       int rc;
+
+      if (to)
+	{
+	  struct timeval d;
+
+	  gettimeofday (&d, NULL);
+	  if (mu_timeval_cmp (&d, &stop_time) >= 0)
+	    {
+	      rc = MU_ERR_TIMEOUT;
+	      break;
+	    }
+	  *to = mu_timeval_sub (&stop_time, &d);
+	}
       
-      rc = mu_stream_readline (iostream, buffer, sizeof (buffer), &len);
+      rc = mu_stream_timed_readline (iostream, buffer, sizeof (buffer),
+				     to, &len);
       check_input_err (rc, len);
       imap4d_tokbuf_expand (tok, len);
       

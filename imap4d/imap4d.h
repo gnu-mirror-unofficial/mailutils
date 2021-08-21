@@ -249,7 +249,6 @@ extern int io_stream_completion_response (mu_stream_t str,
 void io_getline (char **pbuf, size_t *psize, size_t *pnbytes);
 void io_setio (int, int, struct mu_tls_config *);
 void io_flush (void);
-int io_wait_input (int);
 void io_enable_crlf (int);
 
 imap4d_tokbuf_t imap4d_tokbuf_init (void);

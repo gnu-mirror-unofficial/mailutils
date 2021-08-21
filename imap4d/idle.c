@@ -20,30 +20,60 @@ int
 imap4d_idle (struct imap4d_session *session,
              struct imap4d_command *command, imap4d_tokbuf_t tok)
 {
-  time_t start;
+  struct timeval stop_time, tv, *to;
   char *token_str = NULL;
   size_t token_size = 0, token_len;
   
   if (imap4d_tokbuf_argc (tok) != 2)
     return io_completion_response (command, RESP_BAD, "Invalid arguments");
 
-  if (io_wait_input (0) == -1)
+  if (mu_stream_ioctl (iostream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_GET, &tv))
     return io_completion_response (command, RESP_NO, "Cannot idle");
 
   io_sendf ("+ idling\n");
   io_flush ();
 
-  start = time (NULL);
+  if (idle_timeout)
+    {
+      gettimeofday (&stop_time, NULL);
+      stop_time.tv_sec += idle_timeout;
+      to = &tv;
+    }
+  else
+    to = NULL;
+
   while (1)
     {
-      if (io_wait_input (5))
+      int rc;
+
+      if (to)
 	{
-          io_getline (&token_str, &token_size, &token_len); 	  
-	  if (token_len == 4 && mu_c_strcasecmp (token_str, "done") == 0)
-	    break;
+	  struct timeval d;
+
+	  gettimeofday (&d, NULL);
+	  if (mu_timeval_cmp (&d, &stop_time) >= 0)
+	    {
+	      imap4d_bye (ERR_TIMEOUT);
+	    }
+	  *to = mu_timeval_sub (&stop_time, &d);
 	}
-      else if (time (NULL) - start > idle_timeout)
-	imap4d_bye (ERR_TIMEOUT);
+
+      rc = mu_stream_timed_getline (iostream, &token_str, &token_size,
+				    to, &token_len);
+      if (rc == MU_ERR_TIMEOUT)
+	{
+	  imap4d_bye (ERR_TIMEOUT);
+	}
+      else if (rc)
+	{
+	  mu_error (_("read error: %s"), mu_strerror (rc));
+	  imap4d_bye (ERR_NO_IFILE);
+	}
+
+      token_len = mu_rtrim_class (token_str, MU_CTYPE_ENDLN);
+
+      if (token_len == 4 && mu_c_strcasecmp (token_str, "done") == 0)
+	break;
 
       imap4d_sync ();
       io_flush ();
