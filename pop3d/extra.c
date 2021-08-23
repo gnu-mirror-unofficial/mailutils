@@ -160,6 +160,7 @@ void
 pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 {
   mu_stream_t str, istream, ostream;
+  int rc;
   
   if (ifd == -1)
     pop3d_abquit (ERR_NO_IFILE);
@@ -176,10 +177,10 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
   /* Combine the two streams into an I/O one. */
   if (tls_conf)
     {
-      int rc = mu_tls_stream_create (&str, istream, ostream,
-				     tls_conf,
-				     MU_TLS_SERVER,
-				     0);
+      rc = mu_tls_stream_create (&str, istream, ostream,
+				 tls_conf,
+				 MU_TLS_SERVER,
+				 0);
       if (rc)
 	{
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
@@ -196,8 +197,10 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
   /* Convert all writes to CRLF form.
      There is no need to convert reads, as the code ignores extra \r anyway.
   */
-  if (mu_filter_create (&iostream, str, "CRLF", MU_FILTER_ENCODE,
-			MU_STREAM_WRITE | MU_STREAM_RDTHRU))
+  rc = mu_filter_create (&iostream, str, "CRLF", MU_FILTER_ENCODE,
+			 MU_STREAM_WRITE | MU_STREAM_RDTHRU);
+  mu_stream_unref (str);
+  if (rc)
     pop3d_abquit (ERR_NO_IFILE);
   /* Change buffering scheme: filter streams are fully buffered by default. */
   mu_stream_set_buffer (iostream, mu_buffer_line, 0);
@@ -254,8 +257,7 @@ pop3d_init_tls_server (struct mu_tls_config *tls_conf)
 
   stream[0] = stream[1] = tlsstream;
   rc = mu_stream_ioctl (iostream, MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_SET, stream);
-  mu_stream_unref (stream[0]);
-  mu_stream_unref (stream[1]);
+  mu_stream_unref (tlsstream);
   if (rc)
     {
       mu_error (_("%s failed: %s"), "MU_IOCTL_SET_STREAM",

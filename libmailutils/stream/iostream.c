@@ -114,6 +114,100 @@ _iostream_done (struct _mu_stream *str)
 }
 
 static int
+_iostream_get_substream (struct _mu_iostream *sp, mu_stream_t *pstr)
+{
+  mu_stream_t tmp[2], instream;
+  int status;
+  
+  status = mu_stream_ioctl (sp->transport[MU_TRANSPORT_INPUT],
+			    MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_GET, tmp);
+  if (status == ENOSYS)
+    {
+      instream = sp->transport[MU_TRANSPORT_INPUT];
+      mu_stream_ref (instream);
+      status = 0;
+    }
+  else if (status == 0)
+    {
+      mu_stream_unref (tmp[MU_TRANSPORT_OUTPUT]);
+      instream = tmp[MU_TRANSPORT_INPUT];
+    }
+
+  if (status == 0)
+    {
+      status = mu_stream_ioctl (sp->transport[MU_TRANSPORT_OUTPUT],
+				MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_GET, tmp);
+      if (status == 0)
+	{
+	  mu_stream_unref (tmp[MU_TRANSPORT_INPUT]);
+	  pstr[MU_TRANSPORT_INPUT] = instream;
+	  pstr[MU_TRANSPORT_OUTPUT] = tmp[MU_TRANSPORT_OUTPUT];
+	}
+      else if (status == ENOSYS)
+	{
+	  pstr[MU_TRANSPORT_INPUT] = instream;
+	  pstr[MU_TRANSPORT_OUTPUT] = sp->transport[MU_TRANSPORT_OUTPUT];
+	  mu_stream_ref (pstr[MU_TRANSPORT_OUTPUT]);
+	  status = 0;
+	}
+      else
+	mu_stream_unref (instream);
+    }
+  return status;
+}
+
+static int
+_iostream_set_substream (struct _mu_iostream *sp, mu_stream_t *newstr)
+{
+  mu_stream_t saved[2], tmp[2];
+  int status;
+
+  status = _iostream_get_substream (sp, tmp);
+  if (status)
+    return status;
+  saved[MU_TRANSPORT_INPUT] = tmp[MU_TRANSPORT_INPUT];
+  saved[MU_TRANSPORT_OUTPUT] = tmp[MU_TRANSPORT_OUTPUT];
+  
+  tmp[MU_TRANSPORT_INPUT] = newstr[MU_TRANSPORT_INPUT];
+  tmp[MU_TRANSPORT_OUTPUT] = NULL;
+  status = mu_stream_ioctl (sp->transport[MU_TRANSPORT_INPUT],
+			    MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_SET, tmp);
+  if (status == ENOSYS)
+    {
+      mu_stream_unref (sp->transport[MU_TRANSPORT_INPUT]);
+      sp->transport[MU_TRANSPORT_INPUT] = newstr[MU_TRANSPORT_INPUT];
+      mu_stream_ref (sp->transport[MU_TRANSPORT_INPUT]);
+      status = 0;
+    }
+
+  if (status == 0)
+    {
+      tmp[MU_TRANSPORT_INPUT] = NULL;
+      tmp[MU_TRANSPORT_OUTPUT] = newstr[MU_TRANSPORT_OUTPUT];
+      status = mu_stream_ioctl (sp->transport[MU_TRANSPORT_OUTPUT],
+				MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_SET, tmp);
+      if (status == ENOSYS)
+	{
+	  mu_stream_unref (sp->transport[MU_TRANSPORT_OUTPUT]);
+	  sp->transport[MU_TRANSPORT_OUTPUT] = newstr[MU_TRANSPORT_OUTPUT];
+	  mu_stream_ref (sp->transport[MU_TRANSPORT_OUTPUT]);
+	  status = 0;
+	}
+      else
+	{
+	  tmp[MU_TRANSPORT_INPUT] = saved[MU_TRANSPORT_INPUT];
+	  tmp[MU_TRANSPORT_OUTPUT] = NULL;
+	  status = mu_stream_ioctl (sp->transport[MU_TRANSPORT_INPUT],
+				    MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_SET, tmp);
+	}
+    }
+
+  mu_stream_unref (saved[MU_TRANSPORT_INPUT]);
+  mu_stream_unref (saved[MU_TRANSPORT_OUTPUT]);
+  return status;
+}
+
+static int
 _iostream_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 {
   struct _mu_iostream *sp = (struct _mu_iostream *)str;
@@ -147,6 +241,24 @@ _iostream_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
       break;
 
     case MU_IOCTL_SUBSTREAM:
+      if (!arg)
+	return EINVAL;
+      else
+	{
+	  switch (opcode)
+	    {
+	    case MU_IOCTL_OP_GET:
+	      return _iostream_get_substream (sp, arg);
+
+	    case MU_IOCTL_OP_SET:
+	      return _iostream_set_substream (sp, arg);
+
+	    default:
+	      return EINVAL;
+	    }
+	}
+      break;
+	  
     case MU_IOCTL_TOPSTREAM:
       if (!arg)
 	return EINVAL;

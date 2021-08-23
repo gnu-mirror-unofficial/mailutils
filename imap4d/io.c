@@ -53,6 +53,7 @@ void
 io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 {
   mu_stream_t str, istream, ostream;
+  int rc;
   
   if (ifd == -1)
     imap4d_bye (ERR_NO_IFILE);
@@ -70,8 +71,6 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
   /* Combine the two streams into an I/O one. */
   if (tls_conf)
     {
-      int rc;
-
       /* Set timeouts for TLS handshake */
       struct timeval tv;
 
@@ -107,15 +106,16 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
   /* Convert all writes to CRLF form.
      There is no need to convert reads, as the code ignores extra \r anyway.
   */
-  if (mu_filter_create (&iostream, str, "CRLF", MU_FILTER_ENCODE,
-			MU_STREAM_WRITE | MU_STREAM_RDTHRU))
+  rc = mu_filter_create (&iostream, str, "CRLF", MU_FILTER_ENCODE,
+			 MU_STREAM_WRITE | MU_STREAM_RDTHRU);
+  mu_stream_unref (str);
+  if (rc)
     imap4d_bye (ERR_STREAM_CREATE);
   /* Change buffering scheme: filter streams are fully buffered by default. */
   mu_stream_set_buffer (iostream, mu_buffer_line, 0);
   
   if (imap4d_transcript)
     {
-      int rc;
       mu_stream_t dstr, xstr;
       
       rc = mu_dbgstream_create (&dstr, MU_DIAG_DEBUG);
@@ -176,8 +176,7 @@ imap4d_init_tls_server (struct mu_tls_config *tls_conf)
 		mu_stream_strerror (iostream, rc));
       imap4d_bye (ERR_STREAM_CREATE);
     }
-  mu_stream_unref (stream[0]);
-  mu_stream_unref (stream[1]);
+  mu_stream_unref (tlsstream);
 
   return 0;
 }
