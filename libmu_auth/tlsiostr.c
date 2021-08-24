@@ -206,6 +206,18 @@ _tls_io_ioctl (struct _mu_stream *stream, int code, int opcode, void *arg)
   return 0;
 }
 
+static void
+_tls_io_event (struct _mu_stream *str, int code,
+	       unsigned long lval, void *pval)
+{
+  struct _mu_tls_io_stream *sp = (struct _mu_tls_io_stream *)str;
+  if (code == _MU_STR_EVENT_CLRFLAG && lval == _MU_STR_ERR)
+    {
+      if (sp->transport)
+	mu_stream_clearerr (sp->transport);
+    }
+}
+
 int
 mu_tls_io_stream_create (mu_stream_t *pstream,
 			 mu_stream_t transport, int flags,
@@ -234,7 +246,9 @@ mu_tls_io_stream_create (mu_stream_t *pstream,
   sp->stream.close = _tls_io_close;
   sp->stream.done = _tls_io_done; 
   sp->stream.ctl = _tls_io_ioctl;
-
+  sp->stream.event_cb = _tls_io_event;
+  sp->stream.event_mask = _MU_STR_EVMASK (_MU_STR_EVENT_CLRFLAG);
+  
   mu_stream_ref (transport);
   sp->transport = transport;
   sp->up = master;

@@ -364,6 +364,20 @@ _iostream_error_string (struct _mu_stream *str, int rc)
   return mu_strerror (rc);
 }
 
+static void
+_iostream_event (struct _mu_stream *str, int code,
+		 unsigned long lval, void *pval)
+{
+  struct _mu_iostream *sp = (struct _mu_iostream *)str;
+  if (code == _MU_STR_EVENT_CLRFLAG && lval == _MU_STR_ERR)
+    {
+      if (sp->transport[_MU_STREAM_INPUT])
+	mu_stream_clearerr (sp->transport[_MU_STREAM_INPUT]);
+      if (sp->transport[_MU_STREAM_OUTPUT])
+	mu_stream_clearerr (sp->transport[_MU_STREAM_OUTPUT]);
+    }
+}
+
 int
 mu_iostream_create (mu_stream_t *pref, mu_stream_t in, mu_stream_t out)
 {
@@ -386,7 +400,9 @@ mu_iostream_create (mu_stream_t *pref, mu_stream_t in, mu_stream_t out)
   sp->stream.wait = _iostream_wait;
   sp->stream.shutdown = _iostream_shutdown;
   sp->stream.error_string = _iostream_error_string;
-
+  sp->stream.event_cb = _iostream_event;
+  sp->stream.event_mask = _MU_STR_EVMASK (_MU_STR_EVENT_CLRFLAG);
+    
   mu_stream_ref (in);
   sp->transport[_MU_STREAM_INPUT] = in;
   mu_stream_ref (out);

@@ -307,6 +307,8 @@ _tlsfd_read (struct _mu_stream *stream, char *buf, size_t bufsize,
       return 0;
     }
   sp->tls_err = rc;
+  if (sp->tls_err == GNUTLS_E_TIMEDOUT)
+    return MU_ERR_TIMEOUT;
   return MU_ERR_TLS;
 }
 
@@ -330,6 +332,8 @@ _tlsfd_write (struct _mu_stream *stream, const char *buf, size_t bufsize,
       return 0;
     }
   sp->tls_err = rc;
+  if (sp->tls_err == GNUTLS_E_TIMEDOUT)
+    return MU_ERR_TIMEOUT;
   return MU_ERR_TLS;
 }
 

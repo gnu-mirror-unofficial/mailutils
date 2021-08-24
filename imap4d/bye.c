@@ -84,6 +84,7 @@ imap4d_bye_command (int reason, struct imap4d_command *command)
 	  
 	case ERR_TIMEOUT:
 	  status = EX_TEMPFAIL;
+	  mu_stream_clearerr (iostream);
 	  io_untagged_response (RESP_BYE, "Session timed out");
 	  if (state == STATE_NONAUTH)
 	    mu_diag_output (MU_DIAG_INFO, _("session timed out for no user"));

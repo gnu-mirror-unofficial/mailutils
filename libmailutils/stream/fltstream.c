@@ -648,6 +648,17 @@ filter_wait (struct _mu_stream *stream, int *pflags, struct timeval *tvp)
   return mu_stream_wait (fs->transport, pflags, tvp);
 }
 
+static void
+filter_event (struct _mu_stream *str, int code,
+	      unsigned long lval, void *pval)
+{
+  struct _mu_filter_stream *fs = (struct _mu_filter_stream *)str;
+  if (code == _MU_STR_EVENT_CLRFLAG && lval == _MU_STR_ERR)
+    {
+      mu_stream_clearerr (fs->transport);
+    }
+}
+
 
 int
 mu_filter_stream_create (mu_stream_t *pflt,
@@ -705,6 +716,8 @@ mu_filter_stream_create (mu_stream_t *pflt,
   fs->stream.ctl = filter_ctl;
   fs->stream.wait = filter_wait;
   fs->stream.error_string = filter_error_string;
+  fs->stream.event_cb = filter_event;
+  fs->stream.event_mask = _MU_STR_EVMASK (_MU_STR_EVENT_CLRFLAG);
   fs->stream.flags = flags;
 
   mu_stream_ref (str);

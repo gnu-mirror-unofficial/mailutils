@@ -519,6 +519,20 @@ _tls_error_string (struct _mu_stream *stream, int rc)
 }
 
 static void
+_tls_event (struct _mu_stream *str, int code,
+	    unsigned long lval, void *pval)
+{
+  struct _mu_tls_stream *sp = (struct _mu_tls_stream *)str;
+  if (code == _MU_STR_EVENT_CLRFLAG && lval == _MU_STR_ERR)
+    {
+      if (sp->transport[MU_TRANSPORT_INPUT])
+	mu_stream_clearerr (sp->transport[MU_TRANSPORT_INPUT]);
+      if (sp->transport[MU_TRANSPORT_OUTPUT])
+	mu_stream_clearerr (sp->transport[MU_TRANSPORT_OUTPUT]);
+    }
+}
+
+static void
 free_conf (struct mu_tls_config *conf)
 {
   free (conf->cert_file);
@@ -638,7 +652,9 @@ mu_tls_stream_create (mu_stream_t *pstream,
   sp->stream.ctl = _tls_ioctl;
   sp->stream.wait = _tls_wait;
   sp->stream.error_string = _tls_error_string;
-
+  sp->stream.event_cb = _tls_event;
+  sp->stream.event_mask = _MU_STR_EVMASK (_MU_STR_EVENT_CLRFLAG);
+  
   mu_stream_set_buffer (strin, mu_buffer_none, 0);
   mu_stream_set_buffer (strout, mu_buffer_none, 0);
 
