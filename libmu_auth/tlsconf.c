@@ -118,6 +118,10 @@ static struct mu_cfg_param tls_canned_param[] = {
     N_("Set the priorities to use on the ciphers, key exchange methods, "
        "macs and compression methods."),
     NULL },
+  { "handshake-timeout", mu_c_uint,
+    NULL, mu_offsetof(struct mu_tls_config, handshake_timeout), NULL,
+    N_("Timeout for handshake I/O operations (seconds)"),
+    "n" },
   { NULL }
 }; 
 

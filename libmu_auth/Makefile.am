@@ -35,7 +35,8 @@ libmu_auth_la_SOURCES += tlsconf.c tlsvar.c
 if MU_COND_GNUTLS
   libmu_auth_la_SOURCES += \
     tls.c\
-    tlsiostr.c
+    tlsiostr.c\
+    tlsfdstr.c
 else
   libmu_auth_la_SOURCES += notls.c
 endif

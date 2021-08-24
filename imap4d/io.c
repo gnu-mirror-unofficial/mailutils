@@ -60,49 +60,34 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
   if (ofd == -1)
     imap4d_bye (ERR_NO_OFILE);
 
-  if (mu_stdio_stream_create (&istream, ifd, MU_STREAM_READ))
-    imap4d_bye (ERR_STREAM_CREATE);
-  mu_stream_set_buffer (istream, mu_buffer_line, 0);
-  
-  if (mu_stdio_stream_create (&ostream, ofd, MU_STREAM_WRITE))
-    imap4d_bye (ERR_STREAM_CREATE);
-  mu_stream_set_buffer (ostream, mu_buffer_line, 0);
-  
-  /* Combine the two streams into an I/O one. */
   if (tls_conf)
     {
-      /* Set timeouts for TLS handshake */
-      struct timeval tv;
-
-      tv.tv_sec = 10;
-      tv.tv_usec = 0;
-      mu_stream_ioctl (istream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
-      mu_stream_ioctl (ostream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
-
-      rc = mu_tls_stream_create (&str, istream, ostream,
-				 tls_conf,
-				 MU_TLS_SERVER,
-				 0);
+      rc = mu_tlsfd_stream_create (&str, ifd, ofd, tls_conf, MU_TLS_SERVER, 0);
       if (rc)
 	{
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
 	  imap4d_bye (ERR_STREAM_CREATE);
 	}
-
-      /* Reset timeouts */
-      tv.tv_sec = 0;
-      tv.tv_usec = 0;
-      mu_stream_ioctl (istream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
-      mu_stream_ioctl (ostream, MU_IOCTL_TIMEOUT, MU_IOCTL_OP_SET, &tv);
-
       log_cipher (str);
     }
-  else if (mu_iostream_create (&str, istream, ostream))
-    imap4d_bye (ERR_STREAM_CREATE);
+  else
+    {
+      if (mu_stdio_stream_create (&istream, ifd, MU_STREAM_READ))
+	imap4d_bye (ERR_STREAM_CREATE);
+      mu_stream_set_buffer (istream, mu_buffer_line, 0);
+  
+      if (mu_stdio_stream_create (&ostream, ofd, MU_STREAM_WRITE))
+	imap4d_bye (ERR_STREAM_CREATE);
+      mu_stream_set_buffer (ostream, mu_buffer_line, 0);
+  
+      /* Combine the two streams into an I/O one. */
+      if (mu_iostream_create (&str, istream, ostream))
+	imap4d_bye (ERR_STREAM_CREATE);
 
-  mu_stream_unref (istream);
-  mu_stream_unref (ostream);
-
+      mu_stream_unref (istream);
+      mu_stream_unref (ostream);
+    }
+  
   /* Convert all writes to CRLF form.
      There is no need to convert reads, as the code ignores extra \r anyway.
   */
@@ -141,23 +126,44 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 int
 imap4d_init_tls_server (struct mu_tls_config *tls_conf)
 {
-  mu_stream_t tlsstream, stream[2];
+  mu_stream_t tlsstream, stream[2], tstr, istr;
+  mu_transport_t t[2];
+  int ifd, ofd;
   int rc;
 
   rc = mu_stream_ioctl (iostream, MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_GET, stream);
   if (rc)
     {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_GET_STREAM",
+      mu_error (_("%s failed: %s"), "MU_IOCTL_SUBSTREAM",
 		mu_stream_strerror (iostream, rc));
       return 1;
     }
   
-  rc = mu_tls_stream_create (&tlsstream, stream[0], stream[1],
-			     tls_conf,
-			     MU_TLS_SERVER,
-			     0);
-  mu_stream_unref (stream[0]);
-  mu_stream_unref (stream[1]);
+  rc = mu_stream_ioctl (stream[MU_TRANSPORT_INPUT], MU_IOCTL_TRANSPORT,
+			MU_IOCTL_OP_GET, t);
+  if (rc)
+    {
+      mu_error (_("%s failed: %s"), "MU_IOCTL_TRANSPORT",
+		mu_stream_strerror (iostream, rc));
+      return 1;
+    }
+  ifd = (int) (intptr_t) t[0];
+
+  rc = mu_stream_ioctl (stream[MU_TRANSPORT_OUTPUT], MU_IOCTL_TRANSPORT,
+			MU_IOCTL_OP_GET, t);
+  if (rc)
+    {
+      mu_error (_("%s failed: %s"), "MU_IOCTL_TRANSPORT",
+		mu_stream_strerror (iostream, rc));
+      return 1;
+    }
+  ofd = (int) (intptr_t) t[0];
+
+  rc = mu_tlsfd_stream_create (&tlsstream, ifd, ofd,
+			       tls_conf,
+			       MU_TLS_SERVER,
+			       0);
+
   if (rc)
     {
       mu_diag_output (MU_DIAG_ERROR, _("cannot open TLS stream: %s"),
@@ -167,17 +173,60 @@ imap4d_init_tls_server (struct mu_tls_config *tls_conf)
 
   log_cipher (tlsstream);
 
-  stream[0] = stream[1] = tlsstream;
+  t[0] = (mu_transport_t) -1;
+  mu_stream_ioctl (stream[MU_TRANSPORT_INPUT], MU_IOCTL_TRANSPORT,
+		   MU_IOCTL_OP_SET, t);
+  t[0] = (mu_transport_t) -1;
+  mu_stream_ioctl (stream[MU_TRANSPORT_OUTPUT], MU_IOCTL_TRANSPORT,
+		   MU_IOCTL_OP_SET, t);
+  
+  mu_stream_unref (stream[0]);
+  mu_stream_unref (stream[1]);
 
-  rc = mu_stream_ioctl (iostream, MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_SET, stream);
+  /*
+   * Find the iostream and replace it with the TLS stream.
+   * Unless transcript is enabled the iostream variable refers to a
+   * CRLF filter, and its sub-stream is the iostream object.  If transcript
+   * is enabled, the treanscript stream is added on top and iostream refers
+   * to it.
+   *
+   * The loop below uses the fact that iostream is the only stream in
+   * mailutils that returns *both* transport streams on MU_IOCTL_TOPSTREAM/
+   * MU_IOCTL_OP_GET ioctl.  Rest of streams that support MU_IOCTL_TOPSTREAM,
+   * return the transport stream in stream[0] and NULL in stream[1].
+   */
+  tstr = NULL;
+  istr = iostream;
+  while ((rc = mu_stream_ioctl (istr,
+				MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET,
+				stream)) == 0
+	 && stream[1] == NULL)
+    {
+      tstr = istr;
+      istr = stream[0];
+      mu_stream_unref (istr);
+    }
+  
   if (rc)
     {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_SET_STREAM",
-		mu_stream_strerror (iostream, rc));
-      imap4d_bye (ERR_STREAM_CREATE);
+      mu_error ("%s", _("INTERNAL ERROR: cannot locate iostream"));
+      return 1;
+    }
+
+  mu_stream_unref (stream[0]);
+  mu_stream_unref (stream[1]);
+  
+  stream[0] = tlsstream;
+  stream[1] = NULL;
+  rc = mu_stream_ioctl (tstr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_SET, stream);
+  if (rc)
+    {
+      mu_error (_("INTERNAL ERROR: failed to install TLS stream: %s"),
+		mu_strerror (rc));
+      return 1;
     }
   mu_stream_unref (tlsstream);
-
+  
   return 0;
 }
 

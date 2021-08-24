@@ -18,7 +18,7 @@
 
 static int global_conf_status = -1;
 int global_tls_mode;
-struct mu_tls_config global_tls_conf;
+struct mu_tls_config global_tls_conf = { .handshake_timeout = 10 };
 
 /*
 6.2.1.  STARTTLS Command

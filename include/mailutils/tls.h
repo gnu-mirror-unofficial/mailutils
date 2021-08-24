@@ -32,6 +32,7 @@ struct mu_tls_config
   char *key_file;
   char *ca_file;
   char *priorities;
+  unsigned handshake_timeout;
 };
 
 enum mu_tls_type
@@ -60,6 +61,10 @@ extern int mu_tls_ca_file_checks;
 
 void mu_tls_cfg_init (void);
   
+int mu_tlsfd_stream_create (mu_stream_t *pstream, int ifd, int ofd,
+			    struct mu_tls_config const *conf,
+			    enum mu_tls_type type,
+			    int flags);
 int mu_tls_stream_create (mu_stream_t *pstream,
 			  mu_stream_t strin, mu_stream_t strout,
 			  struct mu_tls_config const *conf,

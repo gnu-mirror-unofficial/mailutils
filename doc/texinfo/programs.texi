@@ -1820,6 +1820,8 @@ server @var{ipaddr}[:@var{port}] @{
     ssl-ca-file @var{file};
     # @r{Set the priorities to use on the ciphers, methods, etc.}
     ssl-priorities @var{string};
+    # @r{Set timeout for I/O operations during TLS handshake (seconds).}
+    handshake-timeout @var{n};
   @}
   
   # @r{Set server specific ACLs.}
@@ -2625,6 +2627,8 @@ tls @{
   ssl-ca-file @var{file};
   # @r{Set the priorities to use on the ciphers, methods, etc.}
   ssl-priorities @var{string};
+  # @r{Set timeout for I/O operations during TLS handshake (seconds).}
+  handshake-timeout @var{n};
 @}
 @end example
 @subheading Description
@@ -2649,6 +2653,11 @@ Specify the trusted certificate authorities file.
 @deffn {Configuration} ssl-priorities @var{string}
 Set the priorities to use on the ciphers, key exchange methods, MACs
 and compression methods.
+@end deffn
+
+@deffn {Configuration} handshake-timeout @var{n}
+Set the timeout (in seconds) for I/O operations during TLS handshake.
+Default value is 10 seconds.
 @end deffn
 
 @node tls-file-checks statement
