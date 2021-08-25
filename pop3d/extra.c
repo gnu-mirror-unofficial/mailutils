@@ -74,6 +74,7 @@ pop3d_abquit (int reason)
 
     case ERR_TIMEOUT:
       code = EX_TEMPFAIL;
+      mu_stream_clearerr (iostream);
       pop3d_outf ("-ERR %s\n", pop3d_error_string (reason));
       if (state == TRANSACTION)
 	mu_diag_output (MU_DIAG_INFO, _("session timed out for user: %s"),
@@ -111,8 +112,7 @@ pop3d_abquit (int reason)
       mu_diag_output (MU_DIAG_ERROR,
 		      _("mailbox was updated by other party: %s"),
 		      username);
-      pop3d_outf
-	("-ERR [OUT-SYNC] Mailbox updated by other party or corrupt\n");
+      pop3d_outf ("-ERR [OUT-SYNC] Mailbox updated by other party or corrupted\n");
       break;
 
     default:
@@ -167,20 +167,9 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
   if (ofd == -1)
     pop3d_abquit (ERR_NO_OFILE);
 
-  if (mu_stdio_stream_create (&istream, ifd, MU_STREAM_READ))
-    pop3d_abquit (ERR_NO_IFILE);
-  mu_stream_set_buffer (istream, mu_buffer_line, 0);
-
-  if (mu_stdio_stream_create (&ostream, ofd, MU_STREAM_WRITE))
-    pop3d_abquit (ERR_NO_OFILE);
-
-  /* Combine the two streams into an I/O one. */
   if (tls_conf)
     {
-      rc = mu_tls_stream_create (&str, istream, ostream,
-				 tls_conf,
-				 MU_TLS_SERVER,
-				 0);
+      rc = mu_tlsfd_stream_create (&str, ifd, ofd, tls_conf, MU_TLS_SERVER, 0);
       if (rc)
 	{
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
@@ -188,12 +177,24 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 	}
       log_cipher (str);
     }
-  else if (mu_iostream_create (&str, istream, ostream))
-    pop3d_abquit (ERR_FILE);
+  else
+    {
+      if (mu_stdio_stream_create (&istream, ifd, MU_STREAM_READ))
+	pop3d_abquit (ERR_FILE);
+      mu_stream_set_buffer (istream, mu_buffer_line, 0);
+  
+      if (mu_stdio_stream_create (&ostream, ofd, MU_STREAM_WRITE))
+	pop3d_abquit (ERR_FILE);
+      mu_stream_set_buffer (ostream, mu_buffer_line, 0);
+  
+      /* Combine the two streams into an I/O one. */
+      if (mu_iostream_create (&str, istream, ostream))
+	pop3d_abquit (ERR_FILE);
 
-  mu_stream_unref (istream);
-  mu_stream_unref (ostream);
-
+      mu_stream_unref (istream);
+      mu_stream_unref (ostream);
+    }
+  
   /* Convert all writes to CRLF form.
      There is no need to convert reads, as the code ignores extra \r anyway.
   */
@@ -201,13 +202,12 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 			 MU_STREAM_WRITE | MU_STREAM_RDTHRU);
   mu_stream_unref (str);
   if (rc)
-    pop3d_abquit (ERR_NO_IFILE);
+    pop3d_abquit (ERR_FILE);
   /* Change buffering scheme: filter streams are fully buffered by default. */
   mu_stream_set_buffer (iostream, mu_buffer_line, 0);
   
   if (pop3d_transcript)
     {
-      int rc;
       mu_stream_t dstr, xstr;
       
       rc = mu_dbgstream_create (&dstr, MU_DIAG_DEBUG);
@@ -233,37 +233,107 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 int
 pop3d_init_tls_server (struct mu_tls_config *tls_conf)
 {
-  mu_stream_t tlsstream, stream[2];
+  mu_stream_t tlsstream, stream[2], tstr, istr;
+  mu_transport_t t[2];
+  int ifd, ofd;
   int rc;
 
   rc = mu_stream_ioctl (iostream, MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_GET, stream);
   if (rc)
     {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_GET_STREAM",
+      mu_error (_("%s failed: %s"), "MU_IOCTL_SUBSTREAM",
 		mu_stream_strerror (iostream, rc));
       return 1;
     }
   
-  rc = mu_tls_stream_create (&tlsstream, stream[0], stream[1],
-			     tls_conf,
-			     MU_TLS_SERVER,
-			     0);
-  mu_stream_unref (stream[0]);
-  mu_stream_unref (stream[1]);
+  rc = mu_stream_ioctl (stream[MU_TRANSPORT_INPUT], MU_IOCTL_TRANSPORT,
+			MU_IOCTL_OP_GET, t);
   if (rc)
-    return 1;
+    {
+      mu_error (_("%s failed: %s"), "MU_IOCTL_TRANSPORT",
+		mu_stream_strerror (iostream, rc));
+      return 1;
+    }
+  ifd = (int) (intptr_t) t[0];
+
+  rc = mu_stream_ioctl (stream[MU_TRANSPORT_OUTPUT], MU_IOCTL_TRANSPORT,
+			MU_IOCTL_OP_GET, t);
+  if (rc)
+    {
+      mu_error (_("%s failed: %s"), "MU_IOCTL_TRANSPORT",
+		mu_stream_strerror (iostream, rc));
+      return 1;
+    }
+  ofd = (int) (intptr_t) t[0];
+
+  rc = mu_tlsfd_stream_create (&tlsstream, ifd, ofd,
+			       tls_conf,
+			       MU_TLS_SERVER,
+			       0);
+
+  if (rc)
+    {
+      mu_diag_output (MU_DIAG_ERROR, _("cannot open TLS stream: %s"),
+		      mu_strerror (rc));
+      return 1;
+    }
 
   log_cipher (tlsstream);
 
-  stream[0] = stream[1] = tlsstream;
-  rc = mu_stream_ioctl (iostream, MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_SET, stream);
-  mu_stream_unref (tlsstream);
+  t[0] = (mu_transport_t) -1;
+  mu_stream_ioctl (stream[MU_TRANSPORT_INPUT], MU_IOCTL_TRANSPORT,
+		   MU_IOCTL_OP_SET, t);
+  t[0] = (mu_transport_t) -1;
+  mu_stream_ioctl (stream[MU_TRANSPORT_OUTPUT], MU_IOCTL_TRANSPORT,
+		   MU_IOCTL_OP_SET, t);
+  
+  mu_stream_unref (stream[0]);
+  mu_stream_unref (stream[1]);
+
+  /*
+   * Find the iostream and replace it with the TLS stream.
+   * Unless transcript is enabled the iostream variable refers to a
+   * CRLF filter, and its sub-stream is the iostream object.  If transcript
+   * is enabled, the treanscript stream is added on top and iostream refers
+   * to it.
+   *
+   * The loop below uses the fact that iostream is the only stream in
+   * mailutils that returns *both* transport streams on MU_IOCTL_TOPSTREAM/
+   * MU_IOCTL_OP_GET ioctl.  Rest of streams that support MU_IOCTL_TOPSTREAM,
+   * return the transport stream in stream[0] and NULL in stream[1].
+   */
+  tstr = NULL;
+  istr = iostream;
+  while ((rc = mu_stream_ioctl (istr,
+				MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET,
+				stream)) == 0
+	 && stream[1] == NULL)
+    {
+      tstr = istr;
+      istr = stream[0];
+      mu_stream_unref (istr);
+    }
+  
   if (rc)
     {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_SET_STREAM",
-		mu_stream_strerror (iostream, rc));
-      pop3d_abquit (ERR_IO);
+      mu_error ("%s", _("INTERNAL ERROR: cannot locate iostream"));
+      return 1;
     }
+
+  mu_stream_unref (stream[0]);
+  mu_stream_unref (stream[1]);
+  
+  stream[0] = tlsstream;
+  stream[1] = NULL;
+  rc = mu_stream_ioctl (tstr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_SET, stream);
+  if (rc)
+    {
+      mu_error (_("INTERNAL ERROR: failed to install TLS stream: %s"),
+		mu_strerror (rc));
+      return 1;
+    }
+  mu_stream_unref (tlsstream);
+  
   return 0;
 }
 
@@ -309,12 +379,26 @@ pop3d_readline (char *buffer, size_t size)
 {
   int rc;
   size_t nbytes;
-  
-  alarm (idle_timeout);
-  rc = mu_stream_readline (iostream, buffer, size, &nbytes);
-  alarm (0);
+  struct timeval tv, *to;
 
-  if (rc)
+  if (idle_timeout)
+    {
+      tv.tv_sec = idle_timeout;
+      tv.tv_usec = 0;
+      to = &tv;
+    }
+  else
+    to = NULL;
+  
+  rc = mu_stream_timed_readline (iostream, buffer, size, to, &nbytes);
+
+  if (rc == MU_ERR_TIMEOUT)
+    {
+      mu_diag_output (MU_DIAG_ERROR, "%s", _("Read time out"));
+      mu_stream_clearerr (iostream);
+      pop3d_abquit (ERR_TIMEOUT);
+    }
+  else if (rc)
     {
       mu_diag_output (MU_DIAG_ERROR, _("Read failed: %s"),
  		      mu_stream_strerror (iostream, rc));

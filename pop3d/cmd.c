@@ -16,7 +16,7 @@
 
 #include "pop3d.h"
 
-struct mu_tls_config global_tls_conf;
+struct mu_tls_config global_tls_conf = { .handshake_timeout = 10 };
 int global_tls_mode;
 int global_conf_status = -1;
 
