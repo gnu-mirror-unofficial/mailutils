@@ -146,4 +146,8 @@ MU_ERR_TIMEOUT              _("timed out")
 MU_ERR_SET_TIMEOUT          _("error setting timeout")
 
 MU_ERR_WRITE                _("write error")
+
 MU_ERR_TLS                  _("TLS error")
+
+MU_ERR_TRANSPORT_GET        _("can't get transport desciptor")
+MU_ERR_TRANSPORT_SET        _("can't set transport desciptor")

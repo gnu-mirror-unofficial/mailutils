@@ -169,7 +169,7 @@ pop3d_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 
   if (tls_conf)
     {
-      rc = mu_tlsfd_stream_create (&str, ifd, ofd, tls_conf, MU_TLS_SERVER, 0);
+      rc = mu_tlsfd_stream_create (&str, ifd, ofd, tls_conf, MU_TLS_SERVER);
       if (rc)
 	{
 	  mu_error (_("failed to create TLS stream: %s"), mu_strerror (rc));
@@ -234,64 +234,10 @@ int
 pop3d_init_tls_server (struct mu_tls_config *tls_conf)
 {
   mu_stream_t tlsstream, stream[2], tstr, istr;
-  mu_transport_t t[2];
-  int ifd, ofd;
   int rc;
-
-  rc = mu_stream_ioctl (iostream, MU_IOCTL_SUBSTREAM, MU_IOCTL_OP_GET, stream);
-  if (rc)
-    {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_SUBSTREAM",
-		mu_stream_strerror (iostream, rc));
-      return 1;
-    }
   
-  rc = mu_stream_ioctl (stream[MU_TRANSPORT_INPUT], MU_IOCTL_TRANSPORT,
-			MU_IOCTL_OP_GET, t);
-  if (rc)
-    {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_TRANSPORT",
-		mu_stream_strerror (iostream, rc));
-      return 1;
-    }
-  ifd = (int) (intptr_t) t[0];
-
-  rc = mu_stream_ioctl (stream[MU_TRANSPORT_OUTPUT], MU_IOCTL_TRANSPORT,
-			MU_IOCTL_OP_GET, t);
-  if (rc)
-    {
-      mu_error (_("%s failed: %s"), "MU_IOCTL_TRANSPORT",
-		mu_stream_strerror (iostream, rc));
-      return 1;
-    }
-  ofd = (int) (intptr_t) t[0];
-
-  rc = mu_tlsfd_stream_create (&tlsstream, ifd, ofd,
-			       tls_conf,
-			       MU_TLS_SERVER,
-			       0);
-
-  if (rc)
-    {
-      mu_diag_output (MU_DIAG_ERROR, _("cannot open TLS stream: %s"),
-		      mu_strerror (rc));
-      return 1;
-    }
-
-  log_cipher (tlsstream);
-
-  t[0] = (mu_transport_t) -1;
-  mu_stream_ioctl (stream[MU_TRANSPORT_INPUT], MU_IOCTL_TRANSPORT,
-		   MU_IOCTL_OP_SET, t);
-  t[0] = (mu_transport_t) -1;
-  mu_stream_ioctl (stream[MU_TRANSPORT_OUTPUT], MU_IOCTL_TRANSPORT,
-		   MU_IOCTL_OP_SET, t);
-  
-  mu_stream_unref (stream[0]);
-  mu_stream_unref (stream[1]);
-
   /*
-   * Find the iostream and replace it with the TLS stream.
+   * Find the iostream.
    * Unless transcript is enabled the iostream variable refers to a
    * CRLF filter, and its sub-stream is the iostream object.  If transcript
    * is enabled, the treanscript stream is added on top and iostream refers
@@ -322,7 +268,21 @@ pop3d_init_tls_server (struct mu_tls_config *tls_conf)
 
   mu_stream_unref (stream[0]);
   mu_stream_unref (stream[1]);
-  
+
+  rc = mu_tlsfd_stream2_convert (&tlsstream, stream[0], stream[1],
+				 tls_conf, MU_TLS_SERVER);
+  if (rc)
+    {
+      mu_error(_("cannot open TLS stream: %s"), mu_strerror (rc));
+      if (rc == MU_ERR_TRANSPORT_SET)
+	{
+	  mu_stream_destroy (&tlsstream);
+	  /* iostream is unusable now */
+	  exit (EX_UNAVAILABLE);
+	}
+      return rc;
+    }
+
   stream[0] = tlsstream;
   stream[1] = NULL;
   rc = mu_stream_ioctl (tstr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_SET, stream);
@@ -330,10 +290,10 @@ pop3d_init_tls_server (struct mu_tls_config *tls_conf)
     {
       mu_error (_("INTERNAL ERROR: failed to install TLS stream: %s"),
 		mu_strerror (rc));
-      return 1;
+      exit (EX_UNAVAILABLE);
     }
   mu_stream_unref (tlsstream);
-  
+  log_cipher (tlsstream);  
   return 0;
 }
 

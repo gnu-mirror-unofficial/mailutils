@@ -63,8 +63,19 @@ void mu_tls_cfg_init (void);
   
 int mu_tlsfd_stream_create (mu_stream_t *pstream, int ifd, int ofd,
 			    struct mu_tls_config const *conf,
-			    enum mu_tls_type type,
-			    int flags);
+			    enum mu_tls_type type);
+int mu_tlsfd_stream2_convert (mu_stream_t *pstream,
+			      mu_stream_t istr, mu_stream_t ostr,
+			      struct mu_tls_config const *conf,
+			      enum mu_tls_type type);
+static inline int
+mu_tlsfd_stream_convert (mu_stream_t *pstream, mu_stream_t tstr,
+			 struct mu_tls_config const *conf,
+			 enum mu_tls_type type)
+{
+  return mu_tlsfd_stream2_convert (pstream, tstr, NULL, conf, type);
+}
+
 int mu_tls_stream_create (mu_stream_t *pstream,
 			  mu_stream_t strin, mu_stream_t strout,
 			  struct mu_tls_config const *conf,

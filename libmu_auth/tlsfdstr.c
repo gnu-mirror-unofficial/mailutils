@@ -601,8 +601,7 @@ _tlsfd_error_string (struct _mu_stream *stream, int rc)
 int
 mu_tlsfd_stream_create (mu_stream_t *pstream, int ifd, int ofd,
 			struct mu_tls_config const *conf,
-			enum mu_tls_type type,
-			int flags)
+			enum mu_tls_type type)
 {
   struct _mu_tlsfd_stream *sp;
   int rc;
@@ -684,4 +683,73 @@ mu_tlsfd_stream_create (mu_stream_t *pstream, int ifd, int ofd,
   else
     *pstream = stream;
   return rc;
+}
+
+int
+mu_tlsfd_stream2_convert (mu_stream_t *pstream,
+			  mu_stream_t istr, mu_stream_t ostr,
+			  struct mu_tls_config const *conf,
+			  enum mu_tls_type type)
+{
+  mu_transport_t t[2];
+  int ifd, ofd;
+  int rc;
+  
+  rc = mu_stream_ioctl (istr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET, t);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		("ioctl(istr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET): %s",
+		 mu_stream_strerror (istr, rc)));
+      return MU_ERR_TRANSPORT_GET;
+    }
+  ifd = (int) (intptr_t) t[0];
+
+  if (ostr)
+    {
+      rc = mu_stream_ioctl (ostr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET, t);
+      if (rc)
+	{
+	  mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		    ("ioctl(ostr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_GET): %s",
+		     mu_stream_strerror (ostr, rc)));
+	  return MU_ERR_TRANSPORT_GET;
+	}
+      ofd = (int) (intptr_t) t[0];
+    }
+  else
+    ofd = ifd;
+
+  rc = mu_tlsfd_stream_create (pstream, ifd, ofd, conf, type);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		("mu_tlsfd_stream_create: %s", mu_strerror (rc)));
+      return rc;
+    }
+
+  t[0] = (mu_transport_t) -1;
+  t[1] = NULL;
+  rc = mu_stream_ioctl (istr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET, t);
+  if (rc)
+    {
+      mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		("ioctl(istr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET): %s",
+		 mu_stream_strerror (istr, rc)));
+      return MU_ERR_TRANSPORT_SET;
+    }
+  if (ostr)
+    {
+      t[0] = NULL;
+      t[1] = (mu_transport_t) -1;
+      rc = mu_stream_ioctl (ostr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET, t);
+      if (rc)
+	{
+	  mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		    ("ioctl(ostr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET): %s",
+		     mu_stream_strerror (ostr, rc)));
+	  return MU_ERR_TRANSPORT_SET;
+	}
+    }
+  return 0;
 }
