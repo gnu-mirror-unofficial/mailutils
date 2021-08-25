@@ -1,7 +1,18 @@
-GNU mailutils NEWS -- history of user-visible changes. 2021-08-05
+GNU mailutils NEWS -- history of user-visible changes. 2021-08-25
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
+
+Version 3.13.90 (git)
+
+* TLS support rewritten from scratch
+
+** New configuration statement: tls.handshake-timeout
+
+This statement sets timeout in seconds for TLS handshake operations in
+daemons.  Default timeout it 10 seconds.
+
+* Fix idle timeout handling (imap4d and pop3d daemons)
 
 Version 3.13, 2021-08-05
 
