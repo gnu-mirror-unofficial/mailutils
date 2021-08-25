@@ -126,69 +126,18 @@ io_setio (int ifd, int ofd, struct mu_tls_config *tls_conf)
 int
 imap4d_init_tls_server (struct mu_tls_config *tls_conf)
 {
-  mu_stream_t tlsstream, stream[2], tstr, istr;
   int rc;
   
-  /*
-   * Find the iostream.
-   * Unless transcript is enabled the iostream variable refers to a
-   * CRLF filter, and its sub-stream is the iostream object.  If transcript
-   * is enabled, the treanscript stream is added on top and iostream refers
-   * to it.
-   *
-   * The loop below uses the fact that iostream is the only stream in
-   * mailutils that returns *both* transport streams on MU_IOCTL_TOPSTREAM/
-   * MU_IOCTL_OP_GET ioctl.  Rest of streams that support MU_IOCTL_TOPSTREAM,
-   * return the transport stream in stream[0] and NULL in stream[1].
-   */
-  tstr = NULL;
-  istr = iostream;
-  while ((rc = mu_stream_ioctl (istr,
-				MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET,
-				stream)) == 0
-	 && stream[1] == NULL)
-    {
-      tstr = istr;
-      istr = stream[0];
-      mu_stream_unref (istr);
-    }
-  
+  rc = mu_starttls (&iostream, tls_conf, MU_TLS_SERVER);
   if (rc)
+    log_cipher (iostream);
+  else
     {
-      mu_error ("%s", _("INTERNAL ERROR: cannot locate iostream"));
-      return 1;
-    }
-
-  mu_stream_unref (stream[0]);
-  mu_stream_unref (stream[1]);
-
-  rc = mu_tlsfd_stream2_convert (&tlsstream, stream[0], stream[1],
-				 tls_conf, MU_TLS_SERVER);
-  if (rc)
-    {
-      mu_error(_("cannot open TLS stream: %s"), mu_strerror (rc));
+      mu_diag_funcall (MU_DIAG_ERROR, "mu_starttls", NULL, rc);
       if (rc == MU_ERR_TRANSPORT_SET)
-	{
-	  mu_stream_destroy (&tlsstream);
-	  /* iostream is unusable now */
-	  exit (EX_UNAVAILABLE);
-	}
-      return rc;
+	imap4d_bye (ERR_NO_IFILE);
     }
-
-  stream[0] = tlsstream;
-  stream[1] = NULL;
-  rc = mu_stream_ioctl (tstr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_SET, stream);
-  if (rc)
-    {
-      mu_error (_("INTERNAL ERROR: failed to install TLS stream: %s"),
-		mu_strerror (rc));
-      exit (EX_UNAVAILABLE);
-    }
-  mu_stream_unref (tlsstream);
-  log_cipher (tlsstream);  
-  
-  return 0;
+  return rc;
 }
 
 /* Status Code to String.  */

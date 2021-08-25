@@ -15,6 +15,30 @@ mu_tls_stream_create (mu_stream_t *pstream,
   return ENOSYS;
 }
 
+int
+mu_tlsfd_stream_create (mu_stream_t *pstream, int ifd, int ofd,
+			struct mu_tls_config const *conf,
+			enum mu_tls_type type)
+{
+  return ENOSYS;
+}
+
+int
+mu_tlsfd_stream2_convert (mu_stream_t *pstream,
+			  mu_stream_t istr, mu_stream_t ostr,
+			  struct mu_tls_config const *conf,
+			  enum mu_tls_type type)
+{
+  return ENOSYS;
+}
+
+int
+mu_starttls (mu_stream_t *pstream, struct mu_tls_config *conf,
+	     enum mu_tls_type type)
+{
+  return ENOSYS;
+}
+
 void
 mu_deinit_tls_libs (void)
 {

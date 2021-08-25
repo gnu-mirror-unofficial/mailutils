@@ -138,14 +138,16 @@ _mu_imap_folder_open (mu_folder_t folder, int flags)
   if (tls)
     {
       mu_stream_t tlsstream;
-	      
-      rc = mu_tls_client_stream_create (&tlsstream, transport, transport, 0);
+
+      rc = mu_tlsfd_stream_convert (&tlsstream, transport, NULL,
+				    MU_TLS_CLIENT);
       mu_stream_unref (transport);
       if (rc)
 	{
+	  if (rc == MU_ERR_TRANSPORT_SET)
+	    mu_stream_destroy (&tlsstream);
 	  mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
-		    (_("cannot create TLS stream: %s"),
-		     mu_strerror (rc)));
+		    ("cannot create TLS stream: %s", mu_strerror (rc)));
 	  return rc;
 	}
       transport = tlsstream;
@@ -153,7 +155,8 @@ _mu_imap_folder_open (mu_folder_t folder, int flags)
 #endif
 
   mu_imap_set_carrier (imap, transport);
-
+  mu_stream_unref (transport);
+  
   if (mu_debug_level_p (MU_DEBCAT_FOLDER, MU_DEBUG_PROT) ||
       mu_debug_level_p (MU_DEBCAT_MAILBOX, MU_DEBUG_PROT))
     mu_imap_trace (imap, MU_IMAP_TRACE_SET);

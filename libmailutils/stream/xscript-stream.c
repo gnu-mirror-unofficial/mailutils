@@ -442,18 +442,24 @@ _xscript_ctl (struct _mu_stream *str, int code, int opcode, void *arg)
 	      mu_stream_t *pstr = arg;
 	      mu_stream_t tmp;
 
-	      if (pstr[0] != pstr[1])
+	      if (pstr[1] == NULL)
 		{
-		  status = mu_iostream_create (&tmp, pstr[0], pstr[1]);
-		  if (status)
-		    return status;
+		  tmp = pstr[0];
+		  mu_stream_ref (tmp);
+		  status = 0;
 		}
-	      else
+	      else if (pstr[0] == pstr[1])
 		{
 		  tmp = pstr[0];
 		  mu_stream_ref (tmp);
 		  mu_stream_ref (tmp);
 		  status = 0;
+		}
+	      else
+		{
+		  status = mu_iostream_create (&tmp, pstr[0], pstr[1]);
+		  if (status)
+		    return status;
 		}
 
 	      mu_stream_unref (sp->transport);

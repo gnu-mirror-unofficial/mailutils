@@ -66,6 +66,9 @@ int mu_imapio_get_trace_payload (mu_imapio_t io);
 
 int mu_imapio_get_streams (mu_imapio_t io, mu_stream_t *streams);
 int mu_imapio_set_streams (mu_imapio_t io, mu_stream_t *streams);
+
+int mu_imapio_get_transport (mu_imapio_t io, mu_stream_t *pstream);
+int mu_imapio_set_transport (mu_imapio_t io, mu_stream_t stream);
   
 int mu_imapio_getbuf (mu_imapio_t io, char **pptr, size_t *psize);
 

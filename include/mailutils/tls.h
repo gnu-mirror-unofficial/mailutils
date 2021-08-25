@@ -76,6 +76,10 @@ mu_tlsfd_stream_convert (mu_stream_t *pstream, mu_stream_t tstr,
   return mu_tlsfd_stream2_convert (pstream, tstr, NULL, conf, type);
 }
 
+int mu_starttls (mu_stream_t *pstream, struct mu_tls_config *conf,
+		 enum mu_tls_type type);
+
+  
 int mu_tls_stream_create (mu_stream_t *pstream,
 			  mu_stream_t strin, mu_stream_t strout,
 			  struct mu_tls_config const *conf,

@@ -140,17 +140,20 @@ pop_open (mu_mailbox_t mbox, int flags)
 #ifdef WITH_TLS
   if (mpd->pops)
     {
-      mu_stream_t newstr;
-      
-      status = mu_tls_client_stream_create (&newstr, stream, stream, 0);
+      mu_stream_t tlsstream;
+
+      status = mu_tlsfd_stream_convert (&tlsstream, stream, NULL,
+					MU_TLS_CLIENT);
       mu_stream_unref (stream);
       if (status)
 	{
-	  mu_error ("pop_open: mu_tls_client_stream_create: %s",
-		    mu_strerror (status));
+	  if (status == MU_ERR_TRANSPORT_SET)
+	    mu_stream_destroy (&tlsstream);
+	  mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+		    ("cannot create TLS stream: %s", mu_strerror (status)));
 	  return status;
 	}
-      stream = newstr;
+      stream = tlsstream;
     }
 #endif /* WITH_TLS */
 
@@ -164,7 +167,8 @@ pop_open (mu_mailbox_t mbox, int flags)
       return status;
     }
   mu_pop3_set_carrier (mpd->pop3, stream);
-
+  mu_stream_unref (stream);
+  
   if (mu_debug_level_p (MU_DEBCAT_MAILBOX, MU_DEBUG_PROT))
     mu_pop3_trace (mpd->pop3, MU_POP3_TRACE_SET);
   if (mu_debug_level_p (MU_DEBCAT_MAILBOX, MU_DEBUG_TRACE6))

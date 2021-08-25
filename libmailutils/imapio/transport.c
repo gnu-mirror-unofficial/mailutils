@@ -23,6 +23,27 @@
 #include <mailutils/sys/imapio.h>
 
 int
+mu_imapio_get_transport (struct _mu_imapio *io, mu_stream_t *pstream)
+{
+  if (!io)
+    return EINVAL;
+  if (io->_imap_stream)
+    mu_stream_ref (io->_imap_stream);
+  *pstream = io->_imap_stream;
+  return 0;
+}
+
+int
+mu_imapio_set_transport (mu_imapio_t io, mu_stream_t stream)
+{
+  if (!io)
+    return EINVAL;
+  io->_imap_stream = stream;
+  mu_stream_ref (stream);
+  return 0;
+}
+
+int
 mu_imapio_get_streams (struct _mu_imapio *io, mu_stream_t *streams)
 {
   int rc;

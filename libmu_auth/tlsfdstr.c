@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <gnutls/gnutls.h>
+#include <mailutils/nls.h>
 #include <mailutils/stream.h>
 #include <mailutils/errno.h>
 #include <mailutils/property.h>
@@ -607,11 +608,14 @@ mu_tlsfd_stream_create (mu_stream_t *pstream, int ifd, int ofd,
   int rc;
   mu_stream_t stream;
   int session_type;
+  static struct mu_tls_config default_conf = { .handshake_timeout = 60 };
   
   if (!pstream)
     return MU_ERR_OUT_PTR_NULL;
   if (!conf)
-    return EINVAL;
+    {
+      conf = &default_conf;
+    }
 
   if (!mu_init_tls_libs ())
     return ENOSYS;
@@ -685,6 +689,33 @@ mu_tlsfd_stream_create (mu_stream_t *pstream, int ifd, int ofd,
   return rc;
 }
 
+static int
+stream_reset_transport (mu_stream_t str)
+{
+  mu_transport_t t[2];
+  int rc;
+  
+  t[0] = (mu_transport_t) -1;
+  t[1] = NULL;
+  rc = mu_stream_ioctl (str, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET, t);
+  if (rc)
+    {
+      int b = 1;
+      mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		("ioctl(str, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET): %s",
+		 mu_stream_strerror (str, rc)));
+      rc = mu_stream_ioctl (str, MU_IOCTL_FD, MU_IOCTL_FD_SET_BORROW, &b);
+      if (rc)
+	{
+	  mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		    ("ioctl(str, MU_IOCTL_FD, MU_IOCTL_FD_SET_BORROW): %s",
+		     mu_stream_strerror (str, rc)));
+	  return MU_ERR_TRANSPORT_SET;
+	}
+    }
+  return 0;
+}
+
 int
 mu_tlsfd_stream2_convert (mu_stream_t *pstream,
 			  mu_stream_t istr, mu_stream_t ostr,
@@ -728,28 +759,109 @@ mu_tlsfd_stream2_convert (mu_stream_t *pstream,
       return rc;
     }
 
-  t[0] = (mu_transport_t) -1;
-  t[1] = NULL;
-  rc = mu_stream_ioctl (istr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET, t);
+  if (stream_reset_transport (istr))
+    return MU_ERR_TRANSPORT_SET;
+  if (ostr)
+    {
+      if (stream_reset_transport (ostr))
+	return MU_ERR_TRANSPORT_SET;
+    }
+  return 0;
+}
+
+int
+mu_starttls (mu_stream_t *pstream, struct mu_tls_config *conf,
+	     enum mu_tls_type type)
+{
+  mu_stream_t transport;
+  mu_stream_t tlsstream, stream[2], tstr, istr;
+  int rc;
+
+  if (!pstream || !*pstream)
+    return EINVAL;
+  
+  transport = *pstream;
+  mu_stream_flush (transport);
+  
+  /*
+   * Find the iostream.
+   * Unless transcript is enabled the iostream variable refers to a
+   * CRLF filter, and its sub-stream is the iostream object.  If transcript
+   * is enabled, the transcript stream is added on top and iostream refers
+   * to it.
+   *
+   * The loop below uses the fact that iostream is the only stream in
+   * mailutils that returns *both* transport streams on MU_IOCTL_TOPSTREAM/
+   * MU_IOCTL_OP_GET ioctl.  Rest of streams that support MU_IOCTL_TOPSTREAM,
+   * return the transport stream in stream[0] and NULL in stream[1].
+   */
+  tstr = istr = transport;
+  while ((rc = mu_stream_ioctl (istr,
+				MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_GET,
+				stream)) == 0
+	 && stream[1] == NULL)
+    {
+      tstr = istr;
+      istr = stream[0];
+      mu_stream_unref (istr);
+    }
+
+  switch (rc)
+    {
+    case 0:
+      /* OK */
+      mu_stream_unref (stream[0]);
+      mu_stream_unref (stream[1]);
+      break;
+
+    case ENOSYS:
+      /* There's no underlying stream. */
+      tstr = NULL;
+      stream[0] = transport;
+      stream[1] = NULL;
+      break;
+
+    default:
+      /* Error */
+      mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
+		("%s", _("INTERNAL ERROR: cannot locate I/O stream")));
+      return MU_ERR_TRANSPORT_GET;
+    }
+
+  rc = mu_tlsfd_stream2_convert (&tlsstream, stream[0], stream[1], conf, type);
   if (rc)
     {
       mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
-		("ioctl(istr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET): %s",
-		 mu_stream_strerror (istr, rc)));
-      return MU_ERR_TRANSPORT_SET;
+		(_("cannot open TLS stream: %s"), mu_strerror (rc)));
+      if (rc == MU_ERR_TRANSPORT_SET)
+	{	  
+	  stream_reset_transport (tlsstream);
+	  mu_stream_destroy (&tlsstream);
+	  /* NOTE: iostream is unusable now */
+	  return MU_ERR_FAILURE;
+	}
+      return rc;
     }
-  if (ostr)
+
+  if (tstr)
     {
-      t[0] = NULL;
-      t[1] = (mu_transport_t) -1;
-      rc = mu_stream_ioctl (ostr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET, t);
+      stream[0] = tlsstream;
+      stream[1] = NULL;
+      rc = mu_stream_ioctl (tstr, MU_IOCTL_TOPSTREAM, MU_IOCTL_OP_SET, stream);
       if (rc)
 	{
 	  mu_debug (MU_DEBCAT_TLS, MU_DEBUG_ERROR,
-		    ("ioctl(ostr, MU_IOCTL_TRANSPORT, MU_IOCTL_OP_SET): %s",
-		     mu_stream_strerror (ostr, rc)));
-	  return MU_ERR_TRANSPORT_SET;
+		    (_("INTERNAL ERROR: failed to install TLS stream: %s"),
+		     mu_strerror (rc)));
+	  return MU_ERR_FAILURE;
 	}
+      mu_stream_unref (tlsstream);
     }
+  else
+    {
+      mu_stream_destroy (&transport);
+      *pstream = tlsstream;
+    }
+  
   return 0;
 }

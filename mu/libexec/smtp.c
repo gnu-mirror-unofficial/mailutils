@@ -211,11 +211,14 @@ com_connect (int argc, char **argv)
 	  if (tls)
 	    {
 	      mu_stream_t tlsstream;
-	      
-	      status = mu_tls_client_stream_create (&tlsstream, tcp, tcp, 0);
+
+	      status = mu_tlsfd_stream_convert (&tlsstream, tcp, NULL,
+						MU_TLS_CLIENT);
 	      mu_stream_unref (tcp);
 	      if (status)
 		{
+		  if (status == MU_ERR_TRANSPORT_SET)
+		    mu_stream_destroy (&tlsstream);
 		  mu_error ("cannot create TLS stream: %s",
 			    mu_strerror (status));
 		  return 0;
@@ -224,6 +227,7 @@ com_connect (int argc, char **argv)
 	    }
 #endif
 	  mu_smtp_set_carrier (smtp, tcp);
+	  mu_stream_unref (tcp);
 	  status = smtp_error_handler (mu_smtp_open (smtp));
 	}
       else

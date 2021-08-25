@@ -405,6 +405,8 @@ mu_iostream_create (mu_stream_t *pref, mu_stream_t in, mu_stream_t out)
     
   mu_stream_ref (in);
   sp->transport[_MU_STREAM_INPUT] = in;
+  if (!out)
+    out = in;
   mu_stream_ref (out);
   sp->transport[_MU_STREAM_OUTPUT] = out;
 

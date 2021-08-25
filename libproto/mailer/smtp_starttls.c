@@ -81,7 +81,6 @@ mu_smtp_starttls (mu_smtp_t smtp)
 {
 #ifdef WITH_TLS
   int status;
-  mu_stream_t tlsstream, streams[2];
   
   if (!smtp)
     return EINVAL;
@@ -101,19 +100,7 @@ mu_smtp_starttls (mu_smtp_t smtp)
   else if (smtp->replcode[0] != '2')
     return MU_ERR_FAILURE;
 
-  mu_stream_flush (smtp->carrier);
-  status = _mu_smtp_get_streams (smtp, streams);
-  MU_SMTP_CHECK_ERROR (smtp, status);
-  
-  status = mu_tls_client_stream_create (&tlsstream,
-					streams[0], streams[1], 0);
-  mu_stream_unref (streams[0]);
-  mu_stream_unref (streams[1]);
-  MU_SMTP_CHECK_ERROR (smtp, status);
-  streams[0] = streams[1] = tlsstream;
-  status = _mu_smtp_set_streams (smtp, streams);
-  mu_stream_unref (streams[0]);
-  mu_stream_unref (streams[1]);
+  status = mu_starttls (&smtp->carrier, NULL, MU_TLS_CLIENT);
   MU_SMTP_CHECK_ERROR (smtp, status);
   /* Invalidate the capability list */
   mu_list_destroy (&smtp->capa);

@@ -50,8 +50,9 @@
 struct _tcp_instance
 {
   struct _mu_stream stream;
-  int 		fd;
-  int		state;
+  int fd;
+  int state;
+  int fd_borrowed;
   struct mu_sockaddr *remote_addr;
   struct mu_sockaddr *source_addr;
 };
@@ -62,7 +63,7 @@ _tcp_close (mu_stream_t stream)
   struct _tcp_instance *tcp = (struct _tcp_instance *)stream;
   int err = 0;
 
-  if (tcp->fd != -1)
+  if (tcp->fd != -1 && tcp->fd_borrowed)
     {
       if (close (tcp->fd) != 0)
 	{
@@ -169,11 +170,32 @@ _tcp_ioctl (mu_stream_t stream, int code, int opcode, void *ptr)
 	      ptrans[0] = (mu_transport_t) (intptr_t) tcp->fd;
 	      ptrans[1] = NULL;
 	      break;
+
 	    case MU_IOCTL_OP_SET:
-	      return ENOSYS;
+	      tcp->fd = (int) (intptr_t) ptrans[0];	      
+	      break;
+	      
 	    default:
 	      return EINVAL;
 	    }
+	}
+      break;
+
+    case MU_IOCTL_FD:
+      if (!ptr)
+	return EINVAL;
+      switch (opcode)
+	{
+	case MU_IOCTL_FD_GET_BORROW:
+	  *(int*) ptr = tcp->fd_borrowed;
+	  break;
+
+	case MU_IOCTL_FD_SET_BORROW:
+	  tcp->fd_borrowed = *(int*)ptr;
+	  break;
+
+	default:
+	  return EINVAL;
 	}
       break;
 

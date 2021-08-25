@@ -251,20 +251,23 @@ smtp_open (mu_mailer_t mailer, int flags)
   if (smtp_mailer->tls == MAILER_TLS_ALWAYS)
     {
       mu_stream_t tlsstream;
-      
-      rc = mu_tls_client_stream_create (&tlsstream, transport, transport, 0);
+
+      rc = mu_tlsfd_stream_convert (&tlsstream, transport, NULL,
+				    MU_TLS_CLIENT);
       mu_stream_unref (transport);
       if (rc)
 	{
-	  mu_debug (MU_DEBCAT_MAILER, MU_DEBUG_ERROR,
-		    (_("cannot create TLS stream: %s"),
-		     mu_strerror (rc)));
-	  mu_sockaddr_free (sa);
+	  if (rc == MU_ERR_TRANSPORT_SET)
+	    {
+	      mu_stream_destroy (&tlsstream);
+	      mu_tls_enable = 0;
+	    }
+	  mu_debug (MU_DEBCAT_FOLDER, MU_DEBUG_ERROR,
+		    ("cannot create TLS stream: %s", mu_strerror (rc)));
 	  if (mu_tls_enable)
 	    return rc;
 	}
-      else
-	transport = tlsstream;
+      transport = tlsstream;
     }
 #endif
   mu_stream_set_buffer (transport, mu_buffer_line, 0);

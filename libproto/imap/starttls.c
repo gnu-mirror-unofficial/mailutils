@@ -32,7 +32,7 @@ mu_imap_starttls (mu_imap_t imap)
 {
 #ifdef WITH_TLS
   int status;
-  mu_stream_t tlsstream, streams[2];
+  mu_stream_t transport;
   
   if (imap == NULL)
     return EINVAL;
@@ -63,17 +63,15 @@ mu_imap_starttls (mu_imap_t imap)
       switch (imap->response)
 	{
 	case MU_IMAP_OK:
-	  status = mu_imapio_get_streams (imap->io, streams);
+	  status = mu_imapio_get_transport (imap->io, &transport);
 	  MU_IMAP_CHECK_EAGAIN (imap, status);
-	  status = mu_tls_client_stream_create (&tlsstream,
-						streams[0], streams[1], 0);
-	  mu_stream_unref (streams[0]);
-	  mu_stream_unref (streams[1]);
+	  mu_stream_unref (transport);
+
+	  status = mu_starttls (&transport, NULL, MU_TLS_CLIENT);
 	  MU_IMAP_CHECK_EAGAIN (imap, status);
-	  streams[0] = streams[1] = tlsstream;
-	  status = mu_imapio_set_streams (imap->io, streams);
-	  mu_stream_unref (streams[0]);
-	  mu_stream_unref (streams[1]);
+
+	  status = mu_imapio_set_transport (imap->io, transport);
+	  mu_stream_unref (transport);
 	  MU_IMAP_CHECK_EAGAIN (imap, status);
 	  /* Invalidate the capability list */
 	  mu_list_destroy (&imap->capa);
