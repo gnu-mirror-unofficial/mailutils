@@ -174,7 +174,7 @@ static char *error_table[] = {
   [ERR_BAD_CMD]     =   "Invalid command",
   [ERR_MBOX_LOCK]   =   "[IN-USE] Mailbox in use",
   [ERR_TOO_LONG]    =   "Argument too long",
-  [ERR_NO_MEM]      =   "Out of memory] =quitting",
+  [ERR_NO_MEM]      =   "Out of memory, quitting",
   [ERR_SIGNAL]      =   "Quitting on signal",
   [ERR_FILE]        =   "Some deleted messages not removed",
   [ERR_NO_IFILE]    =   "No input stream",

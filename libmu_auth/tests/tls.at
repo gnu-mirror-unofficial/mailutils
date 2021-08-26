@@ -1,0 +1,59 @@
+# This file is part of GNU Mailutils. -*- Autotest -*-
+# Copyright (C) 2010-2021 Free Software Foundation, Inc.
+#
+# GNU Mailutils is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([tls streams])
+
+AT_CHECK([test "$COND_GNUTLS" = yes || AT_SKIP_TEST])
+
+AT_CHECK([certtool --version >/dev/null 2>&1 || AT_SKIP_TEST])
+
+AT_DATA([cert.cfg],
+[organization = "GNU mailutils"
+unit = "test suite"
+])
+
+AT_CHECK([certtool --generate-privkey --outfile key.pem || AT_SKIP_TEST
+certtool --generate-self-signed --load-privkey key.pem --outfile cert.pem --template=cert.cfg || AT_SKIP_TEST],
+[0],
+[ignore],
+[ignore])
+
+AT_CHECK([
+# Generate input file for the next two tests.  Make it sufficiently large so
+# that it spans several line buffers (default buffer size is 8k)
+genfile -f input -p 32k
+])
+
+AT_CHECK([tlscpy -k key.pem -c cert.pem -i new -s client -o output input &&
+  cmp input output])
+
+AT_CHECK([tlscpy -k key.pem -c cert.pem -i new -s server -o output input &&
+  cmp input output])
+
+AT_CHECK([
+# Generate input file for the next two tests.  Make it sufficiently large so
+# that it spans several full buffers (default buffer size is 8k)
+genfile -f input 32k
+])
+
+AT_CHECK([tlscpy -F -k key.pem -c cert.pem -i new -s client -o output input &&
+  cmp input output])
+
+AT_CHECK([tlscpy -F -k key.pem -c cert.pem -i new -s server -o output input &&
+  cmp input output])
+
+AT_CLEANUP
+

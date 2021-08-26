@@ -1392,6 +1392,7 @@ AC_CONFIG_TESTDIR(libtests)
 AC_CONFIG_FILES([libtests/Makefile libtests/atlocal])
 
 MU_CONFIG_TESTSUITE(libmailutils)
+MU_CONFIG_TESTSUITE(libmu_auth)
 MU_CONFIG_TESTSUITE(frm)
 MU_CONFIG_TESTSUITE(mda/lmtpd)
 MU_CONFIG_TESTSUITE(mda/mda)
