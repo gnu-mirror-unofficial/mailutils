@@ -236,7 +236,7 @@ pop3d_init_tls_server (struct mu_tls_config *tls_conf)
   int rc;
   
   rc = mu_starttls (&iostream, tls_conf, MU_TLS_SERVER);
-  if (rc)
+  if (rc == 0)
     log_cipher (iostream);
   else
     {
