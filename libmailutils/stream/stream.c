@@ -1019,6 +1019,9 @@ mu_stream_timed_getdelim (mu_stream_t stream, char **pbuf, size_t *psize,
 
   if ((rc = _stream_flush_buffer (stream, FLUSH_WRITE)))
     return rc;
+
+  if (lineptr == NULL)
+    n = 0;
   
   for (;;)
     {
