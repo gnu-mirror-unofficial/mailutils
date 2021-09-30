@@ -19,6 +19,7 @@
 #endif
 #include <time.h>
 
+#define SECS_PER_DAY 86400
 #define TMSEC(t) (((t)->tm_hour * 60 + (t)->tm_min) * 60 + (t)->tm_sec)
 
 /* Returns the offset of our timezone from UTC, in seconds. */
@@ -29,9 +30,9 @@ mu_utc_offset (void)
   struct tm ltm = *localtime (&t);
   struct tm gtm = *gmtime (&t);
   int d = TMSEC (&ltm) - TMSEC (&gtm);
-  if (!(ltm.tm_year == gtm.tm_year
-	&& ltm.tm_mon == gtm.tm_mon
-	&& ltm.tm_mday == gtm.tm_mday))
-    d += 86400;
+  if (d < 0 && -d > SECS_PER_DAY/2)
+    d += SECS_PER_DAY;
+  else if (d > SECS_PER_DAY/2)
+    d -= SECS_PER_DAY;
   return d;
 }
