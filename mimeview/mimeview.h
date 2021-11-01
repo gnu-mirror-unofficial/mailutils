@@ -17,35 +17,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef HAVE_STRINGS_H
-# include <strings.h>
-#endif
 #include <mailutils/mailutils.h>
 #include <mailutils/locus.h>
 #include <mailutils/yyloc.h>
 #include <fnmatch.h>
 
-struct mimetypes_string
-{
-  char *ptr;
-  size_t len;
-};
+typedef struct mu_mimetypes *mu_mimetypes_t;
 
-int mimetypes_yylex (void);
-int mimetypes_yyerror (char *s);
+mu_mimetypes_t mimetypes_open (const char *name);
+void mu_mimetypes_close (mu_mimetypes_t mt);
+const char *mu_mimetypes_stream_type (mu_mimetypes_t mt,
+				      char const *name, mu_stream_t str);
+const char *mu_mimetypes_file_type (mu_mimetypes_t mt, const char *file);
+const char *mu_mimetypes_fd_type (mu_mimetypes_t mt, const char *file, int fd);
 
-int mimetypes_open (const char *name);
-void mimetypes_close (void);
-int mimetypes_parse (const char *name);
-void mimetypes_lex_init (void);
-
-void lex_next_rule (void);
-void *mimetypes_malloc (size_t size);
-
-struct mimetypes_string *mimetypes_string_dup (struct mimetypes_string *s);
-
-const char *get_file_type (void);
-
-extern char const *mimeview_file;
-extern mu_stream_t mimeview_stream;    
 

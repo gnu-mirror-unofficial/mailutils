@@ -18,10 +18,8 @@
 #ifndef _MAILUTILS_YYLOC_H
 #define _MAILUTILS_YYLOC_H
 
-void mu_file_print_locus_point (FILE *,
-				struct mu_locus_point const *lpt);
-void mu_file_print_locus_range (FILE *,
-				struct mu_locus_range const *loc);
+void mu_file_print_locus_point (FILE *, struct mu_locus_point const *lpt);
+void mu_file_print_locus_range (FILE *, struct mu_locus_range const *loc);
 
 #define YYLLOC_DEFAULT(Current, Rhs, N)				  \
   do								  \

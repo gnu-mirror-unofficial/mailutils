@@ -38,8 +38,6 @@ static char *mimetypes_config = DEFAULT_CUPS_CONFDIR;
 static char *no_ask_types;  /* List of MIME types for which no questions
 			       should be asked */
 static int interactive = -1; 
-char const *mimeview_file;      /* Name of the file to view */
-mu_stream_t mimeview_stream;    /* The corresponding stream */
 
 
 static void
@@ -160,39 +158,6 @@ static char *capa[] = {
   NULL
 };
 
-static int
-open_file (char const *name)
-{
-  int rc;
-  struct stat st;
-  
-  if (stat (name, &st))
-    {
-      mu_error (_("cannot stat `%s': %s"), name, mu_strerror (errno));
-      return -1;
-    }
-  if (!S_ISREG (st.st_mode) && !S_ISLNK (st.st_mode))
-    {
-      mu_error (_("not a regular file or symbolic link: `%s'"), name);
-      return -1;
-    }
-
-  mimeview_file = name;
-  rc = mu_file_stream_create (&mimeview_stream, mimeview_file, MU_STREAM_READ);
-  if (rc)
-    {
-      mu_error (_("Cannot open `%s': %s"), name, mu_strerror (rc));
-      return -1;
-    }
-  return 0;
-}
-
-void
-close_file ()
-{
-  mu_stream_close (mimeview_stream);
-}
-
 void
 display_file (const char *file, const char *type)
 {
@@ -218,7 +183,7 @@ display_file (const char *file, const char *type)
       
       argv[3] = "-c";
       argv[4] = (char*) type;
-      argv[5] = (char*) mimeview_file;
+      argv[5] = (char*) file;
       argv[6] = NULL;
       
       if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE0))
@@ -244,9 +209,20 @@ display_file (const char *file, const char *type)
 	mu_error (_("cannot create header: %s"), mu_strerror (status));
       else
 	{
-	  display_stream_mailcap (mimeview_file, mimeview_stream, hdr,
-				  no_ask_types, interactive, dry_run,
-				  MU_DEBCAT_APP);
+	  mu_stream_t str;
+
+	  status = mu_file_stream_create (&str, file, MU_STREAM_READ);
+	  if (status)
+	    {
+	      mu_error (_("Cannot open `%s': %s"), file, mu_strerror (status));
+	    }
+	  else
+	    {
+	      display_stream_mailcap (file, str, hdr,
+				      no_ask_types, interactive, dry_run,
+				      MU_DEBCAT_APP);
+	      mu_stream_destroy (&str);
+	    }
 	  mu_header_destroy (&hdr);
 	}
     }
@@ -255,6 +231,8 @@ display_file (const char *file, const char *type)
 int
 main (int argc, char **argv)
 {
+  mu_mimetypes_t mt;
+  
   MU_APP_INIT_NLS ();
 
   interactive = isatty (fileno (stdin));
@@ -274,21 +252,18 @@ main (int argc, char **argv)
       return 1;
     }
 
-  if (mimetypes_parse (mimetypes_config))
+  if ((mt = mimetypes_open (mimetypes_config)) == NULL)
     return 1;
-  if (lint)
-    return 0;
-  
-  while (argc--)
-    {
-      const char *type;
-      char const *file = *argv++;
-      if (open_file (file))
-	continue;
-      type = get_file_type ();
-      display_file (file, type);
-      close_file ();
+  if (!lint)
+    {  
+      while (argc--)
+	{
+	  char const *file = *argv++;
+	  char const *type = mu_mimetypes_file_type (mt, file);
+	  display_file (file, type);
+	}
     }
+  mu_mimetypes_close (mt);
   
   return 0;
 }

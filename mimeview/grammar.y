@@ -23,7 +23,7 @@
 #include <mimeview.h>
 #include <grammar.h>
 #include <regex.h>
-  
+
 static void
 yyprint (FILE *output, unsigned short toknum, YYSTYPE val)
 {
@@ -50,9 +50,7 @@ yyprint (FILE *output, unsigned short toknum, YYSTYPE val)
 }
 
 #define YYPRINT yyprint
-
-static mu_list_t arg_list; /* For error recovery */
-
+  
 #define L_OR  0
 #define L_AND 1
 
@@ -73,7 +71,13 @@ union argument
   regex_t rx;
 };
 
-typedef int (*builtin_t) (union argument *args);
+struct input_file
+{
+  char const *name;
+  mu_stream_t stream;
+};
+ 
+typedef int (*builtin_t) (union argument *args, struct input_file *input);
 
 struct node
 {
@@ -97,20 +101,47 @@ struct node
   } v;
 };
 
-static struct node *make_node (enum node_type type,
+static struct node *make_node (mu_mimetypes_t mth,
+                               enum node_type type,
 			       struct mu_locus_range const *loc); 
-static struct node *make_binary_node (int op,
+static struct node *make_binary_node (mu_mimetypes_t mth,
+                                      int op,
 				      struct node *left, struct node *rigth,
 				      struct mu_locus_range const *loc);
-static struct node *make_negation_node (struct node *p,
+static struct node *make_negation_node (mu_mimetypes_t mth,
+                                        struct node *p,
 					struct mu_locus_range const *loc);
 
-static struct node *make_suffix_node (struct mimetypes_string *suffix,
+static struct node *make_suffix_node (mu_mimetypes_t mth,
+                                      struct mimetypes_string *suffix,
 				      struct mu_locus_range const *loc);
-static struct node *make_functional_node (char *ident, mu_list_t list,
+static struct node *make_functional_node (mu_mimetypes_t mth,
+                                          char *ident, mu_list_t list,
 					  struct mu_locus_range const *loc);
 
-static int eval_rule (struct node *root);
+static int eval_rule (struct node *root, struct input_file *input);
+
+static void *
+mimetypes_malloc (mu_mimetypes_t mth, size_t size)
+{
+  mu_opool_alloc (mth->pool, size);
+  return mu_opool_finish (mth->pool, NULL);
+}
+
+struct mimetypes_string *     
+mimetypes_string_dup (mu_mimetypes_t mth, struct mimetypes_string *s)
+{
+  mu_opool_append (mth->pool, s, sizeof *s);
+  return mu_opool_finish (mth->pool, NULL);
+}
+ 
+%}
+
+%define api.pure full
+%define api.prefix {mimetypes_yy}
+
+%code requires {
+#define MIMETYPES_YYLTYPE struct mu_locus_range
 
 struct rule_tab
 {
@@ -120,15 +151,54 @@ struct rule_tab
   struct node *node;
 };
 
-static mu_list_t rule_list;
-static size_t errors;
-%}
+struct mu_mimetypes
+{
+  mu_list_t rule_list;
+  mu_opool_t pool;
+};
 
-%define api.prefix {mimetypes_yy}
-%code requires {
-#define MIMETYPES_YYLTYPE struct mu_locus_range
-#define yylloc mimetypes_yylloc
-#define yylval mimetypes_yylval
+typedef void *yyscan_t;  
+
+struct parser_control
+{
+  mu_linetrack_t trk;
+  struct mu_locus_point string_beg; 
+  size_t errors;
+  mu_list_t arg_list;
+  mu_mimetypes_t mth;
+};
+
+struct mimetypes_string
+{
+  char *ptr;
+  size_t len;
+}; 
+}
+
+%code provides {
+int mimetypes_yylex (MIMETYPES_YYSTYPE *lvalp, MIMETYPES_YYLTYPE *llocp,
+		     yyscan_t yyscanner);
+int mimetypes_yylex_init_extra (struct parser_control *, yyscan_t *);
+int mimetypes_yylex_destroy (yyscan_t);
+void mimetypes_yyerror (MIMETYPES_YYLTYPE const *llocp,
+			struct parser_control *pctl, yyscan_t scanner,
+			char const *fmt, ...)
+  MU_PRINTFLIKE(4,5);
+int mimetypes_scanner_open (yyscan_t scanner, const char *name);
+ 
+void lex_next_rule (MIMETYPES_YYLTYPE *llocp, yyscan_t scanner);
+}
+
+%parse-param { struct parser_control *pctl } { void *yyscanner }
+%lex-param { yyscan_t yyscanner }
+%initial-action {
+  /*
+   * yylloc is a local variable of yyparse.  It is maintained in sync with
+   * the trk member of struct parser_control, and need to be deallocated
+   * before returning from yyparse.  Since Bison does not provide any
+   * %final-action, the variable is deinited in the <<EOF>> scanner rule.
+   */
+  mu_locus_range_init (&yylloc);
 }
 %locations
 %expect 15
@@ -165,9 +235,7 @@ list     : rule_line
 rule_line: /* empty */ 
          | TYPE maybe_rule maybe_priority
            {
-	     struct rule_tab *p = mimetypes_malloc (sizeof (*p));
-	     if (!rule_list)
-	       mu_list_create (&rule_list);
+	     struct rule_tab *p = mimetypes_malloc (pctl->mth, sizeof (*p));
 	     p->type = $1.ptr;
 	     p->node = $2;
 	     p->priority = $3;
@@ -178,7 +246,7 @@ rule_line: /* empty */
 	     YY_LOCATION_PRINT (stderr, p->loc);
 	     fprintf (stderr, ": rule %s\n", p->type);
 #endif
-	     mu_list_append (rule_list, p);
+	     mu_list_append (pctl->mth->rule_list, p);
 	   }
 	 | BOGUS
 	   {
@@ -186,10 +254,10 @@ rule_line: /* empty */
 	   }
          | error 
            {
-	     errors++;
-	     if (arg_list)
-	       mu_list_destroy (&arg_list);
-	     lex_next_rule ();
+	     pctl->errors++;
+	     if (pctl->arg_list)
+	       mu_list_destroy (&pctl->arg_list);
+	     lex_next_rule (&@1, yyscanner);
 	     yyerrok;
 	     yyclearin;
 	   }
@@ -197,7 +265,7 @@ rule_line: /* empty */
 
 maybe_rule: /* empty */
            {
-	     $$ = make_node (true_node, &yylloc);
+	     $$ = make_node (pctl->mth, true_node, &yylloc);
 	   }
          | rule
 	 ;
@@ -208,27 +276,27 @@ rule     : stmt
 	     struct mu_locus_range lr;
 	     lr.beg = @1.beg;
 	     lr.end = @2.end;
-	     $$ = make_binary_node (L_OR, $1, $2, &lr);
+	     $$ = make_binary_node (pctl->mth, L_OR, $1, $2, &lr);
 	   }
          | rule ',' rule
            {
 	     struct mu_locus_range lr;
 	     lr.beg = @1.beg;
 	     lr.end = @3.end;
-	     $$ = make_binary_node (L_OR, $1, $3, &lr);
+	     $$ = make_binary_node (pctl->mth, L_OR, $1, $3, &lr);
 	   }
          | rule '+' rule
            {
 	     struct mu_locus_range lr;
 	     lr.beg = @1.beg;
 	     lr.end = @3.end;
-	     $$ = make_binary_node (L_AND, $1, $3, &lr);
+	     $$ = make_binary_node (pctl->mth, L_AND, $1, $3, &lr);
 	   }
          ;
 
 stmt     : '!' stmt
            {
-	     $$ = make_negation_node ($2, &@2);
+	     $$ = make_negation_node (pctl->mth, $2, &@2);
 	   }
          | '(' rule ')'
            {
@@ -236,7 +304,7 @@ stmt     : '!' stmt
 	   }
          | STRING
            {
-	     $$ = make_suffix_node (&$1, &@1);
+	     $$ = make_suffix_node (pctl->mth, &$1, &@1);
 	   }
          | function
 	 | BOGUS
@@ -253,7 +321,8 @@ priority : PRIORITY '(' arglist ')'
 	     mu_list_count ($3, &count);
 	     if (count != 1)
 	       {
-		 yyerror (_("priority takes single numberic argument"));
+		 yyerror (&@3, pctl, yyscanner,
+			  "%s", _("priority takes single numberic argument"));
 		 YYERROR;
 	       }
 	     mu_list_head ($3, (void**) &arg);
@@ -275,7 +344,7 @@ function : IDENT '(' arglist ')'
 	     lr.beg = @1.beg;
 	     lr.end = @4.end;
 	     
-	     $$ = make_functional_node ($1.ptr, $3, &lr);
+	     $$ = make_functional_node (pctl->mth, $1.ptr, $3, &lr);
 	     if (!$$)
 	       YYERROR;
 	   }
@@ -283,13 +352,13 @@ function : IDENT '(' arglist ')'
 
 arglist  : arg
            {
-	     mu_list_create (&arg_list);
-	     $$ = arg_list;
-	     mu_list_append ($$, mimetypes_string_dup (&$1));
+	     mu_list_create (&pctl->arg_list);
+	     $$ = pctl->arg_list;
+	     mu_list_append ($$, mimetypes_string_dup (pctl->mth, &$1));
 	   }
          | arglist ',' arg
            {
-	     mu_list_append ($1, mimetypes_string_dup (&$3));
+	     mu_list_append ($1, mimetypes_string_dup (pctl->mth, &$3));
 	     $$ = $1;
 	   }
          ;
@@ -303,29 +372,112 @@ arg      : STRING
 
 %%
 
-int
-yyerror (char *s)
+void
+yyerror (MIMETYPES_YYLTYPE const *loc, struct parser_control *pctl,
+	 yyscan_t scanner, char const *fmt, ...)
 {
-  mu_error ("%s", s);
-  return 0;
+  va_list ap;
+
+  va_start(ap, fmt);
+  mu_vdiag_at_locus_range (MU_DIAG_ERROR, loc, fmt, ap);
+  va_end (ap);
 }
 
-int
-mimetypes_parse (const char *name)
+static void
+parser_control_init (struct parser_control *ctl,
+		     char const *filename, struct mu_mimetypes *mth)
+{
+  memset (ctl, 0, sizeof *ctl);
+  mu_linetrack_create (&ctl->trk, filename, 3);
+  ctl->mth = mth;
+}
+
+static void
+parser_control_destroy (struct parser_control *ctl)
+{
+  mu_linetrack_destroy (&ctl->trk);
+  mu_locus_point_deinit (&ctl->string_beg);
+  mu_list_destroy (&ctl->arg_list);
+}
+
+static void
+locus_on (void)
+{
+  int mode;
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
+  mode |= MU_LOGMODE_LOCUS;
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+}
+
+static void
+locus_off (void)
+{
+  int mode;
+
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
+  mode &= ~MU_LOGMODE_LOCUS;
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
+  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
+                   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, NULL);
+}
+
+mu_mimetypes_t 
+mimetypes_open (const char *name)
 {
   int rc;
-  if (mimetypes_open (name))
-    return 1;
-  yydebug = mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE3);  
-  rc = yyparse ();
-  mimetypes_close ();
-  return rc || errors;
+  struct mu_mimetypes *mtp;
+  struct parser_control ctl;
+  void *scanner;
+
+  mtp = mu_alloc (sizeof *mtp);
+  //FIXME: install destroy_item ?
+  mu_list_create (&mtp->rule_list);
+  mu_opool_create (&mtp->pool, MU_OPOOL_ENOMEMABRT);
+
+  parser_control_init (&ctl, name, mtp);  
+
+  mimetypes_yylex_init_extra (&ctl, &scanner);
+  if (mimetypes_scanner_open (scanner, name))
+    rc = 1;
+  else
+    {
+      yydebug = mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE3);
+      locus_on ();
+      rc = yyparse (&ctl, scanner);
+      locus_off ();
+    }
+  mimetypes_yylex_destroy (scanner);
+
+  if (rc || ctl.errors)
+    {
+      mu_mimetypes_close (mtp);
+      mtp = NULL;
+    }
+  parser_control_destroy (&ctl);
+
+  return mtp;
+}
+
+void
+mu_mimetypes_close (mu_mimetypes_t mt)
+{
+  if (mt)
+    {
+      mu_list_destroy (&mt->rule_list);
+      mu_opool_destroy (&mt->pool);
+      free (mt);
+    }
 }
 
 static struct node *
-make_node (enum node_type type, struct mu_locus_range const *loc)
+make_node (mu_mimetypes_t mth,
+	   enum node_type type, struct mu_locus_range const *loc)
 {
-  struct node *p = mimetypes_malloc (sizeof *p);
+  struct node *p = mimetypes_malloc (mth, sizeof *p);
   p->type = type;
   mu_locus_range_init (&p->loc);
   mu_locus_range_copy (&p->loc, loc);
@@ -333,10 +485,11 @@ make_node (enum node_type type, struct mu_locus_range const *loc)
 }
 
 static struct node *
-make_binary_node (int op, struct node *left, struct node *right,
+make_binary_node (mu_mimetypes_t mth,
+		  int op, struct node *left, struct node *right,
 		  struct mu_locus_range const *loc)
 {
-  struct node *node = make_node (binary_node, loc);
+  struct node *node = make_node (mth, binary_node, loc);
 
   node->v.bin.op = op;
   node->v.bin.arg1 = left;
@@ -345,18 +498,20 @@ make_binary_node (int op, struct node *left, struct node *right,
 }
 
 struct node *
-make_negation_node (struct node *p, struct mu_locus_range const *loc)
+make_negation_node (mu_mimetypes_t mth,
+		    struct node *p, struct mu_locus_range const *loc)
 {
-  struct node *node = make_node (negation_node, loc);
+  struct node *node = make_node (mth, negation_node, loc);
   node->v.arg = p;
   return node;
 }
 
 struct node *
-make_suffix_node (struct mimetypes_string *suffix,
+make_suffix_node (mu_mimetypes_t mth,
+		  struct mimetypes_string *suffix,
 		  struct mu_locus_range const *loc)
 {
-  struct node *node = make_node (suffix_node, loc);
+  struct node *node = make_node (mth, suffix_node, loc);
   node->v.suffix = *suffix;
   return node;
 }
@@ -372,9 +527,9 @@ struct builtin_tab
             Pattern match on filename
 */
 static int
-b_match (union argument *args)
+b_match (union argument *args, struct input_file *input)
 {
-  return fnmatch (args[0].string->ptr, mimeview_file, 0) == 0;
+  return fnmatch (args[0].string->ptr, input->name, 0) == 0;
 }
 
 /*       ascii(offset,length)
@@ -385,12 +540,12 @@ b_match (union argument *args)
                     (strchr ("\n\r\t\b",c) \
                      || (32<=((unsigned) c) && ((unsigned) c)<=126)))
 static int
-b_ascii (union argument *args)
+b_ascii (union argument *args, struct input_file *input)
 {
   int i;
   int rc;
 
-  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (input->stream, args[0].number, MU_SEEK_SET, NULL);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
@@ -402,7 +557,7 @@ b_ascii (union argument *args)
       unsigned char c;
       size_t n;
 
-      rc = mu_stream_read (mimeview_stream, &c, 1, &n);
+      rc = mu_stream_read (input->stream, &c, 1, &n);
       if (rc || n == 0)
 	break;
       if (!ISASCII (c))
@@ -419,12 +574,12 @@ b_ascii (union argument *args)
 #define ISPRINT(c) (ISASCII (c) \
 		    || (128<=((unsigned) c) && ((unsigned) c)<=254))
 static int
-b_printable (union argument *args)
+b_printable (union argument *args, struct input_file *input)
 {
   int i;
   int rc;
 
-  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (input->stream, args[0].number, MU_SEEK_SET, NULL);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
@@ -436,7 +591,7 @@ b_printable (union argument *args)
       unsigned char c;
       size_t n;
 
-      rc = mu_stream_read (mimeview_stream, &c, 1, &n);
+      rc = mu_stream_read (input->stream, &c, 1, &n);
       if (rc || n == 0)
 	break;
       if (!ISPRINT (c))
@@ -449,13 +604,13 @@ b_printable (union argument *args)
             True if bytes are identical to string
 */
 static int
-b_string (union argument *args)
+b_string (union argument *args, struct input_file *input)
 {
   struct mimetypes_string *str = args[1].string;
   int i;
   int rc;
   
-  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (input->stream, args[0].number, MU_SEEK_SET, NULL);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
@@ -467,7 +622,7 @@ b_string (union argument *args)
       char c;
       size_t n;
 
-      rc = mu_stream_read (mimeview_stream, &c, 1, &n);
+      rc = mu_stream_read (input->stream, &c, 1, &n);
       if (rc || n == 0 || c != str->ptr[i])
 	return 0;
     }
@@ -479,14 +634,14 @@ b_string (union argument *args)
             identical
 */
 static int
-b_istring (union argument *args)
+b_istring (union argument *args, struct input_file *input)
 {
   int i;
   struct mimetypes_string *str = args[1].string;
   
   int rc;
 
-  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (input->stream, args[0].number, MU_SEEK_SET, NULL);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
@@ -498,7 +653,7 @@ b_istring (union argument *args)
       char c;
       size_t n;
 
-      rc = mu_stream_read (mimeview_stream, &c, 1, &n);
+      rc = mu_stream_read (input->stream, &c, 1, &n);
       if (rc || n == 0 || mu_tolower (c) != mu_tolower (str->ptr[i]))
 	return 0;
     }
@@ -506,19 +661,20 @@ b_istring (union argument *args)
 }
 
 int
-compare_bytes (union argument *args, void *sample, void *buf, size_t size)
+compare_bytes (union argument *args, struct input_file *input,
+	       void *sample, void *buf, size_t size)
 {
   int rc;
   size_t n;
   
-  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (input->stream, args[0].number, MU_SEEK_SET, NULL);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
       return 0;
     }
   
-  rc = mu_stream_read (mimeview_stream, buf, size, &n);
+  rc = mu_stream_read (input->stream, buf, size, &n);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
@@ -533,11 +689,11 @@ compare_bytes (union argument *args, void *sample, void *buf, size_t size)
             True if byte is identical
 */
 static int
-b_char (union argument *args)
+b_char (union argument *args, struct input_file *input)
 {
   char val = args[1].number;
   char buf;
-  return compare_bytes (args, &val, &buf, sizeof (buf));
+  return compare_bytes (args, input, &val, &buf, sizeof (buf));
 }
 
 /*        short(offset,value)
@@ -545,11 +701,11 @@ b_char (union argument *args)
 	  FIXME: Byte order  
 */
 static int
-b_short (union argument *args)
+b_short (union argument *args, struct input_file *input)
 {
   uint16_t val = args[1].number;
   uint16_t buf;
-  return compare_bytes (args, &val, &buf, sizeof (buf));
+  return compare_bytes (args, input, &val, &buf, sizeof (buf));
 }
 
 /*        int(offset,value)
@@ -557,18 +713,18 @@ b_short (union argument *args)
           FIXME: Byte order
 */
 static int
-b_int (union argument *args)
+b_int (union argument *args, struct input_file *input)
 {
   uint32_t val = args[1].number;
   uint32_t buf;
-  return compare_bytes (args, &val, &buf, sizeof (buf));
+  return compare_bytes (args, input, &val, &buf, sizeof (buf));
 }
 
 /*        locale("string")
             True if current locale matches string
 */
 static int
-b_locale (union argument *args)
+b_locale (union argument *args, struct input_file *input)
 {
   abort (); /* FIXME */
   return 0;
@@ -578,14 +734,14 @@ b_locale (union argument *args)
             True if the range contains the string
 */
 static int
-b_contains (union argument *args)
+b_contains (union argument *args, struct input_file *input)
 {
   size_t i, count;
   char *buf;
   struct mimetypes_string *str = args[2].string;
   int rc;
 
-  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (input->stream, args[0].number, MU_SEEK_SET, NULL);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
@@ -593,7 +749,7 @@ b_contains (union argument *args)
     }
 
   buf = mu_alloc (args[1].number);
-  rc = mu_stream_read (mimeview_stream, buf, args[1].number, &count);
+  rc = mu_stream_read (input->stream, buf, args[1].number, &count);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
@@ -614,20 +770,20 @@ b_contains (union argument *args)
 /*   regex(offset,"regex")		True if bytes match regular expression
  */
 static int
-b_regex (union argument *args)
+b_regex (union argument *args, struct input_file *input)
 {
   size_t count;
   int rc;
   char buf[MIME_MAX_BUFFER];
   
-  rc = mu_stream_seek (mimeview_stream, args[0].number, MU_SEEK_SET, NULL);
+  rc = mu_stream_seek (input->stream, args[0].number, MU_SEEK_SET, NULL);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_seek", NULL, rc);
       return 0;
     }
 
-  rc = mu_stream_read (mimeview_stream, buf, sizeof buf - 1, &count);
+  rc = mu_stream_read (input->stream, buf, sizeof buf - 1, &count);
   if (rc)
     {
       mu_diag_funcall (MU_DIAG_ERROR, "mu_stream_read", NULL, rc);
@@ -655,7 +811,8 @@ static struct builtin_tab builtin_tab[] = {
 };
   
 struct node *
-make_functional_node (char *ident, mu_list_t list,
+make_functional_node (mu_mimetypes_t mth,
+		      char *ident, mu_list_t list,
 		      struct mu_locus_range const *loc)
 {
   size_t count, i;
@@ -669,10 +826,7 @@ make_functional_node (char *ident, mu_list_t list,
     {
       if (!p->name)
 	{
-	  char *s;
-	  mu_asprintf (&s, _("%s: unknown function"), ident);
-	  yyerror (s);
-	  free (s);
+	  yyerror (loc, NULL, NULL, _("%s: unknown function"), ident);
 	  return NULL;
 	}
 
@@ -685,22 +839,16 @@ make_functional_node (char *ident, mu_list_t list,
 
   if (count < i)
     {
-      char *s;
-      mu_asprintf (&s, _("too few arguments in call to `%s'"), ident);
-      yyerror (s);
-      free (s);
+      yyerror (loc, NULL, NULL, _("too few arguments in call to `%s'"), ident);
       return NULL;
     }
   else if (count > i)
     {
-      char *s;
-      mu_asprintf (&s, _("too many arguments in call to `%s'"), ident);
-      yyerror (s);
-      free (s);
+      yyerror (loc, NULL, NULL, _("too many arguments in call to `%s'"), ident);
       return NULL;
     }
 
-  args = mimetypes_malloc (count * sizeof *args);
+  args = mimetypes_malloc (mth, count * sizeof *args);
   
   mu_list_get_iterator (list, &itr);
   for (i = 0, mu_iterator_first (itr); !mu_iterator_is_done (itr);
@@ -740,7 +888,7 @@ make_functional_node (char *ident, mu_list_t list,
 	      {
 		char errbuf[512];
 		regerror (rc, &args[i].rx, errbuf, sizeof errbuf);
-		yyerror (errbuf);
+		yyerror (loc, NULL, NULL, "%s", errbuf);
 		return NULL;
 	      }
 	  }
@@ -757,27 +905,24 @@ make_functional_node (char *ident, mu_list_t list,
 	}
     }
 
-  node = make_node (functional_node, loc);
+  node = make_node (mth, functional_node, loc);
   node->v.function.fun = p->handler;
   node->v.function.args = args;
   return node;
   
  err:
   {
-    char *s;
-    mu_asprintf (&s,
-	         _("argument %lu has wrong type in call to `%s'"),
-	         (unsigned long) i, ident);
-    yyerror (s);
-    free (s);
+    yyerror (loc, NULL, NULL,
+	     _("argument %lu has wrong type in call to `%s'"),
+	     (unsigned long) i, ident); 
     return NULL;
   }
 }
 
 static int
-check_suffix (char *suf)
+check_suffix (char *suf, struct input_file *input)
 {
-  char *p = strrchr (mimeview_file, '.');
+  char *p = strrchr (input->name, '.');
   if (!p)
     return 0;
   return strcmp (p+1, suf) == 0;
@@ -823,7 +968,7 @@ mime_debug (int lev, struct mu_locus_range const *loc, char const *fmt, ...)
 }
 
 static int
-eval_rule (struct node *root)
+eval_rule (struct node *root, struct input_file *input)
 {
   int result;
   
@@ -834,21 +979,21 @@ eval_rule (struct node *root)
       break;
       
     case functional_node:
-      result = root->v.function.fun (root->v.function.args);
+      result = root->v.function.fun (root->v.function.args, input);
       break;
       
     case binary_node:
-      result = eval_rule (root->v.bin.arg1);
+      result = eval_rule (root->v.bin.arg1, input);
       switch (root->v.bin.op)
 	{
 	case L_OR:
 	  if (!result)
-	    result |= eval_rule (root->v.bin.arg2);
+	    result |= eval_rule (root->v.bin.arg2, input);
 	  break;
 	  
 	case L_AND:
 	  if (result)
-	    result &= eval_rule (root->v.bin.arg2);
+	    result &= eval_rule (root->v.bin.arg2, input);
 	  break;
 	  
 	default:
@@ -857,11 +1002,11 @@ eval_rule (struct node *root)
       break;
       
     case negation_node:
-      result = !eval_rule (root->v.arg);
+      result = !eval_rule (root->v.arg, input);
       break;
       
     case suffix_node:
-      result = check_suffix (root->v.suffix.ptr);
+      result = check_suffix (root->v.suffix.ptr, input);
       break;
 
     default:
@@ -875,7 +1020,7 @@ static int
 evaluate (void **itmv, size_t itmc, void *call_data)
 {
   struct rule_tab *p = itmv[0];
-  if (eval_rule (p->node))
+  if (eval_rule (p->node, call_data))
     {
       itmv[0] = p;
       mime_debug (MU_DEBUG_TRACE1, &p->loc, "rule %s matches", p->type);
@@ -905,12 +1050,17 @@ rule_cmp (const void *a, const void *b)
 }
 
 const char *
-get_file_type ()
+mu_mimetypes_stream_type (mu_mimetypes_t mt, char const *name, mu_stream_t str)
 {
   mu_list_t res = NULL;
   const char *type = NULL;
+  struct input_file input;
+
+  input.name = name;
+  input.stream = str;
   
-  mu_list_map (rule_list, evaluate, NULL, 1, &res);
+  mu_stream_seek (str, 0, MU_SEEK_SET, NULL);
+  mu_list_map (mt->rule_list, evaluate, &input, 1, &res);
   if (!mu_list_is_empty (res))
     {
       struct rule_tab *rule;
@@ -923,3 +1073,39 @@ get_file_type ()
   return type;
 }
     
+const char *
+mu_mimetypes_file_type (mu_mimetypes_t mt, const char *file)
+{
+  int rc;
+  mu_stream_t str;
+  const char *res;
+  
+  rc = mu_file_stream_create (&str, file, MU_STREAM_READ);
+  if (rc)
+    {
+      mu_error (_("Cannot open `%s': %s"), file, mu_strerror (rc));
+      return NULL;
+    }
+  res = mu_mimetypes_stream_type (mt, file, str);
+  mu_stream_destroy (&str);
+  return res;
+}
+
+const char *
+mu_mimetypes_fd_type (mu_mimetypes_t mt, const char *file, int fd)
+{
+  int rc;
+  mu_stream_t str;
+  const char *res;
+
+  //FIXME: Fix 2nd argument in mu_fd_stream_create prototype
+  rc = mu_fd_stream_create (&str, (char*) file, fd, MU_STREAM_READ);
+  if (rc)
+    {
+      mu_error (_("Cannot open `%s': %s"), file, mu_strerror (rc));
+      return NULL;
+    }
+  res = mu_mimetypes_stream_type (mt, file, str);
+  mu_stream_destroy (&str);
+  return res;
+}

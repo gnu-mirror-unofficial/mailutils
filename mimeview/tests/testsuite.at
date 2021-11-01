@@ -240,7 +240,7 @@ image/tiff                      tiff tif string(0,MM<002A>) string(0,II<2A00>)
 mime.types:2.1: started error recovery
 mime.types:3: finished error recovery
 mimeview: mime.types:6.63: syntax error
-mime.types:6.63: started error recovery
+mime.types:4.1-6.63: started error recovery
 mime.types:9: finished error recovery
 ])
 

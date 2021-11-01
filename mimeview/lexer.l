@@ -28,11 +28,6 @@
 #include <grammar.h>  
 #include <mailutils/io.h>
  
-static mu_linetrack_t trk;
-struct mu_locus_point string_beg;
- 
-static mu_opool_t pool;
- 
 static unsigned 
 digit_to_number (char c)
 {
@@ -41,53 +36,29 @@ digit_to_number (char c)
                      c-'a'+10);
 }
 
-static void
-drop_string (void)
-{
-  mu_opool_clear (pool);
-}
- 
-static void
-finish_string (void)
-{
-  mu_opool_append_char (pool, 0);
-  yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
-  yylval.string.len--;
-  
-  mu_locus_point_copy (&yylloc.end, &yylloc.beg);
-  yylloc.end.mu_col--;
-  mu_locus_point_copy (&yylloc.beg, &string_beg);
-  mu_locus_point_deinit (&string_beg);
-  
-  if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE5))
-    {
-      size_t i;
-      mu_debug_log_begin ("string %zu: ", yylval.string.len);
-      for (i = 0; i < yylval.string.len; i++)
-	if (mu_isprint (yylval.string.ptr[i]))
-	  mu_debug_log_cont ("%c", yylval.string.ptr[i]);
-        else
-	  mu_debug_log_cont ("\\%03o", yylval.string.ptr[i]);
-      mu_debug_log_nl ();
-    }
-#if 0
-  YY_LOCATION_PRINT (stderr, yylloc);
-  fprintf (stderr, ": %s\n", yylval.string.ptr);
-#endif
-}  
+static void finish_string (MIMETYPES_YYSTYPE *lvalp, MIMETYPES_YYLTYPE *llocp,
+			   yyscan_t yyscanner);
 
+#define PCTL (yyget_extra (yyscanner))
+#define POOL PCTL->mth->pool
+ 
 #define YY_USER_ACTION							\
   do									\
     {									\
-      mu_linetrack_advance (trk, &yylloc, yytext, yyleng);		\
+      mu_linetrack_advance (PCTL->trk, yylloc, yytext, yyleng);		\
       mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,			\
-		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, &yylloc);	\
+		       MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, yylloc);	\
     }									\
   while (0);
+
+#define YYSTYPE         MIMETYPES_YYSTYPE
+#define YYLTYPE         MIMETYPES_YYLTYPE
 
 %}
 
 %option prefix="mimetypes_yy"
+%option reentrant noyywrap bison-bridge bison-locations
+%option extra-type="struct parser_control *"
 
 %x RULE ARGS ASTRING
 X [0-9a-fA-F]
@@ -100,10 +71,10 @@ WS [ \t][ \t]*
 ^#.*\n               ;
 \n                   ;
 ^[^ \t\n/]+"/"[^ \t\n]+ {
-  mu_opool_append (pool, yytext, yyleng);
-  mu_opool_append_char (pool, 0);
-  yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
-  yylval.string.len--;
+  mu_opool_append (POOL, yytext, yyleng);
+  mu_opool_append_char (POOL, 0);
+  yylval->string.ptr = mu_opool_finish (POOL, &yylval->string.len);
+  yylval->string.len--;
   BEGIN (RULE);
   return TYPE;
 }
@@ -134,16 +105,16 @@ WS [ \t][ \t]*
 }
 
 {IDENT}/"(" {
-  mu_opool_append (pool, yytext, yyleng);
-  mu_opool_append_char (pool, 0);
-  yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
+  mu_opool_append (POOL, yytext, yyleng);
+  mu_opool_append_char (POOL, 0);
+  yylval->string.ptr = mu_opool_finish (POOL, &yylval->string.len);
   BEGIN (ARGS);
   return IDENT;
 } 
 
 [a-zA-Z0-9_.-]+/[^(] {
-  mu_opool_append (pool, yytext, yyleng);
-  yylval.string.ptr = mu_opool_finish (pool, &yylval.string.len);
+  mu_opool_append (POOL, yytext, yyleng);
+  yylval->string.ptr = mu_opool_finish (POOL, &yylval->string.len);
   return STRING;
 }
 
@@ -162,8 +133,8 @@ WS [ \t][ \t]*
   return BOGUS;
 }
 . {
-  mu_locus_point_copy (&string_beg, &yylloc.beg);
-  mu_linetrack_retreat (trk, 1); 
+  mu_locus_point_copy (&PCTL->string_beg, &yylloc->beg);
+  mu_linetrack_retreat (PCTL->trk, 1); 
   yyless (0);
   BEGIN (ASTRING);
 }
@@ -172,10 +143,10 @@ WS [ \t][ \t]*
 <ASTRING>{
   /* Quoted string */
 \"[^"\n]*\"        {
-  mu_opool_append (pool, yytext+1, yyleng-2);
+  mu_opool_append (POOL, yytext+1, yyleng-2);
 }
 "'"[^'\n]*"'" {
-  mu_opool_append (pool, yytext+1, yyleng-2);
+  mu_opool_append (POOL, yytext+1, yyleng-2);
 }
   
   /* Hex string */
@@ -183,48 +154,54 @@ WS [ \t][ \t]*
   int i;
   for (i = 1; i < yyleng - 2; i += 2)
     {
-      mu_opool_append_char (pool, digit_to_number (yytext[i])*16
+      mu_opool_append_char (POOL, digit_to_number (yytext[i])*16
                                   + digit_to_number (yytext[i+1]));
     }  
 }
 
   /* Unquoted character sequence */
 [^ \t\n,)<"']+/[^"'<] {
-  mu_opool_append (pool, yytext, yyleng);
+  mu_opool_append (POOL, yytext, yyleng);
 }
 
 [^ \t\n,)<"]+/< {
-  mu_opool_append (pool, yytext, yyleng);
+  mu_opool_append (POOL, yytext, yyleng);
 }
 
 [^ \t\n,)<"]+/["'] {
-  mu_opool_append (pool, yytext, yyleng);
+  mu_opool_append (POOL, yytext, yyleng);
 }
 
 \n   {
   mu_error ("unexpected newline in argument");
-  drop_string ();
+  mu_opool_clear (POOL);
   return BOGUS;
 }
 
 . {
-  mu_linetrack_retreat (trk, 1);
+  mu_linetrack_retreat (PCTL->trk, 1);
   yyless (0);
   BEGIN (ARGS);
-  finish_string ();  
+  finish_string (yylval, yylloc, yyscanner);  
   return STRING;
 }
+
+<<EOF>> {
+  mu_locus_range_deinit (yylloc);
+  yypop_buffer_state (yyscanner);
+  yyterminate ();
+ }
 }
 
 %%
 int
-mimetypes_open (const char *name)
+mimetypes_scanner_open (yyscan_t scanner, const char *name)
 {
   struct stat st;
-  int mode;
   char *filename;
-  
-  yy_flex_debug = mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE4);
+  FILE *fp;
+	
+  yyset_debug (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE4), scanner);
 
   if (stat (name, &st))
     {
@@ -237,79 +214,43 @@ mimetypes_open (const char *name)
   else
     filename = mu_strdup (name);
   
-  yyin = fopen (filename, "r");
-  if (!yyin)
+  fp = fopen (filename, "r");
+  if (!fp)
     {
       mu_error (_("cannot open `%s': %s"), filename, mu_strerror (errno));
       free (filename);
       return -1;
     }
 
-  MU_ASSERT (mu_linetrack_create (&trk, filename, 3));
+  yypush_buffer_state (yy_create_buffer (fp, YY_BUF_SIZE, scanner), scanner);  
   free (filename);
   
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
-  mode |= MU_LOGMODE_LOCUS;
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
-
-  mu_opool_create (&pool, MU_OPOOL_ENOMEMABRT);
   return 0;
-}
-
-void
-mimetypes_close ()
-{
-  int mode;
-
-  fclose (yyin);
-  mu_locus_range_deinit (&yylloc);
-  mu_linetrack_destroy (&trk);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_GET_MODE, &mode);
-  mode &= ~MU_LOGMODE_LOCUS;
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
-  mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
-                   MU_IOCTL_LOGSTREAM_SET_LOCUS_RANGE, NULL);
-}
-
-int
-yywrap (void)
-{
-  return 1;
-}
-
-struct mimetypes_string *     
-mimetypes_string_dup (struct mimetypes_string *s)
-{
-  mu_opool_append (pool, s, sizeof *s);
-  return mu_opool_finish (pool, NULL);
-}
-
-void *
-mimetypes_malloc (size_t size)
-{
-  mu_opool_alloc (pool, size);
-  return mu_opool_finish (pool, NULL);
 }
 
 /* Position input at the beginning of the next rule as a final part of error
    recovery */
 void
-lex_next_rule (void)
+lex_next_rule (MIMETYPES_YYLTYPE *llocp, yyscan_t yyscanner)
 {
+  /*
+   * FIXME: whatever it is, it seems the only way to get unput and BEGIN
+   * to work.  Flex does not provide reentrant interface for BEGIN.  As 
+   * to unput, the yyunput could be used instead.  Unfortunately, it is
+   * undocumented, so relying on it is no better than using yyguts_t.
+   */
+  struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+  mu_linetrack_t trk = yyget_extra (yyscanner)->trk;
   int c;
-  int dbg = yy_flex_debug
+  int dbg = yyget_debug (yyscanner)
                || mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE6);
   
   if (dbg)
     {
-      YY_LOCATION_PRINT (stderr, yylloc);
+      YY_LOCATION_PRINT (stderr, *llocp);
       fprintf (stderr, ": started error recovery\n");
     }
-  while ((c = input ()) != EOF)
+  while ((c = input (yyscanner)) != EOF)
     {
       char ch = c;
       if (!mu_isspace (c) && mu_linetrack_at_bol (trk))
@@ -317,7 +258,7 @@ lex_next_rule (void)
 	  unput (c);
 	  break;
  	}
-      mu_linetrack_advance (trk, &yylloc, &ch, 1);
+      mu_linetrack_advance (trk, llocp, &ch, 1);
     }
   if (dbg)
     {
@@ -330,4 +271,37 @@ lex_next_rule (void)
   BEGIN (RULE);
   unput ('\n');
   mu_linetrack_retreat (trk, 1);
- }
+}
+
+static void
+finish_string (MIMETYPES_YYSTYPE *lvalp, MIMETYPES_YYLTYPE *llocp,
+	       yyscan_t yyscanner)
+{
+  struct parser_control *pctl = yyget_extra (yyscanner);
+  mu_opool_t pool = pctl->mth->pool;
+  
+  mu_opool_append_char (pool, 0);
+  lvalp->string.ptr = mu_opool_finish (pool, &lvalp->string.len);
+  lvalp->string.len--;
+  
+  mu_locus_point_copy (&llocp->end, &llocp->beg);
+  llocp->end.mu_col--;
+  mu_locus_point_copy (&llocp->beg, &pctl->string_beg);
+  mu_locus_point_deinit (&pctl->string_beg);
+  
+  if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE5))
+    {
+      size_t i;
+      mu_debug_log_begin ("string %zu: ", lvalp->string.len);
+      for (i = 0; i < lvalp->string.len; i++)
+	if (mu_isprint (lvalp->string.ptr[i]))
+	  mu_debug_log_cont ("%c", lvalp->string.ptr[i]);
+        else
+	  mu_debug_log_cont ("\\%03o", lvalp->string.ptr[i]);
+      mu_debug_log_nl ();
+    }
+#if 0
+  YY_LOCATION_PRINT (stderr, llocp);
+  fprintf (stderr, ": %s\n", lvalp->string.ptr);
+#endif
+}  
