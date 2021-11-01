@@ -16,7 +16,6 @@
 
 EXTRA_DIST = \
  debcat.awk\
- gylwrap\
  mailutils.spec\
  mailutils.spec.in\
  texify.sed\

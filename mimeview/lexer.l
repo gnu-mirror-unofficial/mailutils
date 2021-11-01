@@ -87,6 +87,8 @@ finish_string (void)
 
 %}
 
+%option prefix="mimetypes_yy"
+
 %x RULE ARGS ASTRING
 X [0-9a-fA-F]
 IDENT [a-zA-Z_\.][a-zA-Z0-9_\.-]*
@@ -274,14 +276,7 @@ mimetypes_close ()
 }
 
 int
-yyerror (char *s)
-{
-  mu_error ("%s", s);
-  return 0;
-}
-
-int
-yywrap ()
+yywrap (void)
 {
   return 1;
 }

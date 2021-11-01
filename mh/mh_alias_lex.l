@@ -32,13 +32,6 @@
 static mu_linetrack_t trk;
 static ino_t ali_source_inode;
 
-int
-yyerror (char *s)
-{
-  mu_error ("%s", s);
-  return 0;
-}
- 
 #define xinput() (yyin ? getc(yyin) : EOF)
 #undef YY_INPUT
 #define YY_INPUT(buf,result,max_size)  do { \
@@ -223,6 +216,7 @@ pop_source (void)
 extern int yyparse (void);
 
 %}
+%option prefix="ali_yy"
 %option nounput
 %option noinput
 
@@ -272,15 +266,15 @@ mh_alias_read (char const *name, int fail)
 {
   int rc;
   int old_mode, mode;
-  extern int yydebug;
+  extern int ali_yydebug;
   char *p = getenv ("ALI_YYDEBUG");
 
   if (p && *p > '0' && *p < '9')
-    yydebug = 1;
+    ali_yydebug = 1;
   
   if (push_source (name, fail))
     return 1;
-  if (yydebug)
+  if (ali_yydebug)
     fprintf (stderr, "Starting parse of %s\n", name);
 
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
@@ -288,7 +282,7 @@ mh_alias_read (char const *name, int fail)
   mode = old_mode | MU_LOGMODE_LOCUS;
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &mode);
-  rc = yyparse ();
+  rc = ali_yyparse ();
   mu_stream_ioctl (mu_strerr, MU_IOCTL_LOGSTREAM,
 		   MU_IOCTL_LOGSTREAM_SET_MODE, &old_mode);
   return rc;

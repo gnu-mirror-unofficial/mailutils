@@ -14,9 +14,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS = -dtv
-#AM_LFLAGS=-dvp
 AM_CPPFLAGS =\
  $(MU_LIB_COMMON_INCLUDES)\
  -DMU_SIEVE_MODDIR=\"$(MU_SIEVE_MODDIR)\"
@@ -38,8 +36,8 @@ libmu_sieve_la_SOURCES = \
  relational.c\
  require.c\
  runtime.c\
- sieve-gram.y\
- sieve-lex.l\
+ sieve-gram.c\
+ sieve-lex.c\
  strexp.c\
  string.c\
  tests.c\
@@ -53,9 +51,15 @@ noinst_HEADERS = sieve-priv.h sieve-gram.h
 BUILT_SOURCES = \
   sieve-gram.c sieve-gram.h \
   sieve-lex.c
-
-EXTRA_DIST=gylwrap.conf
-
 MAINTAINERCLEANFILES=$(BUILT_SOURCES)
+EXTRA_DIST = sieve-gram.y sieve-lex.l
+sieve-gram.c sieve-gram.h: sieve-gram.y
+sieve-lex.c: sieve-lex.l
+
+.l.c:
+	$(FLEX) -o $@ $(AM_LFLAGS) $<
+.y.c:
+	$(BISON) -o $@ $(AM_YFLAGS) $<
+
 
 

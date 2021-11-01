@@ -124,6 +124,12 @@ static mu_list_t rule_list;
 static size_t errors;
 %}
 
+%define api.prefix {mimetypes_yy}
+%code requires {
+#define MIMETYPES_YYLTYPE struct mu_locus_range
+#define yylloc mimetypes_yylloc
+#define yylval mimetypes_yylval
+}
 %locations
 %expect 15
 
@@ -295,6 +301,13 @@ arg      : STRING
          ;
 
 %%
+
+int
+yyerror (char *s)
+{
+  mu_error ("%s", s);
+  return 0;
+}
 
 int
 mimetypes_parse (const char *name)

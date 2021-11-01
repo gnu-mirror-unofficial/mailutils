@@ -24,15 +24,27 @@ AM_CPPFLAGS = \
 bin_PROGRAMS = mimeview
 mimeview_SOURCES = \
  mimeview.c \
- grammar.y \
- lexer.l \
+ grammar.c \
+ lexer.c \
  mimeview.h\
  grammar.h
 
-YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS=-vtd
 AM_LFLAGS=-d
-EXTRA_DIST = gylwrap.conf
+
+grammar.c grammar.h: grammar.y
+lexer.c: lexer.l
+
+BUILT_SOURCES = \
+  grammar.c grammar.h \
+  lexer.c
+
+EXTRA_DIST = grammar.y lexer.l
+
+.l.c:
+	$(FLEX) -o $@ $(AM_LFLAGS) $<
+.y.c:
+	$(BISON) -o $@ $(AM_YFLAGS) $<
 
 mimeview_LDADD = \
  $(MU_APP_LIBRARIES)\

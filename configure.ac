@@ -66,9 +66,6 @@ AC_SUBST(MU_LIB_COMMON_INCLUDES,'-I${top_builddir} -I${top_srcdir}/include  -I${
 
 AC_SUBST(MU_APP_COMMON_INCLUDES,'-I${srcdir} -I${top_srcdir}/include -I${top_srcdir}/lib -I${top_srcdir}/lib/gnu -I${top_builddir}/lib/gnu -I${top_builddir} -I${top_builddir}/include')
 
-# Use our replacement for the ylwrap tool
-AC_SUBST([MU_YLWRAP],'$(mu_aux_dir)/gylwrap --')
-
 dnl Check for programs
 AC_PROG_CC
 AM_PROG_CC_C_O

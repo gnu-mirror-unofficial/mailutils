@@ -119,6 +119,12 @@ int yylex (void);
 %type <string> address
 %type <alias> alias
 
+%define api.prefix {ali_yy}
+%code requires {
+#define ALI_YYLTYPE struct mu_locus_range
+#define yylloc ali_yylloc
+#define yylval ali_yylval
+}
 %locations
 
 %%
@@ -206,6 +212,13 @@ string_list  : STRING
              ;
 
 %%
+
+int
+yyerror (char *s)
+{
+  mu_error ("%s", s);
+  return 0;
+}
 
 static mu_list_t
 ali_list_dup (mu_list_t src)

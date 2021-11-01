@@ -14,7 +14,6 @@
 ## You should have received a copy of the GNU General Public License
 ## along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. 
 
-YLWRAP = $(MU_YLWRAP)
 AM_YFLAGS=-vt
 AM_CPPFLAGS = \
  $(MU_APP_COMMON_INCLUDES) $(MU_AUTHINCS)\
@@ -32,8 +31,6 @@ mail_LDADD = \
  $(MU_AUTHLIBS)\
  $(MU_LIB_MAILUTILS)\
  @READLINE_LIBS@ $(MU_COMMON_LIBRARIES)
-
-EXTRA_DIST = msgset.c
 
 mail_SOURCES = \
  alias.c\
@@ -63,7 +60,7 @@ mail_SOURCES = \
  mailline.c\
  mailvar.c\
  mbox.c\
- msgset.y\
+ msgset.c\
  next.c\
  page.c\
  pipe.c\
@@ -93,6 +90,15 @@ mail_SOURCES = \
  visual.c\
  write.c\
  z.c
+
+BUILT_SOURCES = msgset.c
+EXTRA_DIST = msgset.y
+
+msgset.c: msgset.y
+
+.y.c:
+	$(BISON) -o $@ $(AM_YFLAGS) $<
+
 
 SUBDIRS = . testsuite tests
 

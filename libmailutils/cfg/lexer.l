@@ -81,6 +81,7 @@ static struct mu_locus_point string_beg;
   while (0); 
 %}
 
+%option prefix="mu_cfg_yy"
 %option nounput
 %option noinput
 

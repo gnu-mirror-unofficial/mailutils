@@ -21,7 +21,7 @@ libdatetime_la_SOURCES = \
  dow.c\
  doy.c\
  jd.c\
- parsedate.y\
+ parsedate.c\
  scantime.c\
  streamftime.c\
  strftime.c\
@@ -32,6 +32,12 @@ libdatetime_la_SOURCES = \
  utcoff.c\
  yd.c
 
+BUILT_SOURCES = parsedate.c
+EXTRA_DIST = parsedate.y
+
+parsedate.c: parsedate.y
+.y.c:
+	$(BISON) -o $@ $(AM_YFLAGS) $<
+
 AM_CPPFLAGS = $(MU_LIB_COMMON_INCLUDES) -I/libmailutils
-YLWRAP = $(MU_YLWRAP)
-EXTRA_DIST = gylwrap.conf
+

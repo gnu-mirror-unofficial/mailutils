@@ -23,7 +23,6 @@ void mu_file_print_locus_point (FILE *,
 void mu_file_print_locus_range (FILE *,
 				struct mu_locus_range const *loc);
 
-#define YYLTYPE struct mu_locus_range
 #define YYLLOC_DEFAULT(Current, Rhs, N)				  \
   do								  \
     {								  \

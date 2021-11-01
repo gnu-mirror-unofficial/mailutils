@@ -67,14 +67,14 @@ noinst_LIBRARIES = libmh.a
 libmh_a_SOURCES= \
  compcommon.c\
  mboxprop.c\
- mh_alias_gram.y\
- mh_alias_lex.l\
+ mh_alias_gram.c\
+ mh_alias_lex.c\
  mh_getopt.c\
  mh_global.c\
  mh_format.c\
  mh_init.c\
  mh_list.c\
- mh_fmtgram.y\
+ mh_fmtgram.c\
  mh_msgset.c\
  mh_sequence.c\
  mh_stream.c\
@@ -95,8 +95,6 @@ BUILT_SOURCES=\
 
 MAINTAINERCLEANFILES=$(BUILT_SOURCES)
 
-EXTRA_DIST = gylwrap.conf
-
 mhlibdir = $(pkgdatadir)/mh
 
 AM_CPPFLAGS =\
@@ -115,10 +113,9 @@ mh_LIBS = \
  $(MU_COMMON_LIBRARIES)
 LDADD = $(mh_LIBS)
 scan_LDADD = $(mh_LIBS) @CURSES_LIBS@
-pick_SOURCES = pick.c pick.h pick-gram.y pick-gram.h
+pick_SOURCES = pick.c pick.h pick-gram.c pick-gram.h
 
-YLWRAP = $(MU_YLWRAP)
-AM_YFLAGS=-vt
+AM_YFLAGS=-dt
 
 inc_LDADD = \
  ./libmh.a\
@@ -143,3 +140,17 @@ install-exec-hook:
         $(LN_S) show next; \
         $(LN_S) show prev; \
 	cd $$here
+
+EXTRA_DIST = pick-gram.y mh_alias_gram.y mh_fmtgram.y mh_alias_lex.l
+
+pick-gram.c pick-gram.h: pick-gram.y
+mh_alias_gram.c mh_alias_gram.h: mh_alias_gram.y
+mh_alias_lex.c: mh_alias_lex.l
+
+mh_fmtgram.c: mh_fmtgram.y
+	$(BISON) -o $@ -t $<
+
+.l.c:
+	$(FLEX) -o $@ $(AM_LFLAGS) $<
+.y.c:
+	$(BISON) -o $@ $(AM_YFLAGS) $<

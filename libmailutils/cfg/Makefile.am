@@ -20,8 +20,8 @@ noinst_LTLIBRARIES = libcfg.la
 libcfg_la_SOURCES = \
  driver.c\
  format.c\
- lexer.l\
- parser.y
+ lexer.c\
+ parser.c
 
 localedir = $(datadir)/locale
 AM_CPPFLAGS = \
@@ -32,12 +32,18 @@ AM_CPPFLAGS = \
 EXTRA_DIST = \
  lexer.l\
  parser.y\
- parser.h\
- gylwrap.conf
+ parser.h
 
 BUILT_SOURCES = parser.c parser.h lexer.c
 
-YLWRAP = $(MU_YLWRAP)
+parser.c parser.h: parser.y
+lexer.c: lexer.l
+
 AM_YFLAGS=-vdt
 AM_LFLAGS=-dp
+
+.l.c:
+	$(FLEX) -o $@ $(AM_LFLAGS) $<
+.y.c:
+	$(BISON) -o $@ $(AM_YFLAGS) $<
 

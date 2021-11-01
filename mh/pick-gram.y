@@ -38,6 +38,13 @@ static int nesting_level;
 static int reg_flags = REG_EXTENDED|REG_ICASE;
 %}
 
+%define api.prefix {pick_yy}
+%code requires {
+#define PICK_YYLTYPE struct mu_locus_range
+#define yylloc pick_yylloc
+#define yylval pick_yylval
+}
+
 %token <string> T_COMP T_DATEFIELD  T_STRING T_CFLAGS
 %token T_LBRACE T_RBRACE T_BEFORE T_AFTER 
 %left T_OR

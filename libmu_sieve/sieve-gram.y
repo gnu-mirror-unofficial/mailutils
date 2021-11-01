@@ -37,7 +37,13 @@ static void node_list_add (struct mu_sieve_node_list *list,
 
 %}
 
-%error-verbose
+%define api.prefix {mu_sieve_yy}
+%code requires {
+#define MU_SIEVE_YYLTYPE struct mu_locus_range
+#define yylloc mu_sieve_yylloc
+#define yylval mu_sieve_yylval
+}
+%define parse.error verbose
 %locations
 
 %union {

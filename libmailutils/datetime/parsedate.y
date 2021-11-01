@@ -213,6 +213,8 @@ static const char	*yyinput;
 %type <date> item time zone date day rel relspec relunit
 %type <datespec> spec
 
+%define api.prefix {pd_yy}
+
 %%
 
 input   : spec

@@ -153,12 +153,12 @@ push_source (const char *name)
 
   if (yylloc.beg.mu_file && st.st_ino == sieve_source_inode)
     {
-      yyerror (_("recursive inclusion"));
+      mu_sieve_yyerror (_("recursive inclusion"));
       return 1;
     }
   if ((ctx = ctx_lookup (st.st_ino)))
     {
-      yyerror (_("recursive inclusion"));
+      mu_sieve_yyerror (_("recursive inclusion"));
       if (ctx->prev)
 	{
 	  mu_diag_at_locus_range (MU_LOG_ERROR, &ctx->incl_range,
@@ -232,6 +232,7 @@ pop_source ()
 }
 %}
 
+%option prefix="mu_sieve_yy"
 %option nounput
 %option noinput
 
@@ -344,7 +345,7 @@ get_file_name (char *p, char *endp, int *usepath)
       break;
 
     default:
-      yyerror (_("preprocessor syntax"));
+      mu_sieve_yyerror (_("preprocessor syntax"));
       return NULL;
     }
 
@@ -353,7 +354,7 @@ get_file_name (char *p, char *endp, int *usepath)
 
   if (*p != exp)
     {
-      yyerror (_("missing closing quote in preprocessor statement"));
+      mu_sieve_yyerror (_("missing closing quote in preprocessor statement"));
       return NULL;
     }
   
@@ -567,7 +568,7 @@ multiline_begin (void)
       multiline_delimiter = strdup (".");
       if (!multiline_delimiter)
 	{
-	  yyerror (_("not enough memory"));
+	  mu_sieve_yyerror (_("not enough memory"));
 	  exit (1);
 	}
     }
@@ -587,7 +588,7 @@ ident (const char *text)
   yylval.string = strdup (text);
   if (!yylval.string)
     {
-      yyerror (_("not enough memory"));
+      mu_sieve_yyerror (_("not enough memory"));
       exit (1);
     }
 }

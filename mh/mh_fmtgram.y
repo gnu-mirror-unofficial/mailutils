@@ -149,8 +149,8 @@ static struct node *typecast (struct node *node, enum mh_type type);
 %type <builtin> function
 %type <fmtspec> fmtspec
 
-%error-verbose
-
+%define api.prefix {fmt_yy}
+%define parse.error verbose
 %%
 
 input     : list

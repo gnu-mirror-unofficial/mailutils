@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <poll.h>
+#include <limits.h>
 
 #if HAVE_TERMIOS_H
 # include <termios.h>

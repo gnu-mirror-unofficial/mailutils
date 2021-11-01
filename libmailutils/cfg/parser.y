@@ -169,6 +169,12 @@ mu_cfg_create_node_list (mu_list_t *plist)
 
 %}
 
+%define api.prefix {mu_cfg_yy}
+%code requires {
+#define MU_CFG_YYLTYPE struct mu_locus_range
+#define yylloc mu_cfg_yylloc
+#define yylval mu_cfg_yylval
+}  
 %locations
 %expect 1
 

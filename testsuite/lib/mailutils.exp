@@ -93,7 +93,8 @@ proc mu_makespool args {
 
 proc mu_create_config {name} {
     global objdir
-    mu_copy_file $objdir/$name.rcin $objdir/$name.rc
+    global srcdir
+    mu_copy_file $srcdir/$name.rcin $objdir/$name.rc
 }
 
 proc mu_init {args} {
