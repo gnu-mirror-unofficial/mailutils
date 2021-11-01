@@ -171,6 +171,7 @@ rule_line: /* empty */
 	     p->type = $1.ptr;
 	     p->node = $2;
 	     p->priority = $3;
+	     mu_locus_range_init (&p->loc);
 	     mu_locus_point_copy (&p->loc.beg, &@1.beg);
 	     mu_locus_point_copy (&p->loc.end, &@3.end);
 #if 0
