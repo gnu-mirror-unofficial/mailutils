@@ -122,6 +122,10 @@ libmailutils/server/msrv.c
 libmailutils/mailbox/mbx_default.c
 libmailutils/mailer/mailer.c
 
+libmailutils/mimetypes/lexer.l
+libmailutils/mimetypes/grammar.y
+libmailutils/mimetypes/eval.c
+
 libproto/mailer/smtp.c
 libproto/mailer/smtp_gsasl.c
 
@@ -174,8 +178,6 @@ mh/send.c
 mh/whatnow.c
 mh/whom.c
 
-mimeview/lexer.l
-mimeview/grammar.y
 mimeview/mimeview.c
 
 movemail/movemail.c

@@ -77,6 +77,7 @@ pkginclude_HEADERS = \
  message.h\
  mh.h\
  mime.h\
+ mimetypes.h\
  monitor.h\
  msgset.h\
  mu_auth.h\

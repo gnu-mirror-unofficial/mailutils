@@ -18,33 +18,10 @@ SUBDIRS = . tests
 
 AM_CPPFLAGS = \
  $(MU_APP_COMMON_INCLUDES)\
- -D_GNU_SOURCE=1\
  -DDEFAULT_CUPS_CONFDIR=\"@DEFAULT_CUPS_CONFDIR@\"
 
 bin_PROGRAMS = mimeview
-mimeview_SOURCES = \
- mimeview.c \
- grammar.c \
- lexer.c \
- mimeview.h\
- grammar.h
-
-AM_YFLAGS=-vtd
-AM_LFLAGS=-d
-
-grammar.c grammar.h: grammar.y
-lexer.c: lexer.l
-
-BUILT_SOURCES = \
-  grammar.c grammar.h \
-  lexer.c
-
-EXTRA_DIST = grammar.y lexer.l
-
-.l.c:
-	$(FLEX) -o $@ $(AM_LFLAGS) $<
-.y.c:
-	$(BISON) -o $@ $(AM_YFLAGS) $<
+mimeview_SOURCES = mimeview.c
 
 mimeview_LDADD = \
  $(MU_APP_LIBRARIES)\

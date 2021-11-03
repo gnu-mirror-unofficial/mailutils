@@ -238,7 +238,7 @@ mu_linetrack_create (mu_linetrack_t *ret,
       free (trk);
       return rc;
     }
-  
+
   *ret = trk;
   return 0;
 }

@@ -31,6 +31,7 @@ SUBDIRS = \
  mailcap\
  mailer\
  mime\
+ mimetypes\
  msgset\
  opt\
  server\
@@ -68,6 +69,7 @@ libmailutils_la_LIBADD = \
  mailcap/libmailcap.la\
  mailer/libmailer.la\
  mime/libmime.la\
+ mimetypes/libmimetypes.la\
  msgset/libmsgset.la\
  opt/libopt.la\
  property/libproperty.la\

@@ -431,7 +431,7 @@ int mu_file_stream_create (mu_stream_t *pstream, const char *filename, int flags
 struct mu_tempfile_hints;  
 int mu_temp_file_stream_create (mu_stream_t *pstream,
 				struct mu_tempfile_hints *hints, int flags);
-int mu_fd_stream_create (mu_stream_t *pstream, char *filename, int fd,
+int mu_fd_stream_create (mu_stream_t *pstream, char const *filename, int fd,
 			 int flags);
 
 #define MU_STDIN_FD  0

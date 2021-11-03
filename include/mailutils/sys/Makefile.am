@@ -45,6 +45,7 @@ sysinclude_HEADERS = \
  message_stream.h\
  message.h\
  mime.h\
+ mimetypes.h\
  monitor.h\
  msgset.h\
  nullstream.h\

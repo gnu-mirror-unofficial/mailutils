@@ -18,16 +18,22 @@
 # include <config.h>
 #endif
 
-#include <mimeview.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "mailutils/cli.h"
-#include "mailutils/argcv.h"
-
+#include <mailutils/alloc.h>
+#include <mailutils/cli.h>
+#include <mailutils/argcv.h>
+#include <mailutils/nls.h>
+#include <mailutils/io.h>
+#include <mailutils/header.h>
+#include <mailutils/errno.h>
+#include <mailutils/stream.h>
+#include <mailutils/stdstream.h>
+#include <mailutils/mimetypes.h>
 #include "mailcap.h"
 
 static int dry_run;    /* Dry run mode */
@@ -63,7 +69,7 @@ cli_debug (struct mu_parseopt *po, struct mu_option *opt,
     lev = MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE2);
   else
     {
-      mu_debug_get_category_level (MU_DEBCAT_APP, &lev);
+      mu_debug_get_category_level (MU_DEBCAT_MIMETYPES, &lev);
       for (; *arg; arg++)
 	{
 	  switch (*arg)
@@ -85,7 +91,7 @@ cli_debug (struct mu_parseopt *po, struct mu_option *opt,
 	  }
 	}
     }
-  mu_debug_set_category_level (MU_DEBCAT_APP, lev);
+  mu_debug_set_category_level (MU_DEBCAT_MIMETYPES, lev);
 }
 
 static void
@@ -186,11 +192,11 @@ display_file (const char *file, const char *type)
       argv[5] = (char*) file;
       argv[6] = NULL;
       
-      if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE0))
+      if (mu_debug_level_p (MU_DEBCAT_MIMETYPES, MU_DEBUG_TRACE0))
 	{
 	  char *string;
 	  mu_argcv_string (6, argv, &string);
-	  mu_debug (MU_DEBCAT_APP, MU_DEBUG_TRACE0,
+	  mu_debug (MU_DEBCAT_MIMETYPES, MU_DEBUG_TRACE0,
 		    (_("executing %s...\n"), string));
 	  free (string);
 	}
@@ -220,7 +226,7 @@ display_file (const char *file, const char *type)
 	    {
 	      display_stream_mailcap (file, str, hdr,
 				      no_ask_types, interactive, dry_run,
-				      MU_DEBCAT_APP);
+				      MU_DEBCAT_MIMETYPES);
 	      mu_stream_destroy (&str);
 	    }
 	  mu_header_destroy (&hdr);
@@ -241,18 +247,18 @@ main (int argc, char **argv)
   if (dry_run)
     {
       mu_debug_level_t lev;
-      mu_debug_get_category_level (MU_DEBCAT_APP, &lev);
+      mu_debug_get_category_level (MU_DEBCAT_MIMETYPES, &lev);
       lev |= MU_DEBUG_LEVEL_UPTO (MU_DEBUG_TRACE2);
-      mu_debug_set_category_level (MU_DEBCAT_APP, lev);
+      mu_debug_set_category_level (MU_DEBCAT_MIMETYPES, lev);
     }
 
   if (argc == 0 && !lint)
     {
-      mu_error (_("no files given"));
+      mu_error ("%s", _("no files given"));
       return 1;
     }
 
-  if ((mt = mimetypes_open (mimetypes_config)) == NULL)
+  if ((mt = mu_mimetypes_open (mimetypes_config)) == NULL)
     return 1;
   if (!lint)
     {  
@@ -264,6 +270,6 @@ main (int argc, char **argv)
 	}
     }
   mu_mimetypes_close (mt);
-  
+
   return 0;
 }

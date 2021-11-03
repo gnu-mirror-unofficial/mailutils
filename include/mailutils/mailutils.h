@@ -72,5 +72,6 @@
 #include <mailutils/sockaddr.h>
 #include <mailutils/cidr.h>
 #include <mailutils/msgset.h>
+#include <mailutils/mimetypes.h>
 
 /* EOF */

@@ -61,7 +61,7 @@ AT_KEYWORDS([mimeview])
 AT_CHECK([
 AT_DATA([mime.types],[$2
 ])
-mimeview MIMEVIEW_OPTIONS --debug-level=app.=trace6 -t -f mime.types
+mimeview MIMEVIEW_OPTIONS --debug-level=mimetypes.=trace6 -t -f mime.types
 ],
 m4_shift(m4_shift($@)))
 AT_CLEANUP

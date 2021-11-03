@@ -1,0 +1,9 @@
+.deps
+.gdbinit
+.libs
+Makefile
+Makefile.in
+grammar.c
+grammar.h
+grammar.output
+lexer.c

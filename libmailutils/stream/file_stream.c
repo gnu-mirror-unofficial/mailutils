@@ -479,7 +479,7 @@ mu_file_stream_create (mu_stream_t *pstream, const char *filename, int flags)
 }
 
 int
-mu_fd_stream_create (mu_stream_t *pstream, char *filename, int fd, int flags)
+mu_fd_stream_create (mu_stream_t *pstream, char const *filename, int fd, int flags)
 {
   struct _mu_file_stream *fstr;
   int rc;

@@ -24,10 +24,15 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <mimeview.h>
 #include <grammar.h>  
 #include <mailutils/io.h>
- 
+#include <mailutils/stream.h>
+#include <mailutils/stdstream.h>
+#include <mailutils/opool.h>
+#include <mailutils/errno.h>
+#include <mailutils/nls.h>
+#include <mailutils/diag.h>
+  
 static unsigned 
 digit_to_number (char c)
 {
@@ -185,23 +190,24 @@ WS [ \t][ \t]*
   finish_string (yylval, yylloc, yyscanner);  
   return STRING;
 }
+}
 
 <<EOF>> {
   mu_locus_range_deinit (yylloc);
+  fclose (yyin);
   yypop_buffer_state (yyscanner);
   yyterminate ();
  }
-}
 
 %%
 int
 mimetypes_scanner_open (yyscan_t scanner, const char *name)
 {
   struct stat st;
-  char *filename;
+  char *filename = NULL;
   FILE *fp;
 	
-  yyset_debug (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE4), scanner);
+  yyset_debug (mu_debug_level_p (MU_DEBCAT_MIMETYPES, MU_DEBUG_TRACE4), scanner);
 
   if (stat (name, &st))
     {
@@ -210,14 +216,17 @@ mimetypes_scanner_open (yyscan_t scanner, const char *name)
     }
   
   if (S_ISDIR (st.st_mode))
-    filename = mu_make_file_name (name, "mime.types");
-  else
-    filename = mu_strdup (name);
+    {
+      filename = mu_make_file_name (name, "mime.types");
+      if (!filename)
+	return -1;
+      name = filename;
+    }
   
-  fp = fopen (filename, "r");
+  fp = fopen (name, "r");
   if (!fp)
     {
-      mu_error (_("cannot open `%s': %s"), filename, mu_strerror (errno));
+      mu_error (_("cannot open `%s': %s"), name, mu_strerror (errno));
       free (filename);
       return -1;
     }
@@ -243,7 +252,7 @@ lex_next_rule (MIMETYPES_YYLTYPE *llocp, yyscan_t yyscanner)
   mu_linetrack_t trk = yyget_extra (yyscanner)->trk;
   int c;
   int dbg = yyget_debug (yyscanner)
-               || mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE6);
+               || mu_debug_level_p (MU_DEBCAT_MIMETYPES, MU_DEBUG_TRACE6);
   
   if (dbg)
     {
@@ -289,7 +298,7 @@ finish_string (MIMETYPES_YYSTYPE *lvalp, MIMETYPES_YYLTYPE *llocp,
   mu_locus_point_copy (&llocp->beg, &pctl->string_beg);
   mu_locus_point_deinit (&pctl->string_beg);
   
-  if (mu_debug_level_p (MU_DEBCAT_APP, MU_DEBUG_TRACE5))
+  if (mu_debug_level_p (MU_DEBCAT_MIMETYPES, MU_DEBUG_TRACE5))
     {
       size_t i;
       mu_debug_log_begin ("string %zu: ", lvalp->string.len);
