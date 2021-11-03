@@ -99,6 +99,7 @@ std_log_bootstrap (struct _mu_stream *str, int code,
       mu_stream_set_buffer (transport, mu_buffer_line, 0);
     }
 
+  str->flags |= _MU_STR_OPEN;
   str->event_cb = NULL;
   str->event_mask = 0;
   str->event_cb_data = 0;
