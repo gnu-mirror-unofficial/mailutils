@@ -94,6 +94,12 @@ mu_get_canned_container (const char *name)
 
 static struct mu_cfg_cont *root_container;
 
+static void
+destroy_root_container (void *ptr)
+{
+  mu_config_destroy_container (&root_container);
+}
+
 int
 mu_config_create_container (struct mu_cfg_cont **pcont,
 			    enum mu_cfg_cont_type type)
@@ -211,25 +217,32 @@ destroy_list (mu_list_t *plist)
 void
 mu_config_destroy_container (struct mu_cfg_cont **pcont)
 {
-  struct mu_cfg_cont *cont = *pcont;
-  unsigned refcount = mu_refcount_dec (cont->refcount);
-  /* printf ("destr %p-%s: %d\n", cont, cont->v.section.ident, refcount); */
-  // FIXME: Shouldn't it be done inside the conditional below?
-  switch (cont->type)
+  if (pcont)
     {
-    case mu_cfg_cont_section:
-      destroy_list (&cont->v.section.children);
-      break;
+      struct mu_cfg_cont *cont = *pcont;
+      if (cont)
+	{
+	  unsigned refcount = mu_refcount_dec (cont->refcount);
 
-    case mu_cfg_cont_param:
-      break;
-    }
-
-  if (refcount == 0)
-    {
-      mu_refcount_destroy (&cont->refcount);
-      free (cont);
-      *pcont = 0;
+	  if (refcount == 0)
+	    {
+	      switch (cont->type)
+		{
+		case mu_cfg_cont_section:
+		  free (cont->v.section.ident_storage);
+		  free (cont->v.section.label_storage);
+		  destroy_list (&cont->v.section.children);
+		  break;
+		  
+		case mu_cfg_cont_param:
+		  break;
+		}
+	      
+	      mu_refcount_destroy (&cont->refcount);
+	      free (cont);
+	      *pcont = 0;
+	    }
+	}
     }
 }
      
@@ -418,8 +431,8 @@ mu_config_container_register_section (struct mu_cfg_cont **proot,
       mu_list_append (parent->children, container); 
       s = &container->v.section;
 
-      s->ident = strdup (ident);
-      s->label = label ? strdup (label) : NULL;
+      s->ident = s->ident_storage = strdup (ident);
+      s->label = s->label_storage = label ? strdup (label) : NULL;
       s->parser = parser;
       s->children = NULL;
       mu_cfg_section_add_params (s, param);
@@ -445,10 +458,15 @@ mu_config_root_register_section (const char *parent_path,
 				 mu_cfg_section_fp parser,
 				 struct mu_cfg_param *param)
 {
-  return mu_config_container_register_section (&root_container,
-					       parent_path,
-					       ident, label,
-					       parser, param, NULL);
+  int rc = mu_config_container_register_section (&root_container,
+						 parent_path,
+						 ident, label,
+						 parser, param, NULL);
+  if (rc == 0)
+    {
+      mu_onexit (destroy_root_container, NULL);
+    }
+  return rc;
 }
 
 int

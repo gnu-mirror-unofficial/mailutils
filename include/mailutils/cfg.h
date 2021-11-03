@@ -192,6 +192,8 @@ struct mu_cfg_section
   void *target;                   /* Actual pointer to the data. It is
 				     recomputed each time the section is
 				     reduced. */
+  char *ident_storage;            /* Storage for ident, if malloc'ed */
+  char *label_storage;            /* Same for the label */
 };
 
 enum mu_cfg_cont_type

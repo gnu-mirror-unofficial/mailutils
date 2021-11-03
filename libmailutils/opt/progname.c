@@ -21,9 +21,21 @@
 #include <string.h>
 #include <mailutils/alloc.h>
 #include <mailutils/opt.h>
+#include <mailutils/util.h>
 
 char *mu_program_name;
 char *mu_full_program_name;
+static int progname_cleaner_installed;
+
+static void
+progname_cleaner (void *ptr)
+{
+  free (mu_program_name);
+  mu_program_name = NULL;
+  free (mu_full_program_name);
+  mu_full_program_name = NULL;
+  progname_cleaner_installed = 0;
+}
 
 void
 mu_set_program_name (const char *arg)
@@ -43,4 +55,9 @@ mu_set_program_name (const char *arg)
     p += 3;
   free (mu_program_name);
   mu_program_name = mu_strdup (p);
+  if (!progname_cleaner_installed)
+    {
+      mu_onexit (progname_cleaner, NULL);
+      progname_cleaner_installed = 1;
+    }
 }

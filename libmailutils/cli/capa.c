@@ -27,6 +27,12 @@
 static mu_list_t capa_list;
 
 static void
+capa_list_destroy (void *ptr)
+{
+  mu_list_destroy (&capa_list);
+}
+
+static void
 capa_free (void *ptr)
 {
   struct mu_cli_capa *cp = ptr;
@@ -47,6 +53,7 @@ mu_cli_capa_register (struct mu_cli_capa *capa)
     {
       mu_list_create (&capa_list);
       mu_list_set_destroy_item (capa_list, capa_free);
+      mu_onexit (capa_list_destroy, NULL);
     }
   mu_list_append (capa_list, cp);
 }
