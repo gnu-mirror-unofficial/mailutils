@@ -38,9 +38,8 @@
 #include <mailutils/stream.h>
 #include <mailutils/errno.h>
 #include <mailutils/cstr.h>
+#include <mailutils/util.h>
 
-/* NOTE: We will leak here since the monitor of the filter will never
-   be release.  That's ok we can leave with this, it's only done once.  */
 static mu_list_t filter_list;
 struct mu_monitor filter_monitor = MU_MONITOR_INITIALIZER;
 
@@ -50,6 +49,14 @@ filter_name_cmp (const void *item, const void *data)
   struct _mu_filter_record const *rec = item;
   char const *name = data;
   return mu_c_strcasecmp (rec->name, name);
+}
+
+static void
+filter_dealloc (void *x)
+{
+  mu_monitor_wrlock (&filter_monitor);
+  mu_list_destroy (&filter_list);
+  mu_monitor_unlock (&filter_monitor);
 }
 
 int
@@ -91,6 +98,8 @@ mu_filter_get_list (mu_list_t *plist)
       mu_list_append (filter_list, mu_fromrb_filter);
       
       /* FIXME: add the default encodings?  */
+
+      mu_onexit (filter_dealloc, NULL);
     }
   *plist = filter_list;
   mu_monitor_unlock (&filter_monitor);

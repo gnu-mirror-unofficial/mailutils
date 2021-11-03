@@ -34,6 +34,7 @@
 
 #include <mailutils/sys/monitor.h>
 #include <mailutils/errno.h>
+#include <mailutils/util.h>
 
 #ifdef WITH_PTHREAD
 pthread_mutex_t monitor_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -72,8 +73,9 @@ static int monitor_pthread_unlock (p_lock_t);
    the concrete implementation of monitor on pthread and read/write locks,
    but changing to a different concrete implementation will not be hard if
    the need arise.
-   For static initializers we take a small penality and since we have
-   a global static lock.
+   Static initializers are allocated at the first call to
+   mu_monitor_(rd|wr)lock and are freed on program exit (or a call to
+   mu_onexit_run, whichever happens first).
  */
 
 int
@@ -126,6 +128,17 @@ mu_monitor_destroy (mu_monitor_t *pmonitor, void *owner)
     }
 }
 
+static void
+static_monitor_dealloc (void *ptr)
+{
+  mu_monitor_t monitor = ptr;
+  STATIC_LOCK (&monitor_lock);
+  if (monitor->flags == MU_MONITOR_PTHREAD)
+    monitor_pthread_destroy ((p_lock_t *)&(monitor->data));
+  monitor->allocated = 0;
+  STATIC_UNLOCK (&monitor_lock);
+}
+
 int
 mu_monitor_rdlock (mu_monitor_t monitor)
 {
@@ -143,6 +156,7 @@ mu_monitor_rdlock (mu_monitor_t monitor)
 		  STATIC_UNLOCK (&monitor_lock);
 		  return status;
 		}
+	      mu_onexit (static_monitor_dealloc, monitor);
 	    }
 	  monitor->allocated = 1;
 	  STATIC_UNLOCK (&monitor_lock);
@@ -170,6 +184,7 @@ mu_monitor_wrlock  (mu_monitor_t monitor)
 		  STATIC_UNLOCK (&monitor_lock);
 		  return status;
 		}
+	      mu_onexit (static_monitor_dealloc, monitor);
 	    }
 	  monitor->allocated = 1;
 	  STATIC_UNLOCK (&monitor_lock);

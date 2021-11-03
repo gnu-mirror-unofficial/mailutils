@@ -26,6 +26,7 @@
 #include <mailutils/io.h>
 #include <mailutils/stream.h>
 #include <mailutils/iterator.h>
+#include <mailutils/util.h>
 
 struct mu_ident_ref
 {
@@ -33,6 +34,12 @@ struct mu_ident_ref
 };
 
 static mu_assoc_t nametab;
+
+static void
+nametab_dealloc (void *ptr)
+{
+  mu_assoc_destroy (&nametab);
+}
 
 int
 mu_ident_ref (char const *name, char const **refname)
@@ -57,6 +64,7 @@ mu_ident_ref (char const *name, char const **refname)
 	  return rc;
 	}
       mu_assoc_set_destroy_item (nametab, mu_list_free_item);
+      mu_onexit (nametab_dealloc, NULL);
     }
   rc = mu_assoc_install_ref2 (nametab, name, &refptr, refname);
   switch (rc)

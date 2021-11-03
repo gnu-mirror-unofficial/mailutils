@@ -104,7 +104,8 @@ std_log_bootstrap (struct _mu_stream *str, int code,
   str->event_cb_data = 0;
 
   _mu_log_stream_setup (logstr, transport);
-  stdstream_flushall_setup ();
+  mu_stream_unref (transport);
+  stdstream_flushall_setup ();  
 }
 
 /* The noop destroy function is necessary to prevent stream core from
@@ -161,9 +162,9 @@ mu_stream_t mu_strerr = (mu_stream_t) &default_strerr;
 static void
 stdstream_flushall (void *data MU_ARG_UNUSED)
 {
-  mu_stream_flush (mu_strin);
-  mu_stream_flush (mu_strout);
-  mu_stream_flush (mu_strerr);
+  mu_stream_destroy (&mu_strin);
+  mu_stream_destroy (&mu_strout);
+  mu_stream_destroy (&mu_strerr);
 }
 
 static void
