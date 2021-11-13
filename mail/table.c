@@ -152,6 +152,8 @@ static const struct mail_command_entry mail_command_table[] = {
     mail_print, msglist_compl },
   { "una",	"unalias",	"una[lias] [alias]...",		0,
     mail_unalias, NULL },
+  { "U",        "unread",       "unread [msglist]",             0,
+    mail_unread, msglist_compl },
   { "u",	"undelete",	"u[ndelete] [msglist]",		0,
     mail_undelete, msglist_compl },
   { "unf",      "unfold",       "unf[old] [header-field]",      0,

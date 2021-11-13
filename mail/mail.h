@@ -306,6 +306,7 @@ int mail_touch (int argc, char **argv);
 int mail_unalias (int argc, char **argv);
 int mail_undelete (int argc, char **argv);
 int mail_unfold (int argc, char **argv);
+int mail_unread (int argc, char **argv);
 int mail_unset (int argc, char **argv);
 int mail_version (int argc, char **argv);
 int mail_visual (int argc, char **argv);

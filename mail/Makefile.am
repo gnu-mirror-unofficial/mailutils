@@ -84,6 +84,7 @@ mail_SOURCES = \
  touch.c\
  unalias.c\
  undelete.c\
+ unread.c\
  unset.c\
  util.c\
  version.c\

@@ -827,6 +827,10 @@ Marks each message to be held in user's system mailbox.  This command
 does not override the effect of @code{delete} command.
 @end deffn
 
+@deffn {Mail command} unread [@var{msglist}]
+Marks each message from the @var{msglist} as not having been read.
+@end deffn
+
 @node Disposing of Messages
 @subsubsection Disposing of Messages
 
