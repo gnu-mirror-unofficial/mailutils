@@ -575,7 +575,7 @@ static void disable_starttls (void);
 # include <gnutls/gnutls.h>
 
 /* TLS support */
-char *tls_cert;			/* TLS sertificate */
+char *tls_cert;			/* TLS certificate */
 char *tls_key;			/* TLS key */
 char *tls_cafile;
 
@@ -1561,7 +1561,7 @@ main (int argc, char **argv)
       else
 	{
 	  /* child */
-	  /* Close unneded descriptors */
+	  /* Close unneeded descriptors */
 	  int i;
 	  for (i = 0; i < sysconf (_SC_OPEN_MAX); i++)
 	    {

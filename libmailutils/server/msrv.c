@@ -85,7 +85,7 @@ struct _mu_m_server
   
   int mode;                      /* Server mode: should be removed. */
   
-  int foreground;                /* Should the server remain in foregorund? */
+  int foreground;                /* Should the server remain in foreground? */
   size_t max_children;           /* Maximum number of sub-processes to run. */
   size_t num_children;           /* Current number of running sub-processes. */
   pid_t *child_pid;

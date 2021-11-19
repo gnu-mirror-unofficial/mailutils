@@ -16,7 +16,7 @@
 
     Message to be "delivered" is read from the standard input.
     
-    Only rudimental message parsing is performed, as necessary for
+    Only rudimentary message parsing is performed, as necessary for
     the functioning of the -t option.  Similarly, email address parser
     is very naive.
 
@@ -66,7 +66,7 @@
 
   BUGS
     At most 32 recipients are allowed.
-    Header and address parsing is rudimental.
+    Header and address parsing is rudimentary.
     
   AUTHOR
     Sergey Poznyakoff <gray@gnu.org>

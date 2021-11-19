@@ -214,7 +214,7 @@ struct mu_option mu_common_options[] = {
   MU_OPTION_END
 };
 
-/* This varibales are used to construct the set of configuration
+/* These variables are used to construct the set of configuration
    handling options.
 */
 

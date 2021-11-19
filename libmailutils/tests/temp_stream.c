@@ -21,7 +21,7 @@ DESCRIPTION
   Finally, MAXMEM-1 more bytes are written, read back and compared.
 
   The exit status is 0 if all the above passed as expected, and 1
-  otherwise.  If any unhandled error occured, the program aborts.
+  otherwise.  If any unhandled error occurred, the program aborts.
 
   To test the current stream mode, the MU_IOCTL_FD ioctl is used.  If
   the stream responds successfully to the MU_IOCTL_FD_GET_BORROW ioctl

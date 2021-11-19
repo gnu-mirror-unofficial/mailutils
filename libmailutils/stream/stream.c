@@ -528,7 +528,7 @@ _stream_skip_input_bytes (mu_stream_t stream, mu_off_t count, mu_off_t *pres)
 
 /* A wrapper for the above function.  It is normally called from a
    seek method implementation, so it makes sure the MU_STREAM_SEEK
-   is cleared while in _stream_skip_input_bytes, to avoid infitite
+   is cleared while in _stream_skip_input_bytes, to avoid infinite
    recursion that may be triggered by _stream_flush_buffer invoking
    stream->seek. */
 int

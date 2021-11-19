@@ -256,7 +256,7 @@ struct attrib
 
 /*
  * Both name and value point to the memory allocated in one block with
- * the attrib structure.  Attributes form a singly-linled list with the
+ * the attrib structure.  Attributes form a singly-linked list with the
  * list head pointing to the first attribute defined in the file name.
  *
  * Functions for accessing attribute lists:
@@ -271,7 +271,7 @@ struct attrib
    vlen - Length of the value.
 
    On success, updates head and returns the new head attribute.
-   On memory allocation error, returne NULL and does not modify head.
+   On memory allocation error, return NULL and does not modify head.
 */
 static inline struct attrib *
 attrib_push (struct attrib **head, char const *name, size_t nlen,
@@ -647,7 +647,7 @@ maildir_message_free (struct _amd_message *amsg)
 }
 
 /*
- * Maldir scanning
+ * Maildir scanning
  */
 int
 maildir_tmp_flush (struct _maildir_data *md)
@@ -749,7 +749,7 @@ maildir_subdir_scan (struct _maildir_data *md, int subdir)
  * Maildir attribute fixup
  * =======================
  *
- * Messag info flags used by Mailutils versions prior to 3.10.90 differ
+ * Message info flags used by Mailutils versions prior to 3.10.90 differ
  * from those described in the reference maildir implementation
  * (http://cr.yp.to/proto/maildir.html)
  * This was reported in http://savannah.gnu.org/bugs/?56428.
@@ -762,10 +762,10 @@ maildir_subdir_scan (struct _maildir_data *md, int subdir)
  *  MU_ATTRIBUTE_ANSWERED      R         a
  *  MU_ATTRIBUTE_SEEN          -         S
  *
- * The "Attribute" column lists the maiutils attribute flag, the
+ * The "Attribute" column lists the mailutils attribute flag, the
  * "Reference" column contains the letter that corresponds to that flag
  * in the reference implementation and the "MU-3.10" column shows the
- * letter in mailutils 3.10 and earloer.
+ * letter in mailutils 3.10 and earlier.
  *
  * Starting from version 3.10.90 this discrepancy is fixed.  To make sure
  * both old and new message attributes are correctly recognized, we try 

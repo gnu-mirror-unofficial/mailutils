@@ -37,8 +37,8 @@ extern "C" {
 #define MU_CTYPE_XLETR   0x00400
 #define MU_CTYPE_ENDLN   0x00800
 #define MU_CTYPE_TSPEC   0x01000 /* tspecials: RFC 2045, section 5.1. */
-#define MU_CTYPE_IDENT   0x02000 /* Valid identifier consituent: alnum or _ */
-#define MU_CTYPE_HEADR   0x04000 /* Valid header name consituent: alnum, _,
+#define MU_CTYPE_IDENT   0x02000 /* Valid identifier constituent: alnum or _ */
+#define MU_CTYPE_HEADR   0x04000 /* Valid header name constituent: alnum, _,
 				    or - */
 #define MU_CTYPE_IMSPC   0x08000 /* Internet Message Format Specials:
 				    RFC2822, 3.2.1 */

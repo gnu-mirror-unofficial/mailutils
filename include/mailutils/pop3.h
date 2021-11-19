@@ -82,7 +82,7 @@ int  mu_pop3_pass (mu_pop3_t pop3, const char *pass);
 int  mu_pop3_quit (mu_pop3_t pop3);
 
 /* A stream is returned with the multi-line answer.  It is the responsibility
-   of the caller to call mu_stream_destroy() to dipose of the stream.  */
+   of the caller to call mu_stream_destroy() to dispose of the stream.  */
 int  mu_pop3_retr (mu_pop3_t pop3, unsigned int mesgno,
 		   mu_stream_t *pstream);
 
@@ -91,7 +91,7 @@ int  mu_pop3_rset (mu_pop3_t pop3);
 int  mu_pop3_stat (mu_pop3_t pop3, size_t *count, mu_off_t *octets);
 
 /* A stream is returned with the multi-line answer.  It is the responsibility
-   of the caller to call mu_stream_destroy() to dipose of the stream.  */
+   of the caller to call mu_stream_destroy() to dispose of the stream.  */
 int  mu_pop3_top (mu_pop3_t pop3, unsigned int mesgno,
 		  unsigned int lines, mu_stream_t *pstream);
 

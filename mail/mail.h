@@ -93,7 +93,7 @@ typedef int function_t (int, char **);
 #define EF_REG    0x00    /* Regular command */
 #define EF_FLOW   0x01    /* Flow control command */
 #define EF_SEND   0x02    /* Send command */
-#define EF_HIDDEN 0x04    /* Hiddent command */
+#define EF_HIDDEN 0x04    /* Hidden command */
   
 typedef struct compose_env
 {

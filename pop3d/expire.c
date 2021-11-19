@@ -73,7 +73,7 @@ header_is_expired (mu_header_t hdr)
 }
 
 /* If pop3d is started with --expire, add an expiration header to the message.
-   Additionally, if --deltete-expired option was given, mark
+   Additionally, if --delete-expired option was given, mark
    the message as deleted if its X-Expire-Timestamp is too old.
    Arguments:
       msg   - Message to operate upon

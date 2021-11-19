@@ -118,7 +118,7 @@ imap4d_rename (struct imap4d_session *session,
   newname = imap4d_tokbuf_getarg (tok, IMAP4_ARG_2);
 
   if (mu_c_strcasecmp (newname, "INBOX") == 0)
-    return io_completion_response (command, RESP_NO, "Name Inbox is reservered");
+    return io_completion_response (command, RESP_NO, "Name Inbox is reserved");
 
   /* Allocates memory.  */
   newname = namespace_get_name (newname, &newrec, &mode);

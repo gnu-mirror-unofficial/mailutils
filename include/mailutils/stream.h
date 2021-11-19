@@ -191,7 +191,7 @@ enum mu_buffer_type
      New transcript level is set to *X.
      If setting separate levels for each channel, use MU_XSCRIPT_LEVEL_PACK
      macro to pack them into one integer value. Use
-     MU_IOCTL_XSCRIPTSTREAM_CHANNEL to confugure single channel.
+     MU_IOCTL_XSCRIPTSTREAM_CHANNEL to configure single channel.
      
      Upon successful return, previous levels are stored in X. Use the
      MU_XSCRIPT_LEVEL_UNPACK macro to retrieve level for a particular

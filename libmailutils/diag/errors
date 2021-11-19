@@ -149,5 +149,5 @@ MU_ERR_WRITE                _("write error")
 
 MU_ERR_TLS                  _("TLS error")
 
-MU_ERR_TRANSPORT_GET        _("can't get transport desciptor")
-MU_ERR_TRANSPORT_SET        _("can't set transport desciptor")
+MU_ERR_TRANSPORT_GET        _("can't get transport descriptor")
+MU_ERR_TRANSPORT_SET        _("can't set transport descriptor")

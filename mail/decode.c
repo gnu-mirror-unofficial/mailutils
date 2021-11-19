@@ -20,7 +20,7 @@
 /*
   FIXME:
  decode, this is temporary, until the API on how to present
- mime/attachements etc is less confusing.
+ mime/attachments etc is less confusing.
  */
 
 struct decode_closure
@@ -223,7 +223,7 @@ mime_descend (struct mime_descend_closure *closure,
 	   * message (this code is propagated from mu_stream_to_message,
 	   * which does the actual work).
 	   *
-	   * If the enclosing messgae(part) is of message/digest type, it
+	   * If the enclosing message(part) is of message/digest type, it
 	   * is possible that messages are packed into it without MIME
 	   * headers.  That violates RFC 1341, but such digests are
 	   * reported to exist (re. email conversation with Karl on

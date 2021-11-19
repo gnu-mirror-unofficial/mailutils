@@ -192,7 +192,7 @@ main (int argc, char * argv [])
 	       (unsigned long) instat[MU_STREAM_STAT_OUT]);
       fprintf (stderr, "Lines in: %lu\n",
 	       (unsigned long) instat[MU_STREAM_STAT_INLN]);
-      fprintf (stderr, "Linees out: %lu\n",
+      fprintf (stderr, "Lines out: %lu\n",
 	       (unsigned long) instat[MU_STREAM_STAT_OUTLN]);
       
       fprintf (stderr, "Reads: %lu\n",

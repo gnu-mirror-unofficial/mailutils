@@ -251,7 +251,7 @@ _qp_encoder (void *xd,
 	  
 	  nbytes += 3;
 	  
-	  /* we've actuall used up one byte of input */
+	  /* we've actually used up one byte of input */
 	  iptr++;
 	  consumed++;
 	}

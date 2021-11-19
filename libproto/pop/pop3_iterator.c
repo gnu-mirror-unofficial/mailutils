@@ -95,7 +95,7 @@ pop3_itr_dup (void **ptr, void *owner)
   struct pop3_iterator *clone = malloc (sizeof *pop3_iterator);
   if (clone == NULL)
     return ENOMEM;
-  /* let the assignement operator copy the elements.  */
+  /* let the assignment operator copy the elements.  */
   *clone = *pop3_iterator;
   *ptr = clone;
   return 0;
@@ -107,7 +107,7 @@ pop3_itr_destroy (mu_iterator_t iterator, void *owner)
   struct pop3_iterator *pop3_iterator = (struct pop3_iterator *)owner;
   /* Delicate situation if they did not finish to drain the result
      We take the approach to do it for the user.  FIXME: Not sure
-     if this is the rigth thing to do. The other way is to close the stream  */
+     if this is the right thing to do. The other way is to close the stream  */
   if (!pop3_iterator->done)
     {
       char buf[128];

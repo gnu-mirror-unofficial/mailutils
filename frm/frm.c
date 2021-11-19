@@ -282,7 +282,7 @@ frm (char *mailbox_name)
               "Folder contains XXX messages."
 
 	      Leave it as it is unless your language requires to reorder
-	      the parts of speach in the message
+	      the parts of speech in the message
 	  */
 	  mu_printf (_("."));
 	}

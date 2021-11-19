@@ -74,7 +74,7 @@ ch2ent (int c)
 
 struct xml_encode_state
 {
-  char buf[11]; /* Enough to acomodate &#x10FFFF; - max. UTF-8 codepoint */
+  char buf[11]; /* Enough to accommodate &#x10FFFF; - max. UTF-8 codepoint */
   int idx;
 };
 

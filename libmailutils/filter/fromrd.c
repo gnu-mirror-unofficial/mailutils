@@ -20,7 +20,7 @@ struct transcoder
 {
   int state; /* Transcoder state */
   int count; /* Number of consecutive '>' seen. */
-  int len;   /* Number of "From" charactes collected */
+  int len;   /* Number of "From" characters collected */
 };
 
 static char from_line[] = "From ";

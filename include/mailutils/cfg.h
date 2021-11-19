@@ -97,7 +97,7 @@ struct mu_cfg_parse_hints
    site-wide configuration */
 #define MU_CFHINT_PER_USER_FILE      0x0008
 
-/* Don't allow to overide configuration settings from the command line. */
+/* Don't allow to override configuration settings from the command line. */
 #define MU_CFHINT_NO_CONFIG_OVERRIDE 0x0010
 	
 /* Verbosely log files being processed */

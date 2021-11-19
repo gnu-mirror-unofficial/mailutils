@@ -254,7 +254,7 @@ imap4d_copy0 (imap4d_tokbuf_t tok, int isuid, char **err_text)
   status = mu_mailbox_create_from_record (&cmbox, record, mailbox_name);
   if (status == 0)
     {
-      /* It SHOULD NOT automatifcllly create the mailbox. */
+      /* It SHOULD NOT automatically create the mailbox. */
       status = mu_mailbox_open (cmbox, MU_STREAM_RDWR | mode);
       if (status == 0)
 	{

@@ -194,7 +194,7 @@ status_uidvalidity (mu_mailbox_t smbox)
 }
 
 /* Note that unlike the unseen response code, which indicates the message
-   number of the first unseen message, the unseeen item in the response the
+   number of the first unseen message, the unseen item in the response the
    status command indicates the quantity of unseen messages.  */
 static int
 status_unseen (mu_mailbox_t smbox)

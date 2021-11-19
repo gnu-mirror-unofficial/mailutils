@@ -44,13 +44,13 @@
 
    MU_XSCRIPT_NORMAL
      The default level. Everything is logged indiscriminately. Programmers
-     should excercise care when using this mode, as it can reveal security
+     should exercise care when using this mode, as it can reveal security
      sensitive data (such as login credentials, etc.) as well as private
      user's information (mail content).
 
    MU_XSCRIPT_SECURE
      The stream attempts to locate passwords and replaces them with three
-     asteriscs when sending to the log stream. This mode should be used before
+     asterisks when sending to the log stream. This mode should be used before
      the session is authenticated. Currently the following two constructs are
      recognized:
 

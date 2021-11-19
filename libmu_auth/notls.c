@@ -1,4 +1,4 @@
-/* Declare fail-only TLS interfaces in the absense of GNU TLS */
+/* Declare fail-only TLS interfaces in the absence of GNU TLS */
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif

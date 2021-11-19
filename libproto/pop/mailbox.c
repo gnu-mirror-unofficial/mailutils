@@ -764,14 +764,14 @@ pop_create_header (struct _pop3_message *mpm)
 /* Attributes */
 
 /* There is no POP3 command to return message attributes, therefore we
-   have to recurse to reading the "Status:" header.  Unfortunately, some
-   servers remove it when you dowload a message, and in this case a message
+   have to recourse to reading the "Status:" header.  Unfortunately, some
+   servers remove it when you download a message, and in this case a message
    will always look like new even if you already read it.  There is also
    no way to set an attribute on remote mailbox via the POP server and
    many server once you do a RETR (and in some cases a TOP) will mark the
    message as read (Status: RO).  Even worse, some servers may be configured
    to delete after the RETR, and some go as much as deleting after the TOP,
-   since technicaly you can download a message via TOP without RETR'eiving
+   since technically you can download a message via TOP without RETR'eiving
    it.  */
 static int
 pop_get_attribute (mu_attribute_t attr, int *pflags)

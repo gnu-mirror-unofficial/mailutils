@@ -16,7 +16,7 @@
 
 #include "mail.h"
 
-/* Simple summary dysplaying a blurb on the name of the
+/* Simple summary displaying a blurb on the name of the
    mailbox and how many new:deleted:read messages.
    The side effect is that it sets the cursor
    to the newest or read message number.  */

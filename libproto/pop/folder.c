@@ -39,7 +39,7 @@
 #include <mailutils/sys/registrar.h>
 #include <mailutils/sys/url.h>
 
-/* We export url parsing and the initialisation of
+/* We export url parsing and the initialization of
    the mailbox, via the register entry/record.  */
 
 static struct _mu_record _pop_record =

@@ -17,8 +17,8 @@
      from the main process (client) to the subprocess (server).  If
      --source=server, the direction is reversed.
 
-     Unless the -o (--output) option is specified, the received data
-     are written to the named outpuf file.  Otherwise, they are discarded.
+     If the -o (--output) option is specified, the received data
+     are written to the named output file.  Otherwise, they are discarded.
 
    OPTIONS
 

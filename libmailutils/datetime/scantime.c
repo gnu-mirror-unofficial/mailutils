@@ -570,7 +570,7 @@ mu_scan_datetime (const char *input, const char *fmt,
 	    case 'z':
 	      /*
 	       * The time-zone as hour offset from GMT.
-	       * Notice, that unless '+' or '-' is used explicitely, the
+	       * Notice, that unless '+' or '-' is used explicitly, the
 	       * time-zone in this form can be confused with the year.
 	       * However, no one possibly expects emails dated 13th century
 	       * and earlier, so the possibility of such confusion is

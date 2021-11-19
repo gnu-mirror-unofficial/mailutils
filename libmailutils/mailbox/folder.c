@@ -94,7 +94,7 @@ mu_folder_create_from_record (mu_folder_t *pfolder, mu_url_t url,
 	    {
 	      folder->url = url;
 	      folder->is_local = record->flags & MU_RECORD_LOCAL;
-	      /* Initialize the internal foilder lock, now so the
+	      /* Initialize the internal folder lock, now so the
 		 concrete folder could use it.  */
 	      status = mu_monitor_create (&folder->monitor, 0, folder);
 	      if (status == 0)

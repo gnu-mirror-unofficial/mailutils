@@ -47,7 +47,7 @@ capa_comp (const void *item, const void *value)
 
 /*
   CAPA command, return a list that contains the result.
-  It is the responsability of the caller to destroy the list(mu_list_destroy).
+  It is the responsibility of the caller to destroy the list(mu_list_destroy).
  */
 int
 mu_pop3_capa (mu_pop3_t pop3, int reread, mu_iterator_t *piter)

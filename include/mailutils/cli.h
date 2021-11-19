@@ -83,7 +83,7 @@ enum
     MU_CLI_OPTION_END = -1,     /* End of options */
 
     /* Argument: struct mu_option * 
-     * Description: Supplies the array of options.  Can be given mupliple
+     * Description: Supplies the array of options.  Can be given multiple
      * times. 
      * Ref: optv in struct mu_cli_setup.
      */
@@ -261,7 +261,7 @@ enum
     MU_CLI_OPTION_PROG_DOC_HOOK,  
 
     /* Argument: none 
-     * Description: Long options start with single dash (a la find).  Thid
+     * Description: Long options start with single dash (a la find).
      * Disables recognition of traditional short options.
      * Ref: MU_PARSEOPT_SINGLE_DASH flag in opt.h
      */
@@ -300,7 +300,7 @@ enum
     MU_CLI_OPTION_CONF_PER_USER_FILE,
 
     /* Argument: none
-     * Description:  Don't allow users to overide configuration settings
+     * Description:  Don't allow users to override configuration settings
      * from the command line.
      * Ref: MU_CFHINT_NO_CONFIG_OVERRIDE flag in cfg.h
      */

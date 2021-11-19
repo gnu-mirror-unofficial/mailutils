@@ -51,7 +51,7 @@ mu_pop3_connect (mu_pop3_t pop3)
       /* If pop3 was in an error state going through here should clear it.  */
 
     case MU_POP3_NO_STATE:
-      /* If the stream was previoulsy open this is sudden death:
+      /* If the stream was previously open this is sudden death:
          For many pop servers, it is important to allow them some time to
 	 remove any locks or move the .user.pop files.  This happen when we
 	 do close() and immediately open().  For example, the user does not

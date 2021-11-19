@@ -429,7 +429,7 @@ sieve_mailbox (mu_sieve_machine_t mach)
       int e;
       
       /* A message won't be marked deleted unless the script executed
-         succesfully on it, so we always do an expunge, it will delete
+         successfully on it, so we always do an expunge, it will delete
          any messages that were marked DELETED even if execution failed
          on a later message. */
       if ((e = mu_mailbox_expunge (mbox)) != 0)

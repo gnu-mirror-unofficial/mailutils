@@ -29,7 +29,7 @@
 
    1. S does not contain R.
 
-      Return imeediately, there is nothing to do here.
+      Return immediately, there is nothing to do here.
 
    2. S contains a range X that matches exactly R.
 

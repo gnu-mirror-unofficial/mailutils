@@ -43,7 +43,7 @@ imap4d_select0 (struct imap4d_command *command, const char *mboxname,
 
   /* Even if a mailbox is selected, a SELECT EXAMINE or LOGOUT
      command MAY be issued without previously issuing a CLOSE command.
-     The SELECT, EXAMINE, and LOGUT commands implictly close the
+     The SELECT, EXAMINE, and LOGOUT commands implicitly close the
      currently selected mailbox without doing an expunge.  */
   if (mbox)
     {
@@ -103,7 +103,7 @@ imap4d_select0 (struct imap4d_command *command, const char *mboxname,
       if ((status = imap4d_select_status ()) == 0)
 	{
 	  free (mailbox_name);
-	  /* Need to set the state explicitely for select.  */
+	  /* Need to set the state explicitly for select.  */
 	  return io_sendf ("%s OK [%s] %s Completed\n", command->tag,
 			   ((flags & MU_STREAM_RDWR) == MU_STREAM_RDWR) ?
 			   "READ-WRITE" : "READ-ONLY", command->name);
@@ -138,7 +138,7 @@ imap4d_select_status ()
 
   /* This outputs EXISTS and RECENT responses */
   imap4d_sync();
-  io_untagged_response (RESP_OK, "[UIDVALIDITY %lu] UID valididy status", 
+  io_untagged_response (RESP_OK, "[UIDVALIDITY %lu] UID validity status", 
                            uidvalidity);
   io_untagged_response (RESP_OK, "[UIDNEXT %lu] Predicted next uid",
 	                   (unsigned long) uidnext);

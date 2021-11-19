@@ -273,7 +273,7 @@ io_untagged_response (int rc, const char *format, ...)
 	   during initialization. */
 	return 0;
       mu_diag_output (MU_DIAG_ERROR,
-		      /* TANSLATORS: %s is replaced with the untagged response
+		      /* TRANSLATORS: %s is replaced with the untagged response
 			 name, followed by a space character. */
 		      _("iostream is NULL while trying to send the %suntagged response"),
 		      sc2string (rc));

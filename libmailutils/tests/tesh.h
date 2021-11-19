@@ -69,7 +69,7 @@ struct mu_tesh_command
 
 	    The function is free to modify or reassign argv[0] if it needs
 	    so. The modified value will serve as input for further processing.
-	    If the function chooses to reassing argv[0], it may not free the
+	    If the function chooses to reassign argv[0], it may not free the
 	    current value, and the caller remains responsible for any memory
 	    management needed. For example, if a newly allocated memory is
 	    assigned to argv[0], this pointer must be saved somewhere in the
@@ -136,7 +136,7 @@ struct mu_tesh_command
        than whitespace, '[', or ']'. WS is horizontal space or tab
        character.
 
-       Ellipis can appear immediately before the closing "]" of an <optdef>
+       Ellipsis can appear immediately before the closing "]" of an <optdef>
        or <optarg>.
 
        The <optdef> token defines options that can be supplied to the

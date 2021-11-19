@@ -251,7 +251,7 @@ start_program_filter (int *p, struct _mu_prog_stream *fs, int flags)
 	    }
 	}
        
-      /* Close unneded descripitors */
+      /* Close unneeded descriptors */
       mu_close_fds (3);
 
       /*FIXME: Switch to other uid/gid if desired */

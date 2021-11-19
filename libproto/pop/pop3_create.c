@@ -25,7 +25,7 @@
 #include <mailutils/sys/pop3.h>
 #include <mailutils/list.h>
 
-/* Initialise a mu_pop3_t handle.  */
+/* Initialize a mu_pop3_t handle.  */
 
 int
 mu_pop3_create (mu_pop3_t *ppop3)

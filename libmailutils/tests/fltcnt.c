@@ -22,7 +22,7 @@ DESCRIPTION
     mu_filter_stream_create bug described below would compensate for this.
 
     To check for this bug, the program does two mu_filter_chain_create
-    calls: one with a valid filter name, and another one with an inexisting
+    calls: one with a valid filter name, and another one with a non-existing
     filter name.  Reference counter values are verified after each call.
     
   mu_filter_stream_create
@@ -76,7 +76,7 @@ test_mu_filter_chain_create (mu_stream_t in)
   /*
    * First pass.
    *
-   * Check if input reference counter increases by 1 after successfull
+   * Check if input reference counter increases by 1 after successful
    * call to mu_filter_chain_create.
    */
   
@@ -117,7 +117,7 @@ test_mu_filter_chain_create (mu_stream_t in)
    * call to mu_filter_chain_create.
    */
 
-  /* Request unexisting filter. */
+  /* Request a non-existing filter. */
   fargv[2] = "there_is_no_such_filter";
   rc = mu_filter_chain_create (&flt, in,
 			       MU_FILTER_ENCODE,

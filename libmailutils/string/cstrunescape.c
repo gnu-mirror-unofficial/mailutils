@@ -23,7 +23,7 @@
 /* Copy characters from IN to OUT.  Replace each occurrences of backslash
    followed by a character XTAB[i] with CHR[i].
 
-   OUT should be large enough to accomodate the translated string (same length
+   OUT should be large enough to accommodate the translated string (same length
    as IN, in the worst case).  It is OK if IN==OUT.
 
    Both XTAB and CHR must not be NULL and must contain the same number of
@@ -61,7 +61,7 @@ c_str_unescape (char const *in, char *out, char const *chr, char const *xtab)
   out[j] = 0;
 }
 
-/* Modifies STR, by replacing each occurrence of \ followed by a charater
+/* Modifies STR, by replacing each occurrence of \ followed by a character
    XTAB[i] with CHR[i].
 
    Either XTAB or CHR can be NULL, in which case XTAB=CHR is assumed.
@@ -93,7 +93,7 @@ mu_c_str_unescape_inplace (char *str, char const *chr, char const *xtab)
 }
 
 /* A counterpart of mu_c_str_escape.  Creates an allocated (using malloc(3))
-   copy of STR, where each occurrence of \ followed by a charater XTAB[i]
+   copy of STR, where each occurrence of \ followed by a character XTAB[i]
    is replaced with single character CHR[i].
 
    Either XTAB or CHR can be NULL, in which case XTAB=CHR is assumed.

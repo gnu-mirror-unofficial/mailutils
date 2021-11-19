@@ -163,7 +163,7 @@ sendmail_send_message (mu_mailer_t mailer, mu_message_t msg, mu_address_t from,
 	{
 	  /* the address wasn't fully qualified, choke (for now) */
 	  mu_debug (MU_DEBCAT_MAILER, MU_DEBUG_TRACE,
-		    ("envelope from (%s) not fully qualifed\n",
+		    ("envelope from (%s) not fully qualified\n",
 		     emailfrom));
 	  return MU_ERR_INVALID_EMAIL;
 	}
@@ -235,7 +235,7 @@ sendmail_send_message (mu_mailer_t mailer, mu_message_t msg, mu_address_t from,
 	  if (!email)
 	    {
 	      mu_debug (MU_DEBCAT_MAILER, MU_DEBUG_TRACE,
-			("envelope to (%s) not fully qualifed",
+			("envelope to (%s) not fully qualified",
 			 email));
 	      free (argvec);
 	      return MU_ERR_INVALID_EMAIL;
@@ -280,7 +280,7 @@ static struct _mu_record _sendmail_record =
   NULL, /* _get_mailer method.  */
   NULL  /* _get_folder method.  */
 };
-/* We export, url parsing and the initialisation of
+/* We export, url parsing and the initialization of
    the mailbox, via the register entry/record.  */
 mu_record_t mu_sendmail_record = &_sendmail_record;
 

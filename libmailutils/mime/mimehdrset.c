@@ -44,7 +44,7 @@ mime_store_parameter (char const *name, void *value, void *data)
   struct mu_mime_param *p = value;
   struct header_buffer *hbuf = data;
   size_t nlen;   /* Length of parameter name
-		    (eq. sign, eventual seqence no. and language info mark
+		    (eq. sign, eventual sequence no. and language info mark
 		    included) */
   size_t vlen;   /* Length of lang'charset' part */
   int langinfo;  /* True if language info is available */ 
@@ -205,7 +205,7 @@ mime_store_parameter (char const *name, void *value, void *data)
 	  start = nr;
 
 	  /* Compute the number of octets to put into the current line.
-	     If the requested line width is not enough to accomodate
+	     If the requested line width is not enough to accommodate
 	     the line, signal the error */
 	  if (hbuf->line_max <= (hbuf->line_len + quote + vlen))
 	    {

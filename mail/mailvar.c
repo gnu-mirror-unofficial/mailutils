@@ -516,7 +516,7 @@ mailvar_variable_reset (struct mailvar_variable *var)
   var->set = 0;
 }
 
-/* Set environement
+/* Set environment
    The  mailvar_set() function adds to the mailvar_list the VARIABLE
    with the given VALUE, if VARIABLE does not already exist.
    If it does exist in the mailvar_list, then its value is changed

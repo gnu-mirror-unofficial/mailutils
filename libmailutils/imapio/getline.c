@@ -216,7 +216,7 @@ mu_imapio_getline (struct _mu_imapio *io)
 	    xlev = mu_imapio_set_xscript_level (io, MU_XSCRIPT_PAYLOAD);
 	  
 	  number = strtoul (last_arg + 1, &sp, 10);
-	  /* Client can ask for non-synchronised literal,
+	  /* Client can ask for non-synchronized literal,
 	     if a '+' is appended to the octet count. */
 	  if (*sp == '}')
 	    {

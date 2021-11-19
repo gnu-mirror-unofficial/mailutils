@@ -23,7 +23,7 @@
 #include <mailutils/errno.h>
 #include <mailutils/sys/message.h>
 
-/*  Allocate ressources for the mu_message_t.  */
+/*  Allocate res sources for the mu_message_t.  */
 int
 mu_message_create (mu_message_t *pmsg, void *owner)
 {

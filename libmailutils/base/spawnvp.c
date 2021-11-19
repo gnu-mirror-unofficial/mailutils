@@ -29,7 +29,7 @@
 
 /* See Advanced Programming in the UNIX Environment, Stevens,
  * program  10.20 for the rational for the signal handling. I
- * had to look it up, so if somebody else is curious, thats where
+ * had to look it up, so if somebody else is curious, that's where
  * to find it.
  */
 int 

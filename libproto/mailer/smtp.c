@@ -81,7 +81,7 @@ static struct _mu_record _smtp_record = {
   NULL				/* _get_folder method.  */
 };
 
-/* We export : url parsing and the initialisation of
+/* We export : url parsing and the initialization of
    the mailbox, via the register entry/record.  */
 mu_record_t     mu_smtp_record = &_smtp_record;
 

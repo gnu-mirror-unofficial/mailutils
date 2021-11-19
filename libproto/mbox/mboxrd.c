@@ -345,7 +345,7 @@ mboxrd_message_alloc_uid (struct mu_mboxrd_message *dmsg)
  * parameters, correspondingly.
  *
  * The header is stored in the first message.  To avoid rewriting entire
- * mailbox when one of the parameters chages, the values of <V> and <N>
+ * mailbox when one of the parameters changes, the values of <V> and <N>
  * are left-padded with spaces to the maximum width of their data types.
  *
  * Offset of the header in the mailbox and its length (without the

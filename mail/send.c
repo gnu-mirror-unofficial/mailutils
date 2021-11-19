@@ -676,7 +676,7 @@ read_cc_bcc (compose_env_t *env)
  * m[ail] address...
  if address is starting with
  
-    '/'        it is considered a file and the message is saveed to a file;
+    '/'        it is considered a file and the message is saved to a file;
     '.'        it is considered to be a relative path;
     '|'        it is considered to be a pipe, and the message is written to
                there;

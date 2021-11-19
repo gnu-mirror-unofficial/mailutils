@@ -127,7 +127,7 @@ lr_set_file (struct mu_locus_range *loc, char const *fname, unsigned len,
      FfLlCc
 
    The bits f, l, and c (file, line, and column) are toggled cyclically.
-   The value 0 means locus beg, 1 meand locus end.
+   The value 0 means locus beg, 1 means locus end.
    The bits F, L, and C are set once and indicate that the corresponding
    bit was toggled at least once.
  */

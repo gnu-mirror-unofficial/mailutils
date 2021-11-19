@@ -400,7 +400,7 @@ mu_c_streamftime (mu_stream_t str, const char *fmt, struct tm *input_tm,
 	  break;
 
 	case '$':
-	  /* Ignored for compatibilty with mu_scan_datetime */
+	  /* Ignored for compatibility with mu_scan_datetime */
 	  break;
 	  
 	case '+':

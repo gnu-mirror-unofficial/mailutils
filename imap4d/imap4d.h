@@ -380,7 +380,7 @@ extern void fetch_flags0 (const char *prefix, mu_message_t msg, int isuid);
 #define MKDIR_PERMISSIONS 0700
 int make_interdir (const char *name, int delim, int perms);
 
-/* Synchronisation on simultaneous access.  */
+/* Synchronization on simultaneous access.  */
 extern int imap4d_sync (void);
 extern void imap4d_sync_invalidate (void);
 extern int imap4d_sync_flags (size_t);

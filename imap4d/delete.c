@@ -43,7 +43,7 @@ imap4d_delete (struct imap4d_session *session,
   if (!name || *name == '\0')
     return io_completion_response (command, RESP_BAD, "Too few arguments");
 
-  /* It is an error to attempt to delele "INBOX" or a mailbox
+  /* It is an error to attempt to delete "INBOX" or a mailbox
      name that does not exist.  */
   if (mu_c_strcasecmp (name, "INBOX") == 0)
     return io_completion_response (command, RESP_NO, "Cannot remove");

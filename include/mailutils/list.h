@@ -136,7 +136,7 @@ int mu_list_pop (mu_list_t list, void **item);
   
 
   /* ************************************************* */
-  /* Interation over lists.                            */
+  /* Iteration over lists.                             */
   /* ************************************************* */
 
   /* Get iterator for this _list and return it in _pitr, if successful. */
@@ -301,7 +301,7 @@ typedef int (*mu_list_folder_t) (void *_item, void *_data,
        _data     -  call-specific data,
        _prev     -  on the first call, _init; on subsequent calls,
                     points to the value returned from the previous call
-		    to _fold in the _ret varialble,
+		    to _fold in the _ret variable,
        _ret      -  memory location where to store the result of this
                     call.
 

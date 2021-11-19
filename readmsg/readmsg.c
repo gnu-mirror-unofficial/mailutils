@@ -501,7 +501,7 @@ main (int argc, char **argv)
       exit (2);
     }
 
-  /* Debuging Trace.  */
+  /* Debugging Trace.  */
   if (dbug)
     {
       mu_debug_set_category_level (MU_DEBCAT_MAILBOX,

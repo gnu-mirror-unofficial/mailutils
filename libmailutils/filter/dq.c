@@ -15,7 +15,7 @@
    Public License along with this library.  If not, see 
    <http://www.gnu.org/licenses/>. */
 
-/* Doble-quote escaping filter.
+/* Double-quote escaping filter.
    In encode mode, escapes each occurrence of double-quote and backslash
    by prefixing it with backslash.
    In decode mode, removes backslash prefixes.

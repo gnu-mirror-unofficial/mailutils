@@ -224,7 +224,7 @@ struct parsebuf
   int arg;                      /* Argument number */
   char *token;                  /* Current token */
   int isuid;                    /* UIDs instead of msgnos are required */
-  char *err_mesg;               /* Error message if a parse error occured */
+  char *err_mesg;               /* Error message if a parse error occurred */
   struct mem_chain *alloc;      /* Chain of objects allocated during parsing */
   char *charset;                /* Charset, other than US-ASCII requested */
 
@@ -817,10 +817,10 @@ search_run (struct parsebuf *pb)
   return value.v.number != 0;
 }
 
-/* Helper functions for evaluationg conditions */
+/* Helper functions for evaluating conditions */
 
-/* Scan the header of a message for the occurence of field named `name'.
-   Return true if any of the occurences contained substring `value' */
+/* Scan the header of a message for the occurrence of field named `name'.
+   Return true if any of the occurrences contained substring `value' */
 static int
 _scan_header (struct parsebuf *pb, char *name, char *value)
 {
@@ -876,7 +876,7 @@ _header_date (struct parsebuf *pb, time_t *timep)
   return 1;
 }
 
-/* Scan all header fields for the occurence of a substring `text' */
+/* Scan all header fields for the occurrence of a substring `text' */
 static int
 _scan_header_all (struct parsebuf *pb, char *text)
 {

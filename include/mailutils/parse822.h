@@ -16,7 +16,7 @@
    <http://www.gnu.org/licenses/>. */
 
 /**
-* Parses syntatic elements defined in RFC 822.
+* Parses syntactic elements defined in RFC 822.
 */
 
 #ifndef _MAILUTILS_PARSE822_H

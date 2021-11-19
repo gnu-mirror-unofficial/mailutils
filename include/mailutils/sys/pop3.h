@@ -132,7 +132,7 @@ int _mu_pop3_init (mu_pop3_t pop3);
   while (0)
 
 /* Check if we got "+OK".
-   In POP3 protocol and ack of "+OK" means the command was successfull.
+   In POP3 protocol and ack of "+OK" means the command was successful.
  */
 #define MU_POP3_CHECK_OK(pop3)					\
   do								\

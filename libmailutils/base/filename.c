@@ -67,7 +67,7 @@ mu_get_full_path (const char *file)
   return p;
 }
 
-/* mu_normalize_path: convert pathname containig relative paths specs (../)
+/* mu_normalize_path: convert pathname containing relative paths specs (../)
    into an equivalent absolute path. Strip trailing delimiter if present,
    unless it is the only character left. E.g.:
 
