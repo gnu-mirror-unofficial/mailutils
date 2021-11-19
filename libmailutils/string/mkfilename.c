@@ -28,27 +28,34 @@
 /*
  * Given directory name DIR, file name FILE and optional suffix SUF,
  * return full pathname composed from these three.  In the resulting
- * string, DIR and FILE are separated by '/'.  If SUF is supplied, it
- * is concatenated to the resulting string without additional
- * separators.
+ * string, DIR and FILE are separated by exactly one '/', unless DIR
+ * is one or more '/' characters, in which case the two strings are
+ * simply concatenated.  If SUF is supplied, it is appended to the
+ * resulting string without additional separators.
  *
  * Corner cases:
  *   all three arguments are NULL or empty
  *     Return NULL and set errno to EINVAL.
  *   dir is NULL
  *     Return FILE and SUF concatenated.
+ *   dir is a sequence of one or more '/'
+ *     Return concatenation of arguments.
  *   file is NULL, suf is not NULL
  *     Same as mu_make_file_name_suf(dir, suf, NULL);
  *   file is NULL, suf is NULL
  *     Return allocated copy of DIR.
  */
+
+#define DIRSEP '/'
+
 char *
 mu_make_file_name_suf (const char *dir, const char *file, const char *suf)
 {
   char *tmp;
   size_t dirlen, suflen, fillen;
   size_t len;
-
+  int sep = 0;
+  
   dirlen = dir ? strlen (dir) : 0;
   fillen = file ? strlen (file) : 0;
   suflen = suf ? strlen (suf) : 0;
@@ -64,21 +71,31 @@ mu_make_file_name_suf (const char *dir, const char *file, const char *suf)
     }
   else
     {
-      if (len) len++; // account for the '/' separator
-      while (dirlen > 0 && dir[dirlen-1] == '/')
+      int i = 0;
+
+      if (len)
+	sep = DIRSEP;
+      
+      if (dir[0] == DIRSEP)
+	{
+	  for (i = 0; dir[i+1] == DIRSEP; i++);
+	  sep = DIRSEP;
+	}
+      
+      while (dirlen > i && dir[dirlen-1] == DIRSEP)
 	dirlen--;
     }
   len += dirlen;
+  if (sep)
+    len++;
 
   tmp = malloc (len + 1);
   if (tmp)
     {
-      if (dirlen)
-	{
-	  memcpy (tmp, dir, dirlen);
-	  if (fillen || suflen)
-	    tmp[dirlen++] = '/';
-	}
+      if (dir)
+	memcpy (tmp, dir, dirlen);
+      if (sep)
+	tmp[dirlen++] = sep;
       if (fillen)
 	memcpy (tmp + dirlen, file, fillen);
       if (suflen)
