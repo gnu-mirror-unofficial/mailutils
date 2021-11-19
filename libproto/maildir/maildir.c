@@ -513,7 +513,7 @@ maildir_open (struct _maildir_data *md)
 static void
 maildir_close (struct _maildir_data *md)
 {
-  if (md->folder_fd == -1)
+  if (md->folder_fd != -1)
     {
       close (md->folder_fd);
       md->folder_fd = -1;

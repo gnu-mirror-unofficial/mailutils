@@ -1386,6 +1386,7 @@ amd_expunge (mu_mailbox_t mailbox)
 	  pp = amd_pool_lookup (mhm);
 	  if (pp)
 	    *pp = NULL;
+	  amd_message_stream_close (mhm);
 	  mu_message_destroy (&mhm->message, mhm);
 	  if (amd->msg_free)
 	    amd->msg_free (mhm);
