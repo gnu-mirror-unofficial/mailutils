@@ -69,7 +69,12 @@ imap4d_idle (struct imap4d_session *session,
 	  mu_error (_("read error: %s"), mu_strerror (rc));
 	  imap4d_bye (ERR_NO_IFILE);
 	}
-
+      else if (token_len == 0)
+	{
+	  mu_error ("%s", _("eof while idling"));
+	  imap4d_bye (ERR_NO_IFILE);
+	}
+      
       token_len = mu_rtrim_class (token_str, MU_CTYPE_ENDLN);
 
       if (token_len == 4 && mu_c_strcasecmp (token_str, "done") == 0)
