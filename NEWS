@@ -1,9 +1,9 @@
-GNU mailutils NEWS -- history of user-visible changes. 2021-11-13
+GNU mailutils NEWS -- history of user-visible changes. 2021-11-25
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
 
-Version 3.13.90 (git)
+Version 3.13.91 (git)
 
 * TLS support rewritten from scratch
 
