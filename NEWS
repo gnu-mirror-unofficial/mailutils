@@ -1,4 +1,4 @@
-GNU mailutils NEWS -- history of user-visible changes. 2021-11-25
+GNU mailutils NEWS -- history of user-visible changes. 2021-12-05
 See the end of file for copying conditions.
 
 Please send mailutils bug reports to <bug-mailutils@gnu.org>.
@@ -14,9 +14,20 @@ daemons.  Default timeout it 10 seconds.
 
 * Fix idle timeout handling (imap4d and pop3d daemons)
 
+* New function mu_mailbox_append_message_ext
+
+This function appends the message to the mailbox optionally rewriting
+its envelope and/or attribute flags.
+
 * mail utility
 
 ** new command: unread (U)
+
+** message state is preserved when copying to another mailbox
+
+The mbox and copy commands append the messages to the destination
+mailbox preserving their state (read, unread, etc.)
+
 
 Version 3.13, 2021-08-05
 
