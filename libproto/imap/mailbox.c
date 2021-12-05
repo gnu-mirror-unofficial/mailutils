@@ -1114,21 +1114,23 @@ _imap_mbx_sync (mu_mailbox_t mbox)
 }
 
 static int
-_imap_mbx_append_message (mu_mailbox_t mbox, mu_message_t msg)
+_imap_mbx_append_message (mu_mailbox_t mbox, mu_message_t msg,
+			  mu_envelope_t env, mu_attribute_t atr)
 {
   int rc;
   mu_folder_t folder = mbox->folder;
   mu_imap_t imap = folder->data;
   mu_url_t url;
   const char *mbox_name;
-
+  
   rc = mu_mailbox_get_url (mbox, &url);
   if (rc)
     return rc;
   rc = mu_url_sget_path (url, &mbox_name);
   if (rc)
     return rc;
-  return mu_imap_append_message (imap, mbox_name, 0, NULL, NULL, msg);
+
+  return mu_imap_append_message (imap, mbox_name, msg, env, atr);
 }
 
 static int _compute_lines (struct mu_bodystructure *bs, size_t *pcount);

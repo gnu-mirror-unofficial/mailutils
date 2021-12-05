@@ -220,12 +220,13 @@ guess_message_recipient (mu_message_t msg, char **hdrname, char **pptr)
   
 
 static int
-remote_mbox_append_message (mu_mailbox_t mbox, mu_message_t msg)
+remote_mbox_append_message (mu_mailbox_t mbox, mu_message_t msg,
+			    mu_envelope_t env, mu_attribute_t atr)
 {
   struct remote_mbox_data *dat = mbox->data;
   int status;
   mu_property_t property = NULL;
-  mu_address_t from, to;
+  mu_address_t from = NULL, to;
   
   if (!dat->mailer)
     return EINVAL;
@@ -236,7 +237,24 @@ remote_mbox_append_message (mu_mailbox_t mbox, mu_message_t msg)
               ("failed to get property: %s",
 	        mu_strerror (status)));
 
-  mkaddr (mbox, property, "FROM", &from);
+  if (env)
+    {
+      char const *s;
+      
+      if (mu_envelope_sget_sender (env, &s) == 0)
+	{
+	  status = mu_address_create (&from, s);
+	  if (status)
+	    {
+	      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+			("%s: mu_address_create failed: %s",
+			 s, mu_strerror (status)));
+	      return status;
+	    }
+	}
+    }
+  if (!from)
+    mkaddr (mbox, property, "FROM", &from);
   mkaddr (mbox, property, "TO", &to);
   if (!to)
     {

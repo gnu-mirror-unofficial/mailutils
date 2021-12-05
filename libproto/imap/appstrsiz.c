@@ -25,6 +25,8 @@
 #include <mailutils/filter.h>
 #include <mailutils/errno.h>
 #include <mailutils/imap.h>
+#include <mailutils/attribute.h>
+#include <mailutils/envelope.h>
 #include <mailutils/sys/imap.h>
 
 static int
@@ -57,8 +59,8 @@ get_crlf_stream_size (mu_stream_t str, mu_off_t size, mu_off_t *prealsize)
 }
 
 int
-mu_imap_append_stream_size (mu_imap_t imap, const char *mailbox, int flags,
-			    struct tm *tm, struct mu_timezone *tz,
+mu_imap_append_stream_size (mu_imap_t imap, const char *mailbox,
+			    mu_envelope_t env, mu_attribute_t atr,
 			    mu_stream_t stream, mu_off_t size)
 {
   int status;
@@ -84,20 +86,41 @@ mu_imap_append_stream_size (mu_imap_t imap, const char *mailbox, int flags,
       MU_IMAP_CHECK_ERROR (imap, status);
       status = mu_imapio_send_qstring (imap->io, mailbox);
       MU_IMAP_CHECK_ERROR (imap, status);
-      if (flags)
+      if (atr)
 	{
-	  status = mu_imapio_send (imap->io, " ", 1);
+	  int flags;
+
+	  status = mu_attribute_get_flags (atr, &flags);
 	  if (status == 0)
-	    status = mu_imapio_send_flags (imap->io, flags);
+	    {
+	      if (flags != 0)
+		{
+		  status = mu_imapio_send (imap->io, " ", 1);
+		  if (status == 0)
+		    status = mu_imapio_send_flags (imap->io, flags);
+		}
+	    }
 	  MU_IMAP_CHECK_ERROR (imap, status);
 	}
 
-      if (tm)
+      if (env)
 	{
-	  status = mu_imapio_send (imap->io, " ", 1);
+	  char const *s;
+	  status = mu_envelope_sget_date (env, &s);
 	  if (status == 0)
-	    status = mu_imapio_send_time (imap->io, tm, tz);
+	    {
+	      struct tm tm;
+	      struct mu_timezone tz;
+
+	      if (mu_parse_date_dtl (s, NULL, NULL, &tm, &tz, NULL) == 0)
+		{
+		  status = mu_imapio_send (imap->io, " ", 1);
+		  if (status == 0)
+		    status = mu_imapio_send_time (imap->io, &tm, &tz);
+		}
+	    }
 	  MU_IMAP_CHECK_ERROR (imap, status);
+	  //FIXME: sender
 	}
 
       status = mu_imapio_send (imap->io, " ", 1);

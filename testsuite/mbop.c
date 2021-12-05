@@ -15,6 +15,7 @@
    along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <mailutils/mailutils.h>
+#include <mailutils/sys/envelope.h>
 #include "tesh.h"
 
 unsigned long
@@ -274,15 +275,57 @@ ATTR_FUN(unset,recent)
 ATTR_FUN(unset,read)
 
 int
-mbop_append (int argc, char **argv, mu_assoc_t options, void *env)
+mbop_append (int argc, char **argv, mu_assoc_t options, void *call_env)
 {
-  struct interp_env *ienv = env;
+  struct interp_env *ienv = call_env;
   mu_stream_t str;
   mu_message_t newmsg;
-
+  mu_attribute_t atr = NULL;
+  mu_envelope_t env = NULL;
+  char *s;
+  
   MU_ASSERT (mu_file_stream_create (&str, argv[1], MU_STREAM_READ));
   MU_ASSERT (mu_stream_to_message (str, &newmsg));
-  MU_ASSERT (mu_mailbox_append_message (ienv->mbx, newmsg));
+  
+  if (mu_assoc_lookup (options, "attr", &s) == 0)
+    {
+      int flags = 0;
+
+      MU_ASSERT (mu_attribute_create (&atr, NULL));
+      MU_ASSERT (mu_attribute_string_to_flags (s, &flags));
+      MU_ASSERT (mu_attribute_set_flags (atr, flags));
+    }
+
+  if (mu_assoc_lookup (options, "sender", &s) == 0)
+    {
+      MU_ASSERT (mu_envelope_create (&env, NULL));
+      env->sender = mu_strdup (s);
+    }
+
+  if (mu_assoc_lookup (options, "date", &s) == 0)
+    {
+      struct tm tm;
+      char datebuf[MU_DATETIME_FROM_LENGTH+1];
+      
+      if (!env)
+	MU_ASSERT (mu_envelope_create (&env, NULL));
+      MU_ASSERT (mu_parse_date_dtl (s, NULL, NULL, &tm, NULL, NULL));
+
+      mu_strftime (datebuf, sizeof (datebuf), MU_DATETIME_FROM, &tm);
+      env->date = mu_strdup (datebuf);
+    }
+  
+  if (env || atr)
+    {
+      MU_ASSERT (mu_mailbox_append_message_ext (ienv->mbx, newmsg, env, atr));
+      mu_envelope_destroy (&env, NULL);
+      mu_attribute_destroy (&atr, NULL);
+    }
+  else
+    MU_ASSERT (mu_mailbox_append_message (ienv->mbx, newmsg));
+  
+  mu_envelope_destroy (&env, NULL);
+  mu_attribute_destroy (&atr, NULL);
   mu_stream_destroy (&str);
   mu_printf ("OK");
   return 0;
@@ -489,7 +532,7 @@ struct mu_tesh_command commands[] = {
   { "unset_read",     "", mbop_unset_read     },
   { "expunge",        "", mbop_expunge },
   { "sync",           "", mbop_sync },
-  { "append",         "FILE", mbop_append },
+  { "append",         "[-sender=EMAIL] [-date=DATE] [-attr=FLAGS] FILE", mbop_append },
   { "uidvalidity",    "", mbop_uidvalidity },
   { "uidnext",        "", mbop_uidnext },
   { "uidvalidity_reset", "", mbop_uidvalidity_reset },

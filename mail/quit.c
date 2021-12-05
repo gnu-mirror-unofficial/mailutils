@@ -164,7 +164,7 @@ mail_mbox_commit (void)
 		}
 	    }
 
-	  status = mu_mailbox_append_message (dest_mbox, msg);
+	  status = mu_mailbox_append_message_ext (dest_mbox, msg, NULL, attr);
 	  if (status)
 	    {
 	      mu_url_t url = NULL;

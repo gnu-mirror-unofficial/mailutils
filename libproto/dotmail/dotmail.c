@@ -37,6 +37,7 @@
 #include <mailutils/nls.h>
 #include <mailutils/header.h>
 #include <mailutils/attribute.h>
+#include <mailutils/envelope.h>
 #include <mailutils/util.h>
 #include <mailutils/cctype.h>
 
@@ -936,7 +937,8 @@ dotmail_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
 }
 
 static int
-mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
+mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg,
+			mu_envelope_t env, mu_attribute_t atr)
 {
   int rc;
   mu_off_t size;
@@ -944,6 +946,8 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
   static char *exclude_headers[] = {
     MU_HEADER_X_IMAPBASE,
     MU_HEADER_X_UID,
+    MU_HEADER_STATUS,
+    NULL,
     NULL
   };
   struct mu_dotmail_mailbox *dmp = mailbox->data;
@@ -958,10 +962,63 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 
   do
     {
+      char statbuf[MU_STATUS_BUF_SIZE];
+      
+      if (atr)
+	{
+	  rc = mu_attribute_to_string (atr, statbuf, MU_STATUS_BUF_SIZE, NULL);
+	  if (rc)
+	    break;
+	}      
+      else
+	statbuf[0] = 0;
+      
+      if (env)
+	{
+	  char const *s;
+
+	  if (mu_envelope_sget_sender (env, &s) == 0)
+	    exclude_headers[3] = MU_HEADER_RETURN_PATH;
+	  if (mu_envelope_sget_date (env, &s) == 0)
+	    {
+	      struct tm tm;
+	      struct mu_timezone tz;
+	      
+	      if (mu_parse_date_dtl (s, NULL, NULL, &tm, &tz, NULL) == 0)
+		{
+		  /* Format a "Received:" header with that date */
+		  mu_stream_printf (mailbox->stream,
+				    "Received: from %s\n"
+				    "\tby %s; ",
+				    "localhost", "localhost");
+		  mu_c_streamftime (mailbox->stream,
+				    MU_DATETIME_FORM_RFC822, &tm, &tz);
+		  mu_stream_write (mailbox->stream, "\n", 1, NULL);
+		}
+	    }
+	}
+      
       rc = mu_stream_header_copy (mailbox->stream, istr, exclude_headers);
       if (rc)
 	break;
 
+      if (env)
+	{
+	  char const *s;
+
+	  if (mu_envelope_sget_sender (env, &s) == 0)
+	    {
+	      /* Create a Return-Path header */
+	      mu_stream_printf (mailbox->stream, "%s: %s\n",
+				MU_HEADER_RETURN_PATH, s);
+	    }
+	}
+      
+      /* Write status header */
+      if (statbuf[0])
+	mu_stream_printf (mailbox->stream,
+			  "%s: %s\n", MU_HEADER_STATUS, statbuf);      
+      
       /* Write UID-related data */
       if (dmp->uidvalidity_scanned)
 	{
@@ -1017,7 +1074,8 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 }
 
 static int
-dotmail_append_message (mu_mailbox_t mailbox, mu_message_t msg)
+dotmail_append_message (mu_mailbox_t mailbox, mu_message_t msg,
+			mu_envelope_t env, mu_attribute_t atr)
 {
   struct mu_dotmail_mailbox *dmp = mailbox->data;
   int rc;
@@ -1036,7 +1094,7 @@ dotmail_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     }
   else
     {
-      rc = mailbox_append_message (mailbox, msg);
+      rc = mailbox_append_message (mailbox, msg, env, atr);
 
       if (mailbox->locker)
 	mu_locker_unlock (mailbox->locker);

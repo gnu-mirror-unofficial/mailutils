@@ -28,6 +28,7 @@
 #include <mailutils/imapio.h>
 #include <mailutils/imaputil.h>
 #include <mailutils/msgset.h>
+#include <mailutils/sys/envelope.h>
 #include "mu.h"
 
 char imap_docstring[] = N_("IMAP4 client shell");
@@ -998,32 +999,42 @@ com_unsubscribe (int argc, char **argv)
 static int
 com_append (int argc, char **argv)
 {
-  struct tm tmbuf, *tm = NULL;
-  struct mu_timezone tzbuf, *tz = NULL;
   int flags = 0;
   mu_stream_t stream;
   int rc, i;
+  mu_envelope_t env = NULL;
+  mu_attribute_t atr = NULL;
   
   for (i = 1; i < argc; i++)
     {
       if (strcmp (argv[i], "-time") == 0)
 	{
 	  char *p;
-	  
+	  char datebuf[MU_DATETIME_FROM_LENGTH+1];
+	  struct tm tm;
+
 	  if (++i == argc)
 	    {
 	      mu_error (_("-time requires argument"));
 	      return 0;
 	    }
+
 	  rc = mu_scan_datetime (argv[i], MU_DATETIME_INTERNALDATE,
-				 &tmbuf, &tzbuf, &p);
+				 &tm, NULL, &p);
 	  if (rc || *p)
 	    {
 	      mu_error (_("cannot parse time"));
 	      return 0;
 	    }
-	  tm = &tmbuf;
-	  tz = &tzbuf;
+
+	  mu_strftime (datebuf, sizeof (datebuf), MU_DATETIME_FROM, &tm);
+	  rc = mu_envelope_create (&env, NULL);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_envelope_create", NULL, rc);
+	      return 0;
+	    }
+	  env->date = mu_strdup (datebuf);
 	}
       else if (strcmp (argv[i], "-flag") == 0)
 	{
@@ -1037,6 +1048,13 @@ com_append (int argc, char **argv)
 	      mu_error (_("unrecognized flag: %s"), argv[i]);
 	      return 0;
 	    }
+	  rc = mu_attribute_create (&atr, NULL);
+	  if (rc)
+	    {
+	      mu_diag_funcall (MU_DIAG_ERROR, "mu_attribute_create", NULL, rc);
+	      return 0;
+	    }
+	  mu_attribute_set_flags (atr, flags);
 	}
       else if (strcmp (argv[i], "--") == 0)
 	{
@@ -1066,8 +1084,10 @@ com_append (int argc, char **argv)
       return 0;
     }
 
-  rc = mu_imap_append_stream (imap, argv[i], flags, tm, tz, stream);
+  rc = mu_imap_append_stream (imap, argv[i], env, atr, stream);
   mu_stream_unref (stream);
+  mu_envelope_destroy (&env, NULL);
+  mu_attribute_destroy (&atr, NULL);
   if (rc)
     report_failure ("append", rc);
   return 0;

@@ -28,9 +28,9 @@
 #include <mailutils/sys/imap.h>
 
 int
-mu_imap_append_message (mu_imap_t imap, const char *mailbox, int flags,
-			struct tm *tm, struct mu_timezone *tz,
-			mu_message_t msg)
+mu_imap_append_message (mu_imap_t imap, const char *mailbox, 
+			mu_message_t msg, mu_envelope_t env,
+			mu_attribute_t atr)
 {
   mu_stream_t str;
   int rc;
@@ -38,7 +38,7 @@ mu_imap_append_message (mu_imap_t imap, const char *mailbox, int flags,
   rc = mu_message_get_streamref (msg, &str);
   if (rc == 0)
     {
-      rc = mu_imap_append_stream (imap, mailbox, flags, tm, tz, str);
+      rc = mu_imap_append_stream (imap, mailbox, env, atr, str);
       mu_stream_unref (str);
     }
   return rc;

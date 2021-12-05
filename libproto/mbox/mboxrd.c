@@ -1066,7 +1066,8 @@ mboxrd_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
 }
 
 static int
-mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
+mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg,
+			mu_envelope_t env, mu_attribute_t atr)
 {
   int rc;
   mu_off_t size;
@@ -1074,10 +1075,11 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
   static char *exclude_headers[] = {
     MU_HEADER_X_IMAPBASE,
     MU_HEADER_X_UID,
+    MU_HEADER_STATUS,
     NULL
   };
   struct mu_mboxrd_mailbox *dmp = mailbox->data;
-
+  
   if (dmp->mesg_count)
     {
       char nl[2];
@@ -1120,14 +1122,17 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 
   do
     {
-      mu_envelope_t env;
       char *date = NULL;
       char *sender = NULL;
+      char statbuf[MU_STATUS_BUF_SIZE];
 
-      rc = mu_message_get_envelope (msg, &env);
-      if (rc)
-	break;
-
+      if (!env)
+	{
+	  rc = mu_message_get_envelope (msg, &env);
+	  if (rc)
+	    break;
+	}
+      
       rc = mu_envelope_aget_sender (env, &sender);
       if (rc == 0)
 	{
@@ -1169,11 +1174,25 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 
       if (rc)
 	break;
+
+      if (atr)
+	{
+	  rc = mu_attribute_to_string (atr, statbuf, MU_STATUS_BUF_SIZE, NULL);
+	  if (rc)
+	    break;
+	}
+      else
+	statbuf[0] = 0;
       
       rc = mu_stream_header_copy (mailbox->stream, istr, exclude_headers);
       if (rc)
 	break;
 
+      /* Write status header */
+      if (statbuf[0])
+	mu_stream_printf (mailbox->stream,
+			  "%s: %s\n", MU_HEADER_STATUS, statbuf);
+      
       /* Write UID-related data */
       if (dmp->uidvalidity_scanned)
 	{
@@ -1230,7 +1249,8 @@ mailbox_append_message (mu_mailbox_t mailbox, mu_message_t msg)
 }
 
 static int
-mboxrd_append_message (mu_mailbox_t mailbox, mu_message_t msg)
+mboxrd_append_message (mu_mailbox_t mailbox, mu_message_t msg,
+		       mu_envelope_t env, mu_attribute_t atr)
 {
   struct mu_mboxrd_mailbox *dmp = mailbox->data;
   int rc;
@@ -1249,7 +1269,7 @@ mboxrd_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     }
   else
     {
-      rc = mailbox_append_message (mailbox, msg);
+      rc = mailbox_append_message (mailbox, msg, env, atr);
 
       if (mailbox->locker)
 	mu_locker_unlock (mailbox->locker);

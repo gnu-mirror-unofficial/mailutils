@@ -27,8 +27,8 @@
 #include <mailutils/sys/imap.h>
 
 int
-mu_imap_append_stream (mu_imap_t imap, const char *mailbox, int flags,
-		       struct tm *tm, struct mu_timezone *tz,
+mu_imap_append_stream (mu_imap_t imap, const char *mailbox,
+		       mu_envelope_t env, mu_attribute_t atr,
 		       mu_stream_t stream)
 {
   mu_off_t size;
@@ -36,8 +36,7 @@ mu_imap_append_stream (mu_imap_t imap, const char *mailbox, int flags,
 
   rc = mu_stream_size (stream, &size);
   if (rc == 0)
-    rc = mu_imap_append_stream_size (imap, mailbox, flags, tm, tz, stream,
-				     size);
+    rc = mu_imap_append_stream_size (imap, mailbox, env, atr, stream, size);
   return rc;
 }
 

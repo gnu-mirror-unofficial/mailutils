@@ -134,17 +134,21 @@ mu_attribute_unset_flags (mu_attribute_t attr, int flags)
     return EINVAL;
 
   /* If the required bits are already cleared, do not modify anything */
-  mu_attribute_get_flags (attr, &oflags);
-  if ((oflags & flags) == 0)
-    return 0;
-
-  if (attr->_unset_flags)
-    status = attr->_unset_flags (attr, flags);
-  else
-    attr->flags &= ~flags;
+  status = mu_attribute_get_flags (attr, &oflags);
   if (status == 0)
-    mu_attribute_set_modified (attr);
-  return 0;
+    {
+      if ((oflags & flags) == 0)
+	return 0;
+
+      if (attr->_unset_flags)
+	status = attr->_unset_flags (attr, flags);
+      else
+	attr->flags &= ~flags;
+
+      if (status == 0)
+	mu_attribute_set_modified (attr);
+    }
+  return status;
 }
 
 int
@@ -421,8 +425,8 @@ static struct flagtrans flagtrans[] = {
   { MU_ATTRIBUTE_DELETED, 'D' },
   { MU_ATTRIBUTE_DRAFT, 'd' },
   { MU_ATTRIBUTE_SEEN, 'O' },
-  { MU_ATTRIBUTE_READ, 'R' },
   { MU_ATTRIBUTE_FORWARDED, 'P' },
+  { MU_ATTRIBUTE_READ, 'R' },
   { 0 }
 };
 

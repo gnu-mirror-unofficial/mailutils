@@ -1388,20 +1388,20 @@ maildir_create (struct _amd_data *amd, int flags)
 
 static int
 maildir_msg_finish_delivery (struct _amd_data *amd, struct _amd_message *amm,
-			     const mu_message_t orig_msg)
+			     const mu_message_t orig_msg,
+			     mu_attribute_t atr)
 {
   struct _maildir_data *md = (struct _maildir_data *)amd;
   struct _maildir_message *msg = (struct _maildir_message *) amm;
-  mu_attribute_t attr;
   int flags;
   int rc;
   int src_fd = -1, dst_fd = -1;
   struct string_buffer sb = STRING_BUFFER_INITIALIZER;
   char const *newname;
   
-  if (mu_message_get_attribute (orig_msg, &attr) == 0
-      && mu_attribute_is_read (attr)
-      && mu_attribute_get_flags (attr, &flags) == 0)
+  if ((atr || mu_message_get_attribute (orig_msg, &atr) == 0)
+      && mu_attribute_get_flags (atr, &flags) == 0
+      && flags)
     {
       msg->subdir = SUB_CUR;
       rc = string_buffer_format_message_name (&sb, msg, flags);
@@ -1448,6 +1448,19 @@ maildir_msg_finish_delivery (struct _amd_data *amd, struct _amd_message *amm,
 		    ("can't unlink %s/%s/%s: %s",
 		     amd->name, subdir_name[SUB_TMP], msg->file_name,
 		     mu_strerror (errno)));
+	}
+      
+      if (strcmp (msg->file_name, newname))
+	{
+	  char *p = strdup (newname);
+	  if (!p)
+	    rc = errno;
+	  else
+	    {
+	      free (msg->file_name);
+	      msg->file_name = p;
+	      /* uniq_len remains the same */
+	    }
 	}
     }
   else

@@ -456,10 +456,17 @@ mu_mailbox_flush (mu_mailbox_t mbox, int expunge)
 int
 mu_mailbox_append_message (mu_mailbox_t mbox, mu_message_t msg)
 {
+  return mu_mailbox_append_message_ext (mbox, msg, NULL, NULL);
+}
+
+int
+mu_mailbox_append_message_ext (mu_mailbox_t mbox, mu_message_t msg,
+			       mu_envelope_t env, mu_attribute_t atr)
+{
   _MBOX_CHECK_Q (mbox, _append_message);
   if (!(mbox->flags & (MU_STREAM_WRITE|MU_STREAM_APPEND)))
     return EACCES;
-  return mbox->_append_message (mbox, msg);
+  return mbox->_append_message (mbox, msg, env, atr);
 }
 
 int

@@ -66,6 +66,7 @@ From: Alice  <alice@wonder.land>
 Message-Id: <200207292200.3304@wonder.land>
 To: March Hare  <hare@wonder.land>
 Subject: Re: Invitation
+Status: O
 
 Then it wasn't very civil of you to offer it
 ])
@@ -78,6 +79,7 @@ count
 uid
 env_date
 env_sender
+attr
 headers
 body_text
 ])
@@ -89,6 +91,7 @@ count: 4
 4 uid: 9
 4 env_date: Mon Jul 29 21:00:09 2002
 4 env_sender: alice@wonder.land
+4 attr: -
 4 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
 Date:Mon, 29 Jul 2002 22:00:04 +0100
 From:Alice  <alice@wonder.land>
@@ -107,6 +110,52 @@ mbop -m inbox uidvalidity
 ],
 [0],
 [uidvalidity: 10
+])
+
+AT_DATA([commands.atr],
+[append -attr FRP msg
+count
+5
+uid
+env_date
+env_sender
+headers
+body_text
+])
+
+AT_DATA([commands.ae],
+[append -sender gray@gnu.org -date 'Sat Dec  4 08:00:00 2021' -attr FRP msg
+count
+5
+uid
+env_date
+env_sender
+attr
+headers
+body_text
+])
+
+AT_CHECK([mbop -m inbox < commands.ae],
+[0],
+[append: OK
+count: 5
+5 current message
+5 uid: 10
+5 env_date: Sat Dec  4 08:00:00 2021
+5 env_sender: gray@gnu.org
+5 attr: FPR
+5 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+Date:Mon, 29 Jul 2002 22:00:04 +0100
+From:Alice  <alice@wonder.land>
+Message-Id:<200207292200.3304@wonder.land>
+To:March Hare  <hare@wonder.land>
+Subject:Re: Invitation
+Status:FPR
+X-UID:10
+
+5 body_text: Then it wasn't very civil of you to offer it
+
+
 ])
 
 AT_CLEANUP

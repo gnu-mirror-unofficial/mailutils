@@ -85,7 +85,7 @@ struct _amd_data
   int (*create) (struct _amd_data *, int flags);	
   int (*msg_init_delivery) (struct _amd_data *, struct _amd_message *);
   int (*msg_finish_delivery) (struct _amd_data *, struct _amd_message *,
-			      const mu_message_t);
+			      const mu_message_t, mu_attribute_t atr);
   void (*msg_free) (struct _amd_message *);
   int (*cur_msg_file_name) (struct _amd_message *, int, char **);	
   int (*new_msg_file_name) (struct _amd_message *, int, int, char **);

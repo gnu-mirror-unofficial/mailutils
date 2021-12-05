@@ -81,7 +81,8 @@ static int amd_close (mu_mailbox_t);
 static int amd_get_message (mu_mailbox_t, size_t, mu_message_t *);
 static int amd_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
 				  mu_message_t *pmsg);
-static int amd_append_message (mu_mailbox_t, mu_message_t);
+static int amd_append_message (mu_mailbox_t, mu_message_t,
+			       mu_envelope_t, mu_attribute_t);
 static int amd_messages_count (mu_mailbox_t, size_t *);
 static int amd_messages_recent (mu_mailbox_t, size_t *);
 static int amd_message_unseen (mu_mailbox_t, size_t *);
@@ -784,6 +785,7 @@ _amd_delim (char *str)
 
 static int
 _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
+		   mu_envelope_t env,
 		   int expunge)
 {
   mu_stream_t stream = NULL;
@@ -796,10 +798,8 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
   mu_message_t msg = mhm->message;
   mu_header_t hdr;
   int status;
-  mu_attribute_t attr;
   mu_body_t body;
   const char *sbuf;
-  mu_envelope_t env = NULL;
 
   status = mu_message_size (msg, &bsize);
   if (status)
@@ -827,6 +827,14 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
       return status;
     }
 
+  /*
+   * FIXME: 1. Use (perhaps modified version of) mu_stream_header_copy
+   *        to copy headers.
+   *        2. Use mu_stream_copy+mu_stream_set_stat to copy body.
+   *        3. Save envelope info in Received: and Return-Path: headers
+   *           (see dotmail.c for an example).
+   */
+  
   /* Try to allocate large buffer */
   for (; bsize > 1; bsize /= 2)
     if ((buf = malloc (bsize)))
@@ -866,7 +874,9 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
 	    || mu_c_strncasecmp (buf, 
                 MU_HEADER_ENV_DATE ":", sizeof (MU_HEADER_ENV_DATE)) == 0
 	    || mu_c_strncasecmp (buf, 
-                MU_HEADER_ENV_SENDER ":", sizeof (MU_HEADER_ENV_SENDER)) == 0))
+                MU_HEADER_ENV_SENDER ":", sizeof (MU_HEADER_ENV_SENDER)) == 0
+	    || mu_c_strncasecmp (buf,
+                MU_HEADER_RETURN_PATH ":", sizeof (MU_HEADER_RETURN_PATH)) == 0))
 	{
 	  nlines++;
 	  nbytes += fprintf (fp, "%s", buf);
@@ -874,36 +884,38 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
     }
   mu_stream_destroy (&stream);
   
-  mu_message_get_envelope (msg, &env);
-  if (mu_envelope_sget_date (env, &sbuf) == 0)
+  if (env || mu_message_get_envelope (msg, &env) == 0)
     {
-      /* NOTE: buffer might be terminated with \n */
-      while (*sbuf && mu_isspace (*sbuf))
-	sbuf++;
-      nbytes += fprintf (fp, "%s: %s", MU_HEADER_ENV_DATE, sbuf);
+      if (mu_envelope_sget_date (env, &sbuf) == 0)
+	{
+	  /* NOTE: buffer might be terminated with \n */
+	  while (*sbuf && mu_isspace (*sbuf))
+	    sbuf++;
+	  nbytes += fprintf (fp, "%s: %s", MU_HEADER_ENV_DATE, sbuf);
 
-      if (*sbuf && sbuf[strlen (sbuf) - 1] != '\n')
-	nbytes += fprintf (fp, "\n");
+	  if (*sbuf && sbuf[strlen (sbuf) - 1] != '\n')
+	    nbytes += fprintf (fp, "\n");
       
-      nlines++;
-    }
+	  nlines++;
+	}
 	  
-  if (mu_envelope_sget_sender (env, &sbuf) == 0)
-    {
-      fprintf (fp, "%s: %s\n", MU_HEADER_ENV_SENDER, sbuf);
-      nlines++;
+      if (mu_envelope_sget_sender (env, &sbuf) == 0)
+	{
+	  fprintf (fp, "%s: %s\n", MU_HEADER_ENV_SENDER, sbuf);
+	  nlines++;
+	}
     }
-
+  
   if (!(amd->capabilities & MU_AMD_STATUS))
     {
       /* Add status */
       char statbuf[MU_STATUS_BUF_SIZE];
       
-      mu_message_get_attribute (msg, &attr);
-      mu_attribute_to_string (attr, statbuf, sizeof (statbuf), &n);
-      if (n)
+      if (mu_attribute_flags_to_string (mhm->attr_flags,
+					statbuf, sizeof (statbuf), NULL) == 0 &&
+	  statbuf[0] != 0)
 	{
-	  nbytes += fprintf (fp, "Status: %s\n", statbuf);
+	  nbytes += fprintf (fp, "%s: %s\n", MU_HEADER_STATUS, statbuf);
 	  nlines++;
 	}
     }
@@ -995,12 +1007,13 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
 }
 
 static int
-amd_append_message (mu_mailbox_t mailbox, mu_message_t msg)
+amd_append_message (mu_mailbox_t mailbox, mu_message_t msg,
+		    mu_envelope_t env, mu_attribute_t atr)
 {
   int status;
   struct _amd_data *amd = mailbox->data;
   struct _amd_message *mhm;
-
+  
   if (!mailbox || !msg)
     return EINVAL;
 
@@ -1033,7 +1046,11 @@ amd_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     }
   
   mhm->message = msg;
-  status = _amd_message_save (amd, mhm, 0);
+
+  if (atr)
+    mu_attribute_get_flags (atr, &mhm->attr_flags);
+  
+  status = _amd_message_save (amd, mhm, env, 0);
   if (status)
     {
       free (mhm);
@@ -1050,7 +1067,7 @@ amd_append_message (mu_mailbox_t mailbox, mu_message_t msg)
     }
 
   if (amd->msg_finish_delivery)
-    status = amd->msg_finish_delivery (amd, mhm, msg);
+    status = amd->msg_finish_delivery (amd, mhm, msg, atr);
   
   if (status == 0 && mailbox->observable)
     {
@@ -1292,7 +1309,7 @@ _amd_update_message (struct _amd_data *amd, struct _amd_message *mhm,
 	  return rc;
 	}
 	  
-      rc = _amd_message_save (amd, mhm, expunge);
+      rc = _amd_message_save (amd, mhm, NULL, expunge);
       if (rc)
 	{
 	  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,

@@ -143,8 +143,8 @@ message_envelope_date (mu_envelope_t envelope, char *buf, size_t len,
 	char const *name;
 	int (*retr) (char const *, char **);
       } hdrdate[] = {
-	{ MU_HEADER_RECEIVED, retr_received },
 	{ MU_HEADER_ENV_DATE, retr_env_date },
+	{ MU_HEADER_RECEIVED, retr_received },
 	{ MU_HEADER_DATE, retr_date },
 	{ NULL }
       };
@@ -216,8 +216,8 @@ message_envelope_sender (mu_envelope_t envelope, char *buf, size_t len,
   const char *sender;
   char *email;
   static char *hdrnames[] = {
-    "Return-Path",
     "X-Envelope-Sender",
+    "Return-Path",
     "X-Envelope-From",
     "X-Original-Sender",
     "From",

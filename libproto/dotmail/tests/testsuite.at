@@ -22,7 +22,8 @@ m4_define([DM_TEST],
 AT_CHECK(
  [AT_DATA([dmbx],[$3])
 MAIL=./dmbx
-export MAIL
+TZ=0
+export MAIL TZ
 $2
 ],
 [0],
@@ -37,7 +38,8 @@ AT_CHECK(
 AT_DATA([input],[$5]) 
 $3
 MAIL=./dmbx
-export MAIL
+TZ=0
+export MAIL TZ
 mbop < input
 $4
 ],

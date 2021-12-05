@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with GNU Mailutils.  If not, see <http://www.gnu.org/licenses/>.
 
-DM_MESG([append],
+m4_pushdef([INBOX],
 [Received: (from hare@wonder.land)
 	by wonder.land id 3301
 	for alice@wonder.land; Mon, 29 Jul 2002 22:00:06 +0100
@@ -51,7 +51,10 @@ Return-Path: hare@wonder.land
 
 There isn't any
 .
-],
+])
+
+DM_MESG([append],
+[INBOX],
 [AT_DATA([msg],
 [Received: (from alice@wonder.land)
 	by wonder.land id 3304
@@ -62,6 +65,7 @@ Message-Id: <200207292200.3304@wonder.land>
 To: March Hare  <hare@wonder.land>
 Subject: Re: Invitation
 Return-Path: alice@wonder.land
+Status: O
 X-UID: 1034
 
 Then it wasn't very civil of you to offer it
@@ -74,6 +78,7 @@ append msg
 # Check if it is scanned and loaded
 env_date
 env_sender
+attr
 headers
 body_text
 ],
@@ -82,6 +87,7 @@ body_text
 4 current message
 4 env_date: Mon Jul 29 21:00:09 2002
 4 env_sender: alice@wonder.land
+4 attr: -
 4 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
 Date:Mon, 29 Jul 2002 22:00:04 +0100
 From:Alice  <alice@wonder.land>
@@ -89,6 +95,103 @@ Message-Id:<200207292200.3304@wonder.land>
 To:March Hare  <hare@wonder.land>
 Subject:Re: Invitation
 Return-Path:alice@wonder.land
+
+4 body_text: Then it wasn't very civil of you to offer it
+
+count: 4
+])
+
+DM_MESG([append with changed status],
+[INBOX],
+[AT_DATA([msg],
+[Received: (from alice@wonder.land)
+	by wonder.land id 3304
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+Date: Mon, 29 Jul 2002 22:00:04 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3304@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+Status: O
+X-UID: 1034
+
+Then it wasn't very civil of you to offer it
+])],
+[mbop count],
+[# Append new message
+append -attr FRP msg
+# Select it
+4
+# Check if it is scanned and loaded
+env_date
+env_sender
+attr
+headers
+body_text
+],
+
+[append: OK
+4 current message
+4 env_date: Mon Jul 29 21:00:09 2002
+4 env_sender: alice@wonder.land
+4 attr: FPR
+4 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+Date:Mon, 29 Jul 2002 22:00:04 +0100
+From:Alice  <alice@wonder.land>
+Message-Id:<200207292200.3304@wonder.land>
+To:March Hare  <hare@wonder.land>
+Subject:Re: Invitation
+Return-Path:alice@wonder.land
+Status:FPR
+
+4 body_text: Then it wasn't very civil of you to offer it
+
+count: 4
+])
+
+DM_MESG([append with changed status and envelope],
+[INBOX],
+[AT_DATA([msg],
+[Received: (from alice@wonder.land)
+	by wonder.land id 3304
+	for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+Date: Mon, 29 Jul 2002 22:00:04 +0100
+From: Alice  <alice@wonder.land>
+Message-Id: <200207292200.3304@wonder.land>
+To: March Hare  <hare@wonder.land>
+Subject: Re: Invitation
+Return-Path: alice@wonder.land
+
+Then it wasn't very civil of you to offer it
+])],
+[mbop count],
+[# Append new message
+append -sender gray@gnu.org -date 'Sat, 4 Dec 2021 08:00:00 UTC' -attr FRP msg
+# Select it
+4
+# Check if it is scanned and loaded
+env_date
+env_sender
+attr
+headers
+body_text
+],
+
+[append: OK
+4 current message
+4 env_date: Sat Dec  4 08:00:00 2021
+4 env_sender: gray@gnu.org
+4 attr: FPR
+4 headers: Received:from localhost by localhost; Sat,  4 Dec 2021 08:00:00 +0000
+Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+Date:Mon, 29 Jul 2002 22:00:04 +0100
+From:Alice  <alice@wonder.land>
+Message-Id:<200207292200.3304@wonder.land>
+To:March Hare  <hare@wonder.land>
+Subject:Re: Invitation
+Return-Path:gray@gnu.org
+Status:FPR
 
 4 body_text: Then it wasn't very civil of you to offer it
 

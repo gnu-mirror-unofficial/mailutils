@@ -33,6 +33,7 @@
 #include <mailutils/message.h>
 #include <mailutils/header.h>
 #include <mailutils/body.h>
+#include <mailutils/attribute.h>
 #include <mailutils/stream.h>
 #include <mailutils/util.h>
 #include <mailutils/datetime.h>
@@ -336,6 +337,7 @@ mu_message_from_stream_with_envelope (mu_message_t *pmsg,
 {
   mu_message_t msg;
   mu_body_t body;
+  mu_header_t hdr;
   mu_stream_t bstream;
   mu_stream_t draftstream;
   int rc;
@@ -382,6 +384,20 @@ mu_message_from_stream_with_envelope (mu_message_t *pmsg,
     }
   mu_message_set_envelope (msg, env, draftstream);
 
+  if (mu_message_get_header (msg, &hdr) == 0)
+    {
+      char const *s;
+      if (mu_header_sget_value (hdr, MU_HEADER_STATUS, &s) == 0)
+	{
+	  mu_attribute_t atr;
+	  int flags = 0;
+	  mu_attribute_string_to_flags (s, &flags);
+	  mu_message_get_attribute (msg, &atr);
+	  mu_attribute_unset_flags (atr, ~flags);
+	  mu_attribute_set_flags (atr, flags);
+	}
+    }
+  
   mu_body_create (&body, msg);
 
   rc = mu_streamref_create_abridged (&bstream, instream,

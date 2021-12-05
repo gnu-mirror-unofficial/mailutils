@@ -68,7 +68,8 @@ struct _mu_mailbox
   
   /* messages */
   int  (*_get_message)     (mu_mailbox_t, size_t, mu_message_t *);
-  int  (*_append_message)  (mu_mailbox_t, mu_message_t);
+  int  (*_append_message)  (mu_mailbox_t, mu_message_t, mu_envelope_t,
+			    mu_attribute_t);
   int  (*_messages_count)  (mu_mailbox_t, size_t *);
   int  (*_messages_recent) (mu_mailbox_t, size_t *);
   int  (*_message_unseen)  (mu_mailbox_t, size_t *);

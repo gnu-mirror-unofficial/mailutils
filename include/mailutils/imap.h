@@ -94,15 +94,15 @@ int mu_imap_expunge (mu_imap_t imap);
 
 int mu_imap_mailbox_create (mu_imap_t imap, const char *mailbox);
 
-int mu_imap_append_stream_size (mu_imap_t imap, const char *mailbox, int flags,
-				struct tm *tm, struct mu_timezone *tz,
+int mu_imap_append_stream_size (mu_imap_t imap, const char *mailbox,
+				mu_envelope_t env, mu_attribute_t atr,
 				mu_stream_t stream, mu_off_t size);
-int mu_imap_append_stream (mu_imap_t imap, const char *mailbox, int flags,
-			   struct tm *tm, struct mu_timezone *tz,
+int mu_imap_append_stream (mu_imap_t imap, const char *mailbox,
+			   mu_envelope_t env, mu_attribute_t atr,
 			   mu_stream_t stream);
-int mu_imap_append_message (mu_imap_t imap, const char *mailbox, int flags,
-			    struct tm *tm, struct mu_timezone *tz,
-			    mu_message_t msg);
+int mu_imap_append_message (mu_imap_t imap, const char *mailbox,
+			    mu_message_t msg,
+			    mu_envelope_t env, mu_attribute_t atr);
 
 int mu_imap_genlist (mu_imap_t imap, int lsub,
 		     const char *refname, const char *mboxname,

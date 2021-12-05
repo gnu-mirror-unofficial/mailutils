@@ -66,6 +66,10 @@ extern int  mu_mailbox_get_message     (mu_mailbox_t, size_t msgno,
 extern int  mu_mailbox_quick_get_message(mu_mailbox_t, mu_message_qid_t,
 					 mu_message_t *); 
 extern int  mu_mailbox_append_message  (mu_mailbox_t, mu_message_t);
+extern int  mu_mailbox_append_message_ext (mu_mailbox_t mbox, mu_message_t msg,
+					   mu_envelope_t env,
+					   mu_attribute_t atr);
+  
 extern int  mu_mailbox_messages_count  (mu_mailbox_t, size_t *);
 extern int  mu_mailbox_messages_recent (mu_mailbox_t, size_t *);
 extern int  mu_mailbox_message_unseen  (mu_mailbox_t, size_t *);

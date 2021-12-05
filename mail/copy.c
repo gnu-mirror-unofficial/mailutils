@@ -59,11 +59,20 @@ append_to_mailbox (mu_url_t url, msgset_t *msglist, int mark,
 
   for (mp = msglist; mp; mp = mp->next)
     {
+      mu_attribute_t atr;
+      
       status = util_get_message (mbox, msgset_msgno (mp), &msg);
       if (status)
 	break;
 
-      status = mu_mailbox_append_message (mbx, msg);
+      status = mu_message_get_attribute (msg, &atr);
+      if (status)
+	{
+	  mu_diag_funcall (MU_DIAG_WARNING, "mu_message_get_attribute", NULL,
+			   status);
+	  atr = NULL;
+	}
+      status = mu_mailbox_append_message_ext (mbx, msg, NULL, atr);
       if (status)
 	{
 	  mu_error (_("Cannot append message: %s"), mu_strerror (status));
