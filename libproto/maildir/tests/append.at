@@ -57,8 +57,6 @@ From:Alice  <alice@wonder.land>
 Message-Id:<200207292200.3304@wonder.land>
 To:March Hare  <hare@wonder.land>
 Subject:Re: Invitation
-X-Envelope-Date:Mon Jul 29 21:00:09 2002
-X-Envelope-Sender:alice@wonder.land
 
 6 body_text: Then it wasn't very civil of you to offer it
 
@@ -98,8 +96,6 @@ From:Alice  <alice@wonder.land>
 Message-Id:<200207292200.3304@wonder.land>
 To:March Hare  <hare@wonder.land>
 Subject:Re: Invitation
-X-Envelope-Date:Mon Jul 29 21:00:09 2002
-X-Envelope-Sender:alice@wonder.land
 
 7 body_text: Then it wasn't very civil of you to offer it
 
@@ -126,14 +122,14 @@ count: 8
 8 env_date: Sat Dec  4 08:00:00 2021
 8 env_sender: gray@gnu.org
 8 attr: FPR
-8 headers: Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
+8 headers: Return-Path:gray@gnu.org
+Received:from localhost by localhost; Sat,  4 Dec 2021 08:00:00 +0000
+Received:(from alice@wonder.land) by wonder.land id 3304 for hare@wonder.land; Mon, 29 Jul 2002 22:00:09 +0100
 Date:Mon, 29 Jul 2002 22:00:04 +0100
 From:Alice  <alice@wonder.land>
 Message-Id:<200207292200.3304@wonder.land>
 To:March Hare  <hare@wonder.land>
 Subject:Re: Invitation
-X-Envelope-Date:Sat Dec  4 08:00:00 2021
-X-Envelope-Sender:gray@gnu.org
 
 8 body_text: Then it wasn't very civil of you to offer it
 

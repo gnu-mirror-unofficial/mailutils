@@ -3,13 +3,14 @@
     mbox2dir - convert mbox to maildir or MH format
 
   SYNOPSIS
-    mbox2dir [-i FILE] [-h NAME] [-v VALUE] [-npu] PATH MBOX [NAMES...]
-    mbox2dir -m PATH MBOX [NAMES...]
+    mbox2dir [-i FILE] [-h NAME] [-v VALUE] [-emnpu] PATH MBOX [NAMES...]
 
   DESCRIPTION
-    Creates a maildir mailbox in PATH and populates it with the
-    messages from the UNIX mbox file MBOX.
+    Creates a maildir or (if used with the -m option) MH mailbox in PATH
+    and populates it with the messages from the UNIX mbox file MBOX.
 
+    When maildir output is requested, the following apply:
+    
     If NAMES arguments are given, each successive message from MBOX
     is stored in the file named with the corresponding NAME.
 
@@ -27,10 +28,17 @@
     and -u cannot be used together.  The -h option supplies the hostname
     to use in names (default is "localhost").
 
-    The -m option instructs the program to create MH mailbox.
-
+    If MH output is requested (the -m option), the options -u, -h, and -n
+    have no effect.  Message names supplied in FILE or command line must
+    be positive integers.
+    
   OPTIONS
 
+    -e
+       Read envelope information from the From_ line of each input
+       message and store it in the pair of Return-Path and Received
+       headers in the output file.
+       
     -h NAME
        Hostname for use in maildir message names.
        
@@ -67,6 +75,8 @@
     3. Default hostname is "localhost", instead of the actual machine
        name.
     4. Random number generator is not initialized.
+    5. If -e option is used, the time of the created Received: header
+       is not in RFC 5322 format.
     
   LICENSE
     This program is part of GNU Mailutils testsuite.
@@ -89,6 +99,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -96,6 +107,7 @@
 #include <fcntl.h>
 #include <sysexits.h>
 #include <assert.h>
+#include <ctype.h>
 #include <sys/time.h>
 
 static char *progname;
@@ -110,6 +122,7 @@ int format = F_MAILDIR;
 int new_option;
 int uid_option;
 int prop_option;
+int e_option;
 char *hostname = "localhost";
 char propfile[] = ".mu-prop";
 unsigned long uidvalidity = 0;
@@ -430,110 +443,151 @@ mkhier (char *name)
   
   return fd;
 }
-/*
- *   Alphabet:
- *     0 '\n'
- *     1 'F'
- *     2 'r'
- *     3 'o'
- *     4 'm'
- *     5 ' '
- *     6 '>'
- *     7 ANY
- *     
- *   Transitions:
- *      \      input
- *      state
- *      
- *      \  0 1 2 3 4  5  6  7
- *      -+ ------------------
- *      0| 1 0 0 0 0  0  0  0 \n
- *      1| 1 2 0 0 0  0  6  0 F
- *      2| 1 0 3 0 0  0  0  0 r
- *      3| 1 0 0 4 0  0  0  0 o
- *      4| 1 0 0 0 5  0  0  0 m
- *      5| 1 0 0 0 0  13 0  0
- *      6| 1 7 0 0 0  0  0  0 > (X)
- *      7| 1 0 8 0 0  0  0  0 F
- *      8| 1 0 0 9 0  0  0  0 r
- *      9| 1 0 0 0 10 0  0  0 o
- *     10| 1 0 0 0 0  11 0  0 m
- *     11| 1 0 0 0 0  0  12 0
- *     12 <stop> unescape
- *     13 <stop> mail start
- *
- */
 
-static char alphabet[] = "\nFrom >";
-#define ASZ (sizeof (alphabet))
-static int transition[][ASZ] = {
-  {  1,  0,  0,  0,  0,  0,  0,  0 },
-  {  1,  2,  0,  0,  0,  0,  6,  0 },
-  {  1,  0,  3,  0,  0,  0,  0,  0 },
-  {  1,  0,  0,  4,  0,  0,  0,  0 },
-  {  1,  0,  0,  0,  5,  0,  0,  0 },
-  {  1,  0,  0,  0,  0, 13,  0,  0 },
-  {  1,  7,  0,  0,  0,  0,  0,  0 },
-  {  1,  0,  8,  0,  0,  0,  0,  0 },
-  {  1,  0,  0,  9,  0,  0,  0,  0 },
-  {  1,  0,  0,  0, 10,  0,  0,  0 },
-  {  1,  0,  0,  0,  0, 11,  0,  0 },
-  {  1,  0,  0,  0,  0,  0, 12,  0 }
-};
+#define __cat2__(a,b) a ## _ ## b
+#define DCL_H(n,s)				\
+  static char __cat2__(n,h)[] = s;		\
+  static size_t __cat2__(n,l) = sizeof (__cat2__(n,h)) - 1
+
+DCL_H (from, "From ");
 
 static int
-getalpha (int input)
+is_valid_mbox (FILE *in)
 {
-  char *p = strchr (alphabet, input);
-  if (p)
-    return p - alphabet;
-  return ASZ-1;
+  char buf[sizeof (from_h)];
+
+  if (fread (buf, from_l, 1, in) == 1)
+    return memcmp (buf, from_h, from_l) == 0;
+  else if (ferror (in))
+    {
+      fprintf (stderr, "%s: read error: %s\n",
+	       progname, strerror (errno));
+      exit (EX_IOERR);
+    }
+  return 0;
 }
 
-int
-copy_till (FILE *in, FILE *out, int state)
+/*
+ * Copy single message from IN to OUT.  If e_option is set, omit eventual
+ * Return-Path header.
+ * On input, file pointer in IN must point past the From_ line.
+ * On output, file pointer is left at the beginning of the next From_ line.
+ * Return value: 0 if there are more messages to copy and -1 otherwise.
+ */
+static int
+copy_message (FILE *in, FILE *out)
 {
-  int c;
-  char buf[ASZ];
-  int i = 0;
-#define FLUSH() \
-  do						\
-    {						\
-      if (i && out) fwrite (buf, 1, i, out);	\
-      i = 0;					\
-    }						\
-  while(0)
-  
-  while ((c = fgetc (in)) != EOF)
+  DCL_H (return_path, "return-path:");
+  char buf[sizeof (return_path_h)];
+  int c = 0, la = 0;
+  enum { HDR, HLINE, HSKIP, BODY, BNL } state = HDR;
+
+  while (1)
     {
-      state = transition[state][getalpha (c)];
-      if (state == 0)
+      if (c != 0)
+	fputc (c, out);
+      if (la != 0)
 	{
-	  FLUSH ();
-	  if (out)
-	    fputc (c, out);
-	}
-      else if (state == 12)
-	{
-	  FLUSH ();
-	}
-      else if (state == 13)
-	{
-	  fseek (in, -5, SEEK_SET);
-	  return 0;
-	}
-      else if (state == 6)
-	/* skip */;
-      else if (state == 1)
-	{
-	  FLUSH ();
-	  buf[i++] = c;
+	  c = la;
+	  la = 0;
 	}
       else
-	buf[i++] = c;
+	c = fgetc (in);
+      
+      switch (state)
+	{
+	case HDR:
+	  if (c == EOF)
+	    return -1;
+	  if (c == '\n')
+	    state = BODY;
+	  else if (e_option && tolower (c) == return_path_h[0])
+	    {
+	      buf[0] = c;
+	      if (fread (buf + 1, return_path_l - 1, 1, in) == 1)
+		{
+		  if (strncasecmp (buf, return_path_h, return_path_l) == 0)
+		    {
+		      state = HSKIP;
+		    }
+		  else
+		    {
+		      if (fwrite (buf, return_path_l, 1, out) != 1)
+			return -1;
+		      state = HLINE;
+		    }
+		  c = 0;
+		}
+	      else if (ferror (in) || feof (in))
+		return -1;
+	      else
+		state = HLINE;
+	    }
+	  else
+	    state = HLINE;
+	  break;
+
+	case HLINE:
+	  if (c == EOF)
+	    return -1;
+	  if (c == '\n')
+	    state = HDR;
+	  break;
+
+	case HSKIP:
+	  if (c == EOF)
+	    return -1;
+	  if (c == '\n')
+	    state = HDR;
+	  c = 0;
+	  break;
+
+	case BODY:
+	  if (c == EOF)
+	    return -1;
+	  if (c == '\n')
+	    {
+	      state = BNL;
+	      c = 0;
+	    }
+	  break;
+
+	case BNL:
+	  if (c == EOF)
+	    {
+	      fputc ('\n', out);
+	      return -1;
+	    }
+	  if (c != '\n')
+	    {
+	      if (c == from_h[0])
+		{
+		  buf[0] = c;
+		  if (fread (buf + 1, from_l - 1, 1, in) == 1)
+		    {
+		      if (memcmp (buf, from_h, from_l) == 0)
+			return 0; /* start of next message */
+		      else
+			{
+			  fputc ('\n', out);
+			  if (fwrite (buf, from_l, 1, out) != 1)
+			    return -1;
+			}
+		    }
+		  else if (ferror (in) || feof (in))
+		    return -1;
+		  c = 0;
+		}
+	      else
+		fputc ('\n', out);
+	      state = BODY;
+	    }
+	  break;
+
+	default:
+	  abort ();
+	}
     }
-  FLUSH ();
-  return -1;
 }
 
 static void
@@ -544,6 +598,41 @@ skip_line (FILE *fp)
     ;
 }
     
+static int
+convert_envelope (FILE *in, FILE *out)
+{
+  DCL_H (return_path, "Return-Path: ");
+  DCL_H (received, "Received: from localhost\n\tby localhost; ");
+  int c;
+
+  if (!e_option)
+    {
+      skip_line (in);
+      return 0;
+    }
+  
+  fwrite (return_path_h, return_path_l, 1, out);
+  while ((c = fgetc (in)) != EOF)
+    {
+      if (c == ' ' || c == '\t')
+	break;
+      fputc (c, out);
+    }
+  fputc ('\n', out);
+  
+  if (c == EOF)
+    return -1;
+
+  fwrite (received_h, received_l, 1, out);
+  while ((c = fgetc (in)) != EOF)
+    {
+      fputc (c, out);
+      if (c == '\n')
+	return 0;
+    }
+  return -1;
+}
+
 static int
 store_file (int dirfd, char const *name, FILE *input)
 {
@@ -563,12 +652,14 @@ store_file (int dirfd, char const *name, FILE *input)
   if (!fp)
     abort ();
 
-  rc = copy_till (input, fp, 0);
+  if (convert_envelope (input, fp))
+    return -1;
+  rc = copy_message (input, fp);
   fclose (fp);
   return rc;
 }
 
-void
+static void
 create_prop_file (int dirfd)
 {
   int fd;
@@ -598,7 +689,7 @@ create_prop_file (int dirfd)
 static void
 usage (FILE *fp)
 {
-  fprintf (fp, "usage: %s [-i FILE] [-h NAME] [-v UIDVALIDITY] [-nmpu] PATH FILE [NAMES...]\n",
+  fprintf (fp, "usage: %s [-i FILE] [-h NAME] [-v UIDVALIDITY] [-enmpuv] PATH FILE [NAMES...]\n",
 	   progname);
   fprintf (fp, "converts UNIX mbox file FILE to maildir or MH format.\n");
 }
@@ -614,10 +705,14 @@ main (int argc, char **argv)
   
   progname = argv[0];
 
-  while ((c = getopt (argc, argv, "i:h:nmpuv:")) != EOF)
+  while ((c = getopt (argc, argv, "ei:h:nmpuv:")) != EOF)
     {
       switch (c)
 	{
+	case 'e':
+	  e_option = 1;
+	  break;
+	  
 	case 'h':
 	  hostname = optarg;
 	  break;
@@ -710,7 +805,7 @@ main (int argc, char **argv)
       exit (EX_OSERR);
     }
 
-  if (copy_till (fp, NULL, 1))
+  if (!is_valid_mbox (fp))
     {
       fprintf (stderr, "%s: can't find any messages in %s\n",
 	       progname, argv[1]);
@@ -720,7 +815,6 @@ main (int argc, char **argv)
   while ((name = next_name (&input)) != NULL)
     {
       validate_name (name);
-      skip_line (fp);
       if (store_file (fd, name, fp))
 	break;
     }

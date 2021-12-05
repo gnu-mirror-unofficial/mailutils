@@ -321,11 +321,8 @@ pick -before 'Mon, 29 Jul 2002 21:00:03 +0000'
 ])
 
 MH_CHECK([pick --Component pattern],[pick11 pick-component],[
-mkdir Mail/inbox
-# FIXME: inc is used instead of mbox2dir to insert X-Envelope headers.
-cat $spooldir/teaparty.mbox > teaparty.mbox
-inc -file teaparty.mbox > /dev/null
-pick --X-Envelope-Sender hare
+mbox2dir -e -m Mail/inbox $spooldir/teaparty.mbox
+pick --Return-Path hare
 ],
 [0],
 [1
@@ -345,10 +342,9 @@ pick --X-Envelope-Sender hare
 71
 ])
 
-MH_CHECK([pick --Component pattern -or ...],[pick12 pick-component0or],[
-cat $spooldir/teaparty.mbox > teaparty.mbox
-inc -file teaparty.mbox > /dev/null
-pick --X-Envelope-Sender hare -or -to hare
+MH_CHECK([pick --Component pattern -or ...],[pick12 pick-component-or],[
+mbox2dir -e -m Mail/inbox $spooldir/teaparty.mbox
+pick --Return-Path hare -or -to hare
 ],
 [0],
 [1

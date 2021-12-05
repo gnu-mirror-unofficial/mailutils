@@ -757,7 +757,7 @@ amd_quick_get_message (mu_mailbox_t mailbox, mu_message_qid_t qid,
 }
 
 static int
-_amd_tempfile (struct _amd_data *amd, FILE **pfile, char **namep)
+_amd_tempstream (struct _amd_data *amd, mu_stream_t *pstr, char **namep)
 {
   struct mu_tempfile_hints hints;
   int fd, rc;
@@ -765,22 +765,8 @@ _amd_tempfile (struct _amd_data *amd, FILE **pfile, char **namep)
   hints.tmpdir = amd->name;
   rc = mu_tempfile (&hints, MU_TEMPFILE_TMPDIR, &fd, namep);
   if (rc == 0)
-    if ((*pfile = fdopen (fd, "w")) == NULL)
-      rc = errno;
+    rc = mu_fd_stream_create (pstr, *namep, fd, MU_STREAM_WRITE);
   return rc;
-}
-
-static int
-_amd_delim (char *str)
-{
-  if (str[0] == '-')
-    {
-      for (; *str == '-'; str++)
-	;
-      for (; *str == ' ' || *str == '\t'; str++)
-	;
-    }
-  return str[0] == '\n';
 }
 
 static int
@@ -789,25 +775,34 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
 		   int expunge)
 {
   mu_stream_t stream = NULL;
-  char *name = NULL, *buf = NULL, *msg_name, *old_name;
-  size_t n;
-  size_t bsize;
-  size_t nlines, nbytes;
+  char *name = NULL, *msg_name, *old_name;
   size_t new_body_start, new_header_lines;
-  FILE *fp;
+  mu_stream_t ostr;
+  mu_stream_stat_buffer stat;  
   mu_message_t msg = mhm->message;
   mu_header_t hdr;
   int status;
   mu_body_t body;
-  const char *sbuf;
-
-  status = mu_message_size (msg, &bsize);
-  if (status)
-    return status;
-
+  static char *exclude_headers_tab[] = {
+    MU_HEADER_RETURN_PATH,    
+    MU_HEADER_X_IMAPBASE,
+    MU_HEADER_X_UID,
+    MU_HEADER_STATUS,
+    MU_HEADER_ENV_DATE,
+    MU_HEADER_ENV_SENDER,
+    NULL,
+  };
+  char **exclude_headers = exclude_headers_tab;
+    
   status = amd->new_msg_file_name (mhm, mhm->attr_flags, expunge, &msg_name);
   if (status)
-    return status;
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("new_msg_file_name failed: %s",
+		 mu_strerror (status)));
+      return status;
+    }
+  
   if (!msg_name)
     {
       /* Unlink the original file */
@@ -820,90 +815,67 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
       return status;
     }      
     
-  status = _amd_tempfile (mhm->amd, &fp, &name);
+  status = _amd_tempstream (mhm->amd, &ostr, &name);
   if (status)
     {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("_amd_tempstream failed: %s",
+		 mu_strerror (status)));
       free (msg_name);
       return status;
     }
-
-  /*
-   * FIXME: 1. Use (perhaps modified version of) mu_stream_header_copy
-   *        to copy headers.
-   *        2. Use mu_stream_copy+mu_stream_set_stat to copy body.
-   *        3. Save envelope info in Received: and Return-Path: headers
-   *           (see dotmail.c for an example).
-   */
-  
-  /* Try to allocate large buffer */
-  for (; bsize > 1; bsize /= 2)
-    if ((buf = malloc (bsize)))
-      break;
-
-  if (!bsize)
-    {
-      unlink (name);
-      free (name);
-      free (msg_name);
-      return ENOMEM;
-    }
+  mu_stream_set_stat (ostr,
+		      MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUT) |
+		      MU_STREAM_STAT_MASK (MU_STREAM_STAT_OUTLN),
+		      stat);
 
   /* Copy flags */
+  if (env)
+    {
+      char const *s;
+
+      if (mu_envelope_sget_sender (env, &s) == 0)
+	mu_stream_printf (ostr, "%s: %s\n", MU_HEADER_RETURN_PATH, s);
+      else      
+	exclude_headers++; // Preserve MU_HEADER_RETURN_PATH
+      if (mu_envelope_sget_date (env, &s) == 0)
+	{
+	  struct tm tm;
+	  struct mu_timezone tz;
+	      
+	  if (mu_parse_date_dtl (s, NULL, NULL, &tm, &tz, NULL) == 0)
+	    {
+	      /* Format a "Received:" header with that date */
+	      mu_stream_printf (ostr,
+				"Received: from %s\n"
+				"\tby %s; ",
+				"localhost", "localhost");
+	      mu_c_streamftime (ostr, MU_DATETIME_FORM_RFC822, &tm, &tz);
+	      mu_stream_write (ostr, "\n", 1, NULL);
+	    }
+	}
+    }
+  else
+    exclude_headers++; // Preserve MU_HEADER_RETURN_PATH
+  
   mu_message_get_header (msg, &hdr);
   mu_header_get_streamref (hdr, &stream);
   status = mu_stream_seek (stream, 0, MU_SEEK_SET, NULL);
   if (status)
     {
-      /* FIXME: Provide a common exit point for all error
-	 cases */
-      unlink (name);
-      free (name);
-      free (msg_name);
-      mu_stream_destroy (&stream);
-      return status;
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("mu_stream_seek on header stream failed: %s",
+		 mu_strerror (status)));
+      goto err;
     }
-      
-  nlines = nbytes = 0;
-  while ((status = mu_stream_readline (stream, buf, bsize, &n)) == 0
-	 && n != 0)
-    {
-      if (_amd_delim (buf))
-	break;
-
-      if (!(mu_c_strncasecmp (buf, "status:", 7) == 0
-	    || mu_c_strncasecmp (buf, 
-                MU_HEADER_ENV_DATE ":", sizeof (MU_HEADER_ENV_DATE)) == 0
-	    || mu_c_strncasecmp (buf, 
-                MU_HEADER_ENV_SENDER ":", sizeof (MU_HEADER_ENV_SENDER)) == 0
-	    || mu_c_strncasecmp (buf,
-                MU_HEADER_RETURN_PATH ":", sizeof (MU_HEADER_RETURN_PATH)) == 0))
-	{
-	  nlines++;
-	  nbytes += fprintf (fp, "%s", buf);
-	}
-    }
+  status = mu_stream_header_copy (ostr, stream, exclude_headers);
   mu_stream_destroy (&stream);
-  
-  if (env || mu_message_get_envelope (msg, &env) == 0)
+  if (status)
     {
-      if (mu_envelope_sget_date (env, &sbuf) == 0)
-	{
-	  /* NOTE: buffer might be terminated with \n */
-	  while (*sbuf && mu_isspace (*sbuf))
-	    sbuf++;
-	  nbytes += fprintf (fp, "%s: %s", MU_HEADER_ENV_DATE, sbuf);
-
-	  if (*sbuf && sbuf[strlen (sbuf) - 1] != '\n')
-	    nbytes += fprintf (fp, "\n");
-      
-	  nlines++;
-	}
-	  
-      if (mu_envelope_sget_sender (env, &sbuf) == 0)
-	{
-	  fprintf (fp, "%s: %s\n", MU_HEADER_ENV_SENDER, sbuf);
-	  nlines++;
-	}
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("mu_stream_header_copy failed: %s",
+		 mu_strerror (status)));
+      goto err;
     }
   
   if (!(amd->capabilities & MU_AMD_STATUS))
@@ -912,53 +884,58 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
       char statbuf[MU_STATUS_BUF_SIZE];
       
       if (mu_attribute_flags_to_string (mhm->attr_flags,
-					statbuf, sizeof (statbuf), NULL) == 0 &&
-	  statbuf[0] != 0)
+					statbuf, sizeof (statbuf), NULL) == 0
+	  && statbuf[0] != 0)
 	{
-	  nbytes += fprintf (fp, "%s: %s\n", MU_HEADER_STATUS, statbuf);
-	  nlines++;
+	  mu_stream_printf (ostr, "%s: %s\n", MU_HEADER_STATUS, statbuf);
 	}
     }
 
-  nbytes += fprintf (fp, "\n");
-  nlines++;
+  if (mu_stream_err (ostr))
+    {
+      status = mu_stream_last_error (ostr);
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("output error on temporary stream: %s",
+		 mu_strerror (status)));
+      goto err;
+    }
   
-  new_header_lines = nlines;
-  new_body_start = nbytes;
+  mu_stream_write (ostr, "\n", 1, NULL);
+
+  new_header_lines = stat[MU_STREAM_STAT_OUTLN];
+  new_body_start = stat[MU_STREAM_STAT_OUT];
+
+  /* Clear the counters */
+  stat[MU_STREAM_STAT_OUT] = stat[MU_STREAM_STAT_OUTLN] = 0;
 
   /* Copy message body */
-
   mu_message_get_body (msg, &body);
   mu_body_get_streamref (body, &stream);
   status = mu_stream_seek (stream, 0, MU_SEEK_SET, NULL);
   if (status)
     {
-      unlink (name);
-      free (name);
-      free (msg_name);
-      mu_stream_destroy (&stream);
-      return status;
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("mu_stream_seek on body stream failed: %s",
+		 mu_strerror (status)));
+      goto err;
     }
-    
-  nlines = 0;
-  while (mu_stream_read (stream, buf, bsize, &n) == 0 && n != 0)
-    {
-      char *p;
-      for (p = buf; p < buf + n; p++)
-	if (*p == '\n')
-	  nlines++;
-      fwrite (buf, 1, n, fp);
-      nbytes += n;
-    }
+  
+  status = mu_stream_copy (ostr, stream, 0, NULL);
   mu_stream_destroy (&stream);
+  if (status)
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("copying message body failed: %s",
+		 mu_strerror (status)));
+      goto err;
+    }
   
   mhm->header_lines = new_header_lines;
   mhm->body_start = new_body_start;
-  mhm->body_lines = nlines;
-  mhm->body_end = nbytes;
-
-  free (buf);
-  fclose (fp);
+  mhm->body_lines = stat[MU_STREAM_STAT_OUTLN];
+  mhm->body_end = stat[MU_STREAM_STAT_OUT];
+  
+  mu_stream_destroy (&ostr);  
 
   status = amd->cur_msg_file_name (mhm, 1, &old_name);
   if (status == 0)
@@ -1000,6 +977,10 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
 	}
       free (old_name);
     }
+ err:
+  mu_stream_destroy (&ostr);
+  if (status)
+    unlink (name);
   free (msg_name);
   free (name);
 
