@@ -520,6 +520,7 @@ _mailbox_mh_init (mu_mailbox_t mailbox)
   amd->msg_cmp = mh_message_cmp;
   amd->message_uid = mh_message_uid;
   amd->remove = mh_remove;
+  amd->capabilities = MU_AMD_DASHDELIM;
   amd->mailbox_size = mh_size;
   
   mailbox->_get_property = mh_get_property;

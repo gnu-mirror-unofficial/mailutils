@@ -793,6 +793,7 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
     NULL,
   };
   char **exclude_headers = exclude_headers_tab;
+  size_t i;
     
   status = amd->new_msg_file_name (mhm, mhm->attr_flags, expunge, &msg_name);
   if (status)
@@ -891,6 +892,14 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
 	}
     }
 
+  /*
+   * Header_size can be less than body_start if MU_AMD_DASHDELIM is set
+   * and a line of dashes was used originally to delimit body from headers
+   * (e.g. for draft file in MH format).
+   */
+  for (i = mhm->header_size; i < mhm->body_start; i++)
+    mu_stream_write (ostr, "-", 1, NULL);
+  
   if (mu_stream_err (ostr))
     {
       status = mu_stream_last_error (ostr);
@@ -931,6 +940,7 @@ _amd_message_save (struct _amd_data *amd, struct _amd_message *mhm,
     }
   
   mhm->header_lines = new_header_lines;
+  mhm->header_size = new_body_start;
   mhm->body_start = new_body_start;
   mhm->body_lines = stat[MU_STREAM_STAT_OUTLN];
   mhm->body_end = stat[MU_STREAM_STAT_OUT];
@@ -1639,18 +1649,11 @@ static int
 amd_scan_message (struct _amd_message *mhm)
 {
   mu_stream_t stream = mhm->stream;
-  char buf[1024];
-  size_t off;
-  size_t n;
-  int status;
-  int in_header = 1;
-  size_t hlines = 0;
-  size_t blines = 0;
-  size_t body_start = 0;
-  struct stat st;
-  char *msg_name;
   struct _amd_data *amd = mhm->amd;
   int amd_capa = amd->capabilities;
+  char *msg_name;
+  struct stat st;
+  int status;
   
   /* Check if the message was modified after the last scan */
   status = mhm->amd->cur_msg_file_name (mhm, 1, &msg_name);
@@ -1669,7 +1672,6 @@ amd_scan_message (struct _amd_message *mhm)
       return 0;
     }
 
-  off = 0;
   status = mu_stream_seek (stream, 0, MU_SEEK_SET, NULL);
   if (status)
     mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
@@ -1677,53 +1679,168 @@ amd_scan_message (struct _amd_message *mhm)
 	       msg_name, mu_strerror (status)));      
   else
     {
-      while ((status = mu_stream_readline (stream, buf, sizeof (buf), &n)) == 0
-	     && n != 0)
-	{
-	  if (in_header)
-	    {
-	      if (buf[0] == '\n')
-		{
-		  in_header = 0;
-		  body_start = off + 1;
-		}
-	      if (buf[n - 1] == '\n')
-		hlines++;
-	      
-	      /* Process particular attributes */
-	      if (!(amd_capa & MU_AMD_STATUS) &&
-		  mu_c_strncasecmp (buf, "status:", 7) == 0)
-		{
-		  int deleted = mhm->attr_flags & MU_ATTRIBUTE_DELETED;
-		  mu_attribute_string_to_flags (buf, &mhm->attr_flags);
-		  mhm->attr_flags |= deleted;
-		}
-	    }
-	  else
-	    {
-	      if (buf[n - 1] == '\n')
-		blines++;
-	    }
-	  off += n;
-	}
-      if (status)
-	mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-		  ("amd_scan_message(%s): %s",
-		   msg_name, mu_strerror (status)));     
-    }
-
-  free (msg_name);
-
-  if (status == 0)
-    {
+      enum
+      {
+	amd_scan_init,
+	amd_scan_header,
+	amd_scan_header_newline,
+	amd_scan_header_dash,
+	amd_scan_header_expect,
+	amd_scan_body,
+      } state = amd_scan_init;
+      static char expect[] = "status:";
+      int i;
+      
+      char cur;
+      size_t n;
+      size_t ndash;
+      
       mhm->mtime = st.st_mtime;
-      if (!body_start)
-	body_start = off;
-      mhm->header_lines = hlines;
-      mhm->body_lines = blines;
-      mhm->body_start = body_start;
-      mhm->body_end = off;
-    }
+      mhm->header_lines = 0;      
+      mhm->body_lines = 0;
+
+      while ((status = mu_stream_read (stream, &cur, 1, &n)) == 0)
+	{
+	  if (n == 0)
+	    break;
+	  
+	  switch (state)
+	    {
+	    case amd_scan_init:
+	      state = amd_scan_header_newline;
+	      i = 0;
+	      break;
+
+	    case amd_scan_header:
+	      if (cur == '\n')
+		state = amd_scan_header_newline;
+	      break;
+
+	    case amd_scan_header_newline:
+	      mhm->header_lines++;
+	      if (cur == '\n')
+		{
+		  status = mu_stream_seek (stream, 0, MU_SEEK_CUR,
+					   &mhm->body_start);
+		  if (status)
+		    {
+		      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+				("%s:%s (%s): %s",
+				 __func__, "mu_stream_seek",
+				 amd->name,
+				 mu_strerror (status)));
+		      return status;
+		    }
+		  mhm->body_end = mhm->body_start;
+		  mhm->header_size = mhm->body_start;
+		  state = amd_scan_body;
+		}
+	      else if ((amd_capa & MU_AMD_DASHDELIM) && cur == '-')
+		{
+		  state = amd_scan_header_dash;
+		  ndash = 1;
+		}
+	      else
+		{
+		  state = amd_scan_header;
+		  if (!(amd_capa & MU_AMD_STATUS))
+		    {
+		      i = 0;
+		      if (expect[i] == mu_tolower (cur))
+			{
+			  i++;
+			  state = amd_scan_header_expect;
+			  break;
+			}
+		    }
+		}
+	      break;
+
+	    case amd_scan_header_dash:
+	      if (cur == '\n')
+		{
+		  status = mu_stream_seek (stream, 0, MU_SEEK_CUR,
+					   &mhm->body_start);
+		  if (status)
+		    {
+		      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+				("%s:%s (%s): %s",
+				 __func__, "mu_stream_seek",
+				 amd->name,
+				 mu_strerror (status)));
+		      return status;
+		    }
+		  mhm->body_end = mhm->body_start;
+		  mhm->header_size = mhm->body_start - ndash;
+		  state = amd_scan_body;
+		}
+	      else if (cur == '-')
+		ndash++;
+	      else
+		state = amd_scan_header;
+	      break;
+	      
+	    case amd_scan_header_expect:
+	      if (cur == '\n')
+		{
+		  state = amd_scan_header_newline;
+		}
+	      else
+		{
+		  int c = mu_tolower (cur);
+		  if (expect[i] != c)
+		    {
+		      state = amd_scan_header;
+		      break;
+		    }
+
+		  if (c == ':')
+		    {
+		      char *buf = NULL;
+		      size_t size = 0;
+		      size_t n;
+
+		      status = mu_stream_getline (stream, &buf, &size, &n);
+		      if (status)
+			{
+			  mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+				    ("%s:%s (%s): %s",
+				     __func__, "mu_stream_getline",
+				     amd->name,
+				     mu_strerror (status)));
+			  return status;
+			}
+		      if (n > 0)
+			{
+			  int deleted = mhm->attr_flags & MU_ATTRIBUTE_DELETED;
+			  buf[n-1] = 0;
+			  mu_attribute_string_to_flags (buf, &mhm->attr_flags);
+			  mhm->attr_flags |= deleted;
+			}
+
+		      free (buf);
+		      state = amd_scan_header_newline;
+		    }
+		  else
+		    {
+		      i++;
+		      if (expect[i] == 0)
+			state = amd_scan_header_newline;
+		    }
+		}
+	      break;
+
+	    case amd_scan_body:
+	      mhm->body_end++;
+	      if (cur == '\n')
+		{
+		  mhm->body_lines++;
+		}
+	      break;
+	    }
+	}
+    }  
+  free (msg_name);
   return status;
 }
 
@@ -1881,9 +1998,12 @@ amd_message_stream_open (struct _amd_message *mhm)
   
   status = amd_scan_message (mhm);
   if (status)
-    mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
-	      ("amd_message_stream_open: amd_scan_message=%s",
-	       mu_strerror (status)));
+    {
+      mu_debug (MU_DEBCAT_MAILBOX, MU_DEBUG_ERROR,
+		("amd_message_stream_open: amd_scan_message=%s",
+		 mu_strerror (status)));
+      amd_message_stream_close (mhm);
+    }
   
   return status;
 }
@@ -2039,7 +2159,7 @@ amd_header_fill (void *data, char **pbuf, size_t *plen)
   if (status)
     return status;
 
-  len = mhm->body_start;
+  len = mhm->header_size;
   buffer = malloc (len);
   if (!buffer)
     return ENOMEM;

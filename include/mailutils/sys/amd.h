@@ -58,6 +58,9 @@ struct _amd_message
   int attr_flags;           /* Current attribute flags */
 
   time_t mtime;             /* Time of last modification */
+  size_t header_size;       /* Number of bytes in the header part.  Unless
+			       multi-dash delimiter is used, it equals
+			       body_start. */
   size_t header_lines;      /* Number of lines in the header part */
   size_t body_lines;        /* Number of lines in the body */
 
@@ -74,6 +77,9 @@ struct _amd_message
   by setting the 'Volatile-uidnext' parameter in mh_profile to 'true'.
   See _mailbox_mh_init in libproto/mh/mh.c.
 */
+#define MU_AMD_DASHDELIM        0x04  /* A sequence of '-' may be used
+					 to end message headers, instead of
+					 the '\n' */
 
 #define MU_AMD_F_INIT_SCAN    0x01  /* Done initial scanning */
 #define MU_AMD_F_PROP         0x02  /* prop file existed */
